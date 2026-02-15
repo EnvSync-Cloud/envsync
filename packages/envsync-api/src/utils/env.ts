@@ -48,6 +48,12 @@ export const env = z.object({
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string().default("http://localhost:8080"),
+	// Vault configuration
+	VAULT_ADDR: z.string().default("http://127.0.0.1:8200"),
+	VAULT_ROLE_ID: z.string(),
+	VAULT_SECRET_ID: z.string(),
+	VAULT_MOUNT_PATH: z.string().default("envsync"),
+	VAULT_NAMESPACE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof env>;

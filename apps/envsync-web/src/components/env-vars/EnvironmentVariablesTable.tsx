@@ -142,7 +142,7 @@ export const EnvironmentVariablesTable = ({
             ) : (
               <Key className="size-8 mr-2 bg-emerald-500 border border-emerald-700 p-2 stroke-[3] text-white rounded-md" />
             )}
-            {isSecrets ? "Secrets" : "Environment Variables"}
+            {isSecrets ? "Secrets" : "Variables"}
             <Count
               count={filteredVariables.length}
               variant="subtle"
@@ -248,12 +248,12 @@ export const EnvironmentVariablesTable = ({
             <h3 className="text-lg font-medium text-white mb-2">
               {hasActiveFilters
                 ? "No variables found"
-                : "No environment variables"}
+                : "No variables"}
             </h3>
             <p className="text-slate-400 mb-4">
               {hasActiveFilters
                 ? "No variables match your current filters"
-                : "Add your first environment variable to get started"}
+                : "Add your first variable to get started"}
             </p>
             {hasActiveFilters && (
               <Button

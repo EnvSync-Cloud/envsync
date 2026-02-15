@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
@@ -42,6 +43,12 @@ func (s *secretRepo) GetAll(appID, envTypeID string) ([]responses.SecretResponse
 	}
 
 	if resp.StatusCode() != 200 {
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(resp.Bytes(), &errResp); err == nil && errResp.Error != "" {
+			return nil, fmt.Errorf("%s", errResp.Error)
+		}
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
@@ -66,6 +73,12 @@ func (s *secretRepo) Reveal(appID, envTypeID string, keys []string) ([]responses
 	}
 
 	if resp.StatusCode() != 200 {
+		var errResp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(resp.Bytes(), &errResp); err == nil && errResp.Error != "" {
+			return nil, fmt.Errorf("%s", errResp.Error)
+		}
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 

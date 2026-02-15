@@ -60,7 +60,7 @@ export const DeleteAppModal = ({
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-red-300">
                   <li>The project and all its configurations</li>
-                  <li>All environment variables and secrets</li>
+                  <li>All variables and secrets</li>
                   <li>All environment types and settings</li>
                   <li>Project history and audit logs</li>
                   <li>API access and integrations</li>

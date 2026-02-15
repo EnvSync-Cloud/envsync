@@ -146,7 +146,7 @@ export class SecretStorePiTService {
 		return pits;
 	};
 
-	// Enhanced function to get environment state at a specific point in time
+	// Get environment state at a specific point in time
 	public static getEnvsTillPiTId = async ({
 		org_id,
 		app_id,
@@ -190,7 +190,10 @@ export class SecretStorePiTService {
 			.execute();
 
 		// Replay the changes to build the state at the target point in time
-		const envState = new Map<string, { key: string; value: string; last_updated: Date }>();
+		const envState = new Map<
+			string,
+			{ key: string; value: string; last_updated: Date }
+		>();
 
 		for (const change of allChanges) {
 			const operation = change.operation || "UPDATE";
@@ -210,7 +213,6 @@ export class SecretStorePiTService {
 			}
 		}
 
-		// Convert Map to array
 		return Array.from(envState.values());
 	};
 
@@ -250,7 +252,10 @@ export class SecretStorePiTService {
 			.execute();
 
 		// Replay changes to build state
-		const envState = new Map<string, { key: string; value: string; last_updated: Date }>();
+		const envState = new Map<
+			string,
+			{ key: string; value: string; last_updated: Date }
+		>();
 
 		for (const change of allChanges) {
 			const operation = change.operation || "UPDATE";

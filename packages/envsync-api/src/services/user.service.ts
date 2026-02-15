@@ -33,7 +33,7 @@ export class UserService {
 				email: data.email,
 				org_id: data.org_id,
 				role_id: data.role_id,
-				keycloak_id: zUser.id,
+				auth_service_id: zUser.id,
 				full_name: data.full_name,
 				profile_picture_url: null,
 				created_at: new Date(),
@@ -92,12 +92,12 @@ export class UserService {
 		await db.deleteFrom("users").where("id", "=", id).executeTakeFirstOrThrow();
 	};
 
-	public static getUserByKeycloakId = async (keycloak_id: string) => {
+	public static getUserByKeycloakId = async (auth_service_id: string) => {
 		const db = await DB.getInstance();
 		const user = await db
 			.selectFrom("users")
 			.selectAll()
-			.where("keycloak_id", "=", keycloak_id)
+			.where("auth_service_id", "=", auth_service_id)
 			.executeTakeFirstOrThrow();
 		return user;
 	};

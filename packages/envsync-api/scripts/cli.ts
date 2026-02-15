@@ -11,11 +11,13 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { config } from "../src/utils/env";
 import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
+import { DB } from "../src/libs/db";
 
 const ZITADEL_PROJECT_NAME = "EnvSync";
 
@@ -260,14 +262,177 @@ async function init() {
 	console.log("\nInit done.");
 }
 
+async function createDevUser() {
+	const email = process.argv[3] || "dev@envsync.local";
+	const fullName = process.argv[4] || "Dev User";
+	const orgName = "EnvSync Dev";
+	const slug = "envsync-dev";
+
+	console.log("EnvSync API: Creating local dev user\n");
+
+	const db = await DB.getInstance();
+
+	// 1. Create or reuse org
+	const existingOrg = await db
+		.selectFrom("orgs")
+		.selectAll()
+		.where("slug", "=", slug)
+		.executeTakeFirst();
+
+	let orgId: string;
+	if (existingOrg) {
+		orgId = existingOrg.id;
+		console.log(`Org "${orgName}" already exists (${orgId})`);
+	} else {
+		orgId = randomUUID();
+		await db
+			.insertInto("orgs")
+			.values({
+				id: orgId,
+				name: orgName,
+				slug,
+				metadata: {},
+				created_at: new Date(),
+				updated_at: new Date(),
+			})
+			.execute();
+		console.log(`Created org "${orgName}" (${orgId})`);
+	}
+
+	// 2. Ensure default roles exist
+	let adminRole = await db
+		.selectFrom("org_role")
+		.selectAll()
+		.where("org_id", "=", orgId)
+		.where("is_master", "=", true)
+		.executeTakeFirst();
+
+	if (!adminRole) {
+		const roles = [
+			{ name: "Org Admin", can_edit: true, can_view: true, have_api_access: true, have_billing_options: true, have_webhook_access: true, is_admin: true, is_master: true, color: "#FF5733" },
+			{ name: "Billing Admin", can_edit: false, can_view: false, have_api_access: false, have_billing_options: true, have_webhook_access: false, is_admin: false, is_master: false, color: "#33FF57" },
+			{ name: "Manager", can_edit: true, can_view: true, have_api_access: true, have_billing_options: false, have_webhook_access: true, is_admin: false, is_master: false, color: "#3357FF" },
+			{ name: "Developer", can_edit: true, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, is_admin: false, is_master: false, color: "#572F13" },
+			{ name: "Viewer", can_edit: false, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, is_admin: false, is_master: false, color: "#FF33A1" },
+		];
+
+		await db
+			.insertInto("org_role")
+			.values(
+				roles.map(r => ({
+					id: randomUUID(),
+					...r,
+					org_id: orgId,
+					created_at: new Date(),
+					updated_at: new Date(),
+				})),
+			)
+			.execute();
+
+		adminRole = await db
+			.selectFrom("org_role")
+			.selectAll()
+			.where("org_id", "=", orgId)
+			.where("is_master", "=", true)
+			.executeTakeFirstOrThrow();
+
+		console.log("Created default roles");
+	} else {
+		console.log("Default roles already exist");
+	}
+
+	// 3. Create user in Zitadel + DB
+	const existingUser = await db
+		.selectFrom("users")
+		.selectAll()
+		.where("email", "=", email)
+		.executeTakeFirst();
+
+	if (existingUser) {
+		console.log(`\nUser "${email}" already exists (${existingUser.id})`);
+		console.log("\nDev user ready:");
+		console.log(`  Email:    ${email}`);
+		console.log(`  User ID:  ${existingUser.id}`);
+		console.log(`  Org ID:   ${orgId}`);
+		console.log(`  Role:     Org Admin`);
+		console.log(`  Password: Test@1234`);
+		process.exit(0);
+	}
+
+	const password = "Test@1234";
+	const parts = fullName.trim().split(/\s+/).filter(Boolean);
+	const firstName = parts[0]?.slice(0, 200) ?? "User";
+	const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
+
+	// Create user in Zitadel via v2 API
+	const { pat } = resolveZitadelPat();
+	if (!pat) {
+		throw new Error("ZITADEL_PAT (or ZITADEL_PAT_FILE) is required to create a dev user in Zitadel.");
+	}
+	const zitadelUrl = `${zitadelBase()}/v2/users/human`;
+	const zRes = await fetch(zitadelUrl, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${pat}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			username: email,
+			profile: { givenName: firstName, familyName: lastName },
+			email: { email, isVerified: true },
+			password: { password, changeRequired: false },
+		}),
+	});
+	if (!zRes.ok) {
+		const text = await zRes.text();
+		throw new Error(`Zitadel create user failed: ${zRes.status} ${text}`);
+	}
+	const zUser = (await zRes.json()) as { userId: string };
+	console.log(`Zitadel: user created (${zUser.userId})`);
+
+	const userId = randomUUID();
+
+	await db
+		.insertInto("users")
+		.values({
+			id: userId,
+			email,
+			org_id: orgId,
+			role_id: adminRole.id,
+			auth_service_id: zUser.userId,
+			full_name: fullName,
+			is_active: true,
+			profile_picture_url: null,
+			created_at: new Date(),
+			updated_at: new Date(),
+		})
+		.execute();
+
+	console.log(`\nDev user created:`);
+	console.log(`  Email:           ${email}`);
+	console.log(`  Full Name:       ${fullName}`);
+	console.log(`  Password:        ${password}`);
+	console.log(`  User ID:         ${userId}`);
+	console.log(`  Org:             ${orgName} (${orgId})`);
+	console.log(`  Role:            Org Admin (${adminRole.id})`);
+	console.log(`  Auth Service ID: ${zUser.userId}`);
+}
+
 const cmd = process.argv[2];
 if (cmd === "init") {
 	await init().catch(err => {
 		console.error(err);
 		process.exit(1);
 	});
+} else if (cmd === "create-dev-user") {
+	await createDevUser().catch(err => {
+		console.error(err);
+		process.exit(1);
+	});
 } else {
-	console.log("Usage: bun run scripts/cli.ts init");
-	console.log("  Creates RustFS bucket. Configure Zitadel apps in console and set ZITADEL_* in .env.");
+	console.log("Usage: bun run scripts/cli.ts <command>\n");
+	console.log("Commands:");
+	console.log("  init                              Create RustFS bucket + Zitadel OIDC apps");
+	console.log("  create-dev-user [email] [name]    Create a local dev user (bypasses Zitadel)");
 	process.exit(cmd ? 1 : 0);
 }

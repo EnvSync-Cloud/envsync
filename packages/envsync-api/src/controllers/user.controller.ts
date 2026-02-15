@@ -91,9 +91,9 @@ export class UserController {
 				email: email ?? user.email,
 			};
 
-			if (user.keycloak_id) {
+			if (user.auth_service_id) {
 				const parts = (updateData.full_name ?? "").trim().split(/\s+/);
-				await updateZitadelUser(user.keycloak_id, {
+				await updateZitadelUser(user.auth_service_id, {
 					firstName: parts[0],
 					lastName: parts.slice(1).join(" ") || "",
 					email: updateData.email,
@@ -140,8 +140,8 @@ export class UserController {
 				return c.json({ error: "You do not have permission to delete this user." }, 403);
 			}
 
-			if (user.keycloak_id) {
-				await deleteZitadelUser(user.keycloak_id);
+			if (user.auth_service_id) {
+				await deleteZitadelUser(user.auth_service_id);
 			}
 			await UserService.deleteUser(id);
 
@@ -221,8 +221,8 @@ export class UserController {
 				return c.json({ error: "You do not have permission to update this user." }, 403);
 			}
 
-			if (user.keycloak_id) {
-				await sendZitadelPasswordReset(user.keycloak_id);
+			if (user.auth_service_id) {
+				await sendZitadelPasswordReset(user.auth_service_id);
 			}
 
 			await AuditLogService.notifyAuditSystem({

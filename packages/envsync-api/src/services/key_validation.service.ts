@@ -1,8 +1,9 @@
-import { DB } from "@/libs/db";
+import { VaultClient } from "@/libs/vault";
+import { envPath, envScopePath, secretPath, secretScopePath } from "@/libs/vault/paths";
 
 export class KeyValidationService {
 	/**
-	 * Check if a key already exists in either env_store or secret_store
+	 * Check if a key already exists in either env or secret Vault paths.
 	 */
 	public static async checkKeyExists({
 		key,
@@ -17,20 +18,14 @@ export class KeyValidationService {
 		org_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
 
-		// Check env_store unless excluded
+		// Check env path unless excluded
 		if (excludeTable !== "env_store") {
-			const envExists = await db
-				.selectFrom("env_store")
-				.select("key")
-				.where("key", "=", key)
-				.where("app_id", "=", app_id)
-				.where("env_type_id", "=", env_type_id)
-				.where("org_id", "=", org_id)
-				.executeTakeFirst();
+			const path = envPath(org_id, app_id, env_type_id, key);
+			const result = await vault.kvRead(path);
 
-			if (envExists) {
+			if (result) {
 				return {
 					exists: true,
 					type: "environment_variable" as const,
@@ -39,18 +34,12 @@ export class KeyValidationService {
 			}
 		}
 
-		// Check secret_store unless excluded
+		// Check secret path unless excluded
 		if (excludeTable !== "secret_store") {
-			const secretExists = await db
-				.selectFrom("secret_store")
-				.select("key")
-				.where("key", "=", key)
-				.where("app_id", "=", app_id)
-				.where("env_type_id", "=", env_type_id)
-				.where("org_id", "=", org_id)
-				.executeTakeFirst();
+			const path = secretPath(org_id, app_id, env_type_id, key);
+			const result = await vault.kvRead(path);
 
-			if (secretExists) {
+			if (result) {
 				return {
 					exists: true,
 					type: "secret" as const,
@@ -67,7 +56,9 @@ export class KeyValidationService {
 	}
 
 	/**
-	 * Validate multiple keys at once
+	 * Validate multiple keys at once using optimized LIST calls.
+	 * Instead of N individual reads, uses 2 LIST calls to get all existing keys,
+	 * then checks membership in a Set.
 	 */
 	public static async validateKeys({
 		keys,
@@ -82,22 +73,34 @@ export class KeyValidationService {
 		org_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const conflicts = [];
+		const vault = await VaultClient.getInstance();
+		const conflicts: { key: string; type: string | null; message: string | null }[] = [];
+
+		// Fetch existing keys via LIST (much more efficient than N individual reads)
+		const [envKeys, secretKeys] = await Promise.all([
+			excludeTable === "env_store"
+				? Promise.resolve([])
+				: vault.kvList(envScopePath(org_id, app_id, env_type_id)),
+			excludeTable === "secret_store"
+				? Promise.resolve([])
+				: vault.kvList(secretScopePath(org_id, app_id, env_type_id)),
+		]);
+
+		const envKeySet = new Set(envKeys);
+		const secretKeySet = new Set(secretKeys);
 
 		for (const key of keys) {
-			const result = await this.checkKeyExists({
-				key,
-				app_id,
-				env_type_id,
-				org_id,
-				excludeTable,
-			});
-
-			if (result.exists) {
+			if (excludeTable !== "env_store" && envKeySet.has(key)) {
 				conflicts.push({
 					key,
-					type: result.type,
-					message: result.message,
+					type: "environment_variable",
+					message: `Key "${key}" already exists as an environment variable`,
+				});
+			} else if (excludeTable !== "secret_store" && secretKeySet.has(key)) {
+				conflicts.push({
+					key,
+					type: "secret",
+					message: `Key "${key}" already exists as a secret`,
 				});
 			}
 		}

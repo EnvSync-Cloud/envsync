@@ -197,10 +197,10 @@ export const EditEnvVarModal = ({
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             <Edit className="w-5 h-5 text-emerald-500 mr-2" />
-            Edit Environment Variable
+            Edit Variable
           </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Update the environment variable details. Changes will be applied
+            Update the variable details. Changes will be applied
             immediately.
           </DialogDescription>
         </DialogHeader>
@@ -503,7 +503,7 @@ export const EditEnvVarModal = ({
                     Security Notice
                   </h4>
                   <p className="text-xs text-red-300/80">
-                    This is a sensitive environment variable. The current value is hidden for security.
+                    This is a sensitive variable. The current value is hidden for security.
                     {!isValueModified && " Only modify if you need to update the secret value."}
                     {isValueModified && " Make sure to save your changes to update the secret."}
                   </p>

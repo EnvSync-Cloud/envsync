@@ -5,7 +5,7 @@ import { SecretService } from "@/services/secret.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
-import { smartDecrypt, smartEncrypt } from "@/helpers/key-store";
+import { smartEncrypt, smartDecrypt } from "@/helpers/key-store";
 
 export class SecretController {
 	public static readonly createSecret = async (c: Context) => {
@@ -65,16 +65,19 @@ export class SecretController {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
-			// Create the secret
+			// Encrypt the value using the app's public key
+			const encryptedValue = smartEncrypt(value || "", app.public_key);
+
+			// Create the secret in Vault (encrypted)
 			const secret = await SecretService.createSecret({
 				key,
 				org_id,
-				value: smartEncrypt(value || "", app.public_key),
+				value: encryptedValue,
 				app_id,
 				env_type_id,
 			});
 
-			// Create PiT record
+			// Create PiT record with encrypted value
 			await SecretStorePiTService.createSecretStorePiT({
 				org_id,
 				app_id,
@@ -84,7 +87,7 @@ export class SecretController {
 				envs: [
 					{
 						key,
-						value: smartEncrypt(value || "", app.public_key),
+						value: encryptedValue,
 						operation: "CREATE",
 					},
 				],
@@ -174,9 +177,10 @@ export class SecretController {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
+			// Encrypt the value using the app's public key
 			const encryptedValue = smartEncrypt(value || "", app.public_key);
 
-			// Update the secret
+			// Update the secret in Vault (encrypted)
 			await SecretService.updateSecret({
 				key,
 				org_id,
@@ -185,7 +189,7 @@ export class SecretController {
 				env_type_id,
 			});
 
-			// Create PiT record
+			// Create PiT record with encrypted value
 			await SecretStorePiTService.createSecretStorePiT({
 				org_id,
 				app_id,
@@ -369,25 +373,25 @@ export class SecretController {
 				return c.json({ error: `Secrets already exist for keys: ${existingKeys.join(", ")}` }, 400);
 			}
 
-			// Encrypt the values before storing
-			let modEnvs = envs.map(env => ({
-				...env,
+			// Encrypt values using the app's public key
+			const encryptedEnvs = envs.map(env => ({
+				key: env.key,
 				value: smartEncrypt(env.value || "", app.public_key!),
 			}));
 
-			// Create secrets
-			await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, modEnvs);
+			// Create secrets in Vault (encrypted)
+			await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
 
-			// Create PiT record
+			// Create PiT record with encrypted values
 			await SecretStorePiTService.createSecretStorePiT({
 				org_id,
 				app_id,
 				env_type_id,
 				change_request_message:
 					change_message ||
-					`Batch created ${modEnvs.length} secrets: ${modEnvs.map(env => env.key).join(", ")}`,
+					`Batch created ${envs.length} secrets: ${envs.map(env => env.key).join(", ")}`,
 				user_id,
-				envs: modEnvs.map(env => ({
+				envs: encryptedEnvs.map(env => ({
 					key: env.key,
 					value: env.value,
 					operation: "CREATE" as const,
@@ -399,12 +403,12 @@ export class SecretController {
 				action: "secrets_batch_created",
 				org_id,
 				user_id,
-				message: `Batch creation of ${modEnvs.length} secrets with PiT tracking in app ${app_id} for environment type ${env_type_id} for keys: ${modEnvs.map(env => env.key).join(", ")}.`,
+				message: `Batch creation of ${envs.length} secrets with PiT tracking in app ${app_id} for environment type ${env_type_id} for keys: ${envs.map(env => env.key).join(", ")}.`,
 				details: {
 					app_id,
 					env_type_id,
-					env_count: modEnvs.length,
-					keys: modEnvs.map(env => env.key),
+					env_count: envs.length,
+					keys: envs.map(env => env.key),
 				},
 			});
 
@@ -490,25 +494,25 @@ export class SecretController {
 				);
 			}
 
-			// Encrypt the values before storing
-			const modEnvs = envs.map(env => ({
-				...env,
+			// Encrypt values using the app's public key
+			const encryptedEnvs = envs.map(env => ({
+				key: env.key,
 				value: smartEncrypt(env.value || "", app.public_key!),
 			}));
 
-			// Update secrets
-			await SecretService.batchUpdateSecrets(org_id, app_id, env_type_id, modEnvs);
+			// Update secrets in Vault (encrypted)
+			await SecretService.batchUpdateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
 
-			// Create PiT record
+			// Create PiT record with encrypted values
 			await SecretStorePiTService.createSecretStorePiT({
 				org_id,
 				app_id,
 				env_type_id,
 				change_request_message:
 					change_message ||
-					`Batch updated ${modEnvs.length} secrets: ${modEnvs.map(env => env.key).join(", ")}`,
+					`Batch updated ${envs.length} secrets: ${envs.map(env => env.key).join(", ")}`,
 				user_id,
-				envs: modEnvs.map(env => ({
+				envs: encryptedEnvs.map(env => ({
 					key: env.key,
 					value: env.value,
 					operation: "UPDATE" as const,
@@ -520,12 +524,12 @@ export class SecretController {
 				action: "secrets_batch_updated",
 				org_id,
 				user_id,
-				message: `Batch update of ${modEnvs.length} secrets with PiT tracking in app ${app_id} for environment type ${env_type_id} for keys: ${modEnvs.map(env => env.key).join(", ")}.`,
+				message: `Batch update of ${envs.length} secrets with PiT tracking in app ${app_id} for environment type ${env_type_id} for keys: ${envs.map(env => env.key).join(", ")}.`,
 				details: {
 					app_id,
 					env_type_id,
-					env_count: modEnvs.length,
-					keys: modEnvs.map(env => env.key),
+					env_count: envs.length,
+					keys: envs.map(env => env.key),
 				},
 			});
 
@@ -1031,7 +1035,7 @@ export class SecretController {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			if (!app.enable_secrets || !app.public_key) {
+			if (!app.enable_secrets) {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
@@ -1042,7 +1046,7 @@ export class SecretController {
 				org_id,
 			});
 
-			// Get target state from PiT
+			// Get target state from PiT (values resolved from Vault)
 			const targetSecrets = await SecretStorePiTService.getEnvsTillPiTId({
 				org_id,
 				app_id,
@@ -1050,14 +1054,18 @@ export class SecretController {
 				secret_store_pit_id: pit_id,
 			});
 
-			// Create maps for comparison
+			// Create maps for comparison (values are encrypted)
 			const currentMap = new Map(currentSecrets.map(secret => [secret.key, secret.value]));
 			const targetMap = new Map(targetSecrets.map(secret => [secret.key, secret.value]));
 
-			const rollbackOperations = [];
+			const rollbackOperations: Array<{
+				key: string;
+				value: string;
+				operation: "CREATE" | "UPDATE" | "DELETE";
+			}> = [];
 
 			// Find secrets to delete (exist in current but not in target)
-			for (const [key, value] of currentMap) {
+			for (const [key] of currentMap) {
 				if (!targetMap.has(key)) {
 					await SecretService.deleteSecret({
 						key,
@@ -1067,16 +1075,15 @@ export class SecretController {
 					});
 					rollbackOperations.push({
 						key,
-						value,
+						value: "",
 						operation: "DELETE" as const,
 					});
 				}
 			}
 
-			// Find secrets to create or update
+			// Find secrets to create or update (values are already encrypted from PiT)
 			for (const [key, value] of targetMap) {
 				if (!currentMap.has(key)) {
-					// Create new secret
 					await SecretService.createSecret({
 						key,
 						value,
@@ -1090,7 +1097,6 @@ export class SecretController {
 						operation: "CREATE" as const,
 					});
 				} else if (currentMap.get(key) !== value) {
-					// Update existing secret
 					await SecretService.updateSecret({
 						key,
 						value,
@@ -1130,7 +1136,6 @@ export class SecretController {
 						env_type_id,
 						pit_id,
 						operations_performed: rollbackOperations.length,
-						operations: rollbackOperations,
 					},
 				});
 			}
@@ -1138,7 +1143,6 @@ export class SecretController {
 			return c.json({
 				message: "Rollback completed successfully",
 				operations_performed: rollbackOperations.length,
-				operations: rollbackOperations,
 			});
 		} catch (err) {
 			if (err instanceof Error) {
@@ -1190,7 +1194,7 @@ export class SecretController {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			if (!app.enable_secrets || !app.public_key) {
+			if (!app.enable_secrets) {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
@@ -1201,7 +1205,7 @@ export class SecretController {
 				org_id,
 			});
 
-			// Get target state from timestamp
+			// Get target state from timestamp (values are encrypted from PiT)
 			const targetSecrets = await SecretStorePiTService.getEnvsTillTimestamp({
 				org_id,
 				app_id,
@@ -1209,14 +1213,18 @@ export class SecretController {
 				timestamp: targetTimestamp,
 			});
 
-			// Create maps for comparison
+			// Create maps for comparison (values are encrypted)
 			const currentMap = new Map(currentSecrets.map(secret => [secret.key, secret.value]));
 			const targetMap = new Map(targetSecrets.map(secret => [secret.key, secret.value]));
 
-			const rollbackOperations = [];
+			const rollbackOperations: Array<{
+				key: string;
+				value: string;
+				operation: "CREATE" | "UPDATE" | "DELETE";
+			}> = [];
 
 			// Find secrets to delete (exist in current but not in target)
-			for (const [key, value] of currentMap) {
+			for (const [key] of currentMap) {
 				if (!targetMap.has(key)) {
 					await SecretService.deleteSecret({
 						key,
@@ -1226,16 +1234,15 @@ export class SecretController {
 					});
 					rollbackOperations.push({
 						key,
-						value,
+						value: "",
 						operation: "DELETE" as const,
 					});
 				}
 			}
 
-			// Find secrets to create or update
+			// Find secrets to create or update (values are already encrypted from PiT)
 			for (const [key, value] of targetMap) {
 				if (!currentMap.has(key)) {
-					// Create new secret
 					await SecretService.createSecret({
 						key,
 						value,
@@ -1249,7 +1256,6 @@ export class SecretController {
 						operation: "CREATE" as const,
 					});
 				} else if (currentMap.get(key) !== value) {
-					// Update existing secret
 					await SecretService.updateSecret({
 						key,
 						value,
@@ -1289,7 +1295,6 @@ export class SecretController {
 						env_type_id,
 						timestamp: targetTimestamp.toISOString(),
 						operations_performed: rollbackOperations.length,
-						operations: rollbackOperations,
 					},
 				});
 			}
@@ -1297,7 +1302,6 @@ export class SecretController {
 			return c.json({
 				message: "Rollback completed successfully",
 				operations_performed: rollbackOperations.length,
-				operations: rollbackOperations,
 				target_timestamp: targetTimestamp.toISOString(),
 			});
 		} catch (err) {
@@ -1345,7 +1349,7 @@ export class SecretController {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			if (!app.enable_secrets || !app.public_key) {
+			if (!app.enable_secrets) {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
@@ -1357,7 +1361,7 @@ export class SecretController {
 				org_id,
 			});
 
-			// Get target state from PiT
+			// Get target state from PiT (values resolved from Vault)
 			const targetSecrets = await SecretStorePiTService.getEnvsTillPiTId({
 				org_id,
 				app_id,
@@ -1367,10 +1371,13 @@ export class SecretController {
 
 			// Find the specific variable in target state
 			const targetSecret = targetSecrets.find(secret => secret.key === key);
-			let rollbackOperation = null;
+			let rollbackOperation: {
+				key: string;
+				value: string;
+				operation: "CREATE" | "UPDATE" | "DELETE";
+			} | null = null;
 
 			if (!targetSecret && currentSecret) {
-				// Variable exists now but didn't exist at target PiT - DELETE it
 				await SecretService.deleteSecret({
 					key,
 					app_id,
@@ -1379,13 +1386,10 @@ export class SecretController {
 				});
 				rollbackOperation = {
 					key,
-					value: currentSecret.value,
+					value: "",
 					operation: "DELETE" as const,
-					previous_value: currentSecret.value,
-					target_value: null,
 				};
 			} else if (targetSecret && !currentSecret) {
-				// Variable didn't exist now but existed at target PiT - CREATE it
 				await SecretService.createSecret({
 					key,
 					value: targetSecret.value,
@@ -1397,11 +1401,8 @@ export class SecretController {
 					key,
 					value: targetSecret.value,
 					operation: "CREATE" as const,
-					previous_value: null,
-					target_value: targetSecret.value,
 				};
 			} else if (targetSecret && currentSecret && targetSecret.value !== currentSecret.value) {
-				// Variable exists in both but values differ - UPDATE it
 				await SecretService.updateSecret({
 					key,
 					value: targetSecret.value,
@@ -1413,16 +1414,11 @@ export class SecretController {
 					key,
 					value: targetSecret.value,
 					operation: "UPDATE" as const,
-					previous_value: currentSecret.value,
-					target_value: targetSecret.value,
 				};
 			} else {
-				// No changes needed
 				return c.json({
 					message: "No rollback needed - secret is already at target state",
 					key,
-					current_value: currentSecret?.value || null,
-					target_value: targetSecret?.value || null,
 				});
 			}
 
@@ -1432,16 +1428,9 @@ export class SecretController {
 				app_id,
 				env_type_id,
 				change_request_message:
-					rollback_message ||
-					`Rollback secret ${key} to PiT ${pit_id}: ${rollbackOperation.previous_value} → ${rollbackOperation.target_value}`,
+					rollback_message || `Rollback secret ${key} to PiT ${pit_id}`,
 				user_id,
-				envs: [
-					{
-						key: rollbackOperation.key,
-						value: rollbackOperation.value,
-						operation: rollbackOperation.operation,
-					},
-				],
+				envs: [rollbackOperation],
 			});
 
 			// Log the rollback operation
@@ -1456,8 +1445,6 @@ export class SecretController {
 					key,
 					pit_id,
 					operation: rollbackOperation.operation,
-					previous_value: rollbackOperation.previous_value,
-					target_value: rollbackOperation.target_value,
 				},
 			});
 
@@ -1465,8 +1452,6 @@ export class SecretController {
 				message: "Secret variable rollback completed successfully",
 				key,
 				operation: rollbackOperation.operation,
-				previous_value: rollbackOperation.previous_value,
-				target_value: rollbackOperation.target_value,
 				pit_id,
 			});
 		} catch (err) {
@@ -1523,7 +1508,7 @@ export class SecretController {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			if (!app.enable_secrets || !app.public_key) {
+			if (!app.enable_secrets) {
 				return c.json({ error: "Secrets are not enabled for this app." }, 403);
 			}
 
@@ -1535,7 +1520,7 @@ export class SecretController {
 				org_id,
 			});
 
-			// Get target state from timestamp
+			// Get target state from timestamp (values resolved from Vault)
 			const targetSecrets = await SecretStorePiTService.getEnvsTillTimestamp({
 				org_id,
 				app_id,
@@ -1545,10 +1530,13 @@ export class SecretController {
 
 			// Find the specific variable in target state
 			const targetSecret = targetSecrets.find(secret => secret.key === key);
-			let rollbackOperation = null;
+			let rollbackOperation: {
+				key: string;
+				value: string;
+				operation: "CREATE" | "UPDATE" | "DELETE";
+			} | null = null;
 
 			if (!targetSecret && currentSecret) {
-				// Variable exists now but didn't exist at target timestamp - DELETE it
 				await SecretService.deleteSecret({
 					key,
 					app_id,
@@ -1557,13 +1545,10 @@ export class SecretController {
 				});
 				rollbackOperation = {
 					key,
-					value: currentSecret.value,
+					value: "",
 					operation: "DELETE" as const,
-					previous_value: currentSecret.value,
-					target_value: null,
 				};
 			} else if (targetSecret && !currentSecret) {
-				// Variable didn't exist now but existed at target timestamp - CREATE it
 				await SecretService.createSecret({
 					key,
 					value: targetSecret.value,
@@ -1575,11 +1560,8 @@ export class SecretController {
 					key,
 					value: targetSecret.value,
 					operation: "CREATE" as const,
-					previous_value: null,
-					target_value: targetSecret.value,
 				};
 			} else if (targetSecret && currentSecret && targetSecret.value !== currentSecret.value) {
-				// Variable exists in both but values differ - UPDATE it
 				await SecretService.updateSecret({
 					key,
 					value: targetSecret.value,
@@ -1591,16 +1573,11 @@ export class SecretController {
 					key,
 					value: targetSecret.value,
 					operation: "UPDATE" as const,
-					previous_value: currentSecret.value,
-					target_value: targetSecret.value,
 				};
 			} else {
-				// No changes needed
 				return c.json({
 					message: "No rollback needed - secret is already at target state",
 					key,
-					current_value: currentSecret?.value || null,
-					target_value: targetSecret?.value || null,
 					target_timestamp: targetTimestamp.toISOString(),
 				});
 			}
@@ -1611,16 +1588,9 @@ export class SecretController {
 				app_id,
 				env_type_id,
 				change_request_message:
-					rollback_message ||
-					`Rollback secret ${key} to ${targetTimestamp.toISOString()}: ${rollbackOperation.previous_value} → ${rollbackOperation.target_value}`,
+					rollback_message || `Rollback secret ${key} to ${targetTimestamp.toISOString()}`,
 				user_id,
-				envs: [
-					{
-						key: rollbackOperation.key,
-						value: rollbackOperation.value,
-						operation: rollbackOperation.operation,
-					},
-				],
+				envs: [rollbackOperation],
 			});
 
 			// Log the rollback operation
@@ -1635,8 +1605,6 @@ export class SecretController {
 					key,
 					timestamp: targetTimestamp.toISOString(),
 					operation: rollbackOperation.operation,
-					previous_value: rollbackOperation.previous_value,
-					target_value: rollbackOperation.target_value,
 				},
 			});
 
@@ -1644,8 +1612,6 @@ export class SecretController {
 				message: "Secret variable rollback completed successfully",
 				key,
 				operation: rollbackOperation.operation,
-				previous_value: rollbackOperation.previous_value,
-				target_value: rollbackOperation.target_value,
 				target_timestamp: targetTimestamp.toISOString(),
 			});
 		} catch (err) {
@@ -1684,7 +1650,15 @@ export class SecretController {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			// Get the secret
+			// Only managed secrets can be revealed (server has the private key)
+			if (!app.is_managed_secret) {
+				return c.json({ error: "Cannot reveal secrets for non-managed apps. Decrypt client-side with your own key." }, 403);
+			}
+
+			// Get the app's private key for decryption
+			const privateKey = await AppService.getManagedAppPrivateKey(app_id);
+
+			// Get secrets from Vault (values are encrypted)
 			const secrets = await SecretService.getAllSecret({
 				app_id,
 				env_type_id,
@@ -1695,18 +1669,15 @@ export class SecretController {
 				return c.json({ error: "Secret not found." }, 404);
 			}
 
-			// Filter secrets by keys
-			const filteredSecrets = secrets.filter(secret => keys.includes(secret.key));
+			// Filter secrets by requested keys and decrypt
+			const filteredSecrets = secrets
+				.filter(secret => keys.includes(secret.key))
+				.map(secret => ({
+					...secret,
+					value: smartDecrypt(secret.value, privateKey!),
+				}));
 
-			const appPrivateKey = await AppService.getManagedAppPrivateKey(app_id);
-
-			// Decrypt the secret values
-			const decryptedSecrets = filteredSecrets.map(secret => ({
-				...secret,
-				value: smartDecrypt(secret.value, appPrivateKey!),
-			}));
-
-			return c.json(decryptedSecrets);
+			return c.json(filteredSecrets);
 		} catch (err) {
 			if (err instanceof Error) {
 				return c.json({ error: err.message }, 500);

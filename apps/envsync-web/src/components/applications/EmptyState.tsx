@@ -19,8 +19,8 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
         {canEdit && (
           <>
             <p className="text-slate-400 mb-6">
-              Create your first project to start managing environment variables
-              and configurations.
+              Create your first project to start managing variables and
+              configurations.
             </p>
             <Button
               onClick={onCreateProject}

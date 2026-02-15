@@ -378,52 +378,52 @@ export const WEBHOOK_EVENT_CATEGORIES = [
   },
   {
     name: "environment",
-    label: "Environment Variables",
+    label: "Variables",
     subcategories: [
       {
         name: "env_operations",
-        label: "Environment Operations",
+        label: "Variable Operations",
         events: [
-          { value: "env_created", label: "Environment Created" },
-          { value: "env_updated", label: "Environment Updated" },
-          { value: "env_deleted", label: "Environment Deleted" },
-          { value: "env_viewed", label: "Environment Viewed" },
-          { value: "envs_viewed", label: "Environments Viewed" }
+          { value: "env_created", label: "Variable Created" },
+          { value: "env_updated", label: "Variable Updated" },
+          { value: "env_deleted", label: "Variable Deleted" },
+          { value: "env_viewed", label: "Variable Viewed" },
+          { value: "envs_viewed", label: "Variables Viewed" }
         ]
       },
       {
         name: "env_batch",
         label: "Batch Operations",
         events: [
-          { value: "envs_batch_updated", label: "Environments Batch Updated" },
-          { value: "envs_batch_created", label: "Environments Batch Created" },
-          { value: "envs_batch_deleted", label: "Environments Batch Deleted" }
+          { value: "envs_batch_updated", label: "Variables Batch Updated" },
+          { value: "envs_batch_created", label: "Variables Batch Created" },
+          { value: "envs_batch_deleted", label: "Variables Batch Deleted" }
         ]
       },
       {
         name: "env_rollback",
         label: "Rollback Operations",
         events: [
-          { value: "envs_rollback_pit", label: "Environments Rollback PIT" },
-          { value: "envs_rollback_timestamp", label: "Environments Rollback Timestamp" },
-          { value: "env_variable_rollback_pit", label: "Environment Variable Rollback PIT" },
-          { value: "env_variable_rollback_timestamp", label: "Environment Variable Rollback Timestamp" }
+          { value: "envs_rollback_pit", label: "Variables Rollback PIT" },
+          { value: "envs_rollback_timestamp", label: "Variables Rollback Timestamp" },
+          { value: "env_variable_rollback_pit", label: "Variable Rollback PIT" },
+          { value: "env_variable_rollback_timestamp", label: "Variable Rollback Timestamp" }
         ]
       }
     ],
     events: [
-      { value: "env_created", label: "Environment Created" },
-      { value: "env_updated", label: "Environment Updated" },
-      { value: "env_deleted", label: "Environment Deleted" },
-      { value: "env_viewed", label: "Environment Viewed" },
-      { value: "envs_viewed", label: "Environments Viewed" },
-      { value: "envs_batch_updated", label: "Environments Batch Updated" },
-      { value: "envs_batch_created", label: "Environments Batch Created" },
-      { value: "envs_batch_deleted", label: "Environments Batch Deleted" },
-      { value: "envs_rollback_pit", label: "Environments Rollback PIT" },
-      { value: "envs_rollback_timestamp", label: "Environments Rollback Timestamp" },
-      { value: "env_variable_rollback_pit", label: "Environment Variable Rollback PIT" },
-      { value: "env_variable_rollback_timestamp", label: "Environment Variable Rollback Timestamp" }
+      { value: "env_created", label: "Variable Created" },
+      { value: "env_updated", label: "Variable Updated" },
+      { value: "env_deleted", label: "Variable Deleted" },
+      { value: "env_viewed", label: "Variable Viewed" },
+      { value: "envs_viewed", label: "Variables Viewed" },
+      { value: "envs_batch_updated", label: "Variables Batch Updated" },
+      { value: "envs_batch_created", label: "Variables Batch Created" },
+      { value: "envs_batch_deleted", label: "Variables Batch Deleted" },
+      { value: "envs_rollback_pit", label: "Variables Rollback PIT" },
+      { value: "envs_rollback_timestamp", label: "Variables Rollback Timestamp" },
+      { value: "env_variable_rollback_pit", label: "Variable Rollback PIT" },
+      { value: "env_variable_rollback_timestamp", label: "Variable Rollback Timestamp" }
     ]
   },
   {

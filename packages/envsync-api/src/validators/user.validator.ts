@@ -12,7 +12,7 @@ export const userResponseSchema = z
 			.openapi({ example: "https://example.com/avatar.jpg" }),
 		org_id: z.string().openapi({ example: "org_123" }),
 		role_id: z.string().openapi({ example: "role_123" }),
-		keycloak_id: z.string().nullable().openapi({ example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
+		auth_service_id: z.string().nullable().openapi({ example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
 		is_active: z.boolean().openapi({ example: true }),
 		created_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
 		updated_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),

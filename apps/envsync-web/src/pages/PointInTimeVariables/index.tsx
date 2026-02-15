@@ -85,6 +85,7 @@ const PointInTime = () => {
   const {
     project,
     environmentTypes,
+    enableSecrets,
     isLoading: isProjectLoading,
     error: projectError,
     refetch: refetchProject,
@@ -136,15 +137,16 @@ const PointInTime = () => {
   // Handle environment change
   const handleEnvironmentChange = useCallback(
     (envId: string) => {
+      const env = environmentTypes?.find((e) => e.id === envId);
       setSearchParams((prev) => {
         const newParams = new URLSearchParams(prev);
-        newParams.set("env", envId);
+        newParams.set("env", env?.name?.toLowerCase() || envId);
         return newParams;
       });
       setCurrentPage(1); // Reset to first page when changing environment
       setSelectedPitData(null); // Clear selected PiT when changing environment
     },
-    [setSearchParams]
+    [setSearchParams, environmentTypes]
   );
 
   // Handle page change
@@ -161,7 +163,7 @@ const PointInTime = () => {
     (pitData: PitHistoryItem) => {
       if (!projectNameId || !selectedEnvironment?.id) return;
 
-      const confirmMessage = `Are you sure you want to rollback to PIT ${pitData.id}?\n\nThis will restore all environment variables to their state at that point in time.\n\nMessage: ${pitData.change_request_message}`;
+      const confirmMessage = `Are you sure you want to rollback to PIT ${pitData.id}?\n\nThis will restore all variables to their state at that point in time.\n\nMessage: ${pitData.change_request_message}`;
 
       if (window.confirm(confirmMessage)) {
         rollbackToPit.mutate({
@@ -284,6 +286,7 @@ const PointInTime = () => {
         selectedEnvironmentId={selectedEnvironment.id}
         canEdit={false}
         isRefetching={isRefetching}
+        enableSecrets={enableSecrets}
         onBack={onBack}
         onRefresh={handleRefresh}
         onAddVariable={() => {}}
@@ -304,8 +307,8 @@ const PointInTime = () => {
               No Point-in-Time History
             </h3>
             <p className="text-slate-400 text-center max-w-md">
-              No environment variable changes have been recorded yet. Start
-              making changes to see the point-in-time history here.
+              No variable changes have been recorded yet. Start making changes
+              to see the point-in-time history here.
             </p>
           </CardContent>
         </Card>
@@ -442,7 +445,7 @@ const PointInTime = () => {
                   Point-in-Time History
                 </h3>
                 <p className="text-slate-400 text-sm">
-                  Complete timeline of environment changes for{" "}
+                  Complete timeline of variable changes for{" "}
                   {selectedEnvironment.name}
                 </p>
               </div>
@@ -612,7 +615,7 @@ const PointInTime = () => {
         <Alert className="bg-orange-500/10 border-orange-500/30">
           <AlertCircle className="h-4 w-4 text-orange-400" />
           <AlertDescription className="text-orange-200">
-            Rolling back environment variables... This may take a few moments.
+            Rolling back variables... This may take a few moments.
           </AlertDescription>
         </Alert>
       )}

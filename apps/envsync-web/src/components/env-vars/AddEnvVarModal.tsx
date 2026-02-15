@@ -132,10 +132,10 @@ export const AddEnvVarModal = ({
   }, [onOpenChange]);
 
   // Dynamic content based on context
-  const modalTitle = isSecretsPage ? "Add Secret" : "Add Environment Variable";
+  const modalTitle = isSecretsPage ? "Add Secret" : "Add Variable";
   const modalDescription = isSecretsPage 
     ? "Create a new secret for your project. Secrets are automatically encrypted and hidden by default."
-    : "Create a new environment variable for your project. Variables can be regular values or sensitive secrets.";
+    : "Create a new variable for your project. Variables can be regular values or sensitive secrets.";
   const buttonText = isSecretsPage ? "Add Secret" : "Add Variable";
   const buttonIcon = isSecretsPage ? Shield : Plus;
   const buttonColor = isSecretsPage 

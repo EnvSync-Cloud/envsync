@@ -8,7 +8,7 @@ export class AppController {
 	public static readonly createApp = async (c: Context) => {
 		try {
 			const org_id = c.get("org_id");
-			let private_key = "";
+			let private_key: string | null = null;
 
 			let { name, description, metadata, enable_secrets = false, public_key } = await c.req.json();
 
@@ -91,10 +91,12 @@ export class AppController {
 
 			const envCount = await AppService.getEnvCountByApp({
 				app_id: app.id,
+				org_id,
 			});
 
 			const secretCount = await AppService.getSecretCountByApp({
 				app_id: app.id,
+				org_id,
 			});
 
 			return c.json({ ...app, env_types, envCount, secretCount });
@@ -125,22 +127,20 @@ export class AppController {
 				},
 			});
 
-			// Return the list of apps
-			// This could be optimized to include env_types in the response
 			const appsWithEnvTypes = await Promise.all(
 				apps.map(async app => {
 					const env_types = await AppService.getAppEnvTypes({
 						app_id: app.id,
 					});
-					
-					// Optionally, you can also get the environment count for each app
+
 					const envCount = await AppService.getEnvCountByApp({
 						app_id: app.id,
+						org_id,
 					});
 
-					// Optionally, you can also get the secret count for each app
 					const secretCount = await AppService.getSecretCountByApp({
 						app_id: app.id,
+						org_id,
 					});
 
 					return { ...app, env_types, envCount, secretCount };
