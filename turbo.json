@@ -1,0 +1,33 @@
+{
+    "$schema": "https://turbo.build/schema.json",
+    "tasks": {
+        "build": {
+            "outputs": ["dist/**", "build/**"]
+        },
+        "dev": {
+            "dependsOn": ["^dev"],
+            "cache": false,
+            "persistent": false
+        },
+        "envsync-web#dev": {
+            "cache": false,
+            "persistent": true
+        },
+        "envsync-landing#dev": {
+            "cache": false,
+            "persistent": true
+        },
+        "start": {
+            "dependsOn": ["^start"],
+            "outputs": ["dist/**", "build/**"],
+            "persistent": true
+        }
+    },
+    "ui": "tui",
+    "globalDependencies": [
+        "package.json"
+    ],
+    "globalEnv": [
+
+    ]
+}

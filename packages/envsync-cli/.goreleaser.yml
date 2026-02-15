@@ -1,0 +1,75 @@
+version: 2
+project_name: envsync-cli
+
+before:
+  hooks:
+    - go mod tidy
+    - chmod +x scripts/generate-completions.sh
+
+builds:
+  - binary: "envsync"
+    main: ./cmd/cli
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/EnvSync-Cloud/envsync-cli/internal/config.backendURL="${.Env.ENVSYNC_API_URL}"
+    hooks:
+      post:
+        - cmd: scripts/generate-completions.sh "{{ .Path }}"
+
+release:
+  prerelease: auto
+
+universal_binaries:
+  - replace: true
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^test:"
+      - "^chore"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+      - go mod tidy
+  groups:
+    - title: Dependency updates
+      regexp: "^.*feat\\(deps\\)*:+.*$"
+      order: 300
+    - title: "New Features"
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 100
+    - title: "Bug fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 200
+    - title: "Documentation updates"
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 400
+    - title: Other work
+      order: 9999
+
+archives:
+  - name_template: >
+      {{- .ProjectName }}_{{- .Version }}_{{- title .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{- if .Arm }}v{{ .Arm }}{{ end -}}
+    format_overrides:
+      - goos: windows
+        formats: ["zip"]
+    builds_info:
+      group: root
+      owner: root
+    files:
+      - README.md
+      - completions/*
+
+checksum:
+  name_template: "checksums.txt"

@@ -1,0 +1,308 @@
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ArrowLeft,
+  Plus,
+  RefreshCw,
+  Upload,
+  Download,
+  Settings,
+  Database,
+  ChevronDown,
+  Shield,
+  MoreVertical,
+  DatabaseBackup,
+  History,
+} from "lucide-react";
+
+interface ProjectEnvironmentsHeaderProps {
+  projectName: string;
+  environmentId: string;
+  totalVariables: number;
+  totalSecrets: number;
+  environmentTypes: number;
+  canEdit: boolean;
+  isRefetching: boolean;
+  onBack: () => void;
+  onRefresh: () => void;
+  onAddVariable: () => void;
+  onBulkImport: () => void;
+  onExport: () => void;
+  onManageEnvironments: () => void;
+}
+
+export const ProjectEnvironmentsHeader = ({
+  projectName,
+  environmentId,
+  totalVariables,
+  totalSecrets,
+  environmentTypes,
+  canEdit,
+  isRefetching,
+  onBack,
+  onRefresh,
+  onAddVariable,
+  onBulkImport,
+  onExport,
+  onManageEnvironments,
+}: ProjectEnvironmentsHeaderProps) => {
+  const navigate = useNavigate();
+  const { projectNameId } = useParams();
+  const location = useLocation();
+
+  // Determine current section based on route
+  const isSecretsPage = location.pathname.includes("/secrets");
+  const currentSection = isSecretsPage ? "Secrets" : "Environments";
+
+  const handleSectionChange = (section: "environments" | "secrets") => {
+    if (!projectNameId) return;
+
+    const targetPath = `/applications/${projectNameId}`;
+    navigate(targetPath);
+  };
+
+  const onRollback = () => {
+    let targetUrl = `/applications/pit/${projectNameId}`;
+    if (currentSection === "Secrets") targetUrl += "/secrets";
+    targetUrl += `?env=${environmentId}`;
+
+    navigate(targetUrl);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Navigation */}
+      <div className="flex items-center space-x-3">
+        <Button
+          onClick={onBack}
+          variant="ghost"
+          size="sm"
+          className="text-slate-400 hover:text-white hover:bg-slate-700"
+        >
+          <ArrowLeft className="size-4 mr-1" />
+          Back to Projects
+        </Button>
+        <span className="text-slate-500">/</span>
+        <span className="text-slate-300">{projectName}</span>
+        <span className="text-slate-500">/</span>
+
+        {/* Section Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white font-medium hover:bg-slate-700 px-3 py-2 h-auto"
+            >
+              {isSecretsPage ? (
+                <Shield className="w-4 h-4 mr-2" />
+              ) : (
+                <Settings className="w-4 h-4 mr-2" />
+              )}
+              {currentSection}
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="bg-slate-800 border-slate-700 min-w-[200px]"
+            align="start"
+          >
+            <DropdownMenuItem
+              onClick={() => handleSectionChange("environments")}
+              className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
+                !isSecretsPage ? "bg-slate-700" : ""
+              }`}
+            >
+              <Settings className="w-4 h-4 mr-3 text-emerald-400" />
+              <div className="flex flex-col">
+                <span className="font-medium">Environments</span>
+                <span className="text-xs text-slate-400">
+                  Manage environment variables & configuration
+                </span>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSectionChange("secrets")}
+              className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
+                isSecretsPage ? "bg-slate-700" : ""
+              }`}
+            >
+              <Shield className="w-4 h-4 mr-3 text-red-400" />
+              <div className="flex flex-col">
+                <span className="font-medium">Secrets</span>
+                <span className="text-xs text-slate-400">
+                  Manage sensitive variables & credentials
+                </span>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-electric_indigo-400 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Database className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">{projectName}</h1>
+              <p className="text-slate-400">
+                {isSecretsPage
+                  ? "Sensitive Variables & Credentials Management"
+                  : "Environment Variables & Configuration"}
+              </p>
+            </div>
+          </div>
+
+          {/* Statistics */}
+          <div className="flex items-center space-x-4 mt-3">
+            {!isSecretsPage ? (
+              <>
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-700 text-slate-300"
+                >
+                  {totalVariables} Variables
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-700 text-slate-300"
+                >
+                  {totalSecrets} Secrets
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-500/20 text-emerald-400"
+                >
+                  {environmentTypes} Environments
+                </Badge>
+              </>
+            ) : (
+              <>
+                <Badge
+                  variant="secondary"
+                  className="bg-red-500/20 text-red-400"
+                >
+                  <Shield className="w-3 h-3 mr-1" />
+                  {totalSecrets} Secrets
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-700 text-slate-300"
+                >
+                  {totalVariables} Total Variables
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-500/20 text-emerald-400"
+                >
+                  {environmentTypes} Environments
+                </Badge>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center space-x-3">
+          {/* Options Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-slate-400 border-slate-600 hover:bg-slate-700"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="bg-slate-800 border-slate-700 min-w-[160px]"
+              align="end"
+            >
+              <DropdownMenuItem
+                onClick={onRefresh}
+                disabled={isRefetching}
+                className="text-white hover:bg-slate-700 cursor-pointer"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${
+                    isRefetching ? "animate-spin" : ""
+                  }`}
+                />
+                Refresh
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={onExport}
+                className="text-white hover:bg-slate-700 cursor-pointer"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </DropdownMenuItem>
+              {!isSecretsPage && (
+                <DropdownMenuItem
+                  onClick={onRollback}
+                  className="text-white hover:bg-slate-700 cursor-pointer"
+              >
+                <History className="w-4 h-4 mr-2" />
+                Recovery
+              </DropdownMenuItem>)}
+              {canEdit && (
+                <DropdownMenuItem
+                  onClick={onManageEnvironments}
+                  className="text-white hover:bg-slate-700 cursor-pointer"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage Environments
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {canEdit && (
+            <>
+              <Button
+                onClick={onBulkImport}
+                variant="outline"
+                className="text-white border-slate-600 hover:bg-slate-700"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Bulk Import
+              </Button>
+
+              <Button
+                onClick={onAddVariable}
+                className={`text-white ${
+                  isSecretsPage
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-emerald-500 hover:bg-emerald-600"
+                }`}
+              >
+                {isSecretsPage ? (
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Add Secret
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Variable
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

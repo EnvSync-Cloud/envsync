@@ -1,0 +1,40 @@
+{
+  "name": "@envsync-cloud/envsync-ts-sdk",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {}
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "openapi": "openapi",
+    "generate": "bun run generate:local && bun run build && bun publish",
+    "generate:local": "bun run scripts/gen.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "openapi-typescript-codegen": "^0.29.0",
+    "tsup": "^8.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "version": "0.3.7",
+  "publishConfig": {
+    "access": "public"
+  }
+}

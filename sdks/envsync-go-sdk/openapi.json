@@ -1,0 +1,7083 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "EnvSync API",
+    "description": "API Documentation",
+    "version": "0.3.3"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "LoginUrlResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Login created successfully."
+          },
+          "loginUrl": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://auth0.com/authorize?client_id=xxx&response_type=code"
+          }
+        },
+        "required": [
+          "message",
+          "loginUrl"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "An error occurred."
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "CallbackResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Login callback successful."
+          },
+          "tokenData": {
+            "type": "object",
+            "properties": {
+              "access_token": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "id_token": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "scope": {
+                "type": "string",
+                "example": "openid profile email"
+              },
+              "expires_in": {
+                "type": "number",
+                "example": 86400
+              },
+              "token_type": {
+                "type": "string",
+                "example": "Bearer"
+              }
+            },
+            "required": [
+              "access_token",
+              "id_token",
+              "scope",
+              "expires_in",
+              "token_type"
+            ]
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "GetAppsResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "app_123"
+            },
+            "name": {
+              "type": "string",
+              "example": "My Application"
+            },
+            "description": {
+              "type": "string",
+              "example": "Description of my application"
+            },
+            "enable_secrets": {
+              "type": "boolean",
+              "example": false
+            },
+            "is_managed_secret": {
+              "type": "boolean",
+              "example": false
+            },
+            "public_key": {
+              "type": "string",
+              "example": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": {},
+              "example": {
+                "key": "value"
+              }
+            },
+            "org_id": {
+              "type": "string",
+              "example": "org_123"
+            },
+            "envCount": {
+              "type": "number",
+              "example": 5
+            },
+            "secretCount": {
+              "type": "number",
+              "example": 10
+            },
+            "env_types": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "example": "env_type_123"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Production"
+                  },
+                  "is_default": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "is_protected": {
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "color": {
+                    "type": "string",
+                    "example": "#ff0000"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "is_default",
+                  "is_protected",
+                  "color"
+                ]
+              },
+              "example": [
+                {
+                  "id": "env_type_123",
+                  "name": "Production",
+                  "is_default": true,
+                  "is_protected": false,
+                  "color": "#ff0000"
+                }
+              ]
+            },
+            "created_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            },
+            "updated_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "description",
+            "enable_secrets",
+            "is_managed_secret",
+            "metadata",
+            "org_id",
+            "envCount",
+            "secretCount",
+            "env_types",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      },
+      "GetAppResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "My Application"
+          },
+          "description": {
+            "type": "string",
+            "example": "Description of my application"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {
+              "key": "value"
+            }
+          },
+          "enable_secrets": {
+            "type": "boolean",
+            "example": false
+          },
+          "is_managed_secret": {
+            "type": "boolean",
+            "example": false
+          },
+          "public_key": {
+            "type": "string",
+            "example": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "envCount": {
+            "type": "number",
+            "example": 5
+          },
+          "secretCount": {
+            "type": "number",
+            "example": 10
+          },
+          "env_types": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "example": "env_type_123"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Production"
+                },
+                "is_default": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "is_protected": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "color": {
+                  "type": "string",
+                  "example": "#ff0000"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "is_default",
+                "is_protected",
+                "color"
+              ]
+            },
+            "example": [
+              {
+                "id": "env_type_123",
+                "name": "Production",
+                "is_default": true,
+                "is_protected": false,
+                "color": "#ff0000"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "metadata",
+          "enable_secrets",
+          "is_managed_secret",
+          "org_id",
+          "envCount",
+          "secretCount",
+          "env_types",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateAppResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Application created successfully"
+          },
+          "id": {
+            "type": "string",
+            "example": "app_123"
+          }
+        },
+        "required": [
+          "message",
+          "id"
+        ]
+      },
+      "CreateAppRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "My Application"
+          },
+          "description": {
+            "type": "string",
+            "example": "Description of my application"
+          },
+          "enable_secrets": {
+            "type": "boolean",
+            "example": false
+          },
+          "public_key": {
+            "type": "string",
+            "example": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {
+              "key": "value"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      },
+      "UpdateAppResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Application updated successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "UpdateAppRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Updated Application Name"
+          },
+          "description": {
+            "type": "string",
+            "example": "Updated description"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {
+              "key": "new_value"
+            }
+          }
+        }
+      },
+      "DeleteAppResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Application deleted successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "api_key_123"
+          },
+          "user_id": {
+            "type": "string",
+            "example": "user_123"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "description": {
+            "type": "string",
+            "example": "Production API Key"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "key": {
+            "type": "string",
+            "example": "eVs_xxxxx"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "org_id",
+          "description",
+          "is_active",
+          "key",
+          "created_at",
+          "updated_at",
+          "last_used_at"
+        ]
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Production API Key"
+          },
+          "description": {
+            "type": "string",
+            "example": "API key for production environment"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ApiKeysResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ApiKeyResponse"
+        }
+      },
+      "UpdateApiKeyRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Updated API key description"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": false
+          },
+          "last_used_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        }
+      },
+      "RegenerateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "newKey": {
+            "type": "string",
+            "example": "eVs_newkey_xxxxx"
+          },
+          "id": {
+            "type": "string",
+            "example": "api_key_123"
+          }
+        },
+        "required": [
+          "newKey",
+          "id"
+        ]
+      },
+      "GetAuditLogsResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "auditLogs": {
+            "$ref": "#/components/schemas/GetAuditLogsResponse"
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "auditLogs",
+          "totalPages"
+        ],
+        "description": "Response schema for getting audit logs",
+        "example": {
+          "auditLogs": [
+            {
+              "id": "audit_123",
+              "action": "user_invite_created",
+              "org_id": "org_123",
+              "user_id": "user_123",
+              "details": "{\"invite_id\":\"invite_123\",\"email\":\"user@example.com\",\"role_id\":\"role_123\"}",
+              "message": "User invite created for user@example.com",
+              "created_at": "2023-01-01T00:00:00Z",
+              "updated_at": "2023-01-01T00:00:00Z"
+            }
+          ],
+          "totalPages": 5
+        }
+      },
+      "GetAuditLogsResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "audit_123"
+            },
+            "action": {
+              "type": "string",
+              "example": "user_invite_created"
+            },
+            "org_id": {
+              "type": "string",
+              "example": "org_123"
+            },
+            "user_id": {
+              "type": "string",
+              "example": "user_123"
+            },
+            "details": {
+              "type": "string",
+              "example": "{\"invite_id\":\"invite_123\",\"email\":\"user@example.com\",\"role_id\":\"role_123\"}"
+            },
+            "message": {
+              "type": "string",
+              "example": "User invite created for user@example.com"
+            },
+            "created_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            },
+            "updated_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            }
+          },
+          "required": [
+            "id",
+            "action",
+            "org_id",
+            "user_id",
+            "details",
+            "message",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      },
+      "WhoAmIResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "user_123"
+              },
+              "email": {
+                "type": "string",
+                "example": "user@example.com"
+              },
+              "full_name": {
+                "type": "string",
+                "example": "John Doe"
+              },
+              "org_id": {
+                "type": "string",
+                "example": "org_123"
+              },
+              "role_id": {
+                "type": "string",
+                "example": "role_123"
+              },
+              "profile_picture_url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "https://example.com/avatar.jpg"
+              },
+              "is_active": {
+                "type": "boolean",
+                "example": true
+              },
+              "created_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "full_name",
+              "org_id",
+              "role_id",
+              "profile_picture_url",
+              "is_active",
+              "created_at",
+              "updated_at"
+            ]
+          },
+          "org": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "org_123"
+              },
+              "name": {
+                "type": "string",
+                "example": "My Organization"
+              },
+              "logo_url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "https://example.com/logo.png"
+              },
+              "slug": {
+                "type": "string",
+                "example": "my-organization"
+              },
+              "size": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "small"
+              },
+              "website": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "https://example.com"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {},
+                "example": {
+                  "industry": "technology"
+                }
+              },
+              "created_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "logo_url",
+              "slug",
+              "size",
+              "website",
+              "metadata",
+              "created_at",
+              "updated_at"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/RoleResponse"
+          }
+        },
+        "required": [
+          "user",
+          "org",
+          "role"
+        ]
+      },
+      "RoleResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "role_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Developer"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "can_edit": {
+            "type": "boolean",
+            "example": true
+          },
+          "can_view": {
+            "type": "boolean",
+            "example": true
+          },
+          "have_api_access": {
+            "type": "boolean",
+            "example": false
+          },
+          "have_billing_options": {
+            "type": "boolean",
+            "example": false
+          },
+          "have_webhook_access": {
+            "type": "boolean",
+            "example": false
+          },
+          "color": {
+            "type": "string",
+            "example": "#FF5733"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "example": false
+          },
+          "is_master": {
+            "type": "boolean",
+            "example": false
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "org_id",
+          "can_edit",
+          "can_view",
+          "have_api_access",
+          "have_billing_options",
+          "have_webhook_access",
+          "is_admin",
+          "is_master",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "EnvTypesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EnvTypeResponse"
+        }
+      },
+      "EnvTypeResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Production"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "color": {
+            "type": "string",
+            "example": "#ff5733"
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": true
+          },
+          "is_protected": {
+            "type": "boolean",
+            "example": false
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "org_id",
+          "app_id",
+          "color",
+          "is_default",
+          "is_protected",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateEnvTypeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Production"
+          },
+          "color": {
+            "type": "string",
+            "example": "#ff5733"
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": false
+          },
+          "is_protected": {
+            "type": "boolean",
+            "example": false
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          }
+        },
+        "required": [
+          "name",
+          "app_id"
+        ]
+      },
+      "UpdateEnvTypeRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "Staging"
+          },
+          "color": {
+            "type": "string",
+            "example": "#ff5733"
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": true
+          },
+          "is_protected": {
+            "type": "boolean",
+            "example": false
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "DeleteEnvTypeRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "EnvsResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EnvResponse"
+        }
+      },
+      "EnvResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "env_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "DATABASE_URL"
+          },
+          "value": {
+            "type": "string",
+            "example": "postgresql://localhost:5432/db"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "value",
+          "app_id",
+          "env_type_id",
+          "org_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "GetEnvRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "CreateEnvRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "DATABASE_URL"
+          },
+          "value": {
+            "type": "string",
+            "example": "postgresql://localhost:5432/db"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "BatchEnvsResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Environment variables updated successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "BatchCreateEnvsRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "envs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "API_KEY"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "secret_key_123"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "envs"
+        ]
+      },
+      "DeleteEnvRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "DATABASE_URL"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "key"
+        ]
+      },
+      "UpdateEnvRequest": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "example": "postgresql://localhost:5432/db"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "value",
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "BatchDeleteEnvsRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "API_KEY"
+            }
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "keys"
+        ]
+      },
+      "EnvHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "pits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "example": "pit_123"
+                },
+                "org_id": {
+                  "type": "string",
+                  "example": "org_123"
+                },
+                "app_id": {
+                  "type": "string",
+                  "example": "app_123"
+                },
+                "env_type_id": {
+                  "type": "string",
+                  "example": "env_type_123"
+                },
+                "change_request_message": {
+                  "type": "string",
+                  "example": "Updated DATABASE_URL"
+                },
+                "user_id": {
+                  "type": "string",
+                  "example": "user_123"
+                },
+                "created_at": {
+                  "type": "string",
+                  "example": "2024-01-01T10:00:00Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "example": "2024-01-01T10:00:00Z"
+                }
+              },
+              "required": [
+                "id",
+                "org_id",
+                "app_id",
+                "env_type_id",
+                "change_request_message",
+                "user_id",
+                "created_at",
+                "updated_at"
+              ]
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 5
+          }
+        },
+        "required": [
+          "pits",
+          "totalPages"
+        ]
+      },
+      "EnvHistoryRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "example": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "example": 20
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "EnvPitStateResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "example": "DATABASE_URL"
+            },
+            "value": {
+              "type": "string",
+              "example": "postgresql://localhost:5432/db"
+            },
+            "last_updated": {
+              "type": "string",
+              "example": "2024-01-01T10:00:00Z"
+            }
+          },
+          "required": [
+            "key",
+            "value",
+            "last_updated"
+          ]
+        }
+      },
+      "EnvPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "EnvTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "EnvDiffResponse": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "NEW_VAR"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "new_value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          },
+          "modified": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "DATABASE_URL"
+                },
+                "old_value": {
+                  "type": "string",
+                  "example": "old_connection"
+                },
+                "new_value": {
+                  "type": "string",
+                  "example": "new_connection"
+                }
+              },
+              "required": [
+                "key",
+                "old_value",
+                "new_value"
+              ]
+            }
+          },
+          "deleted": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "REMOVED_VAR"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "removed_value"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "added",
+          "modified",
+          "deleted"
+        ]
+      },
+      "EnvDiffRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "from_pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "to_pit_id": {
+            "type": "string",
+            "example": "pit_456"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "from_pit_id",
+          "to_pit_id"
+        ]
+      },
+      "VariableTimelineResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "pit_id": {
+              "type": "string",
+              "example": "pit_123"
+            },
+            "change_request_message": {
+              "type": "string",
+              "example": "Updated DATABASE_URL"
+            },
+            "user_id": {
+              "type": "string",
+              "example": "user_123"
+            },
+            "created_at": {
+              "type": "string",
+              "example": "2024-01-01T10:00:00Z"
+            },
+            "value": {
+              "type": "string",
+              "example": "postgresql://localhost:5432/db"
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE"
+              ],
+              "example": "UPDATE"
+            }
+          },
+          "required": [
+            "pit_id",
+            "change_request_message",
+            "user_id",
+            "created_at",
+            "value",
+            "operation"
+          ]
+        }
+      },
+      "VariableTimelineRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "DATABASE_URL"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50,
+            "example": 50
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "key"
+        ]
+      },
+      "RollbackResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Rollback completed successfully"
+          },
+          "operations_performed": {
+            "type": "integer",
+            "example": 3
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "DATABASE_URL"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "postgresql://localhost:5432/db"
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "CREATE",
+                    "UPDATE",
+                    "DELETE"
+                  ],
+                  "example": "UPDATE"
+                }
+              },
+              "required": [
+                "key",
+                "value",
+                "operation"
+              ]
+            }
+          }
+        },
+        "required": [
+          "message",
+          "operations_performed",
+          "operations"
+        ]
+      },
+      "RollbackToPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback due to configuration error"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "RollbackToTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback to before deployment"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "VariableRollbackResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Variable rollback completed successfully"
+          },
+          "key": {
+            "type": "string",
+            "example": "DATABASE_URL"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "DELETE"
+            ],
+            "example": "UPDATE"
+          },
+          "previous_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "old_value"
+          },
+          "target_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "new_value"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "target_timestamp": {
+            "type": "string",
+            "example": "2024-01-01T10:00:00Z"
+          }
+        },
+        "required": [
+          "message",
+          "key",
+          "operation",
+          "previous_value",
+          "target_value"
+        ]
+      },
+      "VariableRollbackToPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback DATABASE_URL due to connection issues"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "VariableRollbackToTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Restore API_KEY to working version"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "RolesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RoleResponse"
+        }
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Developer"
+          },
+          "can_edit": {
+            "type": "boolean",
+            "example": true
+          },
+          "can_view": {
+            "type": "boolean",
+            "example": true
+          },
+          "have_api_access": {
+            "type": "boolean",
+            "example": false
+          },
+          "have_billing_options": {
+            "type": "boolean",
+            "example": false
+          },
+          "have_webhook_access": {
+            "type": "boolean",
+            "example": false
+          },
+          "is_admin": {
+            "type": "boolean",
+            "example": false
+          },
+          "color": {
+            "type": "string",
+            "example": "#FF5733"
+          }
+        },
+        "required": [
+          "name",
+          "can_edit",
+          "can_view",
+          "have_api_access",
+          "have_billing_options",
+          "have_webhook_access",
+          "is_admin"
+        ]
+      },
+      "RoleStatsResponse": {
+        "type": "object",
+        "properties": {
+          "admin_access_count": {
+            "type": "number",
+            "example": 2
+          },
+          "billing_access_count": {
+            "type": "number",
+            "example": 3
+          },
+          "api_access_count": {
+            "type": "number",
+            "example": 4
+          },
+          "webhook_access_count": {
+            "type": "number",
+            "example": 3
+          },
+          "view_access_count": {
+            "type": "number",
+            "example": 10
+          },
+          "edit_access_count": {
+            "type": "number",
+            "example": 5
+          },
+          "total_roles": {
+            "type": "number",
+            "example": 10
+          }
+        },
+        "required": [
+          "admin_access_count",
+          "billing_access_count",
+          "api_access_count",
+          "webhook_access_count",
+          "view_access_count",
+          "edit_access_count",
+          "total_roles"
+        ]
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "example": "role_123"
+          }
+        },
+        "required": [
+          "role_id"
+        ]
+      },
+      "CreateOrgInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Organization invite created successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "CreateOrgInviteRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "GetOrgInviteByCodeResponse": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "INVITE_ID"
+              },
+              "email": {
+                "type": "string",
+                "example": "user@example.com"
+              },
+              "invite_token": {
+                "type": "string",
+                "example": "INVITE_TOKEN"
+              },
+              "is_accepted": {
+                "type": "boolean",
+                "example": false
+              },
+              "created_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "invite_token",
+              "is_accepted",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "required": [
+          "invite"
+        ]
+      },
+      "AcceptOrgInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Organization created successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AcceptOrgInviteRequest": {
+        "type": "object",
+        "properties": {
+          "org_data": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "example": "My Organization"
+              },
+              "size": {
+                "type": "string",
+                "example": "small"
+              },
+              "website": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://example.com"
+              }
+            },
+            "required": [
+              "name",
+              "size",
+              "website"
+            ]
+          },
+          "user_data": {
+            "type": "object",
+            "properties": {
+              "full_name": {
+                "type": "string",
+                "example": "John Doe"
+              },
+              "password": {
+                "type": "string",
+                "example": "securepassword123"
+              }
+            },
+            "required": [
+              "full_name",
+              "password"
+            ]
+          }
+        },
+        "required": [
+          "org_data",
+          "user_data"
+        ]
+      },
+      "GetUserInviteByTokenResponse": {
+        "type": "object",
+        "properties": {
+          "invite": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "INVITE_ID"
+              },
+              "email": {
+                "type": "string",
+                "example": "abc@example.com"
+              },
+              "invite_token": {
+                "type": "string",
+                "example": "INVITE_TOKEN"
+              },
+              "role_id": {
+                "type": "string",
+                "example": "ROLE_ID"
+              },
+              "org_id": {
+                "type": "string",
+                "example": "ORG_ID"
+              },
+              "is_accepted": {
+                "type": "boolean",
+                "example": false
+              },
+              "created_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              },
+              "updated_at": {
+                "type": "string",
+                "example": "2023-01-01T00:00:00Z"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "invite_token",
+              "role_id",
+              "org_id",
+              "is_accepted",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "required": [
+          "invite"
+        ]
+      },
+      "AcceptUserInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User invite accepted successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AcceptUserInviteRequest": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "password": {
+            "type": "string",
+            "example": "securepassword123"
+          }
+        },
+        "required": [
+          "full_name",
+          "password"
+        ]
+      },
+      "CreateUserInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User invite created successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "CreateUserInviteRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "abc@example.com"
+          },
+          "role_id": {
+            "type": "string",
+            "example": "ROLE_ID"
+          }
+        },
+        "required": [
+          "email",
+          "role_id"
+        ]
+      },
+      "UpdateUserInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User invite updated successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "UpdateUserInviteRequest": {
+        "type": "object",
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "example": "ROLE_ID"
+          }
+        },
+        "required": [
+          "role_id"
+        ]
+      },
+      "DeleteUserInviteResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "User invite deleted successfully."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "OrgResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "My Organization"
+          },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "https://example.com/logo.png"
+          },
+          "slug": {
+            "type": "string",
+            "example": "my-organization"
+          },
+          "size": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "small"
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "https://example.com"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {
+              "industry": "technology"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "logo_url",
+          "slug",
+          "size",
+          "website",
+          "metadata",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateOrgRequest": {
+        "type": "object",
+        "properties": {
+          "logo_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com/logo.png"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com"
+          },
+          "name": {
+            "type": "string",
+            "example": "Updated Organization Name"
+          },
+          "slug": {
+            "type": "string",
+            "example": "updated-org-name"
+          }
+        }
+      },
+      "CheckSlugResponse": {
+        "type": "object",
+        "properties": {
+          "exists": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "exists"
+        ]
+      },
+      "SecretsResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/SecretResponse"
+        }
+      },
+      "SecretResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "secret_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "API_SECRET_KEY"
+          },
+          "value": {
+            "type": "string",
+            "example": "***ENCRYPTED***"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "value",
+          "app_id",
+          "env_type_id",
+          "org_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "GetSecretRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "CreateSecretRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "API_SECRET_KEY"
+          },
+          "value": {
+            "type": "string",
+            "example": "sk_live_abc123xyz789"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "BatchSecretsResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Secrets updated successfully"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "BatchCreateSecretsRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "envs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "JWT_SECRET"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "super_secret_jwt_key_123"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "envs"
+        ]
+      },
+      "DeleteSecretRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "API_SECRET_KEY"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "key"
+        ]
+      },
+      "UpdateSecretRequest": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "example": "sk_live_abc123xyz789"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          }
+        },
+        "required": [
+          "value",
+          "app_id",
+          "env_type_id"
+        ]
+      },
+      "BatchDeleteSecretsRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "API_SECRET_KEY"
+            }
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "keys"
+        ]
+      },
+      "RevealSecretsResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "secret_123"
+            },
+            "key": {
+              "type": "string",
+              "example": "API_SECRET_KEY"
+            },
+            "value": {
+              "type": "string",
+              "example": "sk_live_abc123xyz789"
+            },
+            "app_id": {
+              "type": "string",
+              "example": "app_123"
+            },
+            "env_type_id": {
+              "type": "string",
+              "example": "env_type_123"
+            },
+            "org_id": {
+              "type": "string",
+              "example": "org_123"
+            },
+            "created_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            },
+            "updated_at": {
+              "type": "string",
+              "example": "2023-01-01T00:00:00Z"
+            }
+          },
+          "required": [
+            "id",
+            "key",
+            "value",
+            "app_id",
+            "env_type_id",
+            "org_id",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      },
+      "RevealSecretsRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "API_SECRET_KEY"
+            }
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "keys"
+        ]
+      },
+      "SecretHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "pits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "example": "pit_123"
+                },
+                "org_id": {
+                  "type": "string",
+                  "example": "org_123"
+                },
+                "app_id": {
+                  "type": "string",
+                  "example": "app_123"
+                },
+                "env_type_id": {
+                  "type": "string",
+                  "example": "env_type_123"
+                },
+                "change_request_message": {
+                  "type": "string",
+                  "example": "Updated API_SECRET_KEY"
+                },
+                "user_id": {
+                  "type": "string",
+                  "example": "user_123"
+                },
+                "created_at": {
+                  "type": "string",
+                  "example": "2024-01-01T10:00:00Z"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "example": "2024-01-01T10:00:00Z"
+                }
+              },
+              "required": [
+                "id",
+                "org_id",
+                "app_id",
+                "env_type_id",
+                "change_request_message",
+                "user_id",
+                "created_at",
+                "updated_at"
+              ]
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 5
+          }
+        },
+        "required": [
+          "pits",
+          "totalPages"
+        ]
+      },
+      "SecretHistoryRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "page": {
+            "type": "string",
+            "example": "1"
+          },
+          "per_page": {
+            "type": "string",
+            "example": "20"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "page",
+          "per_page"
+        ]
+      },
+      "SecretPitStateResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "example": "API_SECRET_KEY"
+            },
+            "value": {
+              "type": "string",
+              "example": "***ENCRYPTED***"
+            },
+            "last_updated": {
+              "type": "string",
+              "example": "2024-01-01T10:00:00Z"
+            }
+          },
+          "required": [
+            "key",
+            "value",
+            "last_updated"
+          ]
+        }
+      },
+      "SecretPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "SecretTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "SecretDiffResponse": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "NEW_SECRET"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "***ENCRYPTED***"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          },
+          "modified": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "API_SECRET_KEY"
+                },
+                "old_value": {
+                  "type": "string",
+                  "example": "***ENCRYPTED***"
+                },
+                "new_value": {
+                  "type": "string",
+                  "example": "***ENCRYPTED***"
+                }
+              },
+              "required": [
+                "key",
+                "old_value",
+                "new_value"
+              ]
+            }
+          },
+          "deleted": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "REMOVED_SECRET"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "***ENCRYPTED***"
+                }
+              },
+              "required": [
+                "key",
+                "value"
+              ]
+            }
+          }
+        },
+        "required": [
+          "added",
+          "modified",
+          "deleted"
+        ]
+      },
+      "SecretDiffRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "from_pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "to_pit_id": {
+            "type": "string",
+            "example": "pit_456"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "from_pit_id",
+          "to_pit_id"
+        ]
+      },
+      "SecretVariableTimelineResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "pit_id": {
+              "type": "string",
+              "example": "pit_123"
+            },
+            "change_request_message": {
+              "type": "string",
+              "example": "Updated API_SECRET_KEY"
+            },
+            "user_id": {
+              "type": "string",
+              "example": "user_123"
+            },
+            "created_at": {
+              "type": "string",
+              "example": "2024-01-01T10:00:00Z"
+            },
+            "value": {
+              "type": "string",
+              "example": "***ENCRYPTED***"
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "CREATE",
+                "UPDATE",
+                "DELETE"
+              ],
+              "example": "UPDATE"
+            }
+          },
+          "required": [
+            "pit_id",
+            "change_request_message",
+            "user_id",
+            "created_at",
+            "value",
+            "operation"
+          ]
+        }
+      },
+      "SecretVariableTimelineRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "API_SECRET_KEY"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50,
+            "example": 50
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "key"
+        ]
+      },
+      "RollbackSecretsResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Secrets rollback completed successfully"
+          },
+          "operations_performed": {
+            "type": "integer",
+            "example": 3
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "example": "API_SECRET_KEY"
+                },
+                "value": {
+                  "type": "string",
+                  "example": "***ENCRYPTED***"
+                },
+                "operation": {
+                  "type": "string",
+                  "enum": [
+                    "CREATE",
+                    "UPDATE",
+                    "DELETE"
+                  ],
+                  "example": "UPDATE"
+                }
+              },
+              "required": [
+                "key",
+                "value",
+                "operation"
+              ]
+            }
+          }
+        },
+        "required": [
+          "message",
+          "operations_performed",
+          "operations"
+        ]
+      },
+      "RollbackSecretsToPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback secrets due to security breach"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "RollbackSecretsToTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback secrets to before incident"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "SecretVariableRollbackResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Secret variable rollback completed successfully"
+          },
+          "key": {
+            "type": "string",
+            "example": "API_SECRET_KEY"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "DELETE"
+            ],
+            "example": "UPDATE"
+          },
+          "previous_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "***ENCRYPTED***"
+          },
+          "target_value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "***ENCRYPTED***"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "target_timestamp": {
+            "type": "string",
+            "example": "2024-01-01T10:00:00Z"
+          }
+        },
+        "required": [
+          "message",
+          "key",
+          "operation",
+          "previous_value",
+          "target_value"
+        ]
+      },
+      "SecretVariableRollbackToPitRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "pit_id": {
+            "type": "string",
+            "example": "pit_123"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Rollback API_SECRET_KEY due to compromise"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "pit_id"
+        ]
+      },
+      "SecretVariableRollbackToTimestampRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string",
+            "example": "env_type_123"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-01-01T10:00:00Z"
+          },
+          "rollback_message": {
+            "type": "string",
+            "example": "Restore JWT_SECRET to working version"
+          }
+        },
+        "required": [
+          "app_id",
+          "env_type_id",
+          "timestamp"
+        ]
+      },
+      "UploadFileResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "File uploaded successfully"
+          },
+          "s3_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://s3.amazonaws.com/bucket/uploads/file.jpg"
+          }
+        },
+        "required": [
+          "message",
+          "s3_url"
+        ]
+      },
+      "UploadFileError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "File is required"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "UsersResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/UserResponse"
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "user_123"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "full_name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "profile_picture_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "https://example.com/avatar.jpg"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "role_id": {
+            "type": "string",
+            "example": "role_123"
+          },
+          "auth0_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "auth0|123"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "profile_picture_url",
+          "org_id",
+          "role_id",
+          "auth0_id",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "example": "John Smith"
+          },
+          "profile_picture_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com/new-avatar.jpg"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john.smith@example.com"
+          }
+        }
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "webhook_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "My Webhook"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "user_id": {
+            "type": "string",
+            "example": "user_123"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://hooks.example.com/webhook"
+          },
+          "event_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "env_created",
+              "env_updated"
+            ]
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "webhook_type": {
+            "type": "string",
+            "enum": [
+              "DISCORD",
+              "SLACK",
+              "CUSTOM"
+            ],
+            "example": "CUSTOM"
+          },
+          "app_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "app_123"
+          },
+          "linked_to": {
+            "type": "string",
+            "enum": [
+              "org",
+              "app"
+            ],
+            "example": "org"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z"
+          },
+          "last_triggered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2023-01-01T00:00:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "org_id",
+          "user_id",
+          "url",
+          "event_types",
+          "is_active",
+          "webhook_type",
+          "app_id",
+          "linked_to",
+          "created_at",
+          "updated_at",
+          "last_triggered_at"
+        ]
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "My Webhook"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://hooks.example.com/webhook"
+          },
+          "event_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "env_created",
+              "env_updated"
+            ]
+          },
+          "webhook_type": {
+            "type": "string",
+            "enum": [
+              "DISCORD",
+              "SLACK",
+              "CUSTOM"
+            ],
+            "example": "CUSTOM"
+          },
+          "linked_to": {
+            "type": "string",
+            "enum": [
+              "org",
+              "app"
+            ],
+            "default": "org",
+            "example": "org"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "event_types",
+          "webhook_type"
+        ]
+      },
+      "WebhooksResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/WebhookResponse"
+        }
+      },
+      "UpdateWebhookRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Updated Webhook"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://hooks.example.com/webhook"
+          },
+          "event_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "env_created"
+            ]
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": false
+          },
+          "webhook_type": {
+            "type": "string",
+            "enum": [
+              "DISCORD",
+              "SLACK",
+              "CUSTOM"
+            ],
+            "example": "CUSTOM"
+          },
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "linked_to": {
+            "type": "string",
+            "enum": [
+              "org",
+              "app"
+            ],
+            "example": "org"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "apiKeyAuth": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://localhost:8600",
+      "description": "Local server"
+    },
+    {
+      "url": "https://api.envsync.cloud",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/api/access/cli": {
+      "get": {
+        "responses": {
+          "201": {
+            "description": "CLI login initiated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginUrlResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createCliLogin",
+        "tags": [
+          "Access"
+        ],
+        "parameters": [],
+        "summary": "Initiate CLI Login",
+        "description": "Generate authentication URL for CLI login"
+      }
+    },
+    "/api/access/web": {
+      "get": {
+        "responses": {
+          "201": {
+            "description": "Web login URL created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginUrlResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createWebLogin",
+        "tags": [
+          "Access"
+        ],
+        "parameters": [],
+        "summary": "Create Web Login URL",
+        "description": "Generate authentication URL for web login"
+      }
+    },
+    "/api/access/web/callback": {
+      "get": {
+        "responses": {
+          "302": {
+            "description": "Redirect with authentication token"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "callbackWebLogin",
+        "tags": [
+          "Access"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Web Login Callback",
+        "description": "Handle web login callback from Auth0"
+      }
+    },
+    "/api/access/api": {
+      "get": {
+        "responses": {
+          "201": {
+            "description": "API login URL created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginUrlResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createApiLogin",
+        "tags": [
+          "Access"
+        ],
+        "parameters": [],
+        "summary": "Create API Login URL",
+        "description": "Generate authentication URL for API login"
+      }
+    },
+    "/api/access/api/callback": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "API login callback successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "callbackApiLogin",
+        "tags": [
+          "Access"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "API Login Callback",
+        "description": "Handle API login callback from Auth0"
+      }
+    },
+    "/api/app": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Applications retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApps",
+        "tags": [
+          "Applications"
+        ],
+        "parameters": [],
+        "summary": "Get All Applications",
+        "description": "Retrieve all applications for the organization"
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Application created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAppResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createApp",
+        "tags": [
+          "Applications"
+        ],
+        "parameters": [],
+        "summary": "Create Application",
+        "description": "Create a new application",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/app/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Application retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApp",
+        "tags": [
+          "Applications"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get Application",
+        "description": "Retrieve a specific application by ID"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Application updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAppResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateApp",
+        "tags": [
+          "Applications"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update Application",
+        "description": "Update an existing application",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Application deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAppResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApp",
+        "tags": [
+          "Applications"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete Application",
+        "description": "Delete an existing application"
+      }
+    },
+    "/api/api_key": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "API key created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [],
+        "summary": "Create API Key",
+        "description": "Create a new API key for the organization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "API keys retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeysResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getAllApiKeys",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [],
+        "summary": "Get All API Keys",
+        "description": "Retrieve all API keys for the organization"
+      }
+    },
+    "/api/api_key/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "API key retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get API Key",
+        "description": "Retrieve a specific API key"
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "API key updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update API Key",
+        "description": "Update an existing API key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateApiKeyRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "API key deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete API Key",
+        "description": "Delete an existing API key"
+      }
+    },
+    "/api/api_key/{id}/regenerate": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "API key regenerated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegenerateApiKeyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "regenerateApiKey",
+        "tags": [
+          "API Keys"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Regenerate API Key",
+        "description": "Generate a new value for an existing API key"
+      }
+    },
+    "/api/audit_log": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAuditLogsResponseWrapper"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getAuditLogs",
+        "tags": [
+          "Audit Logs"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "string",
+              "default": "1",
+              "example": "1"
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "schema": {
+              "type": "string",
+              "default": "20",
+              "example": "20"
+            }
+          }
+        ],
+        "summary": "Get Audit Logs",
+        "description": "Retrieve audit logs for the organization with pagination"
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "User information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhoAmIResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "whoami",
+        "tags": [
+          "Authentication"
+        ],
+        "parameters": [],
+        "summary": "Get Current User",
+        "description": "Retrieve the current authenticated user's information and their organization details"
+      }
+    },
+    "/api/env_type": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Environment types retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvTypesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvTypes",
+        "tags": [
+          "Environment Types"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Types",
+        "description": "Retrieve all environment types for the organization"
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Environment type created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvTypeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createEnvType",
+        "tags": [
+          "Environment Types"
+        ],
+        "parameters": [],
+        "summary": "Create Environment Type",
+        "description": "Create a new environment type",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvTypeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env_type/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Environment type retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvTypeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvType",
+        "tags": [
+          "Environment Types"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get Environment Type",
+        "description": "Retrieve a specific environment type"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Environment type updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvTypeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateEnvType",
+        "tags": [
+          "Environment Types"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update Environment Type",
+        "description": "Update an existing environment type",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnvTypeRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Environment type deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteEnvTypeRequest"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteEnvType",
+        "tags": [
+          "Environment Types"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete Environment Type",
+        "description": "Delete an existing environment type"
+      }
+    },
+    "/api/env": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvs",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Variables",
+        "description": "Retrieve all environment variables for an application and environment type",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetEnvRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Environment variable deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteEnvRequest"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteEnv",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Delete Environment Variable",
+        "description": "Delete an existing environment variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteEnvRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/i/{key}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variable retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnv",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Get Single Environment Variable",
+        "description": "Retrieve a specific environment variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetEnvRequest"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Environment variable updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateEnv",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Update Environment Variable",
+        "description": "Update an existing environment variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnvRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/single": {
+      "put": {
+        "responses": {
+          "201": {
+            "description": "Environment variable created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createEnv",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Create Environment Variable",
+        "description": "Create a new environment variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/batch": {
+      "put": {
+        "responses": {
+          "201": {
+            "description": "Environment variables created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchEnvsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "batchCreateEnvs",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Batch Create Environment Variables",
+        "description": "Create multiple environment variables in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateEnvsRequest"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Environment variables updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchEnvsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "batchUpdateEnvs",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Batch Update Environment Variables",
+        "description": "Update multiple environment variables in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateEnvsRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Environment variables deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchEnvsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteBatchEnv",
+        "tags": [
+          "Environment Variables"
+        ],
+        "parameters": [],
+        "summary": "Batch Delete Environment Variables",
+        "description": "Delete multiple environment variables in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDeleteEnvsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/history": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables history retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvHistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvHistory",
+        "tags": [
+          "Environment Variables - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Variables History",
+        "description": "Retrieve paginated history of environment variable changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvHistoryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables at point in time retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvPitStateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvsAtPointInTime",
+        "tags": [
+          "Environment Variables - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Variables at Point in Time",
+        "description": "Retrieve environment variables state at a specific point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables at timestamp retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvPitStateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvsAtTimestamp",
+        "tags": [
+          "Environment Variables - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Variables at Timestamp",
+        "description": "Retrieve environment variables state at a specific timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/diff": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables diff retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnvDiffResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getEnvDiff",
+        "tags": [
+          "Environment Variables - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Environment Variables Diff",
+        "description": "Compare environment variables between two points in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnvDiffRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/timeline/{key}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Variable timeline retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableTimelineResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getVariableTimeline",
+        "tags": [
+          "Environment Variables - Point in Time"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Get Variable Timeline",
+        "description": "Get timeline of changes for a specific environment variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableTimelineRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/rollback/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackEnvsToPitId",
+        "tags": [
+          "Environment Variables - Rollback"
+        ],
+        "parameters": [],
+        "summary": "Rollback Environment Variables to Point in Time",
+        "description": "Rollback all environment variables to a specific point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackToPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/rollback/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Environment variables rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackEnvsToTimestamp",
+        "tags": [
+          "Environment Variables - Rollback"
+        ],
+        "parameters": [],
+        "summary": "Rollback Environment Variables to Timestamp",
+        "description": "Rollback all environment variables to a specific timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackToTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/rollback/variable/{key}/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Variable rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableRollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackVariableToPitId",
+        "tags": [
+          "Environment Variables - Rollback"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Rollback Single Variable to Point in Time",
+        "description": "Rollback a specific environment variable to a point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableRollbackToPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/env/rollback/variable/{key}/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Variable rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariableRollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackVariableToTimestamp",
+        "tags": [
+          "Environment Variables - Rollback"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Rollback Single Variable to Timestamp",
+        "description": "Rollback a specific environment variable to a timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableRollbackToTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/role": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Roles retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RolesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getAllRoles",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [],
+        "summary": "Get All Roles",
+        "description": "Retrieve all roles in the organization"
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Role created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createRole",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [],
+        "summary": "Create Role",
+        "description": "Create a new role in the organization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/role/stats": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Role statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleStatsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRoleStats",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [],
+        "summary": "Get Role Statistics",
+        "description": "Retrieve statistics about roles in the organization"
+      }
+    },
+    "/api/role/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Role retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRole",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get Role",
+        "description": "Retrieve a specific role by ID"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateRole",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update Role",
+        "description": "Update an existing role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Role deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteRole",
+        "tags": [
+          "Roles"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete Role",
+        "description": "Delete an existing role (non-master roles only)"
+      }
+    },
+    "/api/onboarding/org": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successful greeting response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateOrgInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createOrgInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "summary": "Create Organization Invite",
+        "description": "Create an organization invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgInviteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/org/{invite_code}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Organization invite retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetOrgInviteByCodeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getOrgInviteByCode",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_code",
+            "required": true
+          }
+        ],
+        "summary": "Get Organization Invite by Code",
+        "description": "Get organization invite by code"
+      }
+    },
+    "/api/onboarding/org/{invite_code}/accept": {
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Organization invite accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptOrgInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "acceptOrgInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_code",
+            "required": true
+          }
+        ],
+        "summary": "Accept Organization Invite",
+        "description": "Accept organization invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptOrgInviteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/user/{invite_code}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "User invite retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserInviteByTokenResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getUserInviteByCode",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_code",
+            "required": true
+          }
+        ],
+        "summary": "Get User Invite by Code",
+        "description": "Get user invite by code"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "User invite updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateUserInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_code",
+            "required": true
+          }
+        ],
+        "summary": "Update User Invite",
+        "description": "Update user invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserInviteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/user/{invite_code}/accept": {
+      "put": {
+        "responses": {
+          "200": {
+            "description": "User invite accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptUserInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "acceptUserInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_code",
+            "required": true
+          }
+        ],
+        "summary": "Accept User Invite",
+        "description": "Accept user invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptUserInviteRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/user": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "User invite created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUserInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createUserInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "summary": "Create User Invite",
+        "description": "Create a user invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserInviteRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "User invites retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserInviteByTokenResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getAllUserInvites",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [],
+        "summary": "Get All User Invites",
+        "description": "Get all user invites"
+      }
+    },
+    "/api/onboarding/user/{invite_id}": {
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "User invite deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUserInviteResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteUserInvite",
+        "tags": [
+          "Onboarding"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "invite_id",
+            "required": true
+          }
+        ],
+        "summary": "Delete User Invite",
+        "description": "Delete user invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteUserInviteResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/org": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Organization retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getOrg",
+        "tags": [
+          "Organizations"
+        ],
+        "parameters": [],
+        "summary": "Get Organization",
+        "description": "Retrieve the current organization's details"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Organization updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateOrg",
+        "tags": [
+          "Organizations"
+        ],
+        "parameters": [],
+        "summary": "Update Organization",
+        "description": "Update the current organization's details",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/org/check-slug": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Slug availability checked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckSlugResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "checkIfSlugExists",
+        "tags": [
+          "Organizations"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "my-organization"
+          }
+        ],
+        "summary": "Check Slug Availability",
+        "description": "Check if an organization slug is available"
+      }
+    },
+    "/api/secret": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecrets",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Get Secrets",
+        "description": "Retrieve all secrets for an application and environment type",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSecretRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Secret deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteSecret",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Delete Secret",
+        "description": "Delete an existing secret",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteSecretRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/i/{key}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secret retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecret",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Get Single Secret",
+        "description": "Retrieve a specific secret",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetSecretRequest"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Secret updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateSecret",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Update Secret",
+        "description": "Update an existing secret",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSecretRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/single": {
+      "put": {
+        "responses": {
+          "201": {
+            "description": "Secret created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createSecret",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Create Secret",
+        "description": "Create a new secret",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSecretRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/batch": {
+      "put": {
+        "responses": {
+          "201": {
+            "description": "Secrets created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "batchCreateSecrets",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Batch Create Secrets",
+        "description": "Create multiple secrets in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateSecretsRequest"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Secrets updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "batchUpdateSecrets",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Batch Update Secrets",
+        "description": "Update multiple secrets in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateSecretsRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Secrets deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteBatchSecrets",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Batch Delete Secrets",
+        "description": "Delete multiple secrets in a single request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDeleteSecretsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/reveal": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets revealed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevealSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "revealSecrets",
+        "tags": [
+          "Secrets"
+        ],
+        "parameters": [],
+        "summary": "Reveal Secrets",
+        "description": "Decrypt and reveal secret values for managed apps",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevealSecretsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/history": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets history retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretHistoryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecretHistory",
+        "tags": [
+          "Secrets - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Secrets History",
+        "description": "Retrieve paginated history of secret changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretHistoryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets at point in time retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretPitStateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecretsAtPointInTime",
+        "tags": [
+          "Secrets - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Secrets at Point in Time",
+        "description": "Retrieve secrets state at a specific point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets at timestamp retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretPitStateResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecretsAtTimestamp",
+        "tags": [
+          "Secrets - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Secrets at Timestamp",
+        "description": "Retrieve secrets state at a specific timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/diff": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets diff retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretDiffResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecretDiff",
+        "tags": [
+          "Secrets - Point in Time"
+        ],
+        "parameters": [],
+        "summary": "Get Secrets Diff",
+        "description": "Compare secrets between two points in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretDiffRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/timeline/{key}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secret variable timeline retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretVariableTimelineResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSecretVariableTimeline",
+        "tags": [
+          "Secrets - Point in Time"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Get Secret Variable Timeline",
+        "description": "Get timeline of changes for a specific secret variable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretVariableTimelineRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/rollback/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackSecretsToPitId",
+        "tags": [
+          "Secrets - Rollback"
+        ],
+        "parameters": [],
+        "summary": "Rollback Secrets to Point in Time",
+        "description": "Rollback all secrets to a specific point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackSecretsToPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/rollback/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secrets rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackSecretsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackSecretsToTimestamp",
+        "tags": [
+          "Secrets - Rollback"
+        ],
+        "parameters": [],
+        "summary": "Rollback Secrets to Timestamp",
+        "description": "Rollback all secrets to a specific timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackSecretsToTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/rollback/variable/{key}/pit": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secret variable rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretVariableRollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackSecretVariableToPitId",
+        "tags": [
+          "Secrets - Rollback"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Rollback Single Secret Variable to Point in Time",
+        "description": "Rollback a specific secret variable to a point in time",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretVariableRollbackToPitRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/secret/rollback/variable/{key}/timestamp": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Secret variable rolled back successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretVariableRollbackResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rollbackSecretVariableToTimestamp",
+        "tags": [
+          "Secrets - Rollback"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "key",
+            "required": true
+          }
+        ],
+        "summary": "Rollback Single Secret Variable to Timestamp",
+        "description": "Rollback a specific secret variable to a timestamp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretVariableRollbackToTimestampRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload/file": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadFileError"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "uploadFile",
+        "tags": [
+          "File Upload"
+        ],
+        "parameters": [],
+        "summary": "Upload File",
+        "description": "Upload a file to the server. The file should be less than 5MB in size.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {}
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getUsers",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [],
+        "summary": "Get All Users",
+        "description": "Retrieve all users in the organization"
+      }
+    },
+    "/api/user/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "User retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getUserById",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get User by ID",
+        "description": "Retrieve a specific user by their ID"
+      },
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateUser",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update User",
+        "description": "Update a user's profile information",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteUser",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete User",
+        "description": "Delete a user from the organization (Admin only)"
+      }
+    },
+    "/api/user/role/{id}": {
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "User role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateRole",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update User Role",
+        "description": "Update a user's role (Admin only)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/password/{id}": {
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Password update request sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updatePassword",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update User Password",
+        "description": "Update a user's password (Admin only)"
+      }
+    },
+    "/api/webhook": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Webhook created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [],
+        "summary": "Create Webhook",
+        "description": "Create a new webhook for the organization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Webhooks retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhooksResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getWebhooks",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [],
+        "summary": "Get All Webhooks",
+        "description": "Retrieve all webhooks for the organization"
+      }
+    },
+    "/api/webhook/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Webhook retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get Webhook",
+        "description": "Retrieve a specific webhook"
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Webhook updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Update Webhook",
+        "description": "Update an existing webhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "responses": {
+          "200": {
+            "description": "Webhook deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteWebhook",
+        "tags": [
+          "Webhooks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Delete Webhook",
+        "description": "Delete an existing webhook"
+      }
+    }
+  }
+}

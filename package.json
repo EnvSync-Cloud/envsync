@@ -1,0 +1,22 @@
+{
+  "name": "monorepo",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "sdks/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "start": "turbo start",
+    "cli": "bun run scripts/cli.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "turbo": "^2"
+  },
+  "packageManager": "bun@1.3.9"
+}

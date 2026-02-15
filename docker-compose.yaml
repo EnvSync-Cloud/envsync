@@ -1,0 +1,193 @@
+services:
+  # envsync_api:
+  #   build:
+  #     context: packages/envsync-api
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "${PORT:-4000}:${PORT:-4000}"
+  #   restart: always
+  #   environment:
+  #     ZITADEL_URL: http://zitadel:8080
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #     - rustfs
+  #     - mailpit
+  #     - zitadel
+  #     - vault
+  #   networks:
+  #     - envsync_network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    restart: always
+    networks:
+      - envsync_network
+
+  postgres:
+    image: postgres:17
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-envsync}
+    networks:
+      - envsync_network
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    ports:
+      - "${RUSTFS_PORT:-19000}:9000"
+      - "${RUSTFS_HTTP_PORT:-19001}:9001"
+    restart: always
+    volumes:
+      - rustfs_data:/data
+    environment:
+      RUSTFS_DATA_DIR: /data
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    networks:
+      - envsync_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - envsync_network
+
+  # Zitadel DB: init uses default DB "postgres"; Zitadel creates "zitadel" on first start.
+  # See https://github.com/zitadel/zitadel/blob/main/apps/docs/content/self-hosting/deploy/docker-compose.yaml
+  zitadel_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGUSER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - zitadel_db_data:/var/lib/postgresql/data
+    networks:
+      - envsync_network
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    restart: unless-stopped
+    command: start-from-init --masterkey "${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}"
+    user: "0"
+    environment:
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_TLS_ENABLED: "false"
+      ZITADEL_DATABASE_POSTGRES_HOST: zitadel_db
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${POSTGRES_USER:-postgres}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-zitadel-admin}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-Password1!}
+      ZITADEL_FIRSTINSTANCE_ORG_NAME: EnvSync
+      ZITADEL_FIRSTINSTANCE_PATPATH: /current-dir/admin.pat
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: EnvSync IAM Owner
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2029-01-01T00:00:00Z"
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /current-dir/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Automatically Initialized IAM_LOGIN_CLIENT
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: "2029-01-01T00:00:00Z"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "true"
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_BASEURI: http://localhost:3000/ui/v2/login/
+      ZITADEL_OIDC_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?authRequest=
+      ZITADEL_OIDC_DEFAULTLOGOUTURLV2: http://localhost:3000/ui/v2/login/logout?post_logout_redirect=
+      ZITADEL_SAML_DEFAULTLOGINURLV2: http://localhost:3000/ui/v2/login/login?samlRequest=
+    volumes:
+      # Named volume: PATs persist but are not on host. For host-readable PATs use: ./zitadel-data:/current-dir:delegated
+      - zitadel_data:/current-dir
+    ports:
+      - "${ZITADEL_PORT:-8080}:8080"
+      - "${ZITADEL_LOGIN_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      zitadel_db:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  zitadel_login:
+    image: ghcr.io/zitadel/zitadel-login:latest
+    restart: unless-stopped
+    user: "0"
+    environment:
+      # With network_mode: service:zitadel, use localhost (same container network namespace)
+      ZITADEL_API_URL: http://localhost:8080
+      NEXT_PUBLIC_BASE_PATH: /ui/v2/login
+      ZITADEL_SERVICE_USER_TOKEN_FILE: /current-dir/login-client.pat
+    network_mode: service:zitadel
+    volumes:
+      - zitadel_data:/current-dir:ro
+    depends_on:
+      zitadel:
+        condition: service_healthy
+        restart: false
+
+  vault:
+    image: hashicorp/vault:latest
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    restart: always
+    environment:
+      VAULT_ADDR: http://localhost:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-}
+    volumes:
+      - vault_data:/opt/vault/data
+    depends_on:
+      - postgres
+      - redis
+      - zitadel
+    networks:
+      - envsync_network
+
+networks:
+  envsync_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  mailpit_data:
+  vault_data:
+  rustfs_data:
+  zitadel_db_data:
+  zitadel_data:
