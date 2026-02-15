@@ -16,13 +16,6 @@ export class ApiKeyController {
 				return c.json({ error: "Name and Organization ID are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to create API keys." }, 403);
-			}
-
 			const apiKey = await ApiKeyService.createKey({
 				org_id,
 				description,
@@ -56,13 +49,6 @@ export class ApiKeyController {
 				return c.json({ error: "API Key ID is required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to access API keys." }, 403);
-			}
-
 			const apiKey = await ApiKeyService.getKey(id);
 
 			apiKey.key = encapsulate(apiKey.key);
@@ -91,13 +77,6 @@ export class ApiKeyController {
 
 			if (!org_id) {
 				return c.json({ error: "Organization ID is required." }, 400);
-			}
-
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to access API keys." }, 403);
 			}
 
 			const apiKeys = await ApiKeyService.getAllKeys(org_id);
@@ -131,13 +110,6 @@ export class ApiKeyController {
 
 			if (!id) {
 				return c.json({ error: "API Key ID is required." }, 400);
-			}
-
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to update API keys." }, 403);
 			}
 
 			await ApiKeyService.updateKey(id, {
@@ -175,13 +147,6 @@ export class ApiKeyController {
 				return c.json({ error: "API Key ID is required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to delete API keys." }, 403);
-			}
-
 			await ApiKeyService.deleteKey(id);
 
 			await AuditLogService.notifyAuditSystem({
@@ -208,13 +173,6 @@ export class ApiKeyController {
 
 			if (!userId) {
 				return c.json({ error: "User ID is required." }, 401);
-			}
-
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to access API keys." }, 403);
 			}
 
 			const keys = await ApiKeyService.getKeyByUserId(userId);
@@ -254,13 +212,6 @@ export class ApiKeyController {
 				return c.json({ error: "API Key ID is required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.have_api_access
-			if (!permissions.have_api_access || !permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to regenerate API keys." }, 403);
-			}
-
 			const newKey = await ApiKeyService.regenerateKey(id);
 
 			if (!newKey) {
@@ -276,7 +227,7 @@ export class ApiKeyController {
 					api_key_id: id,
 				},
 			});
-			
+
 			return c.json(newKey, 200);
 		} catch (err) {
 			if (err instanceof Error) {

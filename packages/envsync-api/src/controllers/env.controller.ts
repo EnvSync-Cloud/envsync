@@ -2,6 +2,7 @@ import { type Context } from "hono";
 
 import { EnvService } from "@/services/env.service";
 import { AuditLogService } from "@/services/audit_log.service";
+import { AuthorizationService } from "@/services/authorization.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { EnvStorePiTService } from "@/services/env_store_pit.service";
 
@@ -17,14 +18,12 @@ export class EnvController {
 				return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to create envs in Production." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Check if the environment variable already exists
@@ -37,11 +36,6 @@ export class EnvController {
 
 			if (existingEnv) {
 				return c.json({ error: "Environment variable already exists." }, 400);
-			}
-
-			// permissions.can_edit is true, user can create envs
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to create envs." }, 403);
 			}
 
 			const env = await EnvService.createEnv({
@@ -108,19 +102,12 @@ export class EnvController {
 				return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to update envs in Production." }, 403);
-			}
-
-			// permissions.can_edit is true, user can update envs
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to update envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current value for tracking
@@ -192,19 +179,12 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to delete envs in Production." }, 403);
-			}
-
-			// permissions.can_edit is true, user can delete envs
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to delete envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current value for tracking
@@ -275,19 +255,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// env_type_id
-			const env_type = await EnvTypeService.getEnvType(env_type_id);
-
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to view envs in Production." }, 403);
-			}
-
-			// permissions.can_view is true, user can view envs
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view envs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const env = await EnvService.getEnv({
@@ -328,19 +298,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// env_type_id
-			const env_type = await EnvTypeService.getEnvType(env_type_id);
-
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to view envs in Production." }, 403);
-			}
-
-			// permissions.can_view is true, user can view envs
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view envs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const envs = await EnvService.getAllEnv({
@@ -379,14 +339,12 @@ export class EnvController {
 				return c.json({ error: "envs must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to create envs in Production." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			await EnvService.batchCreateEnvs(org_id, app_id, env_type_id, envs);
@@ -443,14 +401,12 @@ export class EnvController {
 				return c.json({ error: "envs must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to update envs in Production." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current values for tracking changes
@@ -520,14 +476,12 @@ export class EnvController {
 				return c.json({ error: "keys must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to delete envs in Production." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current values for tracking deletions
@@ -598,11 +552,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view env history." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const history = await EnvStorePiTService.getEnvStorePiTs({
@@ -630,9 +582,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and pit_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view envs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			let envs;
@@ -664,11 +616,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and timestamp are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view envs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const envs = await EnvStorePiTService.getEnvsTillTimestamp({
@@ -698,11 +648,9 @@ export class EnvController {
 				);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view env diffs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const diff = await EnvStorePiTService.getEnvDiff({
@@ -745,11 +693,9 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view variable timeline." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const timeline = await EnvStorePiTService.getVariableTimeline({
@@ -792,17 +738,12 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and pit_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to rollback envs in Production." }, 403);
-			}
 
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current state for comparison
@@ -927,17 +868,12 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, and timestamp are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to rollback envs in Production." }, 403);
-			}
 
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Validate timestamp
@@ -1070,17 +1006,12 @@ export class EnvController {
 				return c.json({ error: "org_id, app_id, env_type_id, pit_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to rollback envs in Production." }, 403);
-			}
 
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get current variable state
@@ -1224,17 +1155,12 @@ export class EnvController {
 				);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to rollback envs in Production." }, 403);
-			}
 
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback envs." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Validate timestamp

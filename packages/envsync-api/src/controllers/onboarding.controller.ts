@@ -130,17 +130,11 @@ export class OnboardingController {
 	public static readonly createUserInvite = async (c: Context) => {
 		try {
 			const org_id = c.get("org_id");
-			const permissions = c.get("permissions");
 
 			const { email, role_id } = await c.req.json();
 
 			if (!email || !role_id) {
 				return c.json({ error: "Email and role ID are required." }, 400);
-			}
-
-			// only Admin can create user invites
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "Only Admin can create user invites." }, 403);
 			}
 
 			const invite = await InviteService.createUserInvite(email, org_id, role_id);
@@ -257,13 +251,6 @@ export class OnboardingController {
 	// update user invite
 	public static readonly updateUserInvite = async (c: Context) => {
 		try {
-			const permissions = c.get("permissions");
-
-			// only Admin can update user invites
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "Only Admin can update user invites." }, 403);
-			}
-
 			const { invite_code } = c.req.param();
 
 			const { role_id } = await c.req.json();
@@ -308,13 +295,6 @@ export class OnboardingController {
 			const org_id = c.get("org_id");
 			const { invite_id } = c.req.param();
 
-			const permissions = c.get("permissions");
-
-			// only Admin can delete user invites
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "Only Admin can delete user invites." }, 403);
-			}
-
 			if (!invite_id) {
 				return c.json({ error: "Invite id is required." }, 400);
 			}
@@ -347,13 +327,6 @@ export class OnboardingController {
 	public static readonly getAllUserInvites = async (c: Context) => {
 		try {
 			const org_id = c.get("org_id");
-
-			const permissions = c.get("permissions");
-
-			// only Admin can get user invites
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "Only Admin can view user invites." }, 403);
-			}
 
 			const invites = await InviteService.getAllUserInvites(org_id);
 

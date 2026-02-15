@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { cacheAside, invalidateCache } from "@/helpers/cache";
+import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { WebhookHandler } from "@/libs/webhooks";
 import { config } from "@/utils/env";
@@ -60,19 +62,23 @@ export class WebhookService {
             })
             .execute();
 
+        await invalidateCache(CacheKeys.webhooksByOrg(org_id));
+
         return id;
     }
 
     public static getWebhookByOrgId = async (org_id: string) => {
-        const db = await DB.getInstance();
+        return cacheAside(CacheKeys.webhooksByOrg(org_id), CacheTTL.SHORT, async () => {
+            const db = await DB.getInstance();
 
-        const webhooks = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("org_id", "=", org_id)
-            .execute();
+            const webhooks = await db
+                .selectFrom("webhook_store")
+                .selectAll()
+                .where("org_id", "=", org_id)
+                .execute();
 
-        return webhooks;
+            return webhooks;
+        });
     };
 
     public static getWebhookByAppId = async (app_id: string) => {
@@ -100,15 +106,17 @@ export class WebhookService {
     }
 
     public static getWebhookById = async (id: string) => {
-        const db = await DB.getInstance();
+        return cacheAside(CacheKeys.webhook(id), CacheTTL.SHORT, async () => {
+            const db = await DB.getInstance();
 
-        const webhook = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("id", "=", id)
-            .executeTakeFirstOrThrow();
+            const webhook = await db
+                .selectFrom("webhook_store")
+                .selectAll()
+                .where("id", "=", id)
+                .executeTakeFirstOrThrow();
 
-        return webhook;
+            return webhook;
+        });
     };
 
     public static updateWebhook = async (
@@ -124,6 +132,13 @@ export class WebhookService {
     ): Promise<void> => {
         const db = await DB.getInstance();
 
+        // Fetch webhook to get org_id for invalidation
+        const webhook = await db
+            .selectFrom("webhook_store")
+            .select("org_id")
+            .where("id", "=", id)
+            .executeTakeFirstOrThrow();
+
         await db
             .updateTable("webhook_store")
             .set({
@@ -132,14 +147,25 @@ export class WebhookService {
             })
             .where("id", "=", id)
             .execute();
+
+        await invalidateCache(CacheKeys.webhook(id), CacheKeys.webhooksByOrg(webhook.org_id));
     };
 
     public static deleteWebhook = async (id: string): Promise<void> => {
         const db = await DB.getInstance();
 
+        // Fetch webhook to get org_id for invalidation
+        const webhook = await db
+            .selectFrom("webhook_store")
+            .select("org_id")
+            .where("id", "=", id)
+            .executeTakeFirstOrThrow();
+
         await db.deleteFrom("webhook_store")
             .where("id", "=", id)
             .execute();
+
+        await invalidateCache(CacheKeys.webhook(id), CacheKeys.webhooksByOrg(webhook.org_id));
     };
 
     public static triggerWebhook = async (
@@ -200,7 +226,7 @@ export class WebhookService {
                     case "role_created":
                     case "role_updated":
                     case "role_deleted":
-                        url_for_entity_in_question = urlSetMap.roles; 
+                        url_for_entity_in_question = urlSetMap.roles;
                         break;
                     case "app_created":
                     case "app_updated":
@@ -310,7 +336,7 @@ export class WebhookService {
                         webhook.webhook_type
                     )
                 }
-                
+
                 await db
                     .updateTable("webhook_store")
                     .set({

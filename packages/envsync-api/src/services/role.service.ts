@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { cacheAside, invalidateCache } from "@/helpers/cache";
+import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
+import { AuthorizationService } from "@/services/authorization.service";
 
 export class RoleService {
 	public static createRole = async ({
@@ -47,6 +50,8 @@ export class RoleService {
 			})
 			.returning("id")
 			.executeTakeFirstOrThrow();
+
+		await invalidateCache(CacheKeys.rolesByOrg(org_id));
 
 		return { id, name };
 	};
@@ -123,27 +128,37 @@ export class RoleService {
 			.returning("id")
 			.execute();
 
+		await invalidateCache(CacheKeys.rolesByOrg(org_id));
+
 		return roles;
 	};
 
 	public static getRole = async (id: string) => {
-		const db = await DB.getInstance();
+		return cacheAside(CacheKeys.role(id), CacheTTL.LONG, async () => {
+			const db = await DB.getInstance();
 
-		const role = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+			const role = await db
+				.selectFrom("org_role")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow();
 
-		return role;
+			return role;
+		});
 	};
 
 	public static getRoles = async (org_id: string) => {
-		const db = await DB.getInstance();
+		return cacheAside(CacheKeys.rolesByOrg(org_id), CacheTTL.LONG, async () => {
+			const db = await DB.getInstance();
 
-		const role = await db.selectFrom("org_role").selectAll().where("org_id", "=", org_id).execute();
+			const role = await db
+				.selectFrom("org_role")
+				.selectAll()
+				.where("org_id", "=", org_id)
+				.execute();
 
-		return role;
+			return role;
+		});
 	};
 
 	public static getRoleStats = async (org_id: string) => {
@@ -198,6 +213,11 @@ export class RoleService {
 			.where("is_master", "=", false)
 			.where("org_id", "=", org_id)
 			.execute();
+
+		// Re-sync FGA tuples for all users with this role
+		await AuthorizationService.resyncAllUsersWithRole(id, org_id);
+
+		await invalidateCache(CacheKeys.role(id), CacheKeys.rolesByOrg(org_id));
 	};
 
 	public static deleteRole = async (id: string, org_id: string) => {
@@ -216,6 +236,8 @@ export class RoleService {
 		}
 
 		await db.deleteFrom("org_role").where("id", "=", id).executeTakeFirstOrThrow();
+
+		await invalidateCache(CacheKeys.role(id), CacheKeys.rolesByOrg(org_id));
 	};
 
 	public static checkPermission = async (
@@ -229,13 +251,7 @@ export class RoleService {
 			| "is_admin"
 			| "is_master",
 	) => {
-		const db = await DB.getInstance();
-
-		const role = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("id", "=", role_id)
-			.executeTakeFirstOrThrow();
+		const role = await RoleService.getRole(role_id);
 
 		if (!role) {
 			throw new Error("Role not found");

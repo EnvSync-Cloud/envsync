@@ -4,6 +4,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import { OnboardingController } from "@/controllers/onboarding.controller";
 
 import {
@@ -172,6 +173,7 @@ app.put(
 );
 
 app.use(authMiddleware());
+app.use(requirePermission("can_manage_invites", "org"));
 
 app.post(
 	"/user",

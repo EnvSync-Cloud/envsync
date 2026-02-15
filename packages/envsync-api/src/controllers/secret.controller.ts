@@ -5,6 +5,7 @@ import { SecretService } from "@/services/secret.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
+import { AuthorizationService } from "@/services/authorization.service";
 import { smartEncrypt, smartDecrypt } from "@/helpers/key-store";
 
 export class SecretController {
@@ -19,17 +20,12 @@ export class SecretController {
 				return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to create secrets in Production." },
-					403,
-				);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Check if the secret already exists
@@ -42,11 +38,6 @@ export class SecretController {
 
 			if (existingSecret) {
 				return c.json({ error: "Secret already exists." }, 400);
-			}
-
-			// permissions.can_edit is true, user can create secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to create secrets." }, 403);
 			}
 
 			const app = await AppService.getApp({
@@ -133,22 +124,12 @@ export class SecretController {
 				return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to update secrets in Production." },
-					403,
-				);
-			}
-
-			// permissions.can_edit is true, user can update secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to update secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			const existingSecret = await SecretService.getSecret({
@@ -236,22 +217,12 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to delete secrets in Production." },
-					403,
-				);
-			}
-
-			// permissions.can_edit is true, user can delete secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to delete secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get the existing secret before deletion for PiT record
@@ -321,22 +292,12 @@ export class SecretController {
 				return c.json({ error: "envs must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to create secrets in Production." },
-					403,
-				);
-			}
-
-			// permissions.can_edit is true, user can create secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to create secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			const app = await AppService.getApp({
@@ -437,22 +398,12 @@ export class SecretController {
 				return c.json({ error: "envs must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to update secrets in Production." },
-					403,
-				);
-			}
-
-			// permissions.can_edit is true, user can edit secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to edit secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			const app = await AppService.getApp({
@@ -551,22 +502,12 @@ export class SecretController {
 				return c.json({ error: "keys must be an array." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// env_type_id
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
 
-			// env_type's name is "Production", user must have admin permissions
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to delete secrets in Production." },
-					403,
-				);
-			}
-
-			// permissions.can_edit is true, user can delete secrets
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to delete secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Get existing secrets before deletion for PiT record
@@ -639,11 +580,9 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user has permission to reveal secrets
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to reveal secrets." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			// Get the app
@@ -683,11 +622,9 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user has permission to reveal secrets
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to reveal secrets." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			// Get the app
@@ -732,20 +669,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to view secret history in Production." },
-					403,
-				);
-			}
-
-			// Check view permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view secret history." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const result = await SecretStorePiTService.getSecretStorePiTs({
@@ -787,17 +715,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and pit_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to view secrets in Production." }, 403);
-			}
-
-			// Check view permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view secrets." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const secrets = await SecretStorePiTService.getEnvsTillPiTId({
@@ -837,17 +759,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and timestamp are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json({ error: "You do not have permission to view secrets in Production." }, 403);
-			}
-
-			// Check view permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view secrets." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			// Validate timestamp
@@ -896,20 +812,11 @@ export class SecretController {
 				);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to view secret diffs in Production." },
-					403,
-				);
-			}
-
-			// Check view permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view secret diffs." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const diff = await SecretStorePiTService.getEnvDiff({
@@ -952,20 +859,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to view secret timeline in Production." },
-					403,
-				);
-			}
-
-			// Check view permissions
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to view secret timeline." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			const timeline = await SecretStorePiTService.getVariableTimeline({
@@ -1008,20 +906,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and pit_id are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to rollback secrets in Production." },
-					403,
-				);
-			}
-
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			const app = await AppService.getApp({
@@ -1161,20 +1050,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and timestamp are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to rollback secrets in Production." },
-					403,
-				);
-			}
-
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Validate timestamp
@@ -1322,20 +1202,11 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, pit_id, and key are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to rollback secrets in Production." },
-					403,
-				);
-			}
-
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			const app = await AppService.getApp({
@@ -1475,20 +1346,11 @@ export class SecretController {
 				);
 			}
 
-			const permissions = c.get("permissions");
-
 			// Check env type permissions
 			const env_type = await EnvTypeService.getEnvType(env_type_id);
-			if (env_type.is_protected && (!permissions.is_admin || !permissions.is_master)) {
-				return c.json(
-					{ error: "You do not have permission to rollback secrets in Production." },
-					403,
-				);
-			}
-
-			// Check edit permissions
-			if (!permissions.can_edit) {
-				return c.json({ error: "You do not have permission to rollback secrets." }, 403);
+			const canEdit = await AuthorizationService.check(c.get("user_id"), env_type.is_protected ? "can_manage_protected" : "can_edit", "env_type", env_type_id);
+			if (!canEdit) {
+				return c.json({ error: "You do not have permission to perform this action." }, 403);
 			}
 
 			// Validate timestamp
@@ -1630,11 +1492,9 @@ export class SecretController {
 				return c.json({ error: "org_id, app_id, env_type_id, and keys are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user has permission to reveal secrets
-			if (!permissions.can_view) {
-				return c.json({ error: "You do not have permission to reveal secrets." }, 403);
+			const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
+			if (!canView) {
+				return c.json({ error: "You do not have permission to view this environment." }, 403);
 			}
 
 			// Get the app

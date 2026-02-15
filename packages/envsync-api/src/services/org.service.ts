@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { cacheAside, invalidateCache } from "@/helpers/cache";
+import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 
 export class OrgService {
@@ -28,15 +30,17 @@ export class OrgService {
 	};
 
 	public static getOrg = async (id: string) => {
-		const db = await DB.getInstance();
+		return cacheAside(CacheKeys.org(id), CacheTTL.LONG, async () => {
+			const db = await DB.getInstance();
 
-		const org = await db
-			.selectFrom("orgs")
-			.selectAll()
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+			const org = await db
+				.selectFrom("orgs")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow();
 
-		return org;
+			return org;
+		});
 	};
 
 	public static updateOrg = async (
@@ -58,6 +62,8 @@ export class OrgService {
 			})
 			.where("id", "=", id)
 			.executeTakeFirstOrThrow();
+
+		await invalidateCache(CacheKeys.org(id));
 	};
 
 	public static checkIfSlugExists = async (slug: string) => {

@@ -12,13 +12,6 @@ export class WebhookController {
 
             let { name, event_types, linked_to = "org" , url, webhook_type, app_id } = await c.req.json();
 
-            const permissions = c.get("permissions");
-
-            // Webhooks can only be created by admins or masters in the organization
-            if (!(permissions.is_admin || permissions.is_master) || !permissions.have_webhook_access) {
-                return c.json({ error: "You do not have permission to create webhooks." }, 403);
-            }
-
             if (!name || !url || !webhook_type) {
                 return c.json({ error: "Name, URL, and Webhook Type are required." }, 400);
             }
@@ -144,13 +137,6 @@ export class WebhookController {
                 url,
                 webhook_type } = await c.req.json();
 
-            const permissions = c.get("permissions");
-
-            // Webhooks can only be updated by admins or masters
-            if (!permissions.is_admin || !permissions.is_master || !permissions.have_webhook_access) {
-                return c.json({ error: "You do not have permission to update webhooks." }, 403);
-            }
-
             const webhook = await WebhookService.getWebhookById(id);
 
             if (webhook.org_id !== org_id) {
@@ -193,13 +179,6 @@ export class WebhookController {
             const id = c.req.param("id");
 
             const webhook = await WebhookService.getWebhookById(id);
-
-            const permissions = c.get("permissions");
-
-            // Webhooks can only be delete by admins or masters in the organization
-            if (!permissions.is_admin || !permissions.is_master || !permissions.have_webhook_access) {
-                return c.json({ error: "You do not have permission to delete webhooks." }, 403);
-            }
 
             if (webhook.org_id !== org_id) {
                 return c.json({ error: "Webhook does not belong to your organization" }, 403);

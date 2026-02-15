@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import { AppController } from "@/controllers/app.controller";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
 import {
@@ -106,6 +107,7 @@ app.post(
 		},
 	}),
 	zValidator("json", createAppRequestBodySchema),
+	requirePermission("can_manage_apps", "org"),
 	AppController.createApp,
 );
 
@@ -136,6 +138,7 @@ app.patch(
 		},
 	}),
 	zValidator("json", updateAppRequestBodySchema),
+	requirePermission("can_manage_apps", "org"),
 	AppController.updateApp,
 );
 
@@ -165,6 +168,7 @@ app.delete(
 			},
 		},
 	}),
+	requirePermission("can_manage_apps", "org"),
 	AppController.deleteApp,
 );
 
