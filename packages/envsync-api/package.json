@@ -44,6 +44,7 @@
 		"@types/pg": "^8.15.4",
 		"esbuild": "^0.25.5",
 		"eslint": "8",
+		"glob": "^13.0.3",
 		"prettier": "^3.5.3"
 	},
 	"prettier": "@bravo68web/prettier-config"

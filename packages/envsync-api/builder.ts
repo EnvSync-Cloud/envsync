@@ -9,7 +9,7 @@ import path from "node:path";
 
 import type { BuildOptions, Plugin, PluginBuild } from "esbuild";
 import { build } from "esbuild";
-import glob from "glob";
+import { glob } from "glob";
 
 const entryPoints = glob.sync("./src/**/*.ts", {
 	ignore: ["./src/**/*.test.ts"],
