@@ -476,7 +476,7 @@ export const ManageEnvironment = () => {
                 </h3>
                 <p className="text-slate-400 text-center mb-6 max-w-md">
                   Create your first environment type to start organizing your
-                  environment variables. Common types include Development,
+                  variables. Common types include Development,
                   Staging, and Production.
                 </p>
                 <Button
@@ -500,7 +500,7 @@ export const ManageEnvironment = () => {
               Create Environment Type
             </DialogTitle>
             <DialogDescription className="text-slate-400">
-              Add a new environment type to organize your environment variables.
+              Add a new environment type to organize your variables.
             </DialogDescription>
           </DialogHeader>
 
@@ -820,7 +820,7 @@ export const ManageEnvironment = () => {
                     {selectedEnvironment?.variable_count || 0}
                   </div>
                   <div className="text-xs text-slate-400">
-                    Environment Variables
+                    Variables
                   </div>
                 </div>
               </div>
@@ -902,7 +902,7 @@ export const ManageEnvironment = () => {
                 {" "}
                 {selectedEnvironment?.name}{" "}
               </strong>
-              and all its environment variables.
+              and all its variables.
             </DialogDescription>
           </DialogHeader>
 
@@ -938,8 +938,8 @@ export const ManageEnvironment = () => {
                       <ul className="list-disc list-inside space-y-1 text-red-300">
                         <li>The environment type configuration</li>
                         <li>
-                          All {selectedEnvironment?.variable_count || 0} environment
-                          variables in this type
+                          All {selectedEnvironment?.variable_count || 0} variables
+                          in this type
                         </li>
                         <li>All deployment history for this environment type</li>
                         <li>Any integrations using this environment type</li>

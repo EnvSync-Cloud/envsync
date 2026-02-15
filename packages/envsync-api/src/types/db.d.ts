@@ -111,7 +111,7 @@ interface Users extends BaseTable {
 	email: ColumnType<string>;
 	org_id: ColumnType<string>;
 	role_id: ColumnType<string>;
-	keycloak_id?: ColumnType<string | null>;
+	auth_service_id?: ColumnType<string | null>;
 	full_name?: ColumnType<string | null>;
 	profile_picture_url?: ColumnType<string | null>;
 	last_login?: ColumnType<Date | null>;
@@ -159,7 +159,6 @@ export interface Database {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
 	org_role: OrgRole;
-	env_store: EnvStore;
 	audit_log: AuditLog;
 	app: App;
 	env_type: EnvType;
@@ -169,7 +168,6 @@ export interface Database {
 	api_keys: ApiKeys;
 	env_store_pit: EnvStorePiT;
 	env_store_pit_change_request: EnvStorePiTChangeRequest;
-	secret_store: SecretStore;
 	secret_store_pit: SecretStorePiT;
 	secret_store_pit_change_request: SecretStorePiTChangeRequest;
 	webhook_store: WebhookStore;

@@ -1,8 +1,31 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { DB } from "@/libs/db";
+import { VaultClient } from "@/libs/vault";
+import { envPath, envScopePath } from "@/libs/vault/paths";
 
 import { KeyValidationService } from "./key_validation.service";
+
+/**
+ * Synthesize a response object matching the previous PG row shape.
+ */
+function toEnvRecord(
+	org_id: string,
+	app_id: string,
+	env_type_id: string,
+	key: string,
+	value: string,
+	created_time: string,
+) {
+	return {
+		id: `${org_id}:${app_id}:${env_type_id}:${key}`,
+		org_id,
+		app_id,
+		env_type_id,
+		key,
+		value,
+		created_at: new Date(created_time),
+		updated_at: new Date(created_time),
+	};
+}
 
 export class EnvService {
 	public static createEnv = async ({
@@ -18,37 +41,23 @@ export class EnvService {
 		app_id: string;
 		org_id: string;
 	}) => {
-		const db = await DB.getInstance();
-
-		// Validate key doesn't exist as secret
 		const keyCheck = await KeyValidationService.checkKeyExists({
 			key,
 			app_id,
 			env_type_id,
 			org_id,
-			excludeTable: "env_store", // Don't check env_store since we're creating in it
+			excludeTable: "env_store",
 		});
 
 		if (keyCheck.exists) {
 			throw new Error(keyCheck.message!);
 		}
 
-		const { id } = await db
-			.insertInto("env_store")
-			.values({
-				id: uuidv4(),
-				value,
-				key,
-				env_type_id,
-				org_id,
-				app_id,
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.returning("id")
-			.executeTakeFirstOrThrow();
+		const vault = await VaultClient.getInstance();
+		const path = envPath(org_id, app_id, env_type_id, key);
+		await vault.kvWrite(path, { value });
 
-		return { id };
+		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
 	};
 
 	public static getEnv = async ({
@@ -62,18 +71,22 @@ export class EnvService {
 		app_id: string;
 		org_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
+		const path = envPath(org_id, app_id, env_type_id, key);
+		const result = await vault.kvRead(path);
 
-		const env = await db
-			.selectFrom("env_store")
-			.selectAll()
-			.where("key", "=", key)
-			.where("env_type_id", "=", env_type_id)
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.executeTakeFirst();
+		if (!result) {
+			return undefined;
+		}
 
-		return env;
+		return toEnvRecord(
+			org_id,
+			app_id,
+			env_type_id,
+			key,
+			result.data.value,
+			result.metadata.created_time,
+		);
 	};
 
 	public static updateEnv = async ({
@@ -89,19 +102,16 @@ export class EnvService {
 		org_id: string;
 		env_type_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
+		const path = envPath(org_id, app_id, env_type_id, key);
 
-		await db
-			.updateTable("env_store")
-			.set({
-				value,
-				updated_at: new Date(),
-			})
-			.where("key", "=", key)
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.where("env_type_id", "=", env_type_id)
-			.executeTakeFirstOrThrow();
+		// Verify the key exists before updating
+		const existing = await vault.kvRead(path);
+		if (!existing) {
+			throw new Error("no result");
+		}
+
+		await vault.kvWrite(path, { value });
 	};
 
 	public static deleteEnv = async ({
@@ -115,15 +125,16 @@ export class EnvService {
 		env_type_id: string;
 		org_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
+		const path = envPath(org_id, app_id, env_type_id, key);
 
-		await db
-			.deleteFrom("env_store")
-			.where("key", "=", key)
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.where("env_type_id", "=", env_type_id)
-			.executeTakeFirstOrThrow();
+		// Verify the key exists before deleting
+		const existing = await vault.kvRead(path);
+		if (!existing) {
+			throw new Error("no result");
+		}
+
+		await vault.kvMetadataDelete(path);
 	};
 
 	public static getAllEnv = async ({
@@ -135,17 +146,31 @@ export class EnvService {
 		org_id: string;
 		env_type_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
+		const scopePath = envScopePath(org_id, app_id, env_type_id);
+		const keys = await vault.kvList(scopePath);
 
-		const envs = await db
-			.selectFrom("env_store")
-			.selectAll()
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.where("env_type_id", "=", env_type_id)
-			.execute();
+		if (keys.length === 0) {
+			return [];
+		}
 
-		return envs;
+		const results = await Promise.all(
+			keys.map(async key => {
+				const path = envPath(org_id, app_id, env_type_id, key);
+				const result = await vault.kvRead(path);
+				if (!result) return null;
+				return toEnvRecord(
+					org_id,
+					app_id,
+					env_type_id,
+					key,
+					result.data.value,
+					result.metadata.created_time,
+				);
+			}),
+		);
+
+		return results.filter(r => r !== null);
 	};
 
 	public static batchCreateEnvs = async (
@@ -157,7 +182,6 @@ export class EnvService {
 			value: string;
 		}[],
 	) => {
-		// Validate all keys don't exist as secrets
 		const keys = envs.map(env => env.key);
 		const conflicts = await KeyValidationService.validateKeys({
 			keys,
@@ -172,20 +196,14 @@ export class EnvService {
 			throw new Error(`Key conflicts found: ${conflictMessages}`);
 		}
 
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
 
-		const envInserts = envs.map(env => ({
-			id: uuidv4(),
-			key: env.key,
-			value: env.value,
-			app_id,
-			org_id,
-			env_type_id,
-			created_at: new Date(),
-			updated_at: new Date(),
-		}));
-
-		await db.insertInto("env_store").values(envInserts).execute();
+		await Promise.all(
+			envs.map(env => {
+				const path = envPath(org_id, app_id, env_type_id, env.key);
+				return vault.kvWrite(path, { value: env.value });
+			}),
+		);
 	};
 
 	public static batchUpdateEnvs = async (
@@ -197,21 +215,14 @@ export class EnvService {
 			value: string;
 		}[],
 	) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
 
-		for (const env of envs) {
-			await db
-				.updateTable("env_store")
-				.set({
-					value: env.value,
-					updated_at: new Date(),
-				})
-				.where("key", "=", env.key)
-				.where("app_id", "=", app_id)
-				.where("org_id", "=", org_id)
-				.where("env_type_id", "=", env_type_id)
-				.executeTakeFirstOrThrow();
-		}
+		await Promise.all(
+			envs.map(env => {
+				const path = envPath(org_id, app_id, env_type_id, env.key);
+				return vault.kvWrite(path, { value: env.value });
+			}),
+		);
 	};
 
 	public static batchDeleteEnvs = async (
@@ -220,15 +231,14 @@ export class EnvService {
 		env_type_id: string,
 		keys: string[],
 	) => {
-		const db = await DB.getInstance();
+		const vault = await VaultClient.getInstance();
 
-		await db
-			.deleteFrom("env_store")
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.where("env_type_id", "=", env_type_id)
-			.where("key", "in", keys)
-			.executeTakeFirstOrThrow();
+		await Promise.all(
+			keys.map(key => {
+				const path = envPath(org_id, app_id, env_type_id, key);
+				return vault.kvMetadataDelete(path);
+			}),
+		);
 	};
 
 	public static getAppEnvSummary = async ({
@@ -239,13 +249,22 @@ export class EnvService {
 		org_id: string;
 	}) => {
 		const db = await DB.getInstance();
-
-		const summary = await db
-			.selectFrom("env_store")
-			.select(["env_type_id", db.fn.count("id").as("count")])
+		const envTypes = await db
+			.selectFrom("env_type")
+			.select("id")
 			.where("app_id", "=", app_id)
 			.where("org_id", "=", org_id)
 			.execute();
+
+		const vault = await VaultClient.getInstance();
+
+		const summary = await Promise.all(
+			envTypes.map(async et => {
+				const scopePath = envScopePath(org_id, app_id, et.id);
+				const keys = await vault.kvList(scopePath);
+				return { env_type_id: et.id, count: keys.length };
+			}),
+		);
 
 		return summary;
 	};

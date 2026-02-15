@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 
 import { DB } from "@/libs/db";
+import { VaultClient } from "@/libs/vault";
+import { envScopePath, secretScopePath } from "@/libs/vault/paths";
 
 export class AppService {
 	public static createApp = async ({
@@ -9,18 +11,18 @@ export class AppService {
 		description,
 		metadata,
 		enable_secrets,
-		is_managed_secret,
-		public_key,
-		private_key,
+		is_managed_secret = false,
+		public_key = null,
+		private_key = null,
 	}: {
 		name: string;
 		org_id: string;
 		description: string;
 		metadata: Record<string, any>;
 		enable_secrets: boolean;
-		is_managed_secret: boolean;
-		public_key?: string;
-		private_key?: string;
+		is_managed_secret?: boolean;
+		public_key?: string | null;
+		private_key?: string | null;
 	}) => {
 		const db = await DB.getInstance();
 
@@ -140,28 +142,60 @@ export class AppService {
 		return envTypes;
 	};
 
-	public static getEnvCountByApp = async ({ app_id }: { app_id: string }) => {
+	public static getEnvCountByApp = async ({
+		app_id,
+		org_id,
+	}: {
+		app_id: string;
+		org_id: string;
+	}) => {
 		const db = await DB.getInstance();
-
-		const count = await db
-			.selectFrom("env_store")
-			.select(db.fn.count<number>("id").as("count"))
+		const envTypes = await db
+			.selectFrom("env_type")
+			.select("id")
 			.where("app_id", "=", app_id)
-			.executeTakeFirstOrThrow();
+			.where("org_id", "=", org_id)
+			.execute();
 
-		return count.count;
+		if (envTypes.length === 0) return 0;
+
+		const vault = await VaultClient.getInstance();
+		const counts = await Promise.all(
+			envTypes.map(async et => {
+				const keys = await vault.kvList(envScopePath(org_id, app_id, et.id));
+				return keys.length;
+			}),
+		);
+
+		return counts.reduce((sum, c) => sum + c, 0);
 	};
 
-	public static getSecretCountByApp = async ({ app_id }: { app_id: string }) => {
+	public static getSecretCountByApp = async ({
+		app_id,
+		org_id,
+	}: {
+		app_id: string;
+		org_id: string;
+	}) => {
 		const db = await DB.getInstance();
-
-		const count = await db
-			.selectFrom("secret_store")
-			.select(db.fn.count<number>("id").as("count"))
+		const envTypes = await db
+			.selectFrom("env_type")
+			.select("id")
 			.where("app_id", "=", app_id)
-			.executeTakeFirstOrThrow();
+			.where("org_id", "=", org_id)
+			.execute();
 
-		return count.count;
+		if (envTypes.length === 0) return 0;
+
+		const vault = await VaultClient.getInstance();
+		const counts = await Promise.all(
+			envTypes.map(async et => {
+				const keys = await vault.kvList(secretScopePath(org_id, app_id, et.id));
+				return keys.length;
+			}),
+		);
+
+		return counts.reduce((sum, c) => sum + c, 0);
 	};
 
 	public static getManagedAppPrivateKey = async (app_id: string) => {

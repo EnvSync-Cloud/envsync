@@ -25,11 +25,13 @@ import {
 interface ProjectEnvironmentsHeaderProps {
   projectName: string;
   environmentId: string;
+  environmentName?: string;
   totalVariables: number;
   totalSecrets: number;
   environmentTypes: number;
   canEdit: boolean;
   isRefetching: boolean;
+  enableSecrets?: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onAddVariable: () => void;
@@ -41,11 +43,13 @@ interface ProjectEnvironmentsHeaderProps {
 export const ProjectEnvironmentsHeader = ({
   projectName,
   environmentId,
+  environmentName,
   totalVariables,
   totalSecrets,
   environmentTypes,
   canEdit,
   isRefetching,
+  enableSecrets,
   onBack,
   onRefresh,
   onAddVariable,
@@ -59,19 +63,21 @@ export const ProjectEnvironmentsHeader = ({
 
   // Determine current section based on route
   const isSecretsPage = location.pathname.includes("/secrets");
-  const currentSection = isSecretsPage ? "Secrets" : "Environments";
+  const currentSection = isSecretsPage ? "Secrets" : "Variables";
 
   const handleSectionChange = (section: "environments" | "secrets") => {
     if (!projectNameId) return;
 
-    const targetPath = `/applications/${projectNameId}`;
+    let targetPath = `/applications/${projectNameId}`;
+    if (section === "secrets") targetPath += "/secrets";
     navigate(targetPath);
   };
 
   const onRollback = () => {
     let targetUrl = `/applications/pit/${projectNameId}`;
     if (currentSection === "Secrets") targetUrl += "/secrets";
-    targetUrl += `?env=${environmentId}`;
+    const envParam = environmentName?.toLowerCase() || environmentId;
+    targetUrl += `?env=${encodeURIComponent(envParam)}`;
 
     navigate(targetUrl);
   };
@@ -93,57 +99,64 @@ export const ProjectEnvironmentsHeader = ({
         <span className="text-slate-300">{projectName}</span>
         <span className="text-slate-500">/</span>
 
-        {/* Section Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white font-medium hover:bg-slate-700 px-3 py-2 h-auto"
+        {/* Section Dropdown (only show when secrets are enabled) */}
+        {enableSecrets ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white font-medium hover:bg-slate-700 px-3 py-2 h-auto"
+              >
+                {isSecretsPage ? (
+                  <Shield className="w-4 h-4 mr-2" />
+                ) : (
+                  <Settings className="w-4 h-4 mr-2" />
+                )}
+                {currentSection}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="bg-slate-800 border-slate-700 min-w-[200px]"
+              align="start"
             >
-              {isSecretsPage ? (
-                <Shield className="w-4 h-4 mr-2" />
-              ) : (
-                <Settings className="w-4 h-4 mr-2" />
-              )}
-              {currentSection}
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="bg-slate-800 border-slate-700 min-w-[200px]"
-            align="start"
-          >
-            <DropdownMenuItem
-              onClick={() => handleSectionChange("environments")}
-              className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
-                !isSecretsPage ? "bg-slate-700" : ""
-              }`}
-            >
-              <Settings className="w-4 h-4 mr-3 text-emerald-400" />
-              <div className="flex flex-col">
-                <span className="font-medium">Environments</span>
-                <span className="text-xs text-slate-400">
-                  Manage environment variables & configuration
-                </span>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleSectionChange("secrets")}
-              className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
-                isSecretsPage ? "bg-slate-700" : ""
-              }`}
-            >
-              <Shield className="w-4 h-4 mr-3 text-red-400" />
-              <div className="flex flex-col">
-                <span className="font-medium">Secrets</span>
-                <span className="text-xs text-slate-400">
-                  Manage sensitive variables & credentials
-                </span>
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem
+                onClick={() => handleSectionChange("environments")}
+                className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
+                  !isSecretsPage ? "bg-slate-700" : ""
+                }`}
+              >
+                <Settings className="w-4 h-4 mr-3 text-emerald-400" />
+                <div className="flex flex-col">
+                  <span className="font-medium">Variables</span>
+                  <span className="text-xs text-slate-400">
+                    Manage variables & configuration
+                  </span>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleSectionChange("secrets")}
+                className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
+                  isSecretsPage ? "bg-slate-700" : ""
+                }`}
+              >
+                <Shield className="w-4 h-4 mr-3 text-red-400" />
+                <div className="flex flex-col">
+                  <span className="font-medium">Secrets</span>
+                  <span className="text-xs text-slate-400">
+                    Manage sensitive variables & credentials
+                  </span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="text-white font-medium flex items-center px-3 py-2">
+            <Settings className="w-4 h-4 mr-2" />
+            {currentSection}
+          </span>
+        )}
       </div>
 
       {/* Header */}
@@ -158,7 +171,7 @@ export const ProjectEnvironmentsHeader = ({
               <p className="text-slate-400">
                 {isSecretsPage
                   ? "Sensitive Variables & Credentials Management"
-                  : "Environment Variables & Configuration"}
+                  : "Variables & Configuration"}
               </p>
             </div>
           </div>

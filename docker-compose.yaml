@@ -162,20 +162,36 @@ services:
         condition: service_healthy
         restart: false
 
+  vault-init:
+    image: alpine:latest
+    command: sh -c "chown -R 100:1000 /vault/data"
+    volumes:
+      - vault_data:/vault/data
+    restart: "no"
+
   vault:
     image: hashicorp/vault:latest
+    command: vault server -config=/vault/config/vault.hcl
     ports:
       - "${VAULT_PORT:-8200}:8200"
     restart: always
     environment:
       VAULT_ADDR: http://localhost:8200
       VAULT_TOKEN: ${VAULT_TOKEN:-}
+      SKIP_SETCAP: "true"
+      SKIP_CHOWN: "true"
     volumes:
-      - vault_data:/opt/vault/data
+      - vault_data:/vault/data
+      - ./docker/vault/vault.hcl:/vault/config/vault.hcl:ro
     depends_on:
-      - postgres
-      - redis
-      - zitadel
+      vault-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      zitadel:
+        condition: service_started
     networks:
       - envsync_network
 

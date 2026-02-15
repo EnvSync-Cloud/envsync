@@ -293,7 +293,7 @@ export const ProjectEnvironments = ({
       queryClient.invalidateQueries({
         queryKey: ["envVars", projectNameId, selectedEnv],
       });
-      toast.success("Environment variable added successfully");
+      toast.success("Variable added successfully");
       resetForm();
       setShowAddEnvVarDialog(false);
     },
@@ -301,7 +301,7 @@ export const ProjectEnvironments = ({
       const message =
         error?.response?.data?.message ||
         error.message ||
-        "Failed to add environment variable";
+        "Failed to add variable";
       toast.error(message);
     },
   });
@@ -320,7 +320,7 @@ export const ProjectEnvironments = ({
       queryClient.invalidateQueries({
         queryKey: ["envVars", projectNameId, selectedEnv],
       });
-      toast.success("Environment variable updated successfully");
+      toast.success("Variable updated successfully");
       resetForm();
       setShowEditEnvVarDialog(false);
       setActionLoading(key, false);
@@ -329,7 +329,7 @@ export const ProjectEnvironments = ({
       const message =
         error?.response?.data?.message ||
         error.message ||
-        "Failed to update environment variable";
+        "Failed to update variable";
       toast.error(message);
       setActionLoading(key, false);
     },
@@ -349,7 +349,7 @@ export const ProjectEnvironments = ({
       queryClient.invalidateQueries({
         queryKey: ["envVars", projectNameId, selectedEnv],
       });
-      toast.success("Environment variable deleted successfully");
+      toast.success("Variable deleted successfully");
       setShowDeleteEnvVarDialog(false);
       setEditingEnvVar(null);
       setActionLoading(key, false);
@@ -358,7 +358,7 @@ export const ProjectEnvironments = ({
       const message =
         error?.response?.data?.message ||
         error.message ||
-        "Failed to delete environment variable";
+        "Failed to delete variable";
       toast.error(message);
       setActionLoading(key, false);
     },
@@ -459,7 +459,7 @@ export const ProjectEnvironments = ({
 
     if (successful > 0) {
       toast.success(
-        `Successfully imported ${successful} environment variables`
+        `Successfully imported ${successful} variables`
       );
       queryClient.invalidateQueries({
         queryKey: ["envVars", projectNameId, selectedEnv],
@@ -467,7 +467,7 @@ export const ProjectEnvironments = ({
     }
 
     if (failed > 0) {
-      toast.error(`Failed to import ${failed} environment variables`);
+      toast.error(`Failed to import ${failed} variables`);
     }
 
     setShowBulkImportDialog(false);
@@ -653,7 +653,7 @@ export const ProjectEnvironments = ({
             <h1 className="text-2xl font-bold text-white">
               {projectData.project.name}
             </h1>
-            <p className="text-gray-400">Environment Variables</p>
+            <p className="text-gray-400">Variables</p>
           </div>
         </div>
         {can_edit && (
@@ -789,7 +789,7 @@ export const ProjectEnvironments = ({
               <div className="text-center">
                 <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
                 <p className="text-red-400 mb-2">
-                  Failed to load environment variables
+                  Failed to load variables
                 </p>
                 <Button
                   onClick={() => refetchEnvVars()}
@@ -813,15 +813,15 @@ export const ProjectEnvironments = ({
               <h3 className="text-lg font-medium text-white mb-2">
                 {searchQuery
                   ? "No variables found"
-                  : "No environment variables"}
+                  : "No variables"}
               </h3>
               <p className="text-gray-400 mb-4">
                 {searchQuery
                   ? `No variables match "${searchQuery}"`
                   : selectedEnv
                   ? can_edit
-                    ? "Add your first environment variable to get started"
-                    : "No environment variables configured for this environment"
+                    ? "Add your first variable to get started"
+                    : "No variables configured for this environment"
                   : "Select an environment to view variables"}
               </p>
               {selectedEnv && !searchQuery && can_edit && (
@@ -952,10 +952,10 @@ export const ProjectEnvironments = ({
         <DialogContent className="bg-gray-800 border-gray-700 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Add Environment Variable
+              Add Variable
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Add a new environment variable to {selectedEnvironment?.name}
+              Add a new variable to {selectedEnvironment?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1039,7 +1039,7 @@ export const ProjectEnvironments = ({
         <DialogContent className="bg-gray-800 border-gray-700 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Edit Environment Variable
+              Edit Variable
             </DialogTitle>
             <DialogDescription className="text-gray-400">
               Update the value for {editingEnvVar?.key} in{" "}
@@ -1119,10 +1119,10 @@ export const ProjectEnvironments = ({
         <DialogContent className="bg-gray-800 border-gray-700 max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Delete Environment Variable
+              Delete Variable
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Are you sure you want to delete the environment variable "
+              Are you sure you want to delete the variable "
               {editingEnvVar?.key}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -1132,7 +1132,7 @@ export const ProjectEnvironments = ({
               <div>
                 <h4 className="text-red-400 font-medium text-sm">Warning</h4>
                 <p className="text-red-300 text-sm mt-1">
-                  This will permanently remove the environment variable from{" "}
+                  This will permanently remove the variable from{" "}
                   {selectedEnvironment?.name}. Any applications depending on
                   this variable may stop working.
                 </p>
@@ -1178,7 +1178,7 @@ export const ProjectEnvironments = ({
         <DialogContent className="bg-gray-800 border-gray-700 max-w-2xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Import Environment Variables
+              Import Variables
             </DialogTitle>
             <DialogDescription className="text-gray-400">
               Paste your .env file content below. Each line should be in

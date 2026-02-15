@@ -156,7 +156,7 @@ export const CreateProject = () => {
         <div>
           <h1 className="text-3xl font-bold text-white">Create New Project</h1>
           <p className="text-slate-400 mt-2">
-            Set up a new project to manage your environment variables
+            Set up a new project to manage your variables
           </p>
         </div>
       </div>
@@ -243,7 +243,7 @@ export const CreateProject = () => {
                       Enable Secrets
                     </Label>
                     <p className="text-xs text-slate-400">
-                      Enable encryption for sensitive environment variables
+                      Enable encryption for sensitive variables
                     </p>
                   </div>
                   <Switch
@@ -402,7 +402,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
               <ul className="space-y-2 list-disc list-inside text-sm text-slate-400">
                 <li>Your project will be created and ready to use.</li>
                 <li>
-                  You can start adding environment variables for different
+                  You can start adding variables for different
                   environments.
                 </li>
                 {formData.enableSecrets && (

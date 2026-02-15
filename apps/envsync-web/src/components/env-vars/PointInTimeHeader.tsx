@@ -43,6 +43,7 @@ interface PointInTimeHeaderProps {
   selectedEnvironmentId?: string;
   canEdit: boolean;
   isRefetching: boolean;
+  enableSecrets?: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onAddVariable: () => void;
@@ -59,6 +60,7 @@ export const PointInTimeHeader = ({
   selectedEnvironmentId,
   canEdit,
   isRefetching,
+  enableSecrets,
   onBack,
   onRefresh,
   onAddVariable,
@@ -80,22 +82,24 @@ export const PointInTimeHeader = ({
 
   // Determine current section based on route
   const isSecretsPage = location.pathname.includes("/secrets");
-  const currentSection = isSecretsPage ? "Secrets" : "Environments";
+  const currentSection = isSecretsPage ? "Secrets" : "Variables";
 
   const handleSectionChange = (section: "environments" | "secrets") => {
     if (!projectNameId) return;
 
     let targetUrl = `/applications/pit/${projectNameId}`;
     if (section === "secrets") targetUrl += "/secrets";
-    targetUrl += `?env=${selectedEnvId}`;
+    const envName = currentEnv?.name?.toLowerCase() || selectedEnvId;
+    targetUrl += `?env=${encodeURIComponent(envName)}`;
 
     navigate(targetUrl);
   };
 
   const handleEnvironmentChange = (envId: string) => {
     onEnvironmentChange?.(envId);
-    setCurrentEnv(environmentTypes.find((env) => env.id === envId));
-    setSearchParams({ env: envId });
+    const env = environmentTypes.find((env) => env.id === envId);
+    setCurrentEnv(env);
+    setSearchParams({ env: env?.name?.toLowerCase() || envId });
   };
 
   const getEnvironmentColor = (color?: string) => {
@@ -140,59 +144,66 @@ export const PointInTimeHeader = ({
             <span className="text-slate-300 font-medium">{projectName}</span>
             <span className="text-slate-500">/</span>
 
-            {/* Enhanced Section Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white font-medium hover:bg-slate-700 px-4 py-2 h-auto border border-slate-600 hover:border-slate-500 transition-all"
+            {/* Section Dropdown (only show when secrets are enabled) */}
+            {enableSecrets ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white font-medium hover:bg-slate-700 px-4 py-2 h-auto border border-slate-600 hover:border-slate-500 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isSecretsPage ? (
+                        <Shield className="w-4 h-4 text-red-400" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-electric_indigo-400" />
+                      )}
+                      <span>{currentSection} PIT</span>
+                      <ChevronDown className="w-4 h-4 ml-1" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="bg-slate-800 border-slate-700 min-w-[250px] shadow-xl"
+                  align="start"
                 >
-                  <div className="flex items-center gap-2">
-                    {isSecretsPage ? (
-                      <Shield className="w-4 h-4 text-red-400" />
-                    ) : (
-                      <Clock className="w-4 h-4 text-electric_indigo-400" />
-                    )}
-                    <span>{currentSection} PIT</span>
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="bg-slate-800 border-slate-700 min-w-[250px] shadow-xl"
-                align="start"
-              >
-                <DropdownMenuItem
-                  onClick={() => handleSectionChange("environments")}
-                  className={`text-white hover:bg-slate-700 cursor-pointer p-4 ${
-                    !isSecretsPage ? "bg-slate-700/50" : ""
-                  }`}
-                >
-                  <Clock className="w-5 h-5 mr-3 text-electric_indigo-400" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">Environment Variables</span>
-                    <span className="text-xs text-slate-400">
-                      View point-in-time snapshots of environment variables
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleSectionChange("secrets")}
-                  className={`text-white hover:bg-slate-700 cursor-pointer p-4 ${
-                    isSecretsPage ? "bg-slate-700/50" : ""
-                  }`}
-                >
-                  <Shield className="w-5 h-5 mr-3 text-red-400" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">Secrets</span>
-                    <span className="text-xs text-slate-400">
-                      View point-in-time snapshots of secret values
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    onClick={() => handleSectionChange("environments")}
+                    className={`text-white hover:bg-slate-700 cursor-pointer p-4 ${
+                      !isSecretsPage ? "bg-slate-700/50" : ""
+                    }`}
+                  >
+                    <Clock className="w-5 h-5 mr-3 text-electric_indigo-400" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">Variables</span>
+                      <span className="text-xs text-slate-400">
+                        View point-in-time snapshots of variables
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleSectionChange("secrets")}
+                    className={`text-white hover:bg-slate-700 cursor-pointer p-4 ${
+                      isSecretsPage ? "bg-slate-700/50" : ""
+                    }`}
+                  >
+                    <Shield className="w-5 h-5 mr-3 text-red-400" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">Secrets</span>
+                      <span className="text-xs text-slate-400">
+                        View point-in-time snapshots of secret values
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className="text-white font-medium flex items-center gap-2 px-4 py-2">
+                <Clock className="w-4 h-4 text-electric_indigo-400" />
+                {currentSection} PIT
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -210,7 +221,7 @@ export const PointInTimeHeader = ({
                 <p className="text-slate-400 text-lg">
                   {isSecretsPage
                     ? "Point-in-time snapshots for secrets"
-                    : "Point-in-time snapshots for environment variables"}
+                    : "Point-in-time snapshots for variables"}
                 </p>
               </div>
             </div>

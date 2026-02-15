@@ -33,6 +33,7 @@ export const ProjectEnvironments = () => {
     project,
     environmentTypes,
     secrets,
+    enableSecrets,
     isLoading,
     error,
 
@@ -187,6 +188,7 @@ export const ProjectEnvironments = () => {
       <ProjectEnvironmentsHeader
         environmentTypes={environmentTypes.length}
         environmentId={selectedEnvironment}
+        environmentName={environmentTypes.find((e) => e.id === selectedEnvironment)?.name}
         isRefetching={
           createSecret.isPending ||
           updateSecret.isPending ||
@@ -196,6 +198,7 @@ export const ProjectEnvironments = () => {
         projectName={project.name}
         totalSecrets={secrets.length}
         totalVariables={secrets.length}
+        enableSecrets={enableSecrets}
         onBack={onBack}
         onAddVariable={() => setShowAddModal(true)}
         onBulkImport={() => setShowBulkImportModal(true)}

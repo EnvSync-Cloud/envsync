@@ -42,9 +42,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Webhook event types
 const WEBHOOK_EVENTS = [
-  { value: "env.created", label: "Environment Variable Created" },
-  { value: "env.updated", label: "Environment Variable Updated" },
-  { value: "env.deleted", label: "Environment Variable Deleted" },
+  { value: "env.created", label: "Variable Created" },
+  { value: "env.updated", label: "Variable Updated" },
+  { value: "env.deleted", label: "Variable Deleted" },
   { value: "project.created", label: "Project Created" },
   { value: "project.updated", label: "Project Updated" },
   { value: "project.deleted", label: "Project Deleted" },

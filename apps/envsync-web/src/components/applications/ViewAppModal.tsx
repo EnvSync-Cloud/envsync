@@ -199,7 +199,7 @@ export const ViewAppModal = ({
           <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-700">
             <div className="text-xs text-slate-400">
               <Info className="inline-block mr-1" size={16} />
-              Manage environment variables and configurations for this project
+              Manage variables and configurations for this project
             </div>
             <Button
               variant="outline"
@@ -210,7 +210,7 @@ export const ViewAppModal = ({
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              View Environments
+              View Variables
             </Button>
           </div>
         </div>

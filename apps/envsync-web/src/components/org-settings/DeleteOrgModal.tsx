@@ -55,7 +55,7 @@ export const DeleteOrgModal = ({
                 <ul className="list-disc list-inside space-y-1 text-red-300">
                   <li>All organization data and settings</li>
                   <li>All projects and applications</li>
-                  <li>All environment variables and configurations</li>
+                  <li>All variables and configurations</li>
                   <li>All user memberships and permissions</li>
                   <li>All API keys and access tokens</li>
                   <li>All audit logs and activity history</li>

@@ -223,10 +223,10 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
   // Dynamic content based on context
   const modalTitle = isSecretsPage
     ? "Bulk Import Secrets"
-    : "Bulk Import Environment Variables";
+    : "Bulk Import Variables";
   const modalDescription = isSecretsPage
     ? "Import multiple secrets at once using key=value format. All imported values will be treated as sensitive and encrypted."
-    : "Import multiple environment variables at once using key=value format.";
+    : "Import multiple variables at once using key=value format.";
   const buttonText = isSecretsPage ? "Import Secrets" : "Import Variables";
   const buttonIcon = isSecretsPage ? Shield : Upload;
   const buttonColor = isSecretsPage
@@ -329,7 +329,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
                   <Label htmlFor="import-text" className="text-white">
                     {isSecretsPage
                       ? "Secret Variables"
-                      : "Environment Variables"}
+                      : "Variables"}
                   </Label>
                   <Button
                     onClick={handleLoadExample}
@@ -355,7 +355,7 @@ API_SECRET_KEY=your-secret-api-key
 DATABASE_PASSWORD=secure_password_123
 JWT_SECRET=your-jwt-secret-key
 STRIPE_SECRET_KEY=sk_live_your_stripe_key`
-                      : `# Enter your environment variables in KEY=value format
+                      : `# Enter your variables in KEY=value format
 # Lines starting with # are comments
 
 DATABASE_URL=postgresql://user:pass@localhost:5432/db

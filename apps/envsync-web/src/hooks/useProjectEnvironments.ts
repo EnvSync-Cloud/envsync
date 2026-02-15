@@ -96,7 +96,8 @@ export const useProjectEnvironments = (projectNameId: string) => {
         project,
         environmentTypes,
         environmentVariables,
-        secrets
+        secrets,
+        enableSecrets: projectResponse.enable_secrets ?? false,
       };
     },
     staleTime: 30 * 1000, // 30 seconds
@@ -117,11 +118,11 @@ export const useProjectEnvironments = (projectNameId: string) => {
       queryClient.invalidateQueries({
         queryKey: ["project-environments", projectNameId],
       });
-      toast.success("Environment variable created successfully");
+      toast.success("Variable created successfully");
     },
     onError: (error) => {
-      console.error("Failed to create environment variable:", error);
-      toast.error("Failed to create environment variable");
+      console.error("Failed to create variable:", error);
+      toast.error("Failed to create variable");
     },
   });
 
@@ -142,11 +143,11 @@ export const useProjectEnvironments = (projectNameId: string) => {
       queryClient.invalidateQueries({
         queryKey: ["project-environments", projectNameId],
       });
-      toast.success("Environment variable updated successfully");
+      toast.success("Variable updated successfully");
     },
     onError: (error) => {
-      console.error("Failed to update environment variable:", error);
-      toast.error("Failed to update environment variable");
+      console.error("Failed to update variable:", error);
+      toast.error("Failed to update variable");
     },
   });
 
@@ -171,11 +172,11 @@ export const useProjectEnvironments = (projectNameId: string) => {
       queryClient.invalidateQueries({
         queryKey: ["project-environments", projectNameId],
       });
-      toast.success("Environment variable deleted successfully");
+      toast.success("Variable deleted successfully");
     },
     onError: (error) => {
-      console.error("Failed to delete environment variable:", error);
-      toast.error("Failed to delete environment variable");
+      console.error("Failed to delete variable:", error);
+      toast.error("Failed to delete variable");
     },
   });
 
@@ -198,12 +199,12 @@ export const useProjectEnvironments = (projectNameId: string) => {
         queryKey: ["project-environments", projectNameId],
       });
       toast.success(
-        `Successfully imported ${variables.variables.length} environment variables`
+        `Successfully imported ${variables.variables.length} variables`
       );
     },
     onError: (error) => {
-      console.error("Failed to import environment variables:", error);
-      toast.error("Failed to import environment variables");
+      console.error("Failed to import variables:", error);
+      toast.error("Failed to import variables");
     },
   });
 
@@ -317,6 +318,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     environmentTypes: projectData?.environmentTypes || [],
     environmentVariables: projectData?.environmentVariables || [],
     secrets: projectData?.secrets || [],
+    enableSecrets: projectData?.enableSecrets ?? false,
     isLoading,
     error,
 
