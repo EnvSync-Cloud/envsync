@@ -92,15 +92,18 @@ export async function updateZitadelUser(
 	const body: Record<string, unknown> = {};
 	if (payload.firstName != null || payload.lastName != null) {
 		body.profile = {
-			givenName: payload.firstName ?? "",
-			familyName: payload.lastName ?? "",
+			givenName: ensureNonEmptyName(payload.firstName ?? "", "User"),
+			familyName: ensureNonEmptyName(payload.lastName ?? "", "-"),
 		};
 	}
 	if (payload.email != null) {
 		body.email = { email: payload.email, isVerified: true };
 	}
 	if (Object.keys(body).length === 0) return;
-	const res = await mgmtFetch(`/users/${userId}`, {
+
+	// Use User Service v2 for human updates.
+	// The old Management v1 generic /users/{id} update endpoint is not available.
+	const res = await v2Fetch(`/users/human/${userId}`, {
 		method: "PUT",
 		body: JSON.stringify(body),
 	});
