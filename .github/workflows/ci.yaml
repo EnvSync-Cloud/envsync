@@ -331,6 +331,10 @@ jobs:
             -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME=admin \
             -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME="EnvSync IAM Owner" \
             -e "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
+            -e ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH=/current-dir/login-client.pat \
+            -e ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME=login-client \
+            -e ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME="Automatically Initialized IAM_LOGIN_CLIENT" \
+            -e "ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
             -e ZITADEL_MASTERKEY=MasterkeyNeedsToHave32Characters \
             ghcr.io/zitadel/zitadel:latest start-from-init --masterkey MasterkeyNeedsToHave32Characters
 
@@ -358,16 +362,18 @@ jobs:
       - name: Read Zitadel admin PAT
         run: |
           for i in $(seq 1 10); do
-            PAT=$(cat /tmp/zitadel/admin.pat 2>/dev/null || true)
-            if [ -n "$PAT" ]; then
-              echo "ZITADEL_PAT=${PAT}" >> $GITHUB_ENV
-              echo "Zitadel PAT read successfully"
+            ADMIN_PAT=$(cat /tmp/zitadel/admin.pat 2>/dev/null || true)
+            LOGIN_PAT=$(cat /tmp/zitadel/login-client.pat 2>/dev/null || true)
+            if [ -n "$ADMIN_PAT" ] && [ -n "$LOGIN_PAT" ]; then
+              echo "ZITADEL_PAT=${ADMIN_PAT}" >> $GITHUB_ENV
+              echo "ZITADEL_LOGIN_PAT=${LOGIN_PAT}" >> $GITHUB_ENV
+              echo "Zitadel admin and login-client PATs read successfully"
               exit 0
             fi
-            echo "Waiting for Zitadel PAT... ($i/10)"
+            echo "Waiting for Zitadel PAT files... ($i/10)"
             sleep 3
           done
-          echo "Failed to read Zitadel PAT"
+          echo "Failed to read Zitadel PAT files"
           exit 1
 
       - name: Bootstrap Zitadel for E2E
@@ -391,6 +397,7 @@ jobs:
           VAULT_SECRET_ID: ${{ env.VAULT_SECRET_ID }}
           ZITADEL_URL: http://localhost:8080
           ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
+          ZITADEL_LOGIN_PAT: ${{ env.ZITADEL_LOGIN_PAT }}
           ZITADEL_E2E_CLIENT_ID: ${{ env.ZITADEL_E2E_CLIENT_ID }}
           ZITADEL_E2E_CLIENT_SECRET: ${{ env.ZITADEL_E2E_CLIENT_SECRET }}
 

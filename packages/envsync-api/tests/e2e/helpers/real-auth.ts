@@ -36,6 +36,7 @@ export interface E2ESeed {
 let zitadelCreds: {
 	url: string;
 	pat: string;
+	loginPat: string;
 	clientId: string;
 	clientSecret: string;
 } | null = null;
@@ -45,10 +46,11 @@ function initZitadelCredentials(): typeof zitadelCreds & {} {
 
 	const url = process.env.ZITADEL_URL;
 	const pat = process.env.ZITADEL_PAT;
+	const loginPat = process.env.ZITADEL_LOGIN_PAT || pat;
 	const clientId = process.env.ZITADEL_E2E_CLIENT_ID;
 	const clientSecret = process.env.ZITADEL_E2E_CLIENT_SECRET;
 
-	if (!url || !pat || !clientId || !clientSecret) {
+	if (!url || !pat || !loginPat || !clientId || !clientSecret) {
 		throw new Error(
 			"Missing Zitadel E2E credentials. Ensure ZITADEL_URL, ZITADEL_PAT, " +
 			"ZITADEL_E2E_CLIENT_ID, and ZITADEL_E2E_CLIENT_SECRET are set. " +
@@ -56,7 +58,7 @@ function initZitadelCredentials(): typeof zitadelCreds & {} {
 		);
 	}
 
-	zitadelCreds = { url, pat, clientId, clientSecret };
+	zitadelCreds = { url, pat, loginPat, clientId, clientSecret };
 	return zitadelCreds;
 }
 
@@ -220,7 +222,7 @@ export async function seedE2EUser(
 		creds.url,
 		creds.clientId,
 		creds.clientSecret,
-		creds.pat,
+		creds.loginPat,
 		email,
 		password,
 	);
