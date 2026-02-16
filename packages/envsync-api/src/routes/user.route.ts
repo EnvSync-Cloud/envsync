@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import { UserController } from "@/controllers/user.controller";
 import {
 	userResponseSchema,
@@ -133,6 +134,7 @@ app.patch(
 		},
 	}),
 	zValidator("json", updateRoleRequestSchema),
+	requirePermission("can_manage_users", "org"),
 	UserController.updateRole,
 );
 
@@ -191,6 +193,7 @@ app.delete(
 			},
 		},
 	}),
+	requirePermission("can_manage_users", "org"),
 	UserController.deleteUser,
 );
 

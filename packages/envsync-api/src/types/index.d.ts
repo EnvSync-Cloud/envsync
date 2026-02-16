@@ -95,6 +95,20 @@ type WebHookAuditActions =
 	| "webhooks_viewed"
 	| "webhook_triggered";
 
+type TeamAuditActions =
+	| "team_created"
+	| "team_updated"
+	| "team_deleted"
+	| "team_viewed"
+	| "teams_viewed"
+	| "team_member_added"
+	| "team_member_removed";
+
+type PermissionAuditActions =
+	| "permission_granted"
+	| "permission_revoked"
+	| "permissions_viewed";
+
 type CliAuditActions = "cli_command_executed";
 
 type AuditActions =
@@ -109,4 +123,6 @@ type AuditActions =
 	| SecretStoreAuditActions
 	| UserAuditActions
 	| WebHookAuditActions
+	| TeamAuditActions
+	| PermissionAuditActions
 	| CliAuditActions;

@@ -155,6 +155,20 @@ interface WebhookStore extends BaseTable {
 	last_triggered_at?: ColumnType<Date | null>;
 }
 
+interface Team extends BaseTable {
+	org_id: ColumnType<string>;
+	name: ColumnType<string>;
+	description?: ColumnType<string | null>;
+	color: ColumnType<string>;
+}
+
+interface TeamMember {
+	id: ColumnType<string>;
+	team_id: ColumnType<string>;
+	user_id: ColumnType<string>;
+	created_at: ColumnType<Date>;
+}
+
 export interface Database {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -171,4 +185,6 @@ export interface Database {
 	secret_store_pit: SecretStorePiT;
 	secret_store_pit_change_request: SecretStorePiTChangeRequest;
 	webhook_store: WebhookStore;
+	teams: Team;
+	team_members: TeamMember;
 }

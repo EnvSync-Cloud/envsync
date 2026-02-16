@@ -1,8 +1,11 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { cacheAside, invalidateCache } from "@/helpers/cache";
+import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { VaultClient } from "@/libs/vault";
 import { envScopePath, secretScopePath } from "@/libs/vault/paths";
+import { AuthorizationService } from "@/services/authorization.service";
 
 export class AppService {
 	public static createApp = async ({
@@ -55,30 +58,37 @@ export class AppService {
 			])
 			.executeTakeFirstOrThrow();
 
+		// Write structural FGA tuple: app belongs to org
+		await AuthorizationService.writeAppOrgRelation(app.id, org_id);
+
+		await invalidateCache(CacheKeys.appsByOrg(org_id));
+
 		return app;
 	};
 
 	public static getApp = async ({ id }: { id: string }) => {
-		const db = await DB.getInstance();
+		return cacheAside(CacheKeys.app(id), CacheTTL.SHORT, async () => {
+			const db = await DB.getInstance();
 
-		const app = await db
-			.selectFrom("app")
-			.select([
-				"id",
-				"name",
-				"description",
-				"org_id",
-				"enable_secrets",
-				"is_managed_secret",
-				"public_key",
-				"metadata",
-				"created_at",
-				"updated_at",
-			])
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+			const app = await db
+				.selectFrom("app")
+				.select([
+					"id",
+					"name",
+					"description",
+					"org_id",
+					"enable_secrets",
+					"is_managed_secret",
+					"public_key",
+					"metadata",
+					"created_at",
+					"updated_at",
+				])
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow();
 
-		return app;
+			return app;
+		});
 	};
 
 	public static updateApp = async (
@@ -91,6 +101,13 @@ export class AppService {
 	) => {
 		const db = await DB.getInstance();
 
+		// Fetch app to get org_id for invalidation
+		const app = await db
+			.selectFrom("app")
+			.select("org_id")
+			.where("id", "=", id)
+			.executeTakeFirstOrThrow();
+
 		await db
 			.updateTable("app")
 			.set({
@@ -99,35 +116,51 @@ export class AppService {
 			})
 			.where("id", "=", id)
 			.executeTakeFirstOrThrow();
+
+		await invalidateCache(CacheKeys.app(id), CacheKeys.appsByOrg(app.org_id));
 	};
 
 	public static deleteApp = async ({ id }: { id: string }) => {
 		const db = await DB.getInstance();
 
+		// Fetch app to get org_id for invalidation
+		const app = await db
+			.selectFrom("app")
+			.select("org_id")
+			.where("id", "=", id)
+			.executeTakeFirstOrThrow();
+
 		await db.deleteFrom("app").where("id", "=", id).executeTakeFirstOrThrow();
+
+		// Clean up FGA tuples for this app
+		await AuthorizationService.deleteResourceTuples("app", id);
+
+		await invalidateCache(CacheKeys.app(id), CacheKeys.appsByOrg(app.org_id));
 	};
 
 	public static getAllApps = async (org_id: string) => {
-		const db = await DB.getInstance();
+		return cacheAside(CacheKeys.appsByOrg(org_id), CacheTTL.SHORT, async () => {
+			const db = await DB.getInstance();
 
-		const apps = await db
-			.selectFrom("app")
-			.select([
-				"id",
-				"name",
-				"description",
-				"org_id",
-				"enable_secrets",
-				"is_managed_secret",
-				"public_key",
-				"metadata",
-				"created_at",
-				"updated_at",
-			])
-			.where("org_id", "=", org_id)
-			.execute();
+			const apps = await db
+				.selectFrom("app")
+				.select([
+					"id",
+					"name",
+					"description",
+					"org_id",
+					"enable_secrets",
+					"is_managed_secret",
+					"public_key",
+					"metadata",
+					"created_at",
+					"updated_at",
+				])
+				.where("org_id", "=", org_id)
+				.execute();
 
-		return apps;
+			return apps;
+		});
 	};
 
 	public static getAppEnvTypes = async ({ app_id }: { app_id: string }) => {

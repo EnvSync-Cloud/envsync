@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { ApiKeyController } from "@/controllers/api_key.controller";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	createApiKeyRequestSchema,
 	apiKeyResponseSchema,
@@ -18,6 +19,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
+app.use(requirePermission("can_manage_api_keys", "org"));
 
 app.post(
 	"/",

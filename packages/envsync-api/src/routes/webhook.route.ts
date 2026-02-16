@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { WebhookController } from "@/controllers/webhook.controller";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import {
     createWebhookRequestSchema,
     webhookResponseSchema,
@@ -45,6 +46,7 @@ app.post(
         },
     }),
     zValidator("json", createWebhookRequestSchema),
+    requirePermission("can_manage_webhooks", "org"),
     WebhookController.createWebhook,
 );
 
@@ -133,6 +135,7 @@ app.put(
         },
     }),
     zValidator("json", updateWebhookRequestSchema),
+    requirePermission("can_manage_webhooks", "org"),
     WebhookController.updateWebhook,
 );
 
@@ -162,6 +165,7 @@ app.delete(
             },
         },
     }),
+    requirePermission("can_manage_webhooks", "org"),
     WebhookController.deleteWebhook,
 );
 

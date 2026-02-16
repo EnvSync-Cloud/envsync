@@ -51,13 +51,6 @@ export class RoleController {
 				return c.json({ error: "Name and Organization ID are required." }, 400);
 			}
 
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.is_admin or permissions.is_master
-			if (!permissions.is_admin && !permissions.is_master) {
-				return c.json({ error: "You do not have permission to create roles." }, 403);
-			}
-
 			const role = await RoleService.createRole({
 				org_id,
 				name,
@@ -98,13 +91,6 @@ export class RoleController {
 
 			if (!id) {
 				return c.json({ error: "Role ID is required." }, 400);
-			}
-
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.is_admin or permissions.is_master
-			if (!permissions.is_admin && !permissions.is_master) {
-				return c.json({ error: "You do not have permission to delete roles." }, 403);
 			}
 
 			await RoleService.deleteRole(id, org_id);
@@ -156,13 +142,6 @@ export class RoleController {
 
 			if (!id) {
 				return c.json({ error: "Role ID is required." }, 400);
-			}
-
-			const permissions = c.get("permissions");
-
-			// Check if the user must have permissions.is_admin or permissions.is_master
-			if (!permissions.is_admin && !permissions.is_master) {
-				return c.json({ error: "You do not have permission to update roles." }, 403);
 			}
 
 			await RoleService.updateRole(id, org_id, data);

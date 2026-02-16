@@ -12,13 +12,6 @@ export class AppController {
 
 			let { name, description, metadata, enable_secrets = false, public_key } = await c.req.json();
 
-			const permissions = c.get("permissions");
-
-			// Apps can only be created by admins or masters in the organization
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to create apps." }, 403);
-			}
-
 			if (!name) {
 				return c.json({ error: "Name is required." }, 400);
 			}
@@ -163,13 +156,6 @@ export class AppController {
 
 			const { name, description, metadata } = await c.req.json();
 
-			const permissions = c.get("permissions");
-
-			// Apps can only be update by admins or masters
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to update apps." }, 403);
-			}
-
 			const app = await AppService.getApp({ id });
 
 			if (app.org_id !== org_id) {
@@ -209,13 +195,6 @@ export class AppController {
 			const id = c.req.param("id");
 
 			const app = await AppService.getApp({ id });
-
-			const permissions = c.get("permissions");
-
-			// Apps can only be delete by admins or masters in the organization
-			if (!permissions.is_admin || !permissions.is_master) {
-				return c.json({ error: "You do not have permission to delete apps." }, 403);
-			}
 
 			if (app.org_id !== org_id) {
 				return c.json({ error: "App does not belong to your organization" }, 403);

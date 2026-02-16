@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { RoleController } from "@/controllers/role.controller";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	createRoleRequestSchema,
 	roleResponseSchema,
@@ -75,6 +76,7 @@ app.post(
 		},
 	}),
 	zValidator("json", createRoleRequestSchema),
+	requirePermission("can_manage_roles", "org"),
 	RoleController.createRole,
 );
 
@@ -163,6 +165,7 @@ app.patch(
 		},
 	}),
 	zValidator("json", updateRoleRequestSchema),
+	requirePermission("can_manage_roles", "org"),
 	RoleController.updateRole,
 );
 
@@ -192,6 +195,7 @@ app.delete(
 			},
 		},
 	}),
+	requirePermission("can_manage_roles", "org"),
 	RoleController.deleteRole,
 );
 

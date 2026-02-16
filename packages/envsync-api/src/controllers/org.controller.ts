@@ -40,13 +40,6 @@ export class OrgController {
 
 			const { logo_url, website, name, slug } = await c.req.json();
 
-			// Only master can update the organization details
-			const permissions = c.get("permissions");
-
-			if (!permissions.is_master) {
-				return c.json({ error: "You do not have permission to update the organization." }, 403);
-			}
-
 			const org = await OrgService.getOrg(org_id);
 
 			const updatedData = {

@@ -121,7 +121,6 @@ export class UserController {
 	public static deleteUser = async (c: Context) => {
 		try {
 			const org_id = c.get("org_id");
-			const permissions = c.get("permissions");
 
 			const { id } = c.req.param();
 
@@ -134,9 +133,6 @@ export class UserController {
 				return c.json({ error: "User not found." }, 404);
 			}
 			if (user.org_id !== org_id) {
-				return c.json({ error: "You do not have permission to delete this user." }, 403);
-			}
-			if (!permissions.is_admin && !permissions.is_master) {
 				return c.json({ error: "You do not have permission to delete this user." }, 403);
 			}
 
@@ -164,7 +160,6 @@ export class UserController {
 	public static readonly updateRole = async (c: Context) => {
 		try {
 			const org_id = c.get("org_id");
-			const permissions = c.get("permissions");
 
 			const { id } = c.req.param();
 			const { role_id } = await c.req.json();
@@ -179,10 +174,6 @@ export class UserController {
 			}
 			if (user.org_id !== org_id) {
 				return c.json({ error: "You do not have permission to update this user." }, 403);
-			}
-
-			if (permissions.is_admin !== true && permissions.is_master !== true) {
-				return c.json({ error: "You do not have permission to update roles." }, 403);
 			}
 
 			await UserService.updateUser(id, { role_id });

@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.821.0",
+		"@openfga/sdk": "^0.8.0",
 		"@aws-sdk/lib-storage": "^3.821.0",
 		"@hono/zod-validator": "^0.7.0",
 		"@scalar/hono-api-reference": "^0.9.1",
