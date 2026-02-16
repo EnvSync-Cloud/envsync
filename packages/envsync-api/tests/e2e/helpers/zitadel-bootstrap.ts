@@ -185,6 +185,9 @@ export async function getZitadelAccessToken(
 	});
 
 	const authorizeRes = await fetch(`${base}/oauth/v2/authorize?${authorizeParams.toString()}`, {
+		headers: {
+			"x-zitadel-login-client": clientId,
+		},
 		redirect: "manual",
 	});
 
@@ -232,7 +235,10 @@ export async function getZitadelAccessToken(
 	for (const candidate of authRequestCandidates) {
 		const probeRes = await fetch(`${base}/v2/oidc/auth_requests/${encodeURIComponent(candidate)}`, {
 			method: "GET",
-			headers: { Authorization: `Bearer ${pat}` },
+			headers: {
+				Authorization: `Bearer ${pat}`,
+				"x-zitadel-login-client": clientId,
+			},
 		});
 		preflightStatuses.push(`${candidate}:${probeRes.status}`);
 		if (probeRes.ok) {
@@ -287,6 +293,7 @@ export async function getZitadelAccessToken(
 			headers: {
 				Authorization: `Bearer ${pat}`,
 				"Content-Type": "application/json",
+				"x-zitadel-login-client": clientId,
 			},
 			body: JSON.stringify(attempt.body),
 		});
