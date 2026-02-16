@@ -236,10 +236,20 @@ jobs:
             '{"type":"approle"}' || true
 
           # Create policy
-          POLICY='path "envsync/data/*" { capabilities = ["create","read","update","delete","list"] } path "envsync/metadata/*" { capabilities = ["read","delete","list"] } path "envsync/delete/*" { capabilities = ["update"] } path "envsync/undelete/*" { capabilities = ["update"] } path "envsync/destroy/*" { capabilities = ["update"] } path "auth/token/renew-self" { capabilities = ["update"] } path "sys/health" { capabilities = ["read"] }'
+          POLICY=$(cat <<'EOF'
+          path "envsync/data/*" { capabilities = ["create","read","update","delete","list"] }
+          path "envsync/metadata/*" { capabilities = ["read","delete","list"] }
+          path "envsync/delete/*" { capabilities = ["update"] }
+          path "envsync/undelete/*" { capabilities = ["update"] }
+          path "envsync/destroy/*" { capabilities = ["update"] }
+          path "auth/token/renew-self" { capabilities = ["update"] }
+          path "sys/health" { capabilities = ["read"] }
+          EOF
+          )
+          POLICY_JSON=$(jq -n --arg policy "$POLICY" '{policy: $policy}')
           vault_call "Create policy envsync-e2e" "PUT" \
             "http://localhost:8200/v1/sys/policy/envsync-e2e" \
-            "{\"policy\":\"${POLICY}\"}"
+            "${POLICY_JSON}"
 
           # Create role
           vault_call "Create AppRole envsync-e2e" "POST" \
