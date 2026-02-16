@@ -307,10 +307,11 @@ jobs:
 
       - name: Start Zitadel
         run: |
-          docker run -d --name zitadel --network host \
+          docker run -d --name zitadel --network host --user 0 \
             -e ZITADEL_EXTERNALDOMAIN=localhost \
             -e ZITADEL_EXTERNALSECURE=false \
             -e ZITADEL_TLS_ENABLED=false \
+            -e ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED=false \
             -e ZITADEL_DATABASE_POSTGRES_HOST=localhost \
             -e ZITADEL_DATABASE_POSTGRES_PORT=5434 \
             -e ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel \
@@ -321,7 +322,7 @@ jobs:
             -e ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=zitadel \
             -e ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable \
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED=false \
-            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin@zitadel.localhost \
+            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin \
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1! \
             -e ZITADEL_FIRSTINSTANCE_ORG_NAME=EnvSync \
             -e ZITADEL_FIRSTINSTANCE_PATPATH=/tmp/admin.pat \
