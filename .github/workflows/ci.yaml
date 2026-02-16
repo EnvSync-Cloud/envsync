@@ -288,7 +288,7 @@ jobs:
         run: |
           docker run -d --name mailpit --network host \
             axllent/mailpit:latest \
-            --smtp-bind-addr 0.0.0.0:1025 \
+            --smtp 0.0.0.0:1025 \
             --listen 0.0.0.0:8025
 
       - name: Wait for Mailpit to be ready
