@@ -251,7 +251,10 @@ export async function getZitadelAccessToken(
 	for (const attempt of finalizeAttempts) {
 		const finalizeRes = await fetch(attempt.url, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				Authorization: `Bearer ${pat}`,
+				"Content-Type": "application/json",
+			},
 			body: JSON.stringify(attempt.body),
 		});
 		if (finalizeRes.ok) {
