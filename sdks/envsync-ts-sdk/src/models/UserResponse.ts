@@ -9,7 +9,7 @@ export type UserResponse = {
     profile_picture_url: string | null;
     org_id: string;
     role_id: string;
-    auth0_id: string | null;
+    auth_service_id: string | null;
     is_active: boolean;
     created_at: string;
     updated_at: string;

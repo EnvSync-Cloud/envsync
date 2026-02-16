@@ -45,6 +45,7 @@ function parseEnvFile(content: string): Record<string, string> {
  * Call this before parsing config so all packages use root env when run from anywhere in the repo.
  */
 export function loadRootEnv(): void {
+	if (process.env.SKIP_ROOT_ENV === "1") return;
 	const root = findMonorepoRoot();
 	const envPath = path.join(root, ".env");
 	if (!fs.existsSync(envPath)) return;
