@@ -148,7 +148,7 @@ jobs:
       - name: Start Vault
         run: |
           docker run -d --name vault --network host \
-            -e VAULT_DEV_ROOT_TOKEN_ID="" \
+            -e VAULT_DEV_ROOT_TOKEN_ID="ci-root-token" \
             -e VAULT_ADDR=http://localhost:8200 \
             --cap-add IPC_LOCK \
             hashicorp/vault:latest server -dev -dev-listen-address=0.0.0.0:8200
@@ -170,8 +170,16 @@ jobs:
       - name: Initialize Vault for E2E
         run: |
           # In dev mode, Vault is already initialized and unsealed.
-          # Get the dev root token from logs
-          VAULT_TOKEN=$(docker logs vault 2>&1 | grep 'Root Token:' | awk '{print $NF}')
+          # Prefer deterministic token; fallback to logs for compatibility.
+          VAULT_TOKEN="${VAULT_TOKEN:-ci-root-token}"
+          if [ -z "$VAULT_TOKEN" ]; then
+            VAULT_TOKEN=$(docker logs vault 2>&1 | grep 'Root Token:' | awk '{print $NF}' | tail -n1)
+          fi
+          if [ -z "$VAULT_TOKEN" ]; then
+            echo "Vault token is empty; dumping vault logs for debugging"
+            docker logs vault
+            exit 1
+          fi
           echo "VAULT_TOKEN=${VAULT_TOKEN}" >> $GITHUB_ENV
 
           # Enable KV v2 at envsync/

@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { writeFileSync, readFileSync } from 'fs';
 
-const BASE_URL = 'http://localhost:8600';
+const BASE_URL = 'http://localhost:4000';
 
 const generateSDK = () => {
   try {

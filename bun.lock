@@ -89,7 +89,7 @@
     },
     "apps/envsync-web": {
       "name": "envsync-web",
-      "version": "0.3.8",
+      "version": "0.4.0",
       "dependencies": {
         "@envsync-cloud/envsync-ts-sdk": "workspace:*",
         "@hookform/resolvers": "^3.10.0",
@@ -164,7 +164,7 @@
     },
     "packages/envsync-api": {
       "name": "envsync-api",
-      "version": "0.3.8",
+      "version": "0.4.0",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.821.0",
         "@aws-sdk/lib-storage": "^3.821.0",
@@ -206,7 +206,7 @@
     },
     "sdks/envsync-ts-sdk": {
       "name": "@envsync-cloud/envsync-ts-sdk",
-      "version": "0.3.8",
+      "version": "0.4.0",
       "devDependencies": {
         "@types/bun": "latest",
         "openapi-typescript-codegen": "^0.29.0",

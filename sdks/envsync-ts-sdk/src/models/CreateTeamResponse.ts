@@ -2,15 +2,12 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type UserResponse = {
+export type CreateTeamResponse = {
     id: string;
-    email: string;
-    full_name: string;
-    profile_picture_url: string | null;
+    name: string;
     org_id: string;
-    role_id: string;
-    auth_service_id: string | null;
-    is_active: boolean;
+    description: string | null;
+    color: string;
     created_at: string;
     updated_at: string;
 };

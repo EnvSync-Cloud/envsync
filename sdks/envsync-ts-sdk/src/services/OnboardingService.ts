@@ -195,13 +195,11 @@ export class OnboardingService {
      * Delete User Invite
      * Delete user invite
      * @param inviteId
-     * @param requestBody
      * @returns DeleteUserInviteResponse User invite deleted successfully
      * @throws ApiError
      */
     public deleteUserInvite(
         inviteId: string,
-        requestBody?: DeleteUserInviteResponse,
     ): CancelablePromise<DeleteUserInviteResponse> {
         return this.httpRequest.request({
             method: 'DELETE',
@@ -209,8 +207,6 @@ export class OnboardingService {
             path: {
                 'invite_id': inviteId,
             },
-            body: requestBody,
-            mediaType: 'application/json',
             errors: {
                 500: `Internal server error`,
             },

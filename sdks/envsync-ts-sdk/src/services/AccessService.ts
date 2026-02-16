@@ -40,7 +40,7 @@ export class AccessService {
     }
     /**
      * Web Login Callback
-     * Handle web login callback from Auth0
+     * Handle web login callback from Zitadel
      * @param code
      * @returns void
      * @throws ApiError
@@ -77,7 +77,7 @@ export class AccessService {
     }
     /**
      * API Login Callback
-     * Handle API login callback from Auth0
+     * Handle API login callback from Zitadel
      * @param code
      * @returns CallbackResponse API login callback successful
      * @throws ApiError
