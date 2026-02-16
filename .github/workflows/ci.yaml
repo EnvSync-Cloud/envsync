@@ -321,7 +321,7 @@ jobs:
             -e ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=zitadel \
             -e ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable \
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED=false \
-            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin \
+            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin@zitadel.localhost \
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1! \
             -e ZITADEL_FIRSTINSTANCE_ORG_NAME=EnvSync \
             -e ZITADEL_FIRSTINSTANCE_PATPATH=/tmp/admin.pat \
@@ -334,6 +334,12 @@ jobs:
       - name: Wait for Zitadel to be ready
         run: |
           for i in $(seq 1 120); do
+            if [ "$(docker inspect -f '{{.State.Status}}' zitadel 2>/dev/null || echo missing)" = "exited" ]; then
+              echo "Zitadel container exited early"
+              docker inspect zitadel
+              docker logs zitadel
+              exit 1
+            fi
             if docker exec zitadel /app/zitadel ready > /dev/null 2>&1; then
               echo "Zitadel is ready"
               exit 0
