@@ -196,11 +196,13 @@ export async function getZitadelAccessToken(
 		// Format: /ui/v2/login/login?authRequest=<id> or similar
 		const locationUrl = new URL(location, base);
 		authRequestId = locationUrl.searchParams.get("authRequest")
+			?? locationUrl.searchParams.get("authRequestID")
+			?? locationUrl.searchParams.get("authRequestId")
 			?? locationUrl.searchParams.get("id")
 			?? "";
 		if (!authRequestId) {
 			// Try extracting from path: /login?authRequest=...
-			const match = location.match(/authRequest=([^&]+)/);
+			const match = location.match(/authRequest(?:ID|Id)?=([^&]+)/);
 			authRequestId = match?.[1] ?? "";
 		}
 	} else {
