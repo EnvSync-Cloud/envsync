@@ -152,15 +152,24 @@ services:
       ZITADEL_FIRSTINSTANCE_PATPATH: /current-dir/admin.pat
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin
       ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: EnvSync IAM Owner
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2029-01-01T00:00:00Z"
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: ${ZITADEL_MACHINE_PAT_EXPIRATIONDATE:-2029-01-01T00:00:00Z}
+      # Keep login-v2 optional for API-first bootstrap; avoids startup loops
+      # when no dedicated login UI is configured yet.
+      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "false"
+      # Also emit a login-client PAT for flows that require IAM_LOGIN_CLIENT.
+      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /current-dir/login-client.pat
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Automatically Initialized IAM_LOGIN_CLIENT
+      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: ${ZITADEL_LOGINCLIENT_PAT_EXPIRATIONDATE:-2029-01-01T00:00:00Z}
     ports:
       - "${ZITADEL_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD", "/app/zitadel", "ready"]
       interval: 10s
       timeout: 60s
-      retries: 5
-      start_period: 10s
+      retries: 30
+      # First boot (DB init, migrations, first-instance setup) can take a few minutes.
+      start_period: 120s
     volumes:
       - zitadel_data:/current-dir
     depends_on:
@@ -231,7 +240,8 @@ services:
       openfga_migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8081"]
+      # OpenFGA gRPC listener is configured on 8091 above.
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8091"]
       interval: 5s
       timeout: 5s
       retries: 5
