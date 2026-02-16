@@ -8,7 +8,13 @@
 		"db": "bun run scripts/migrate.ts",
 		"dev": "bun run --hot src/entrypoint.ts",
 		"format": "prettier --write .",
-		"start": "bun run src/entrypoint.ts"
+		"start": "bun run src/entrypoint.ts",
+		"test": "bun test tests/mock",
+		"test:mock": "bun test tests/mock --timeout 10000",
+		"test:e2e": "TEST_MODE=e2e bun test tests/e2e --preload tests/e2e/helpers/real-setup.ts --timeout 60000",
+		"test:all": "bun test tests/ --timeout 30000",
+		"e2e:init": "bun run ../../scripts/e2e-setup.ts init",
+		"e2e:cleanup": "bun run ../../scripts/e2e-setup.ts cleanup"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.821.0",

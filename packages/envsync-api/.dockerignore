@@ -1,6 +1,8 @@
 node_modules
 dist
 build
+tests
+*.test.ts
 .env
 .env.*
 !.env.example
@@ -8,3 +10,8 @@ build
 .turbo
 coverage
 .git
+.gitignore
+bunfig.toml
+builder.ts
+tsconfig.build.json
+README.md

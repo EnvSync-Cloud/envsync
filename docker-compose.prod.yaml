@@ -1,0 +1,252 @@
+# Production Docker Compose for Dokploy / self-hosting
+# Usage: docker compose -f docker-compose.prod.yaml up -d
+# Requires: .env file with production values (see .env.prod.example)
+
+services:
+  envsync_api:
+    image: ghcr.io/envsync-cloud/envsync-api:latest
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-4000}:${PORT:-4000}"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://rustfs:9001
+      S3_BUCKET_URL: http://rustfs:9001
+      VAULT_ADDR: http://vault:8200
+      OPENFGA_API_URL: http://openfga:8090
+      ZITADEL_URL: http://zitadel:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+      vault:
+        condition: service_started
+      openfga:
+        condition: service_healthy
+      zitadel:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  envsync_init:
+    image: ghcr.io/envsync-cloud/envsync-api:latest
+    command: ["bun", "run", "scripts/prod-init.ts"]
+    env_file:
+      - .env
+    environment:
+      ZITADEL_PAT_FILE: /zitadel-data/admin.pat
+      VAULT_ADDR: http://vault:8200
+      OPENFGA_API_URL: http://openfga:8090
+      DATABASE_HOST: postgres
+      S3_ENDPOINT: http://rustfs:9001
+      ZITADEL_URL: http://zitadel:8080
+    volumes:
+      - zitadel_data:/zitadel-data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_started
+      openfga:
+        condition: service_healthy
+      zitadel:
+        condition: service_healthy
+      rustfs:
+        condition: service_started
+    restart: "no"
+    networks:
+      - envsync_network
+
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-envsync}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - envsync_network
+
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - envsync_network
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    environment:
+      RUSTFS_DATA_DIR: /data
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      RUSTFS_CONSOLE_ENABLE: "false"
+    volumes:
+      - rustfs_data:/data
+    networks:
+      - envsync_network
+
+  zitadel_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGUSER: ${ZITADEL_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${ZITADEL_DB_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ZITADEL_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - zitadel_db_data:/var/lib/postgresql/data
+    networks:
+      - envsync_network
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    restart: unless-stopped
+    command: start-from-init --masterkey "${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}"
+    user: "0"
+    environment:
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
+      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-false}
+      ZITADEL_TLS_ENABLED: ${ZITADEL_TLS_ENABLED:-false}
+      ZITADEL_DATABASE_POSTGRES_HOST: zitadel_db
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${ZITADEL_DB_USER:-postgres}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${ZITADEL_DB_PASSWORD:-postgres}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-zitadel-admin}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-Password1!}
+      ZITADEL_FIRSTINSTANCE_ORG_NAME: EnvSync
+      ZITADEL_FIRSTINSTANCE_PATPATH: /current-dir/admin.pat
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: EnvSync IAM Owner
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2029-01-01T00:00:00Z"
+    ports:
+      - "${ZITADEL_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "/app/zitadel", "ready"]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - zitadel_data:/current-dir
+    depends_on:
+      zitadel_db:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  vault:
+    image: hashicorp/vault:latest
+    restart: unless-stopped
+    command: vault server -config=/vault/config/vault.hcl
+    environment:
+      VAULT_ADDR: http://localhost:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-}
+      SKIP_SETCAP: "true"
+      SKIP_CHOWN: "true"
+    volumes:
+      - vault_data:/vault/data
+      - ./docker/vault/vault.hcl:/vault/config/vault.hcl:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  openfga_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openfga
+      POSTGRES_PASSWORD: ${OPENFGA_DB_PASSWORD:-openfga}
+      POSTGRES_DB: openfga
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openfga"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - openfga_db_data:/var/lib/postgresql/data
+    networks:
+      - envsync_network
+
+  openfga_migrate:
+    image: openfga/openfga:latest
+    command: migrate
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: "postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable"
+    depends_on:
+      openfga_db:
+        condition: service_healthy
+    networks:
+      - envsync_network
+    restart: "no"
+
+  openfga:
+    image: openfga/openfga:latest
+    restart: unless-stopped
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: "postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable"
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+      OPENFGA_HTTP_ADDR: 0.0.0.0:8090
+      OPENFGA_GRPC_ADDR: 0.0.0.0:8091
+    depends_on:
+      openfga_migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8081"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - envsync_network
+
+networks:
+  envsync_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rustfs_data:
+  vault_data:
+  zitadel_db_data:
+  zitadel_data:
+  openfga_db_data:

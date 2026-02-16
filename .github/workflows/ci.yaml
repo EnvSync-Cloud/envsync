@@ -1,4 +1,4 @@
-name: Build Checks for API
+name: Build & Test
 
 on:
   push:
@@ -11,8 +11,340 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup Bun Runtime
-        uses: antongolub/action-setup-bun@v1
+        uses: oven-sh/setup-bun@v2
       - run: bun i
       - run: bun run build
+
+  test-mock:
+    name: Mock Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: envsync_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: envsync_test
+      CACHE_ENV: development
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+      - run: bun i
+      - name: Run mock tests
+        run: bun run test:mock
+        working-directory: packages/envsync-api
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: envsync_e2e_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      openfga-db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: openfga
+          POSTGRES_PASSWORD: openfga
+          POSTGRES_DB: openfga
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U openfga"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      zitadel-db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: envsync_e2e_test
+      CACHE_ENV: development
+      OPENFGA_API_URL: http://localhost:8090
+      VAULT_ADDR: http://localhost:8200
+      VAULT_MOUNT_PATH: envsync
+      ZITADEL_URL: http://localhost:8080
+      SKIP_ROOT_ENV: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: packages/envsync-cli/go.sum
+      - run: bun i
+
+      - name: Run OpenFGA migrations
+        run: |
+          docker run --rm --network host \
+            -e OPENFGA_DATASTORE_ENGINE=postgres \
+            -e OPENFGA_DATASTORE_URI="postgres://openfga:openfga@localhost:5433/openfga?sslmode=disable" \
+            openfga/openfga:latest migrate
+
+      - name: Start OpenFGA server
+        run: |
+          docker run -d --name openfga --network host \
+            -e OPENFGA_DATASTORE_ENGINE=postgres \
+            -e OPENFGA_DATASTORE_URI="postgres://openfga:openfga@localhost:5433/openfga?sslmode=disable" \
+            -e OPENFGA_HTTP_ADDR=0.0.0.0:8090 \
+            -e OPENFGA_GRPC_ADDR=0.0.0.0:8091 \
+            openfga/openfga:latest run
+
+      - name: Wait for OpenFGA to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8090/healthz > /dev/null 2>&1; then
+              echo "OpenFGA is ready"
+              exit 0
+            fi
+            echo "Waiting for OpenFGA... ($i/30)"
+            sleep 2
+          done
+          echo "OpenFGA failed to start"
+          docker logs openfga
+          exit 1
+
+      - name: Start Vault
+        run: |
+          docker run -d --name vault --network host \
+            -e VAULT_DEV_ROOT_TOKEN_ID="" \
+            -e VAULT_ADDR=http://localhost:8200 \
+            --cap-add IPC_LOCK \
+            hashicorp/vault:latest server -dev -dev-listen-address=0.0.0.0:8200
+
+      - name: Wait for Vault to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8200/v1/sys/health > /dev/null 2>&1; then
+              echo "Vault is ready"
+              exit 0
+            fi
+            echo "Waiting for Vault... ($i/30)"
+            sleep 2
+          done
+          echo "Vault failed to start"
+          docker logs vault
+          exit 1
+
+      - name: Initialize Vault for E2E
+        run: |
+          # In dev mode, Vault is already initialized and unsealed.
+          # Get the dev root token from logs
+          VAULT_TOKEN=$(docker logs vault 2>&1 | grep 'Root Token:' | awk '{print $NF}')
+          echo "VAULT_TOKEN=${VAULT_TOKEN}" >> $GITHUB_ENV
+
+          # Enable KV v2 at envsync/
+          curl -sf -X POST http://localhost:8200/v1/sys/mounts/envsync \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"type":"kv","options":{"version":"2"}}' || true
+
+          # Enable AppRole
+          curl -sf -X POST http://localhost:8200/v1/sys/auth/approle \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"type":"approle"}' || true
+
+          # Create policy
+          POLICY='path "envsync/data/*" { capabilities = ["create","read","update","delete","list"] } path "envsync/metadata/*" { capabilities = ["read","delete","list"] } path "envsync/delete/*" { capabilities = ["update"] } path "envsync/undelete/*" { capabilities = ["update"] } path "envsync/destroy/*" { capabilities = ["update"] } path "auth/token/renew-self" { capabilities = ["update"] } path "sys/health" { capabilities = ["read"] }'
+          curl -sf -X PUT http://localhost:8200/v1/sys/policy/envsync-e2e \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"policy\":\"${POLICY}\"}"
+
+          # Create role
+          curl -sf -X POST http://localhost:8200/v1/auth/approle/role/envsync-e2e \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"token_policies":["envsync-e2e"],"token_ttl":"1h","token_max_ttl":"4h","secret_id_ttl":"0","secret_id_num_uses":0}'
+
+          # Get role_id
+          ROLE_ID=$(curl -sf http://localhost:8200/v1/auth/approle/role/envsync-e2e/role-id \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" | jq -r '.data.role_id')
+          echo "VAULT_ROLE_ID=${ROLE_ID}" >> $GITHUB_ENV
+
+          # Generate secret_id
+          SECRET_ID=$(curl -sf -X POST http://localhost:8200/v1/auth/approle/role/envsync-e2e/secret-id \
+            -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{}' | jq -r '.data.secret_id')
+          echo "VAULT_SECRET_ID=${SECRET_ID}" >> $GITHUB_ENV
+
+          echo "Vault configured for E2E (role_id=${ROLE_ID:0:8}...)"
+
+      - name: Start Mailpit
+        run: |
+          docker run -d --name mailpit --network host \
+            axllent/mailpit:latest \
+            --smtp-bind-addr 0.0.0.0:1025 \
+            --listen 0.0.0.0:8025
+
+      - name: Wait for Mailpit to be ready
+        run: |
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8025/ > /dev/null 2>&1; then
+              echo "Mailpit is ready"
+              exit 0
+            fi
+            echo "Waiting for Mailpit... ($i/15)"
+            sleep 2
+          done
+          echo "Mailpit failed to start"
+          docker logs mailpit
+          exit 1
+
+      - name: Start Zitadel
+        run: |
+          docker run -d --name zitadel --network host \
+            -e ZITADEL_EXTERNALDOMAIN=localhost \
+            -e ZITADEL_EXTERNALSECURE=false \
+            -e ZITADEL_TLS_ENABLED=false \
+            -e ZITADEL_DATABASE_POSTGRES_HOST=localhost \
+            -e ZITADEL_DATABASE_POSTGRES_PORT=5434 \
+            -e ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel \
+            -e ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=postgres \
+            -e ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=postgres \
+            -e ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE=disable \
+            -e ZITADEL_DATABASE_POSTGRES_USER_USERNAME=zitadel \
+            -e ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=zitadel \
+            -e ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable \
+            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED=false \
+            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin \
+            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1! \
+            -e ZITADEL_FIRSTINSTANCE_ORG_NAME=EnvSync \
+            -e ZITADEL_FIRSTINSTANCE_PATPATH=/tmp/admin.pat \
+            -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME=admin \
+            -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME="EnvSync IAM Owner" \
+            -e "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
+            -e ZITADEL_MASTERKEY=MasterkeyNeedsToHave32Characters \
+            ghcr.io/zitadel/zitadel:latest start-from-init --masterkey MasterkeyNeedsToHave32Characters
+
+      - name: Wait for Zitadel to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/.well-known/openid-configuration > /dev/null 2>&1; then
+              echo "Zitadel is ready"
+              exit 0
+            fi
+            echo "Waiting for Zitadel... ($i/60)"
+            sleep 5
+          done
+          echo "Zitadel failed to start"
+          docker logs zitadel
+          exit 1
+
+      - name: Read Zitadel admin PAT
+        run: |
+          for i in $(seq 1 10); do
+            PAT=$(docker exec zitadel cat /tmp/admin.pat 2>/dev/null || true)
+            if [ -n "$PAT" ]; then
+              echo "ZITADEL_PAT=${PAT}" >> $GITHUB_ENV
+              echo "Zitadel PAT read successfully"
+              exit 0
+            fi
+            echo "Waiting for Zitadel PAT... ($i/10)"
+            sleep 3
+          done
+          echo "Failed to read Zitadel PAT"
+          exit 1
+
+      - name: Bootstrap Zitadel for E2E
+        run: |
+          bun -e "
+            import { bootstrapZitadelProject } from './packages/envsync-api/tests/e2e/helpers/zitadel-bootstrap';
+            import fs from 'fs';
+            const result = await bootstrapZitadelProject('http://localhost:8080', process.env.ZITADEL_PAT);
+            fs.appendFileSync(process.env.GITHUB_ENV, 'ZITADEL_E2E_CLIENT_ID=' + result.appClientId + '\n');
+            fs.appendFileSync(process.env.GITHUB_ENV, 'ZITADEL_E2E_CLIENT_SECRET=' + result.appClientSecret + '\n');
+            console.log('Zitadel bootstrapped: project=' + result.projectId + ', clientId=' + result.appClientId);
+          "
+        env:
+          ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
+
+      - name: Run E2E tests
+        run: bun run test:e2e
+        working-directory: packages/envsync-api
+        env:
+          VAULT_ROLE_ID: ${{ env.VAULT_ROLE_ID }}
+          VAULT_SECRET_ID: ${{ env.VAULT_SECRET_ID }}
+          ZITADEL_URL: http://localhost:8080
+          ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
+          ZITADEL_E2E_CLIENT_ID: ${{ env.ZITADEL_E2E_CLIENT_ID }}
+          ZITADEL_E2E_CLIENT_SECRET: ${{ env.ZITADEL_E2E_CLIENT_SECRET }}
+
+  build-api-image:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/envsync-cloud/envsync-api
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/envsync-api
+          file: packages/envsync-api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

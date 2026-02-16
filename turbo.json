@@ -21,6 +21,12 @@
             "dependsOn": ["^start"],
             "outputs": ["dist/**", "build/**"],
             "persistent": true
+        },
+        "test:mock": {
+            "dependsOn": []
+        },
+        "test:e2e": {
+            "dependsOn": []
         }
     },
     "ui": "tui",
