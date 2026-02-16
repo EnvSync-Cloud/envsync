@@ -215,25 +215,18 @@ export async function getZitadelAccessToken(
 
 	// 4. Finalize auth with session → get callback URL with code
 	const finalizeAttempts: Array<{ url: string; body: Record<string, any> }> = [
-		// Current API (Zitadel v2 OIDC service)
+		// Current API (Zitadel v2 OIDC service), as documented for custom login UIs.
 		{
 			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(authRequestId)}`,
 			body: {
-				sessionId: sessionData.sessionId,
-				sessionToken: sessionData.sessionToken,
-			},
-		},
-		// Some versions accept nested session object
-		{
-			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(authRequestId)}`,
-			body: {
+				callbackKind: "CALLBACK_KIND_REDIRECT",
 				session: {
 					sessionId: sessionData.sessionId,
 					sessionToken: sessionData.sessionToken,
 				},
 			},
 		},
-		// Legacy endpoint
+		// Legacy endpoint fallback.
 		{
 			url: `${base}/oidc/v2/authorize`,
 			body: {
