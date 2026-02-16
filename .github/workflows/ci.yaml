@@ -358,7 +358,7 @@ jobs:
       - name: Read Zitadel admin PAT
         run: |
           for i in $(seq 1 10); do
-            PAT=$(docker exec zitadel cat /current-dir/admin.pat 2>/dev/null || true)
+            PAT=$(cat /tmp/zitadel/admin.pat 2>/dev/null || true)
             if [ -n "$PAT" ]; then
               echo "ZITADEL_PAT=${PAT}" >> $GITHUB_ENV
               echo "Zitadel PAT read successfully"
