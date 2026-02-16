@@ -214,21 +214,55 @@ export async function getZitadelAccessToken(
 	}
 
 	// 4. Finalize auth with session → get callback URL with code
-	const finalizeRes = await fetch(`${base}/oidc/v2/authorize`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			authRequestId,
-			session: {
+	const finalizeAttempts: Array<{ url: string; body: Record<string, any> }> = [
+		// Current API (Zitadel v2 OIDC service)
+		{
+			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(authRequestId)}`,
+			body: {
 				sessionId: sessionData.sessionId,
 				sessionToken: sessionData.sessionToken,
 			},
-		}),
-	});
-	if (!finalizeRes.ok) {
-		throw new Error(`OIDC finalize failed: ${finalizeRes.status} ${await finalizeRes.text()}`);
+		},
+		// Some versions accept nested session object
+		{
+			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(authRequestId)}`,
+			body: {
+				session: {
+					sessionId: sessionData.sessionId,
+					sessionToken: sessionData.sessionToken,
+				},
+			},
+		},
+		// Legacy endpoint
+		{
+			url: `${base}/oidc/v2/authorize`,
+			body: {
+				authRequestId,
+				session: {
+					sessionId: sessionData.sessionId,
+					sessionToken: sessionData.sessionToken,
+				},
+			},
+		},
+	];
+
+	let finalizeData: { callbackUrl?: string } | null = null;
+	const finalizeErrors: string[] = [];
+	for (const attempt of finalizeAttempts) {
+		const finalizeRes = await fetch(attempt.url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(attempt.body),
+		});
+		if (finalizeRes.ok) {
+			finalizeData = (await finalizeRes.json()) as { callbackUrl: string };
+			break;
+		}
+		finalizeErrors.push(`${finalizeRes.status} ${await finalizeRes.text()}`);
 	}
-	const finalizeData = (await finalizeRes.json()) as { callbackUrl: string };
+	if (!finalizeData?.callbackUrl) {
+		throw new Error(`OIDC finalize failed. Attempts: ${finalizeErrors.join(" | ")}`);
+	}
 
 	// 5. Extract code from callback URL
 	const callbackUrl = new URL(finalizeData.callbackUrl);
