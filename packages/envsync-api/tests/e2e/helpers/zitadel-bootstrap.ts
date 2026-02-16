@@ -188,20 +188,22 @@ export async function getZitadelAccessToken(
 		redirect: "manual",
 	});
 
-	// The authorize endpoint redirects to the login UI with an authRequest ID
-	let authRequestId: string;
+	// The authorize endpoint redirects to the login UI with an authRequest ID.
+	// Different Zitadel setups use different query keys and formats.
+	let authRequestId = "";
 	const location = authorizeRes.headers.get("location");
 	if (location) {
-		// Extract authRequest ID from redirect URL
-		// Format: /ui/v2/login/login?authRequest=<id> or similar
+		// Extract authRequest ID from redirect URL.
+		// Format: /ui/v2/login/login?authRequest=<id> or similar.
 		const locationUrl = new URL(location, base);
-		authRequestId = locationUrl.searchParams.get("authRequest")
-			?? locationUrl.searchParams.get("authRequestID")
-			?? locationUrl.searchParams.get("authRequestId")
-			?? locationUrl.searchParams.get("id")
-			?? "";
+		authRequestId =
+			locationUrl.searchParams.get("authRequest") ??
+			locationUrl.searchParams.get("authRequestID") ??
+			locationUrl.searchParams.get("authRequestId") ??
+			locationUrl.searchParams.get("id") ??
+			"";
 		if (!authRequestId) {
-			// Try extracting from path: /login?authRequest=...
+			// Fallback: parse raw location string.
 			const match = location.match(/authRequest(?:ID|Id)?=([^&]+)/);
 			authRequestId = match?.[1] ?? "";
 		}
@@ -213,30 +215,68 @@ export async function getZitadelAccessToken(
 		throw new Error(`Could not extract authRequestId from redirect: ${location}`);
 	}
 
+	// Build candidate IDs. Some versions hand back a numeric ID in authRequestID,
+	// while v2 endpoints can expect a V2_ prefixed value.
+	const authRequestCandidates = Array.from(
+		new Set(
+			[authRequestId, decodeURIComponent(authRequestId)]
+				.filter(Boolean)
+				.flatMap((id) => (id.startsWith("V2_") ? [id] : [id, `V2_${id}`])),
+		),
+	);
+
+	// Prefer candidates that are visible through the v2 auth_request read endpoint.
+	// This avoids finalizing with an already-invalid or wrong-format ID.
+	const preflightStatuses: string[] = [];
+	const preferredCandidates: string[] = [];
+	for (const candidate of authRequestCandidates) {
+		const probeRes = await fetch(`${base}/v2/oidc/auth_requests/${encodeURIComponent(candidate)}`, {
+			method: "GET",
+			headers: { Authorization: `Bearer ${pat}` },
+		});
+		preflightStatuses.push(`${candidate}:${probeRes.status}`);
+		if (probeRes.ok) {
+			preferredCandidates.push(candidate);
+		}
+	}
+	const orderedCandidates =
+		preferredCandidates.length > 0
+			? [...preferredCandidates, ...authRequestCandidates.filter((id) => !preferredCandidates.includes(id))]
+			: authRequestCandidates;
+
 	// 4. Finalize auth with session → get callback URL with code
 	const finalizeAttempts: Array<{ url: string; body: Record<string, any> }> = [
-		// Current API (Zitadel v2 OIDC service), as documented for custom login UIs.
-		{
-			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(authRequestId)}`,
+		...orderedCandidates.map((candidate) => ({
+			url: `${base}/v2/oidc/auth_requests/${encodeURIComponent(candidate)}`,
 			body: {
-				callbackKind: "CALLBACK_KIND_REDIRECT",
 				session: {
 					sessionId: sessionData.sessionId,
 					sessionToken: sessionData.sessionToken,
 				},
 			},
-		},
-		// Legacy endpoint fallback.
-		{
-			url: `${base}/oidc/v2/authorize`,
-			body: {
-				authRequestId,
-				session: {
-					sessionId: sessionData.sessionId,
-					sessionToken: sessionData.sessionToken,
+		})),
+		...orderedCandidates.flatMap((candidate) => [
+			{
+				url: `${base}/oidc/v2/authorize`,
+				body: {
+					authRequestId: candidate,
+					session: {
+						sessionId: sessionData.sessionId,
+						sessionToken: sessionData.sessionToken,
+					},
 				},
 			},
-		},
+			{
+				url: `${base}/oidc/v2/authorize`,
+				body: {
+					authRequestID: candidate,
+					session: {
+						sessionId: sessionData.sessionId,
+						sessionToken: sessionData.sessionToken,
+					},
+				},
+			},
+		]),
 	];
 
 	let finalizeData: { callbackUrl?: string } | null = null;
@@ -257,7 +297,9 @@ export async function getZitadelAccessToken(
 		finalizeErrors.push(`${finalizeRes.status} ${await finalizeRes.text()}`);
 	}
 	if (!finalizeData?.callbackUrl) {
-		throw new Error(`OIDC finalize failed. Attempts: ${finalizeErrors.join(" | ")}`);
+		throw new Error(
+			`OIDC finalize failed. location=${location} authRequestCandidates=${orderedCandidates.join(",")} preflight=${preflightStatuses.join(",")} attempts=${finalizeErrors.join(" | ")}`,
+		);
 	}
 
 	// 5. Extract code from callback URL
