@@ -26,6 +26,7 @@ import {
 	waitForMailpit,
 	waitForZitadel,
 	readPatFromVolume,
+	readLoginPatFromVolume,
 	initVault,
 } from "./lib/services";
 import { bootstrapZitadelProject } from "../packages/envsync-api/tests/e2e/helpers/zitadel-bootstrap";
@@ -137,17 +138,22 @@ async function init(): Promise<void> {
 	await waitForMailpit();
 	await waitForZitadel();
 
-	// Read Zitadel admin PAT
+	// Read Zitadel PATs
 	const zitadelUrl = "http://localhost:8080";
-	const patFromVolume = await readPatFromVolume(rootDir);
-	if (!patFromVolume) {
+	const adminPatFromVolume = await readPatFromVolume(rootDir);
+	if (!adminPatFromVolume) {
 		throw new Error("Failed to read Zitadel admin PAT from Docker volume. Is Zitadel running?");
 	}
-	console.log("Zitadel: PAT read from docker volume.");
+	const loginPatFromVolume = await readLoginPatFromVolume(rootDir);
+	const effectiveLoginPat = loginPatFromVolume || adminPatFromVolume;
+	if (!loginPatFromVolume) {
+		console.log("Zitadel: login-client.pat not found; falling back to admin PAT for login flow.");
+	}
+	console.log("Zitadel: PAT(s) read from docker volume.");
 
 	// Bootstrap Zitadel project + OIDC app for E2E
 	console.log("\nBootstrapping Zitadel project + OIDC app for E2E...");
-	const zitadelApp = await bootstrapZitadelProject(zitadelUrl, patFromVolume);
+	const zitadelApp = await bootstrapZitadelProject(zitadelUrl, adminPatFromVolume);
 	console.log(`  Project: ${zitadelApp.projectId}, Client: ${zitadelApp.appClientId}`);
 
 	// Create E2E database
@@ -175,7 +181,8 @@ async function init(): Promise<void> {
 		VAULT_UNSEAL_KEY: vaultResult.unsealKey,
 		OPENFGA_API_URL: openfgaUrl,
 		ZITADEL_URL: zitadelUrl,
-		ZITADEL_PAT: patFromVolume,
+		ZITADEL_PAT: adminPatFromVolume,
+		ZITADEL_LOGIN_PAT: effectiveLoginPat,
 		ZITADEL_E2E_CLIENT_ID: zitadelApp.appClientId,
 		ZITADEL_E2E_CLIENT_SECRET: zitadelApp.appClientSecret,
 	};

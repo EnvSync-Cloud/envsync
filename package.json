@@ -12,6 +12,7 @@
     "dev": "turbo dev",
     "start": "turbo start",
     "cli": "bun run scripts/cli.ts",
+    "e2e-setup": "bun run scripts/e2e-setup.ts",
     "test:mock": "turbo test:mock",
     "test:e2e": "turbo test:e2e"
   },

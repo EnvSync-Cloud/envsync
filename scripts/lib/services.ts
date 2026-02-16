@@ -185,8 +185,7 @@ export async function waitForZitadel(url?: string): Promise<void> {
 	);
 }
 
-/** Read Zitadel admin PAT from the zitadel_data Docker volume (admin.pat from first-instance machine user). */
-export async function readPatFromVolume(rootDir: string): Promise<string | null> {
+async function readFileFromZitadelVolume(rootDir: string, fileName: string): Promise<string | null> {
 	const projectName = process.env.COMPOSE_PROJECT_NAME ?? path.basename(rootDir);
 	const volumeName = `${projectName}_zitadel_data`;
 	const maxAttempts = 5;
@@ -194,18 +193,30 @@ export async function readPatFromVolume(rootDir: string): Promise<string | null>
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		const result = spawnSync(
 			"docker",
-			["run", "--rm", "-v", `${volumeName}:/data:ro`, "alpine", "cat", "/data/admin.pat"],
+			["run", "--rm", "-v", `${volumeName}:/data:ro`, "alpine", "cat", `/data/${fileName}`],
 			{ cwd: rootDir, encoding: "utf8", env: process.env },
 		);
 		if (result.status === 0 && result.stdout?.trim()) {
 			return result.stdout.trim();
 		}
 		if (attempt < maxAttempts) {
-			console.log(`Zitadel: PAT not ready yet (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs / 1000}s...`);
+			console.log(
+				`Zitadel: ${fileName} not ready yet (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs / 1000}s...`,
+			);
 			await new Promise(r => setTimeout(r, delayMs));
 		}
 	}
 	return null;
+}
+
+/** Read Zitadel admin PAT from the zitadel_data Docker volume (admin.pat from first-instance machine user). */
+export async function readPatFromVolume(rootDir: string): Promise<string | null> {
+	return readFileFromZitadelVolume(rootDir, "admin.pat");
+}
+
+/** Read Zitadel login-client PAT from the zitadel_data Docker volume (login-client.pat). */
+export async function readLoginPatFromVolume(rootDir: string): Promise<string | null> {
+	return readFileFromZitadelVolume(rootDir, "login-client.pat");
 }
 
 // ── Vault initialization ────────────────────────────────────────────
