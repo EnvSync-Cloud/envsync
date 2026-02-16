@@ -3,10 +3,11 @@
  * EnvSync CLI – full init from project root.
  * 1. Ensure .env exists (copy from .env.example)
  * 2. Start Docker Compose services (without envsync_api)
- * 3. Wait for postgres, Zitadel, RustFS, Vault
+ * 3. Wait for postgres, Zitadel, RustFS, Vault, OpenFGA
  * 4. Initialize & configure Vault (KV v2, AppRole auth)
- * 5. Run DB migrations
- * 6. Run API init (RustFS bucket; Zitadel apps created in console, secrets in .env)
+ * 5. Initialize OpenFGA (create store, write authorization model)
+ * 6. Run DB migrations
+ * 7. Run API init (RustFS bucket; Zitadel apps created in console, secrets in .env)
  *
  * Run from monorepo root: bun run scripts/cli.ts init
  */
@@ -17,6 +18,8 @@ import net from "node:net";
 import path from "node:path";
 import * as readline from "node:readline";
 import { fileURLToPath } from "node:url";
+
+import { authorizationModelDef } from "../packages/envsync-api/src/libs/openfga/model";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -125,7 +128,7 @@ async function ensureEnv(): Promise<void> {
 }
 
 function dockerUp(): void {
-	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault)...");
+	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault, openfga)...");
 	const result = spawnSync(
 		"docker",
 		[
@@ -139,6 +142,9 @@ function dockerUp(): void {
 			"zitadel",
 			"vault-init",
 			"vault",
+			"openfga_db",
+			"openfga_migrate",
+			"openfga",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -256,6 +262,27 @@ async function waitForVault(): Promise<void> {
 					signal: AbortSignal.timeout(3000),
 				});
 				return res.status !== undefined;
+			} catch {
+				return false;
+			}
+		},
+		3000,
+		30,
+	);
+}
+
+async function waitForOpenFGA(): Promise<void> {
+	const openfgaUrl = (
+		process.env.OPENFGA_API_URL ?? `http://localhost:${process.env.OPENFGA_HTTP_PORT ?? "8090"}`
+	).replace(/\/$/, "");
+	await waitFor(
+		"OpenFGA",
+		async () => {
+			try {
+				const res = await fetch(`${openfgaUrl}/healthz`, {
+					signal: AbortSignal.timeout(3000),
+				});
+				return res.ok;
 			} catch {
 				return false;
 			}
@@ -483,6 +510,73 @@ path "sys/health" {
 	console.log("  Vault credentials saved to .env (VAULT_ADDR, VAULT_TOKEN, VAULT_ROLE_ID, VAULT_SECRET_ID, VAULT_MOUNT_PATH).");
 }
 
+/**
+ * Initialize OpenFGA for EnvSync:
+ * 1. Create a store (if OPENFGA_STORE_ID is not already set)
+ * 2. Write the authorization model
+ * 3. Save OPENFGA_STORE_ID and OPENFGA_MODEL_ID to .env
+ */
+async function initOpenFGA(): Promise<void> {
+	const openfgaUrl = (
+		process.env.OPENFGA_API_URL ?? `http://localhost:${process.env.OPENFGA_HTTP_PORT ?? "8090"}`
+	).replace(/\/$/, "");
+
+	console.log(`\nInitializing OpenFGA at ${openfgaUrl}...`);
+
+	// If already configured, skip
+	if (process.env.OPENFGA_STORE_ID && process.env.OPENFGA_MODEL_ID) {
+		console.log(
+			`  OpenFGA already configured (store=${process.env.OPENFGA_STORE_ID}, model=${process.env.OPENFGA_MODEL_ID}). Skipping.`,
+		);
+		return;
+	}
+
+	// ── Step 1: Create store ─────────────────────────────────────────
+	let storeId = process.env.OPENFGA_STORE_ID || "";
+	if (!storeId) {
+		console.log("  Creating OpenFGA store 'envsync'...");
+		const storeRes = await fetch(`${openfgaUrl}/stores`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: "envsync" }),
+			signal: AbortSignal.timeout(10000),
+		});
+		if (!storeRes.ok) {
+			throw new Error(`Failed to create OpenFGA store (${storeRes.status}): ${await storeRes.text()}`);
+		}
+		const storeData = (await storeRes.json()) as { id: string; name: string };
+		storeId = storeData.id;
+		console.log(`  Store created: ${storeId}`);
+	} else {
+		console.log(`  Using existing store: ${storeId}`);
+	}
+
+	// ── Step 2: Write authorization model ────────────────────────────
+	console.log("  Writing authorization model...");
+	const modelRes = await fetch(`${openfgaUrl}/stores/${storeId}/authorization-models`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(authorizationModelDef),
+		signal: AbortSignal.timeout(10000),
+	});
+	if (!modelRes.ok) {
+		throw new Error(
+			`Failed to write OpenFGA authorization model (${modelRes.status}): ${await modelRes.text()}`,
+		);
+	}
+	const modelData = (await modelRes.json()) as { authorization_model_id: string };
+	const modelId = modelData.authorization_model_id;
+	console.log(`  Authorization model written: ${modelId}`);
+
+	// ── Step 3: Save to .env ─────────────────────────────────────────
+	updateRootEnvAndReload({
+		OPENFGA_API_URL: openfgaUrl,
+		OPENFGA_STORE_ID: storeId,
+		OPENFGA_MODEL_ID: modelId,
+	});
+	console.log("  OpenFGA credentials saved to .env (OPENFGA_API_URL, OPENFGA_STORE_ID, OPENFGA_MODEL_ID).");
+}
+
 function runMigrations(): void {
 	console.log("\nRunning DB migrations...");
 	const result = spawnSync(process.execPath, ["run", "scripts/migrate.ts", "latest"], {
@@ -504,7 +598,7 @@ function runApiInit(): void {
 }
 
 async function init(): Promise<void> {
-	console.log("EnvSync full init (env, Docker, migrations, Zitadel, RustFS, Vault)\n");
+	console.log("EnvSync full init (env, Docker, migrations, Zitadel, RustFS, Vault, OpenFGA)\n");
 
 	await ensureEnv();
 	loadEnvFile(path.join(rootDir, ".env"));
@@ -517,6 +611,7 @@ async function init(): Promise<void> {
 	await waitForZitadel();
 	await waitForRustfs();
 	await waitForVault();
+	await waitForOpenFGA();
 
 	const patFromVolume = await readPatFromVolume();
 	if (patFromVolume) {
@@ -525,6 +620,7 @@ async function init(): Promise<void> {
 	}
 
 	await initVault();
+	await initOpenFGA();
 
 	runMigrations();
 	runApiInit();
@@ -567,7 +663,10 @@ function servicesUp(): void {
 			"zitadel",
 			"vault-init",
 			"vault",
-			"zitadel_login"
+			"zitadel_login",
+			"openfga_db",
+			"openfga_migrate",
+			"openfga",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -597,7 +696,7 @@ function printUsage(): void {
 	console.log("Usage: bun run cli <command> [options]");
 	console.log("");
 	console.log("Commands:");
-	console.log("  init              Full init: .env, Docker up, wait, Vault setup, migrations, API init, then Docker down");
+	console.log("  init              Full init: .env, Docker up, wait, Vault setup, OpenFGA setup, migrations, API init, then Docker down");
 	console.log("  db <migrate-cmd>  Run DB migrations (packages/envsync-api/scripts/migrate.ts)");
 	console.log("                    e.g. db latest | db list | db rollback | db backup | db restore | db migrate_to <name> | db step | db drop | db init");
 	console.log("  services <sub>    Docker Compose: up | down | status");

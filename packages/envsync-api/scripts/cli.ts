@@ -262,6 +262,76 @@ async function init() {
 	console.log("\nInit done.");
 }
 
+/**
+ * Write OpenFGA relationship tuples for a user based on their org role flags.
+ * Uses the REST API directly to avoid pulling in the full FGAClient init chain.
+ */
+async function assignFGARoles(
+	userId: string,
+	orgId: string,
+	role: {
+		is_master: boolean;
+		is_admin: boolean;
+		can_view: boolean;
+		can_edit: boolean;
+		have_api_access: boolean;
+		have_billing_options: boolean;
+		have_webhook_access: boolean;
+	},
+): Promise<void> {
+	const openfgaUrl = config.OPENFGA_API_URL?.replace(/\/$/, "");
+	const storeId = config.OPENFGA_STORE_ID;
+	const modelId = config.OPENFGA_MODEL_ID;
+
+	if (!openfgaUrl || !storeId) {
+		console.log(
+			"  FGA: OPENFGA_API_URL or OPENFGA_STORE_ID not set. Run monorepo `bun run cli init` first to bootstrap OpenFGA.",
+		);
+		return;
+	}
+
+	const user = `user:${userId}`;
+	const org = `org:${orgId}`;
+	const tuples: { user: string; relation: string; object: string }[] = [];
+
+	tuples.push({ user, relation: "member", object: org });
+	if (role.is_master) tuples.push({ user, relation: "master", object: org });
+	if (role.is_admin) tuples.push({ user, relation: "admin", object: org });
+	if (role.can_view) tuples.push({ user, relation: "can_view", object: org });
+	if (role.can_edit) tuples.push({ user, relation: "can_edit", object: org });
+	if (role.have_api_access) tuples.push({ user, relation: "have_api_access", object: org });
+	if (role.have_billing_options) tuples.push({ user, relation: "have_billing_options", object: org });
+	if (role.have_webhook_access) tuples.push({ user, relation: "have_webhook_access", object: org });
+
+	console.log(`  FGA: Writing ${tuples.length} tuples for user ${userId} in org ${orgId}...`);
+
+	// Write tuples one by one so we can skip "already exists" errors
+	let written = 0;
+	let skipped = 0;
+	for (const tuple of tuples) {
+		const res = await fetch(`${openfgaUrl}/stores/${storeId}/write`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				writes: { tuple_keys: [tuple] },
+				...(modelId ? { authorization_model_id: modelId } : {}),
+			}),
+			signal: AbortSignal.timeout(10000),
+		});
+		if (res.ok) {
+			written++;
+		} else {
+			const body = await res.text();
+			if (body.includes("already exists")) {
+				skipped++;
+			} else {
+				console.warn(`  FGA: Failed to write tuple (${tuple.relation}): ${res.status} ${body}`);
+			}
+		}
+	}
+	console.log(`  FGA: ${written} tuples written, ${skipped} already existed.`);
+}
+
 async function createDevUser() {
 	const email = process.argv[3] || "dev@envsync.local";
 	const fullName = process.argv[4] || "Dev User";
@@ -350,6 +420,10 @@ async function createDevUser() {
 
 	if (existingUser) {
 		console.log(`\nUser "${email}" already exists (${existingUser.id})`);
+
+		// Ensure FGA tuples exist even for previously created users
+		await assignFGARoles(existingUser.id, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
+
 		console.log("\nDev user ready:");
 		console.log(`  Email:    ${email}`);
 		console.log(`  User ID:  ${existingUser.id}`);
@@ -407,6 +481,9 @@ async function createDevUser() {
 			updated_at: new Date(),
 		})
 		.execute();
+
+	// Assign FGA roles for the new user
+	await assignFGARoles(userId, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
 
 	console.log(`\nDev user created:`);
 	console.log(`  Email:           ${email}`);

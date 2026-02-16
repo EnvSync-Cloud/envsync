@@ -48,7 +48,10 @@ export const requirePermission = (
 			return ctx.json({ error: "Missing resource identifier for permission check." }, 400);
 		}
 
+		console.log("Checking permission:", userId, relation, objectType, objectId);
+
 		const allowed = await AuthorizationService.check(userId, relation, objectType, objectId);
+		console.log("Allowed:", allowed);
 
 		if (!allowed) {
 			return ctx.json({ error: "You do not have permission to perform this action." }, 403);
