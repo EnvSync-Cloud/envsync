@@ -3,8 +3,8 @@ FROM oven/bun:1.3.9-alpine AS deps
 
 WORKDIR /app
 
-COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile --production
+COPY package.json ./
+RUN bun install --production
 
 # Stage 2: Production runtime
 FROM oven/bun:1.3.9-alpine
