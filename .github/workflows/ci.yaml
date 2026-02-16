@@ -307,7 +307,9 @@ jobs:
 
       - name: Start Zitadel
         run: |
+          mkdir -p /tmp/zitadel
           docker run -d --name zitadel --network host --user 0 \
+            -v /tmp/zitadel:/current-dir \
             -e ZITADEL_EXTERNALDOMAIN=localhost \
             -e ZITADEL_EXTERNALSECURE=false \
             -e ZITADEL_TLS_ENABLED=false \
@@ -325,7 +327,7 @@ jobs:
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin \
             -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1! \
             -e ZITADEL_FIRSTINSTANCE_ORG_NAME=EnvSync \
-            -e ZITADEL_FIRSTINSTANCE_PATPATH=/tmp/admin.pat \
+            -e ZITADEL_FIRSTINSTANCE_PATPATH=/current-dir/admin.pat \
             -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME=admin \
             -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME="EnvSync IAM Owner" \
             -e "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
@@ -356,7 +358,7 @@ jobs:
       - name: Read Zitadel admin PAT
         run: |
           for i in $(seq 1 10); do
-            PAT=$(docker exec zitadel cat /tmp/admin.pat 2>/dev/null || true)
+            PAT=$(docker exec zitadel cat /current-dir/admin.pat 2>/dev/null || true)
             if [ -n "$PAT" ]; then
               echo "ZITADEL_PAT=${PAT}" >> $GITHUB_ENV
               echo "Zitadel PAT read successfully"
