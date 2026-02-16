@@ -139,6 +139,7 @@ export async function getZitadelAccessToken(
 	url: string,
 	clientId: string,
 	clientSecret: string,
+	pat: string,
 	loginName: string,
 	password: string,
 ): Promise<string> {
@@ -147,7 +148,10 @@ export async function getZitadelAccessToken(
 	// 1. Create authenticated session
 	const sessionRes = await fetch(`${base}/v2/sessions`, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			Authorization: `Bearer ${pat}`,
+			"Content-Type": "application/json",
+		},
 		body: JSON.stringify({
 			checks: {
 				user: { loginName },

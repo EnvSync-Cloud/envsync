@@ -220,6 +220,7 @@ export async function seedE2EUser(
 		creds.url,
 		creds.clientId,
 		creds.clientSecret,
+		creds.pat,
 		email,
 		password,
 	);
