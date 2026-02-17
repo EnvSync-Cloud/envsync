@@ -24,14 +24,20 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Build SDK
+        run: bun run --filter @envsync-cloud/envsync-ts-sdk build
+
       - name: Build
         run: bun run --filter envsync-web build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.ENVSYNC_API_URL }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy
         working-directory: apps/envsync-web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   deploy-landing:
     name: Deploy envsync-landing
@@ -46,11 +52,17 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Build SDK
+        run: bun run --filter @envsync-cloud/envsync-ts-sdk build
+
       - name: Build
         run: bun run --filter envsync-landing build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.ENVSYNC_API_URL }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy
         working-directory: apps/envsync-landing
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
