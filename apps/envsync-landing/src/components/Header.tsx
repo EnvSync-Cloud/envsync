@@ -47,9 +47,11 @@ const Header = () => {
               Integrations
             </Link>
             <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
-            <Button variant="outline" className="border-slate-700 text-black">
-              Sign In
-            </Button>
+            <a href="https://app.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">
+              <Button variant="outline" className="border-slate-700 text-black">
+                Sign In
+              </Button>
+            </a>
             <Link to="/onboarding">
               <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 Get Started
