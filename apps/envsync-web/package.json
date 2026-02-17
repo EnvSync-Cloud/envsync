@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "bun run build && bun wrangler deploy"
   },
   "dependencies": {
     "@envsync-cloud/envsync-ts-sdk": "workspace:*",
