@@ -54,6 +54,7 @@ export const env = z.object({
 	VAULT_SECRET_ID: z.string(),
 	VAULT_MOUNT_PATH: z.string().default("envsync"),
 	VAULT_NAMESPACE: z.string().optional(),
+	VAULT_UNSEAL_KEY: z.string().optional(),
 	// OpenFGA configuration
 	OPENFGA_API_URL: z.string().default("http://localhost:8090"),
 	OPENFGA_STORE_ID: z.string().optional(),

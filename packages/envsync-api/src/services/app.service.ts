@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
+import infoLogs, { LogTypes } from "@/libs/logger";
 import { VaultClient } from "@/libs/vault";
 import { envScopePath, secretScopePath } from "@/libs/vault/paths";
 import { AuthorizationService } from "@/services/authorization.service";
@@ -192,15 +193,23 @@ export class AppService {
 
 		if (envTypes.length === 0) return 0;
 
-		const vault = await VaultClient.getInstance();
-		const counts = await Promise.all(
-			envTypes.map(async et => {
-				const keys = await vault.kvList(envScopePath(org_id, app_id, et.id));
-				return keys.length;
-			}),
-		);
-
-		return counts.reduce((sum, c) => sum + c, 0);
+		try {
+			const vault = await VaultClient.getInstance();
+			const counts = await Promise.all(
+				envTypes.map(async et => {
+					const keys = await vault.kvList(envScopePath(org_id, app_id, et.id));
+					return keys.length;
+				}),
+			);
+			return counts.reduce((sum, c) => sum + c, 0);
+		} catch (err) {
+			infoLogs(
+				`Failed to fetch env count for app ${app_id}: ${err instanceof Error ? err.message : err}`,
+				LogTypes.ERROR,
+				"AppService",
+			);
+			return 0;
+		}
 	};
 
 	public static getSecretCountByApp = async ({
@@ -220,15 +229,23 @@ export class AppService {
 
 		if (envTypes.length === 0) return 0;
 
-		const vault = await VaultClient.getInstance();
-		const counts = await Promise.all(
-			envTypes.map(async et => {
-				const keys = await vault.kvList(secretScopePath(org_id, app_id, et.id));
-				return keys.length;
-			}),
-		);
-
-		return counts.reduce((sum, c) => sum + c, 0);
+		try {
+			const vault = await VaultClient.getInstance();
+			const counts = await Promise.all(
+				envTypes.map(async et => {
+					const keys = await vault.kvList(secretScopePath(org_id, app_id, et.id));
+					return keys.length;
+				}),
+			);
+			return counts.reduce((sum, c) => sum + c, 0);
+		} catch (err) {
+			infoLogs(
+				`Failed to fetch secret count for app ${app_id}: ${err instanceof Error ? err.message : err}`,
+				LogTypes.ERROR,
+				"AppService",
+			);
+			return 0;
+		}
 	};
 
 	public static getManagedAppPrivateKey = async (app_id: string) => {
