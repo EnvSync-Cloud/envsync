@@ -206,3 +206,94 @@ describe("PUT /api/env/batch", () => {
 		expect(body.message).toBe("Envs created successfully");
 	});
 });
+
+describe("Transparent decryption roundtrip", () => {
+	test("create env var and read back matches original plaintext", async () => {
+		const originalValue = "postgres://user:pass@host:5432/db";
+
+		await testRequest("/api/env/single", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { key: "ROUNDTRIP_VAR", value: originalValue, app_id: appId, env_type_id: envTypeId },
+		});
+
+		const res = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<any[]>();
+		const found = body.find((e: any) => e.key === "ROUNDTRIP_VAR");
+		expect(found).toBeDefined();
+		expect(found.value).toBe(originalValue);
+	});
+});
+
+describe("PATCH /api/env/batch", () => {
+	test("updates multiple env variables", async () => {
+		// Create vars first
+		await testRequest("/api/env/batch", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				envs: [
+					{ key: "BUPD_1", value: "old1" },
+					{ key: "BUPD_2", value: "old2" },
+				],
+			},
+		});
+
+		const res = await testRequest("/api/env/batch", {
+			method: "PATCH",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				envs: [
+					{ key: "BUPD_1", value: "new1" },
+					{ key: "BUPD_2", value: "new2" },
+				],
+			},
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<{ message: string }>();
+		expect(body.message).toBe("Envs updated successfully");
+	});
+});
+
+describe("DELETE /api/env/batch", () => {
+	test("removes multiple env variables", async () => {
+		// Create vars first
+		await testRequest("/api/env/batch", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				envs: [
+					{ key: "BDEL_1", value: "val1" },
+					{ key: "BDEL_2", value: "val2" },
+				],
+			},
+		});
+
+		const res = await testRequest("/api/env/batch", {
+			method: "DELETE",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				keys: ["BDEL_1", "BDEL_2"],
+			},
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<{ message: string }>();
+		expect(body.message).toBe("Envs deleted successfully");
+	});
+});

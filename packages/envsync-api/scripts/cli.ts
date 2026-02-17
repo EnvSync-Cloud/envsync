@@ -20,6 +20,7 @@ import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
 import { DB } from "../src/libs/db";
 import { VaultClient } from "../src/libs/vault";
 import { envPath } from "../src/libs/vault/paths";
+import { KMSClient } from "../src/libs/kms/client";
 import { SecretKeyGenerator } from "sk-keygen";
 
 const ZITADEL_PROJECT_NAME = "EnvSync";
@@ -520,22 +521,27 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 	};
 
 	let envVarCount = 0;
-	try {
-		const vault = await VaultClient.getInstance();
-		for (const [appName, envsByType] of Object.entries(envVars)) {
-			const appId = appIds[appName];
-			for (const [envTypeName, vars] of Object.entries(envsByType)) {
-				const etId = envTypeIds[appName][envTypeName];
-				for (const [key, value] of Object.entries(vars)) {
-					await vault.kvWrite(envPath(orgId, appId, etId, key), { value });
-					envVarCount++;
-				}
+	const vault = await VaultClient.getInstance();
+	const kms = await KMSClient.getInstance();
+	const kmsHealthy = await kms.healthCheck();
+	if (!kmsHealthy) {
+		throw new Error("Seed: miniKMS is not healthy. Cannot seed without encryption.");
+	}
+
+	for (const [appName, envsByType] of Object.entries(envVars)) {
+		const appId = appIds[appName];
+		for (const [envTypeName, vars] of Object.entries(envsByType)) {
+			const etId = envTypeIds[appName][envTypeName];
+			for (const [key, value] of Object.entries(vars)) {
+				const aad = `env:${orgId}:${appId}:${etId}:${key}`;
+				const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
+				const writeValue = `KMS:v1:${keyVersionId}:${ciphertext}`;
+				await vault.kvWrite(envPath(orgId, appId, etId, key), { value: writeValue });
+				envVarCount++;
 			}
 		}
-		console.log(`Seed: Wrote ${envVarCount} env vars to Vault`);
-	} catch (err) {
-		console.warn(`Seed: Failed to write env vars to Vault (is Vault running?): ${err}`);
 	}
+	console.log(`Seed: Wrote ${envVarCount} env vars to Vault (KMS-encrypted)`);
 
 	if (!dbAlreadySeeded) {
 		// -- d) Create 1 team + add dev user as member --

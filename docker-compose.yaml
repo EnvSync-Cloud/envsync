@@ -20,6 +20,31 @@ services:
   #   networks:
   #     - envsync_network
 
+  minikms:
+    image: ghcr.io/envsync-cloud/minikms:latest
+    ports:
+      - "${MINIKMS_GRPC_PORT:-50051}:50051"
+    restart: always
+    environment:
+      MINIKMS_DB_URL: "postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable"
+      MINIKMS_REDIS_URL: "redis://redis:6379/1"
+      MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
+      MINIKMS_GRPC_ADDR: "0.0.0.0:50051"
+    depends_on:
+      - minikms_db
+      - redis
+    networks:
+      - envsync_network
+
+  minikms_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: minikms
+    networks:
+      - envsync_network
   redis:
     image: redis:latest
     ports:

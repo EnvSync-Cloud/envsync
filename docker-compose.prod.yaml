@@ -19,6 +19,7 @@ services:
       VAULT_ADDR: http://vault:8200
       OPENFGA_API_URL: http://openfga:8090
       ZITADEL_URL: http://zitadel:8080
+      MINIKMS_GRPC_ADDR: minikms:50051
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,6 +32,8 @@ services:
       openfga:
         condition: service_healthy
       zitadel:
+        condition: service_healthy
+      minikms:
         condition: service_healthy
     networks:
       - envsync_network
@@ -47,6 +50,7 @@ services:
       DATABASE_HOST: postgres
       S3_ENDPOINT: http://rustfs:9001
       ZITADEL_URL: http://zitadel:8080
+      MINIKMS_GRPC_ADDR: minikms:50051
     volumes:
       - zitadel_data:/zitadel-data:ro
     depends_on:
@@ -62,6 +66,8 @@ services:
         condition: service_healthy
       rustfs:
         condition: service_started
+      minikms:
+        condition: service_healthy
     restart: "no"
     networks:
       - envsync_network
@@ -248,6 +254,50 @@ services:
     networks:
       - envsync_network
 
+  minikms_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${MINIKMS_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: minikms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MINIKMS_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - minikms_db_data:/var/lib/postgresql/data
+    networks:
+      - envsync_network
+
+  minikms:
+    image: ghcr.io/envsync-cloud/minikms:latest
+    restart: unless-stopped
+    environment:
+      MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
+      MINIKMS_DB_HOST: minikms_db
+      MINIKMS_DB_PORT: "5432"
+      MINIKMS_DB_USER: ${MINIKMS_DB_USER:-postgres}
+      MINIKMS_DB_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
+      MINIKMS_DB_NAME: minikms
+      MINIKMS_REDIS_URL: redis://redis:6379
+      MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
+    healthcheck:
+      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      minikms_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
 networks:
   envsync_network:
     driver: bridge
@@ -260,3 +310,4 @@ volumes:
   zitadel_db_data:
   zitadel_data:
   openfga_db_data:
+  minikms_db_data:

@@ -83,6 +83,9 @@ Object.assign(process.env, {
 	OPENFGA_API_URL: process.env.OPENFGA_API_URL ?? "http://localhost:8090",
 	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",
 	OPENFGA_MODEL_ID: process.env.OPENFGA_MODEL_ID ?? "",
+	// miniKMS
+	MINIKMS_GRPC_ADDR: process.env.MINIKMS_GRPC_ADDR ?? "localhost:50051",
+	MINIKMS_TLS_ENABLED: "false",
 	// App URLs
 	LANDING_PAGE_URL: "http://localhost:3000",
 	DASHBOARD_URL: "http://localhost:9090",

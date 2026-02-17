@@ -1,6 +1,7 @@
 import { DB } from "@/libs/db";
 import { VaultClient } from "@/libs/vault";
 import { envPath, envScopePath } from "@/libs/vault/paths";
+import { kmsEncrypt, kmsDecrypt } from "@/helpers/key-store";
 
 import { KeyValidationService } from "./key_validation.service";
 
@@ -25,6 +26,31 @@ function toEnvRecord(
 		created_at: new Date(created_time),
 		updated_at: new Date(created_time),
 	};
+}
+
+/**
+ * Build the AAD string for env variable encryption.
+ */
+function envAAD(org_id: string, app_id: string, env_type_id: string, key: string): string {
+	return `env:${org_id}:${app_id}:${env_type_id}:${key}`;
+}
+
+/**
+ * Decrypt a KMS-encrypted value read from Vault.
+ * All values must be KMS-encrypted (KMS:v1: prefix).
+ */
+async function decryptEnvValue(
+	org_id: string,
+	app_id: string,
+	env_type_id: string,
+	key: string,
+	value: string,
+): Promise<string> {
+	if (!value.startsWith("KMS:v1:")) {
+		throw new Error(`Env value for key "${key}" is not KMS-encrypted.`);
+	}
+	const aad = envAAD(org_id, app_id, env_type_id, key);
+	return kmsDecrypt(org_id, app_id, value, aad);
 }
 
 export class EnvService {
@@ -53,9 +79,13 @@ export class EnvService {
 			throw new Error(keyCheck.message!);
 		}
 
+		// Encrypt via miniKMS before writing to Vault
+		const aad = envAAD(org_id, app_id, env_type_id, key);
+		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+
 		const vault = await VaultClient.getInstance();
 		const path = envPath(org_id, app_id, env_type_id, key);
-		await vault.kvWrite(path, { value });
+		await vault.kvWrite(path, { value: encryptedValue });
 
 		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
 	};
@@ -79,12 +109,17 @@ export class EnvService {
 			return undefined;
 		}
 
+		// Decrypt value transparently
+		const decryptedValue = await decryptEnvValue(
+			org_id, app_id, env_type_id, key, result.data.value,
+		);
+
 		return toEnvRecord(
 			org_id,
 			app_id,
 			env_type_id,
 			key,
-			result.data.value,
+			decryptedValue,
 			result.metadata.created_time,
 		);
 	};
@@ -111,7 +146,11 @@ export class EnvService {
 			throw new Error("no result");
 		}
 
-		await vault.kvWrite(path, { value });
+		// Encrypt via miniKMS before writing to Vault
+		const aad = envAAD(org_id, app_id, env_type_id, key);
+		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+
+		await vault.kvWrite(path, { value: encryptedValue });
 	};
 
 	public static deleteEnv = async ({
@@ -159,12 +198,18 @@ export class EnvService {
 				const path = envPath(org_id, app_id, env_type_id, key);
 				const result = await vault.kvRead(path);
 				if (!result) return null;
+
+				// Decrypt value transparently
+				const decryptedValue = await decryptEnvValue(
+					org_id, app_id, env_type_id, key, result.data.value,
+				);
+
 				return toEnvRecord(
 					org_id,
 					app_id,
 					env_type_id,
 					key,
-					result.data.value,
+					decryptedValue,
 					result.metadata.created_time,
 				);
 			}),
@@ -198,10 +243,13 @@ export class EnvService {
 
 		const vault = await VaultClient.getInstance();
 
+		// Encrypt all values via miniKMS before writing to Vault
 		await Promise.all(
-			envs.map(env => {
+			envs.map(async env => {
+				const aad = envAAD(org_id, app_id, env_type_id, env.key);
+				const encryptedValue = await kmsEncrypt(org_id, app_id, env.value, aad);
 				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: env.value });
+				return vault.kvWrite(path, { value: encryptedValue });
 			}),
 		);
 	};
@@ -217,10 +265,13 @@ export class EnvService {
 	) => {
 		const vault = await VaultClient.getInstance();
 
+		// Encrypt all values via miniKMS before writing to Vault
 		await Promise.all(
-			envs.map(env => {
+			envs.map(async env => {
+				const aad = envAAD(org_id, app_id, env_type_id, env.key);
+				const encryptedValue = await kmsEncrypt(org_id, app_id, env.value, aad);
 				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: env.value });
+				return vault.kvWrite(path, { value: encryptedValue });
 			}),
 		);
 	};

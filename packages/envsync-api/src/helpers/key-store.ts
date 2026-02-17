@@ -8,6 +8,8 @@ import {
 	constants,
 } from "node:crypto";
 
+import { KMSClient } from "@/libs/kms/client";
+
 // Generate RSA key pair with optimized settings
 export const generateKeyPair = () => {
 	const { publicKey, privateKey } = generateKeyPairSync("rsa", {
@@ -138,7 +140,11 @@ const rsaDecryptSmall = (encryptedData: string, privateKey: string): string => {
 	return decrypted.toString("utf8");
 };
 
-// Smart encrypt function that chooses the best method
+/**
+ * Encrypt data using the app's RSA/BYOK public key.
+ * Used as the inner encryption layer for secrets (BYOK/PKI layer).
+ * Returns prefixed ciphertext: "RSA:{base64}" or "HYB:{base64}"
+ */
 export const smartEncrypt = (data: string, publicKey: string): string => {
 	const dataSize = Buffer.byteLength(data, "utf8");
 
@@ -152,7 +158,54 @@ export const smartEncrypt = (data: string, publicKey: string): string => {
 	return "HYB:" + hybridEncrypt(data, publicKey);
 };
 
-export const smartDecrypt = (encryptedData: string, privateKey: string): string => {
+/**
+ * Encrypt a value using miniKMS. This is the preferred encryption method.
+ * Returns a formatted string: KMS:v1:{keyVersionId}:{base64_ciphertext}
+ */
+export const kmsEncrypt = async (
+	orgId: string,
+	appId: string,
+	value: string,
+	aad: string,
+): Promise<string> => {
+	const kms = await KMSClient.getInstance();
+	const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
+	return `KMS:v1:${keyVersionId}:${ciphertext}`;
+};
+
+/**
+ * Decrypt a KMS-encrypted value. Parses the KMS:v1: format and calls miniKMS.
+ * Returns the inner plaintext (which may itself be RSA:/HYB: encrypted for secrets).
+ * AAD must match the value used during encryption.
+ */
+export const kmsDecrypt = async (
+	orgId: string,
+	appId: string,
+	kmsWrapped: string,
+	aad: string,
+): Promise<string> => {
+	if (!kmsWrapped.startsWith("KMS:v1:")) {
+		throw new Error("Not a KMS:v1: encrypted value");
+	}
+
+	const parts = kmsWrapped.substring(7).split(":");
+	if (parts.length < 2) {
+		throw new Error("Invalid KMS:v1: format");
+	}
+	const keyVersionId = parts[0];
+	const ciphertext = parts.slice(1).join(":");
+
+	const kms = await KMSClient.getInstance();
+	const result = await kms.decrypt(orgId, appId, ciphertext, aad, keyVersionId);
+	return result.plaintext;
+};
+
+/**
+ * Decrypt the inner RSA/BYOK encryption layer.
+ * Only works with RSA: and HYB: prefixed data.
+ * Used as Layer 2 decryption after KMS-unwrapping.
+ */
+export const rsaLayerDecrypt = (encryptedData: string, privateKey: string): string => {
 	const method = encryptedData.substring(0, 4);
 	const data = encryptedData.substring(4);
 
