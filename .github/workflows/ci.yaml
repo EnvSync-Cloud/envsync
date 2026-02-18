@@ -149,7 +149,7 @@ jobs:
           docker run -d --name minikms --network host \
             -e MINIKMS_DB_URL="postgres://postgres:postgres@localhost:5435/minikms?sslmode=disable" \
             -e MINIKMS_REDIS_URL="redis://localhost:6379/1" \
-            -e MINIKMS_ROOT_KEY="e2e0ci00test00key00000000000000000000000000000000000000000000abcd" \
+            -e MINIKMS_ROOT_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2" \
             -e MINIKMS_GRPC_ADDR="0.0.0.0:50051" \
             ghcr.io/envsync-cloud/minikms:latest
 
