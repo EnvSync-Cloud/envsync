@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package minikms.v1;
+
+option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
+
+// PKIService manages the 3-level PKI hierarchy:
+// Root CA -> Org Intermediate CA (IsCA:true, MaxPathLen:0) -> Member Certificate (IsCA:false)
+service PKIService {
+    rpc CreateOrgCA(CreateOrgCARequest) returns (CreateOrgCAResponse);
+    rpc IssueMemberCert(IssueMemberCertRequest) returns (IssueMemberCertResponse);
+    rpc RevokeCert(RevokeCertRequest) returns (RevokeCertResponse);
+    rpc GetCRL(GetCRLRequest) returns (GetCRLResponse);
+    rpc CheckOCSP(CheckOCSPRequest) returns (CheckOCSPResponse);
+    rpc GetRootCA(GetRootCARequest) returns (GetRootCAResponse);
+}
+
+message CreateOrgCARequest {
+    string org_id = 1;
+    string org_name = 2;
+}
+
+message CreateOrgCAResponse {
+    string cert_pem = 1;
+    string serial_hex = 2;
+}
+
+message IssueMemberCertRequest {
+    string member_id = 1;
+    string member_email = 2;
+    string org_id = 3;
+    string role = 4;
+}
+
+message IssueMemberCertResponse {
+    string cert_pem = 1;
+    string key_pem = 2;
+    string serial_hex = 3;
+}
+
+message RevokeCertRequest {
+    string serial_hex = 1;
+    string org_id = 2;
+    int32 reason = 3; // RFC 5280 reason code
+}
+
+message RevokeCertResponse {
+    bool success = 1;
+}
+
+message GetCRLRequest {
+    string org_id = 1;
+    bool delta_only = 2; // If true, return only delta CRL
+}
+
+message GetCRLResponse {
+    bytes crl_der = 1;
+    int64 crl_number = 2;
+    bool is_delta = 3;
+}
+
+message CheckOCSPRequest {
+    string serial_hex = 1;
+    string org_id = 2;
+}
+
+message CheckOCSPResponse {
+    int32 status = 1; // 0=good, 1=revoked, 2=unknown
+    string revoked_at = 2; // RFC3339, empty if not revoked
+}
+
+message GetRootCARequest {}
+
+message GetRootCAResponse {
+    string cert_pem = 1;
+}

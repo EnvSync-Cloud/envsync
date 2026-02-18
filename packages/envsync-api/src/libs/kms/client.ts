@@ -1,3 +1,7 @@
+import path from "node:path";
+import * as grpc from "@grpc/grpc-js";
+import * as protoLoader from "@grpc/proto-loader";
+
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
 
@@ -6,8 +10,8 @@ import infoLogs, { LogTypes } from "@/libs/logger";
  * Singleton pattern matching VaultClient.
  *
  * Maps EnvSync concepts to generic miniKMS concepts:
- *   orgId  → tenant_id
- *   appId  → scope_id
+ *   orgId  -> tenant_id
+ *   appId  -> scope_id
  */
 
 export interface EncryptResult {
@@ -30,16 +34,47 @@ export interface BatchDecryptItem {
 	keyVersionId: string;
 }
 
+// Proto file paths (resolved relative to this file)
+const PROTO_DIR = path.resolve(import.meta.dir, "proto");
+const KMS_PROTO_PATH = path.join(PROTO_DIR, "kms.proto");
+const HEALTH_PROTO_PATH = path.join(PROTO_DIR, "health.proto");
+
+const PROTO_LOADER_OPTIONS: protoLoader.Options = {
+	keepCase: true,
+	longs: String,
+	enums: String,
+	defaults: true,
+	oneofs: true,
+};
+
 export class KMSClient {
 	private static instance: KMSClient | null = null;
 	private grpcAddr: string;
-	private tlsEnabled: boolean;
-	private tlsCaCert?: string;
+	private kmsStub: grpc.Client;
+	private healthStub: grpc.Client;
 
 	private constructor() {
 		this.grpcAddr = config.MINIKMS_GRPC_ADDR;
-		this.tlsEnabled = config.MINIKMS_TLS_ENABLED === "true";
-		this.tlsCaCert = config.MINIKMS_TLS_CA_CERT;
+		const tlsEnabled = config.MINIKMS_TLS_ENABLED === "true";
+		const tlsCaCert = config.MINIKMS_TLS_CA_CERT;
+
+		const credentials = tlsEnabled
+			? grpc.credentials.createSsl(
+					tlsCaCert ? Buffer.from(tlsCaCert) : undefined,
+				)
+			: grpc.credentials.createInsecure();
+
+		// Load KMS service proto
+		const kmsPackageDef = protoLoader.loadSync(KMS_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const kmsProto = grpc.loadPackageDefinition(kmsPackageDef);
+		const KMSService = (kmsProto.minikms as any).v1.KMSService;
+		this.kmsStub = new KMSService(this.grpcAddr, credentials);
+
+		// Load gRPC health check proto
+		const healthPackageDef = protoLoader.loadSync(HEALTH_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const healthProto = grpc.loadPackageDefinition(healthPackageDef);
+		const HealthService = (healthProto.grpc as any).health.v1.Health;
+		this.healthStub = new HealthService(this.grpcAddr, credentials);
 	}
 
 	public static async getInstance(): Promise<KMSClient> {
@@ -55,8 +90,27 @@ export class KMSClient {
 	}
 
 	/**
+	 * Promisify a unary gRPC call on the given stub.
+	 */
+	private rpcCall<TRes>(
+		stub: grpc.Client,
+		method: string,
+		request: Record<string, any>,
+	): Promise<TRes> {
+		return new Promise<TRes>((resolve, reject) => {
+			(stub as any)[method](
+				request,
+				(err: grpc.ServiceError | null, response: TRes) => {
+					if (err) reject(err);
+					else resolve(response);
+				},
+			);
+		});
+	}
+
+	/**
 	 * Encrypt a single value via miniKMS.
-	 * Maps orgId → tenant_id, appId → scope_id for the generic KMS interface.
+	 * Maps orgId -> tenant_id, appId -> scope_id for the generic KMS interface.
 	 */
 	public async encrypt(
 		orgId: string,
@@ -64,17 +118,28 @@ export class KMSClient {
 		plaintext: string,
 		aad: string,
 	): Promise<EncryptResult> {
-		const response = await this.grpcCall("Encrypt", {
-			tenant_id: orgId,
-			scope_id: appId,
-			plaintext: Buffer.from(plaintext, "utf-8").toString("base64"),
-			aad,
-		});
+		try {
+			const response = await this.rpcCall<any>(this.kmsStub, "Encrypt", {
+				tenant_id: orgId,
+				scope_id: appId,
+				plaintext: Buffer.from(plaintext, "utf-8"),
+				aad,
+			});
 
-		return {
-			ciphertext: response.ciphertext,
-			keyVersionId: response.key_version_id,
-		};
+			return {
+				ciphertext: response.ciphertext,
+				keyVersionId: response.key_version_id,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(
+					`KMS Encrypt error: ${error.message}`,
+					LogTypes.ERROR,
+					"KMSClient",
+				);
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -87,17 +152,28 @@ export class KMSClient {
 		aad: string,
 		keyVersionId: string,
 	): Promise<DecryptResult> {
-		const response = await this.grpcCall("Decrypt", {
-			tenant_id: orgId,
-			scope_id: appId,
-			ciphertext,
-			aad,
-			key_version_id: keyVersionId,
-		});
+		try {
+			const response = await this.rpcCall<any>(this.kmsStub, "Decrypt", {
+				tenant_id: orgId,
+				scope_id: appId,
+				ciphertext,
+				aad,
+				key_version_id: keyVersionId,
+			});
 
-		return {
-			plaintext: Buffer.from(response.plaintext, "base64").toString("utf-8"),
-		};
+			return {
+				plaintext: Buffer.from(response.plaintext).toString("utf-8"),
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(
+					`KMS Decrypt error: ${error.message}`,
+					LogTypes.ERROR,
+					"KMSClient",
+				);
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -108,19 +184,30 @@ export class KMSClient {
 		appId: string,
 		items: BatchEncryptItem[],
 	): Promise<EncryptResult[]> {
-		const response = await this.grpcCall("BatchEncrypt", {
-			tenant_id: orgId,
-			scope_id: appId,
-			items: items.map((item) => ({
-				plaintext: Buffer.from(item.plaintext, "utf-8").toString("base64"),
-				aad: item.aad,
-			})),
-		});
+		try {
+			const response = await this.rpcCall<any>(this.kmsStub, "BatchEncrypt", {
+				tenant_id: orgId,
+				scope_id: appId,
+				items: items.map((item) => ({
+					plaintext: Buffer.from(item.plaintext, "utf-8"),
+					aad: item.aad,
+				})),
+			});
 
-		return response.items.map((item: any) => ({
-			ciphertext: item.ciphertext,
-			keyVersionId: item.key_version_id,
-		}));
+			return response.items.map((item: any) => ({
+				ciphertext: item.ciphertext,
+				keyVersionId: item.key_version_id,
+			}));
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(
+					`KMS BatchEncrypt error: ${error.message}`,
+					LogTypes.ERROR,
+					"KMSClient",
+				);
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -131,51 +218,24 @@ export class KMSClient {
 		appId: string,
 		items: BatchDecryptItem[],
 	): Promise<DecryptResult[]> {
-		const response = await this.grpcCall("BatchDecrypt", {
-			tenant_id: orgId,
-			scope_id: appId,
-			items: items.map((item) => ({
-				ciphertext: item.ciphertext,
-				aad: item.aad,
-				key_version_id: item.keyVersionId,
-			})),
-		});
-
-		return response.items.map((item: any) => ({
-			plaintext: Buffer.from(item.plaintext, "base64").toString("utf-8"),
-		}));
-	}
-
-	/**
-	 * Internal gRPC call helper. Uses HTTP/2 JSON transcoding to communicate
-	 * with miniKMS gRPC service.
-	 *
-	 * In production, this should use a proper gRPC client (@grpc/grpc-js).
-	 * For the initial integration, we use HTTP/2 with JSON bodies as a simpler
-	 * bridge that avoids proto code generation on the TS side.
-	 */
-	private async grpcCall(method: string, body: Record<string, any>): Promise<any> {
-		const url = `http://${this.grpcAddr}/minikms.v1.KMSService/${method}`;
-
 		try {
-			const response = await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(body),
+			const response = await this.rpcCall<any>(this.kmsStub, "BatchDecrypt", {
+				tenant_id: orgId,
+				scope_id: appId,
+				items: items.map((item) => ({
+					ciphertext: item.ciphertext,
+					aad: item.aad,
+					key_version_id: item.keyVersionId,
+				})),
 			});
 
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`miniKMS ${method} failed (${response.status}): ${errorText}`);
-			}
-
-			return await response.json();
+			return response.items.map((item: any) => ({
+				plaintext: Buffer.from(item.plaintext).toString("utf-8"),
+			}));
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(
-					`KMS ${method} error: ${error.message}`,
+					`KMS BatchDecrypt error: ${error.message}`,
 					LogTypes.ERROR,
 					"KMSClient",
 				);
@@ -189,13 +249,10 @@ export class KMSClient {
 	 */
 	public async healthCheck(): Promise<boolean> {
 		try {
-			const url = `http://${this.grpcAddr}/grpc.health.v1.Health/Check`;
-			const response = await fetch(url, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ service: "minikms" }),
+			const response = await this.rpcCall<any>(this.healthStub, "Check", {
+				service: "minikms",
 			});
-			return response.ok;
+			return response.status === "SERVING";
 		} catch {
 			return false;
 		}

@@ -11,7 +11,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -248,6 +248,17 @@ async function initRustfsBucket() {
 	throw lastError;
 }
 
+async function initMiniKMS() {
+	// a 32 byte hex string
+	const rootKey = randomBytes(32).toString("hex");
+	console.log("miniKMS: root key", rootKey);
+
+	updateRootEnv({
+		MINIKMS_ROOT_KEY: rootKey,
+	});
+	console.log("miniKMS: root key written to root .env");
+}
+
 async function init() {
 	console.log("EnvSync API init: RustFS bucket + Zitadel OIDC apps\n");
 
@@ -262,6 +273,9 @@ async function init() {
 			"\nZitadel: Set ZITADEL_PAT in .env (or ZITADEL_PAT_FILE to bootstrap admin.pat) and re-run init to create OIDC apps.",
 		);
 	}
+
+	// Initialize miniKMS
+	await initMiniKMS();
 
 	console.log("\nInit done.");
 }

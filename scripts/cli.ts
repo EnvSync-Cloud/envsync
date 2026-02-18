@@ -96,6 +96,9 @@ function dockerUp(): void {
 			"openfga_db",
 			"openfga_migrate",
 			"openfga",
+			"minikms_db",
+			"minikms_migrate",
+			"minikms",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -312,6 +315,9 @@ function servicesUp(): void {
 			"openfga_db",
 			"openfga_migrate",
 			"openfga",
+			"minikms_db",
+			"minikms_migrate",
+			"minikms",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);

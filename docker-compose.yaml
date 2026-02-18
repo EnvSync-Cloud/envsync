@@ -20,6 +20,35 @@ services:
   #   networks:
   #     - envsync_network
 
+  minikms_db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: minikms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d minikms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - envsync_network
+
+  minikms_migrate:
+    image: postgres:17
+    command: ["psql", "-h", "minikms_db", "-U", "postgres", "-d", "minikms", "-f", "/migrations/001_initial_schema.sql"]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./docker/minikms/migrations:/migrations:ro
+    depends_on:
+      minikms_db:
+        condition: service_healthy
+    networks:
+      - envsync_network
+    restart: "no"
+
   minikms:
     image: ghcr.io/envsync-cloud/minikms:latest
     ports:
@@ -31,18 +60,10 @@ services:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
       MINIKMS_GRPC_ADDR: "0.0.0.0:50051"
     depends_on:
-      - minikms_db
-      - redis
-    networks:
-      - envsync_network
-
-  minikms_db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: minikms
+      minikms_migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
     networks:
       - envsync_network
   redis:
