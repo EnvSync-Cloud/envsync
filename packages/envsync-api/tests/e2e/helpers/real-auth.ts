@@ -7,6 +7,7 @@
 import { v4 as uuidv4 } from "uuid";
 
 import { DB } from "@/libs/db";
+import { KMSClient } from "@/libs/kms/client";
 import { FGAClient } from "@/libs/openfga/index";
 import { VaultClient } from "@/libs/vault/index";
 
@@ -308,6 +309,14 @@ export async function checkServiceHealth(): Promise<void> {
 					signal: AbortSignal.timeout(5000),
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			},
+		},
+		{
+			name: "miniKMS",
+			check: async () => {
+				const kms = await KMSClient.getInstance();
+				const healthy = await kms.healthCheck();
+				if (!healthy) throw new Error("miniKMS health check returned non-SERVING status");
 			},
 		},
 	];

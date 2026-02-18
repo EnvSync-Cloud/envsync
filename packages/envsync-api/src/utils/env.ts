@@ -59,6 +59,10 @@ export const env = z.object({
 	OPENFGA_API_URL: z.string().default("http://localhost:8090"),
 	OPENFGA_STORE_ID: z.string().optional(),
 	OPENFGA_MODEL_ID: z.string().optional(),
+	// miniKMS configuration
+	MINIKMS_GRPC_ADDR: z.string().default("localhost:50051"),
+	MINIKMS_TLS_ENABLED: z.string().default("false"),
+	MINIKMS_TLS_CA_CERT: z.string().optional(),
 });
 
 export type Env = z.infer<typeof env>;

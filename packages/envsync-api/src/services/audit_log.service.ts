@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { createHash } from "node:crypto";
 
 import { DB } from "@/libs/db";
 import { WebhookService } from "./webhook.service";
@@ -34,6 +35,25 @@ export const ActionPastTimeOptions = z.enum([
 
 export type ActionPastTimes = z.infer<typeof ActionPastTimeOptions>;
 
+// Genesis hash for the first entry in the audit chain (Issue #11)
+const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+
+/**
+ * Compute the hash for an audit entry.
+ * hash = SHA256(previous_hash + timestamp + action + org_id + user_id + details)
+ */
+function computeEntryHash(
+	previousHash: string,
+	timestamp: string,
+	action: string,
+	orgId: string,
+	userId: string,
+	details: string,
+): string {
+	const data = previousHash + timestamp + action + orgId + userId + details;
+	return createHash("sha256").update(data).digest("hex");
+}
+
 export class AuditLogService {
 	public static notifyAuditSystem = async ({
 		action,
@@ -50,6 +70,39 @@ export class AuditLogService {
 	}) => {
 		const db = await DB.getInstance();
 
+		const now = new Date();
+		const timestamp = now.toISOString();
+		const detailsStr = JSON.stringify(details);
+
+		// Fetch the most recent audit log's entry_hash for the org (Issue #11)
+		let previousHash = GENESIS_HASH;
+		try {
+			const latestEntry = await db
+				.selectFrom("audit_log")
+				.select("entry_hash")
+				.where("org_id", "=", org_id)
+				.where("entry_hash", "is not", null)
+				.orderBy("created_at", "desc")
+				.limit(1)
+				.executeTakeFirst();
+
+			if (latestEntry?.entry_hash) {
+				previousHash = latestEntry.entry_hash;
+			}
+		} catch {
+			// If entry_hash column doesn't exist yet (pre-migration), use genesis hash
+		}
+
+		// Compute the entry hash for hash chaining
+		const entryHash = computeEntryHash(
+			previousHash,
+			timestamp,
+			action,
+			org_id,
+			user_id,
+			detailsStr,
+		);
+
 		await db
 			.insertInto("audit_log")
 			.values({
@@ -57,15 +110,17 @@ export class AuditLogService {
 				action,
 				org_id,
 				user_id,
-				details: JSON.stringify(details),
+				details: detailsStr,
 				message,
-				created_at: new Date(),
-				updated_at: new Date(),
+				previous_hash: previousHash,
+				entry_hash: entryHash,
+				created_at: now,
+				updated_at: now,
 			})
 			.execute();
 
 		WebhookService.triggerWebhook({
-			event_type: action, 
+			event_type: action,
 			org_id: org_id || "",
 			user_id: user_id || "",
 			message: JSON.stringify(details || {}),
@@ -75,17 +130,17 @@ export class AuditLogService {
 	public static getAuditLogs = async (
 		org_id: string,
 		{
-			page, 
-			per_page, 
+			page,
+			per_page,
 			filter_by_user,
 			filter_by_category,
-			filter_by_past_time, 
+			filter_by_past_time,
 			}: {
 				page: number;
 				per_page: number;
 				filter_by_user?: string;
 				filter_by_category?: ActionCtgs;
-				filter_by_past_time?: ActionPastTimes; 
+				filter_by_past_time?: ActionPastTimes;
 			},
 	) => {
 		const db = await DB.getInstance();

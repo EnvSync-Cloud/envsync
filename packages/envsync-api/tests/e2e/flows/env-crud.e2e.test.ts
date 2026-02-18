@@ -1,9 +1,9 @@
 /**
  * E2E: Environment variable CRUD — create → read → update → delete
  *
- * Uses real PostgreSQL and OpenFGA. Vault is mocked with an in-memory
- * KV v2 implementation (configured in real-setup.ts preload).
- * Tests single and batch operations.
+ * Uses real PostgreSQL and OpenFGA. Vault stores KMS-encrypted env vars.
+ * Tests single and batch operations. Values are transparently encrypted/decrypted
+ * by EnvService — the API always returns plaintext.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
@@ -86,6 +86,24 @@ describe("Env CRUD E2E", () => {
 		const body = await res.json<any[]>();
 		expect(body).toBeArray();
 		expect(body.length).toBeGreaterThanOrEqual(3);
+	});
+
+	test("env values are returned as plaintext (decrypted transparently)", async () => {
+		const res = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<any[]>();
+		const dbUrl = body.find((e: any) => e.key === "DATABASE_URL");
+		expect(dbUrl).toBeDefined();
+		expect(dbUrl.value).toBe("postgres://localhost:5432/mydb");
+
+		const redisUrl = body.find((e: any) => e.key === "REDIS_URL");
+		expect(redisUrl).toBeDefined();
+		expect(redisUrl.value).toBe("redis://localhost:6379");
 	});
 
 	test("update a single env variable", async () => {

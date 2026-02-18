@@ -92,6 +92,28 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      minikms-db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: minikms
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
@@ -103,6 +125,8 @@ jobs:
       VAULT_ADDR: http://localhost:8200
       VAULT_MOUNT_PATH: envsync
       ZITADEL_URL: http://localhost:8080
+      MINIKMS_GRPC_ADDR: localhost:50051
+      MINIKMS_TLS_ENABLED: "false"
       SKIP_ROOT_ENV: "1"
     steps:
       - uses: actions/checkout@v4
@@ -114,6 +138,39 @@ jobs:
           go-version: "1.24"
           cache-dependency-path: packages/envsync-cli/go.sum
       - run: bun i
+
+      - name: Run miniKMS database migrations
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5435 -U postgres -d minikms \
+            -f docker/minikms/migrations/001_initial_schema.sql
+
+      - name: Start miniKMS
+        run: |
+          docker run -d --name minikms --network host \
+            -e MINIKMS_DB_URL="postgres://postgres:postgres@localhost:5435/minikms?sslmode=disable" \
+            -e MINIKMS_REDIS_URL="redis://localhost:6379/1" \
+            -e MINIKMS_ROOT_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2" \
+            -e MINIKMS_GRPC_ADDR="0.0.0.0:50051" \
+            ghcr.io/envsync-cloud/minikms:latest
+
+      - name: Wait for miniKMS to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec minikms /bin/sh -c "echo > /dev/tcp/localhost/50051" 2>/dev/null; then
+              echo "miniKMS is ready"
+              exit 0
+            fi
+            # Fallback: check if port is open from host
+            if nc -z localhost 50051 2>/dev/null; then
+              echo "miniKMS is ready (port check)"
+              exit 0
+            fi
+            echo "Waiting for miniKMS... ($i/30)"
+            sleep 2
+          done
+          echo "miniKMS failed to start"
+          docker logs minikms
+          exit 1
 
       - name: Run OpenFGA migrations
         run: |

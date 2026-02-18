@@ -85,6 +85,8 @@ interface AuditLog extends BaseTable {
 	action: ColumnType<AuditActions | string>;
 	details: ColumnType<string>;
 	message: ColumnType<string>;
+	previous_hash?: ColumnType<string | null>;
+	entry_hash?: ColumnType<string | null>;
 }
 
 interface App extends BaseTable {
@@ -96,6 +98,8 @@ interface App extends BaseTable {
 	public_key?: ColumnType<string | null>;
 	private_key?: ColumnType<string | null>;
 	metadata: ColumnType<Record<string, any>>;
+	kms_key_version_id?: ColumnType<string | null>;
+	encryption_migrated?: ColumnType<boolean>;
 }
 
 interface EnvType extends BaseTable {
