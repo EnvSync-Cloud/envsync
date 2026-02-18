@@ -16,6 +16,8 @@ import roleRoute from "./role.route";
 import teamRoute from "./team.route";
 import permissionRoute from "./permission.route";
 import webhookRoute from "./webhook.route";
+import gpgKeyRoute from "./gpg_key.route";
+import certificateRoute from "./certificate.route";
 
 const app = new Hono();
 
@@ -35,5 +37,7 @@ app.route("/user", userRoute);
 app.route("/team", teamRoute);
 app.route("/permission", permissionRoute);
 app.route("/webhook", webhookRoute);
+app.route("/gpg_key", gpgKeyRoute);
+app.route("/certificate", certificateRoute);
 
 export default app;

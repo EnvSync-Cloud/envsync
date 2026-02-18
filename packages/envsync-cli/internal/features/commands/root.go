@@ -20,14 +20,16 @@ const (
 )
 
 type CommandRegistry struct {
-	appHandler         *handlers.AppHandler
-	authHandler        *handlers.AuthHandler
-	configHandler      *handlers.ConfigHandler
-	environmentHandler *handlers.EnvironmentHandler
-	syncHandler        *handlers.SyncHandler
-	initHandler        *handlers.InitHandler
-	runHandler         *handlers.RunHandler
-	genPEMKeyHandler   *handlers.GenPEMKeyHandler
+	appHandler          *handlers.AppHandler
+	authHandler         *handlers.AuthHandler
+	configHandler       *handlers.ConfigHandler
+	environmentHandler  *handlers.EnvironmentHandler
+	syncHandler         *handlers.SyncHandler
+	initHandler         *handlers.InitHandler
+	runHandler          *handlers.RunHandler
+	genPEMKeyHandler    *handlers.GenPEMKeyHandler
+	gpgKeyHandler       *handlers.GpgKeyHandler
+	certificateHandler  *handlers.CertificateHandler
 }
 
 func NewCommandRegistry(
@@ -39,16 +41,20 @@ func NewCommandRegistry(
 	initHandler *handlers.InitHandler,
 	runHandler *handlers.RunHandler,
 	genPEMKeyHandler *handlers.GenPEMKeyHandler,
+	gpgKeyHandler *handlers.GpgKeyHandler,
+	certificateHandler *handlers.CertificateHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
-		appHandler:         appHandler,
-		authHandler:        authHandler,
-		configHandler:      configHandler,
-		environmentHandler: environmentHandler,
-		syncHandler:        syncHandler,
-		initHandler:        initHandler,
-		runHandler:         runHandler,
-		genPEMKeyHandler:   genPEMKeyHandler,
+		appHandler:          appHandler,
+		authHandler:         authHandler,
+		configHandler:       configHandler,
+		environmentHandler:  environmentHandler,
+		syncHandler:         syncHandler,
+		initHandler:         initHandler,
+		runHandler:          runHandler,
+		genPEMKeyHandler:    genPEMKeyHandler,
+		gpgKeyHandler:       gpgKeyHandler,
+		certificateHandler:  certificateHandler,
 	}
 }
 
@@ -79,6 +85,8 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 			InitCommand(r.initHandler),
 			RunCommand(r.runHandler),
 			GenereatePrivateKeyCommand(r.genPEMKeyHandler),
+			GpgKeyCommands(r.gpgKeyHandler),
+			CertificateCommands(r.certificateHandler),
 		},
 	}
 }

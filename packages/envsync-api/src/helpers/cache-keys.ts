@@ -40,6 +40,9 @@ export const CacheKeys = {
 	webhook: (id: string) => `es:webhook:${id}`,
 	webhooksByOrg: (orgId: string) => `es:org:${orgId}:webhooks`,
 
+	// Certificate
+	certsByOrg: (orgId: string) => `es:org:${orgId}:certs`,
+
 	// Glob patterns for cascade invalidation
 	allForUser: (userId: string) => `es:user:${userId}*`,
 	allForOrg: (orgId: string) => `es:org:${orgId}:*`,

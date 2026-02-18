@@ -266,6 +266,90 @@ export class AuthorizationService {
 		await fga.writeTuples([{ user: `org:${orgId}`, relation: "org", object: `team:${teamId}` }]);
 	}
 
+	// ─── GPG key relations ────────────────────────────────────────────
+
+	/**
+	 * Write the structural tuples linking a GPG key to its org and owner.
+	 * Called when a GPG key is created.
+	 */
+	static async writeGpgKeyRelations(gpgKeyId: string, orgId: string, ownerId: string): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		await fga.writeTuples([
+			{ user: `org:${orgId}`, relation: "org", object: `gpg_key:${gpgKeyId}` },
+			{ user: `user:${ownerId}`, relation: "owner", object: `gpg_key:${gpgKeyId}` },
+		]);
+	}
+
+	/**
+	 * Grant a user or team a role on a GPG key (manager or signer).
+	 */
+	static async grantGpgKeyAccess(
+		subjectId: string,
+		subjectType: "user" | "team",
+		gpgKeyId: string,
+		relation: "manager" | "signer",
+	): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await fga.writeTuples([{ user, relation, object: `gpg_key:${gpgKeyId}` }]);
+	}
+
+	/**
+	 * Revoke a user or team's role on a GPG key.
+	 */
+	static async revokeGpgKeyAccess(
+		subjectId: string,
+		subjectType: "user" | "team",
+		gpgKeyId: string,
+		relation: "manager" | "signer",
+	): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await fga.deleteTuples([{ user, relation, object: `gpg_key:${gpgKeyId}` }]);
+	}
+
+	// ─── Certificate relations ──────────────────────────────────────
+
+	/**
+	 * Write the structural tuples linking a certificate to its org and owner.
+	 * Called when a certificate is created (initOrgCA or issueMemberCert).
+	 */
+	static async writeCertificateRelations(certId: string, orgId: string, ownerId: string): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		await fga.writeTuples([
+			{ user: `org:${orgId}`, relation: "org", object: `certificate:${certId}` },
+			{ user: `user:${ownerId}`, relation: "owner", object: `certificate:${certId}` },
+		]);
+	}
+
+	/**
+	 * Grant a user or team a role on a certificate (manager or viewer).
+	 */
+	static async grantCertificateAccess(
+		subjectId: string,
+		subjectType: "user" | "team",
+		certId: string,
+		relation: "manager" | "viewer",
+	): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await fga.writeTuples([{ user, relation, object: `certificate:${certId}` }]);
+	}
+
+	/**
+	 * Revoke a user or team's role on a certificate.
+	 */
+	static async revokeCertificateAccess(
+		subjectId: string,
+		subjectType: "user" | "team",
+		certId: string,
+		relation: "manager" | "viewer",
+	): Promise<void> {
+		const fga = await FGAClient.getInstance();
+		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await fga.deleteTuples([{ user, relation, object: `certificate:${certId}` }]);
+	}
+
 	// ─── Introspection ─────────────────────────────────────────────────
 
 	/**

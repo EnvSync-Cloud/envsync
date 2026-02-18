@@ -23,6 +23,8 @@ services:
   minikms_db:
     image: postgres:17
     restart: unless-stopped
+    volumes:
+      - minikms_db_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -79,6 +81,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -310,3 +314,4 @@ volumes:
   zitadel_db_data:
   zitadel_data:
   openfga_db_data:
+  minikms_db_data:

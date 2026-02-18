@@ -66,6 +66,22 @@ function checkPermission(user: string, relation: string, object: string): boolea
 			case "can_manage_org_settings":
 				return hasTuple(user, "master", object);
 
+			// GPG key management
+			case "can_manage_gpg_keys":
+				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
+
+			// Certificate management
+			case "can_view_certificates":
+				return (
+					hasTuple(user, "can_view_certificates", object) ||
+					hasTuple(user, "admin", object) ||
+					hasTuple(user, "master", object)
+				);
+			case "can_manage_certificates":
+			case "can_issue_certificates":
+			case "can_revoke_certificates":
+				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
+
 			// Capability relations inherit from admin/master
 			case "can_view":
 			case "can_edit":
@@ -129,6 +145,60 @@ function checkPermission(user: string, relation: string, object: string): boolea
 					hasTuple(user, "admin", object) ||
 					(orgId ? hasTuple(user, "master", orgId) : false) ||
 					(orgId ? hasTuple(user, "admin", orgId) : false)
+				);
+		}
+	}
+
+	if (objectType === "gpg_key") {
+		const orgTuple = findTuples({ relation: "org", object }).find(Boolean);
+		const orgId = orgTuple?.user;
+
+		switch (relation) {
+			case "can_view":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "manager", object) ||
+					hasTuple(user, "signer", object) ||
+					(orgId ? checkPermission(user, "can_view", orgId) : false)
+				);
+			case "can_sign":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "signer", object) ||
+					(orgId ? checkPermission(user, "admin", orgId) : false)
+				);
+			case "can_manage":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "manager", object) ||
+					(orgId ? checkPermission(user, "admin", orgId) : false)
+				);
+		}
+	}
+
+	if (objectType === "certificate") {
+		const orgTuple = findTuples({ relation: "org", object }).find(Boolean);
+		const orgId = orgTuple?.user;
+
+		switch (relation) {
+			case "can_view":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "manager", object) ||
+					hasTuple(user, "viewer", object) ||
+					(orgId ? checkPermission(user, "can_view_certificates", orgId) : false)
+				);
+			case "can_manage":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "manager", object) ||
+					(orgId ? checkPermission(user, "can_manage_certificates", orgId) : false)
+				);
+			case "can_revoke":
+				return (
+					hasTuple(user, "owner", object) ||
+					hasTuple(user, "manager", object) ||
+					(orgId ? checkPermission(user, "can_revoke_certificates", orgId) : false)
 				);
 		}
 	}

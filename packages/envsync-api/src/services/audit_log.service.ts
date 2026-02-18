@@ -18,6 +18,8 @@ export const ActionCategories = z.enum([
 	'api_key*',
 	'webhook*',
 	'cli*',
+	'gpg_key*',
+	'cert*',
 ]);
 
 export type ActionCtgs = z.infer<typeof ActionCategories>;

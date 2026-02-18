@@ -123,6 +123,35 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
 					},
 				},
+
+				// GPG key management
+				can_manage_gpg_keys: {
+					union: {
+						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+
+				// Certificate management
+				can_view_certificates: {
+					union: {
+						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+				can_manage_certificates: {
+					union: {
+						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+				can_issue_certificates: {
+					union: {
+						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+				can_revoke_certificates: {
+					union: {
+						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
 			},
 			metadata: {
 				relations: {
@@ -156,6 +185,13 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					can_view_audit_logs: {},
 					can_manage_org_settings: {},
 					can_manage_invites: {},
+					can_manage_gpg_keys: {},
+					can_view_certificates: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					can_manage_certificates: {},
+					can_issue_certificates: {},
+					can_revoke_certificates: {},
 				},
 			},
 		},
@@ -275,6 +311,120 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					can_view: {},
 					can_edit: {},
 					can_manage_protected: {},
+				},
+			},
+		},
+
+		// ------------------------------------------------------------------
+		// gpg_key
+		// ------------------------------------------------------------------
+		{
+			type: "gpg_key",
+			relations: {
+				org: { this: {} },
+				owner: { this: {} },
+				manager: { this: {} },
+				signer: { this: {} },
+
+				can_view: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "manager" } },
+							{ computedUserset: { relation: "signer" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "can_view" } } },
+						],
+					},
+				},
+				can_sign: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "signer" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "admin" } } },
+						],
+					},
+				},
+				can_manage: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "manager" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "admin" } } },
+						],
+					},
+				},
+			},
+			metadata: {
+				relations: {
+					org: { directly_related_user_types: [{ type: "org" }] },
+					owner: { directly_related_user_types: [{ type: "user" }] },
+					manager: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					signer: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					can_view: {},
+					can_sign: {},
+					can_manage: {},
+				},
+			},
+		},
+
+		// ------------------------------------------------------------------
+		// certificate
+		// ------------------------------------------------------------------
+		{
+			type: "certificate",
+			relations: {
+				org: { this: {} },
+				owner: { this: {} },
+				manager: { this: {} },
+				viewer: { this: {} },
+
+				can_view: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "manager" } },
+							{ computedUserset: { relation: "viewer" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "can_view_certificates" } } },
+						],
+					},
+				},
+				can_manage: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "manager" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "can_manage_certificates" } } },
+						],
+					},
+				},
+				can_revoke: {
+					union: {
+						child: [
+							{ computedUserset: { relation: "owner" } },
+							{ computedUserset: { relation: "manager" } },
+							{ tupleToUserset: { tupleset: { relation: "org" }, computedUserset: { relation: "can_revoke_certificates" } } },
+						],
+					},
+				},
+			},
+			metadata: {
+				relations: {
+					org: { directly_related_user_types: [{ type: "org" }] },
+					owner: { directly_related_user_types: [{ type: "user" }] },
+					manager: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					viewer: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					can_view: {},
+					can_manage: {},
+					can_revoke: {},
 				},
 			},
 		},

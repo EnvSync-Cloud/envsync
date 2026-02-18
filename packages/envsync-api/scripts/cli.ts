@@ -15,11 +15,13 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 
+import * as openpgp from "openpgp";
+
 import { config } from "../src/utils/env";
 import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
 import { DB } from "../src/libs/db";
 import { VaultClient } from "../src/libs/vault";
-import { envPath } from "../src/libs/vault/paths";
+import { envPath, gpgKeyPath } from "../src/libs/vault/paths";
 import { KMSClient } from "../src/libs/kms/client";
 import { SecretKeyGenerator } from "sk-keygen";
 
@@ -604,6 +606,113 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 
 		console.log(`Seed: Created API key for dev user (${apiKey})`);
 
+		// -- f) Look up dev user for GPG + cert seeding --
+		const devUser = await db
+			.selectFrom("users")
+			.select(["email", "full_name"])
+			.where("id", "=", userId)
+			.executeTakeFirstOrThrow();
+
+		// -- g) Create a sample GPG key --
+		let gpgKeyId: string | null = null;
+		try {
+			const passphrase = randomBytes(32).toString("hex");
+			const { privateKey, publicKey } = await openpgp.generateKey({
+				type: "ecc",
+				curve: "curve25519",
+				userIDs: [{ name: devUser.full_name || "Dev User", email: devUser.email }],
+				passphrase,
+				format: "armored",
+			});
+
+			const parsedPublic = await openpgp.readKey({ armoredKey: publicKey });
+			const fingerprint = parsedPublic.getFingerprint().toUpperCase();
+			const keyIdStr = fingerprint.slice(-16);
+
+			const kmsResult = await kms.encrypt(orgId, "gpg", passphrase, `gpg:${fingerprint}`);
+
+			const vaultKeyPath = gpgKeyPath(orgId, fingerprint);
+			await vault.kvWrite(vaultKeyPath, {
+				armored_private_key: privateKey,
+				kms_wrapped_passphrase: kmsResult.ciphertext,
+				kms_key_version_id: kmsResult.keyVersionId,
+			});
+
+			gpgKeyId = randomUUID();
+			await db
+				.insertInto("gpg_keys")
+				.values({
+					id: gpgKeyId,
+					org_id: orgId,
+					user_id: userId,
+					name: "Dev Signing Key",
+					email: devUser.email,
+					fingerprint,
+					key_id: keyIdStr,
+					algorithm: "ecc-curve25519",
+					key_size: null,
+					public_key: publicKey,
+					private_key_ref: vaultKeyPath,
+					usage_flags: JSON.stringify(["sign", "certify"]),
+					trust_level: "ultimate",
+					expires_at: null,
+					is_default: true,
+					created_at: new Date(),
+					updated_at: new Date(),
+				})
+				.execute();
+
+			console.log(`Seed: Created GPG key (${fingerprint.slice(0, 16)}...)`);
+		} catch (err) {
+			console.warn("Seed: Failed to create sample GPG key:", (err as Error).message);
+		}
+
+		// -- h) Initialize org CA + issue member cert --
+		try {
+			const caResult = await kms.createOrgCA(orgId, "EnvSync Dev");
+
+			const now = new Date();
+			await db
+				.insertInto("org_certificates")
+				.values({
+					id: randomUUID(),
+					org_id: orgId,
+					user_id: userId,
+					serial_hex: caResult.serialHex,
+					cert_type: "org_ca",
+					subject_cn: "EnvSync Dev CA",
+					status: "active",
+					description: "Dev organization CA",
+					created_at: now,
+					updated_at: now,
+				})
+				.execute();
+
+			console.log(`Seed: Initialized org CA (serial: ${caResult.serialHex})`);
+
+			const memberResult = await kms.issueMemberCert(userId, devUser.email, orgId, "admin");
+			await db
+				.insertInto("org_certificates")
+				.values({
+					id: randomUUID(),
+					org_id: orgId,
+					user_id: userId,
+					serial_hex: memberResult.serialHex,
+					cert_type: "member",
+					subject_cn: devUser.email,
+					subject_email: devUser.email,
+					status: "active",
+					description: "Dev user member certificate",
+					created_at: now,
+					updated_at: now,
+				})
+				.execute();
+
+			console.log(`Seed: Issued member certificate for ${devUser.email}`);
+		} catch (err) {
+			console.warn("Seed: Failed to create certificates (miniKMS PKI may not be available):", (err as Error).message);
+		}
+
 		// -- FGA tuples for seeded resources --
 		const fgaTuples: { user: string; relation: string; object: string }[] = [];
 
@@ -617,6 +726,11 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 
 		fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `team:${teamId}` });
 		fgaTuples.push({ user: `user:${userId}`, relation: "member", object: `team:${teamId}` });
+
+		if (gpgKeyId) {
+			fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `gpg_key:${gpgKeyId}` });
+			fgaTuples.push({ user: `user:${userId}`, relation: "owner", object: `gpg_key:${gpgKeyId}` });
+		}
 
 		await writeFGATuples(fgaTuples);
 	}

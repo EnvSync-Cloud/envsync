@@ -13,3 +13,6 @@ export const envScopePath = (org_id: string, app_id: string, env_type_id: string
 
 export const secretScopePath = (org_id: string, app_id: string, env_type_id: string) =>
 	`${getMountPath()}/${org_id}/${app_id}/secret/${env_type_id}`;
+
+export const gpgKeyPath = (org_id: string, fingerprint: string) =>
+	`${getMountPath()}/${org_id}/gpg/${fingerprint}`;

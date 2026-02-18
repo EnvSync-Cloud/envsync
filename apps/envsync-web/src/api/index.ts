@@ -4,6 +4,8 @@ import { applications } from "./applications.api";
 import { roles } from "./roles.api";
 import { users } from "./users.api";
 import { webhooks } from "./webhooks.api";
+import { gpgKeys } from "./gpg-keys.api";
+import { certificates } from "./certificates.api";
 
 export const api = {
   sdk,
@@ -11,7 +13,9 @@ export const api = {
   applications,
   roles,
   users,
-  webhooks
+  webhooks,
+  gpgKeys,
+  certificates,
 };
 
 export * from "./base";
