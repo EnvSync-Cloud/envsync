@@ -1,7 +1,7 @@
 import { DB } from "@/libs/db";
 import { VaultClient } from "@/libs/vault";
 import { envPath, envScopePath } from "@/libs/vault/paths";
-import { kmsEncrypt, kmsDecrypt } from "@/helpers/key-store";
+import { kmsEncrypt, kmsDecrypt, kmsBatchEncrypt } from "@/helpers/key-store";
 
 import { KeyValidationService } from "./key_validation.service";
 
@@ -243,13 +243,20 @@ export class EnvService {
 
 		const vault = await VaultClient.getInstance();
 
-		// Encrypt all values via miniKMS before writing to Vault
+		// Batch encrypt all values via miniKMS in a single call, then write to Vault
+		const encryptedValues = await kmsBatchEncrypt(
+			org_id,
+			app_id,
+			envs.map(env => ({
+				value: env.value,
+				aad: envAAD(org_id, app_id, env_type_id, env.key),
+			})),
+		);
+
 		await Promise.all(
-			envs.map(async env => {
-				const aad = envAAD(org_id, app_id, env_type_id, env.key);
-				const encryptedValue = await kmsEncrypt(org_id, app_id, env.value, aad);
+			envs.map((env, i) => {
 				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: encryptedValue });
+				return vault.kvWrite(path, { value: encryptedValues[i] });
 			}),
 		);
 	};
@@ -265,13 +272,20 @@ export class EnvService {
 	) => {
 		const vault = await VaultClient.getInstance();
 
-		// Encrypt all values via miniKMS before writing to Vault
+		// Batch encrypt all values via miniKMS in a single call, then write to Vault
+		const encryptedValues = await kmsBatchEncrypt(
+			org_id,
+			app_id,
+			envs.map(env => ({
+				value: env.value,
+				aad: envAAD(org_id, app_id, env_type_id, env.key),
+			})),
+		);
+
 		await Promise.all(
-			envs.map(async env => {
-				const aad = envAAD(org_id, app_id, env_type_id, env.key);
-				const encryptedValue = await kmsEncrypt(org_id, app_id, env.value, aad);
+			envs.map((env, i) => {
 				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: encryptedValue });
+				return vault.kvWrite(path, { value: encryptedValues[i] });
 			}),
 		);
 	};

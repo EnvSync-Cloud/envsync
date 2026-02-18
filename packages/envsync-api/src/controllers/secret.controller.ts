@@ -6,7 +6,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
-import { smartEncrypt, kmsEncrypt, kmsDecrypt, rsaLayerDecrypt } from "@/helpers/key-store";
+import { smartEncrypt, kmsEncrypt, kmsDecrypt, kmsBatchEncrypt, rsaLayerDecrypt } from "@/helpers/key-store";
 
 /**
  * Build the AAD string for secret encryption.
@@ -408,15 +408,22 @@ export class SecretController {
 				return c.json({ error: `Secrets already exist for keys: ${existingKeys.join(", ")}` }, 400);
 			}
 
-			// Double-layer encrypt: smartEncrypt (BYOK) → kmsEncrypt (miniKMS)
-			const encryptedEnvs = await Promise.all(
-				envs.map(async (env: { key: string; value: string }) => {
-					const encryptedValue = await doubleLayerEncrypt(
-						org_id, app_id, env_type_id, env.key, env.value || "", app.public_key!,
-					);
-					return { key: env.key, value: encryptedValue };
-				}),
+			// Double-layer encrypt: smartEncrypt (BYOK) → kmsBatchEncrypt (miniKMS)
+			// Layer 1: RSA/BYOK encryption (synchronous)
+			const rsaBlobs = envs.map((env: { key: string; value: string }) => ({
+				key: env.key,
+				blob: smartEncrypt(env.value || "", app.public_key!),
+				aad: secretAAD(org_id, app_id, env_type_id, env.key),
+			}));
+			// Layer 2: Batch KMS encryption (single gRPC call, avoids race condition)
+			const kmsValues = await kmsBatchEncrypt(
+				org_id, app_id,
+				rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
 			);
+			const encryptedEnvs = rsaBlobs.map((r, i) => ({
+				key: r.key,
+				value: kmsValues[i],
+			}));
 
 			// Create secrets in Vault (double-encrypted)
 			await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
@@ -523,15 +530,22 @@ export class SecretController {
 				);
 			}
 
-			// Double-layer encrypt: smartEncrypt (BYOK) → kmsEncrypt (miniKMS)
-			const encryptedEnvs = await Promise.all(
-				envs.map(async (env: { key: string; value: string }) => {
-					const encryptedValue = await doubleLayerEncrypt(
-						org_id, app_id, env_type_id, env.key, env.value || "", app.public_key!,
-					);
-					return { key: env.key, value: encryptedValue };
-				}),
+			// Double-layer encrypt: smartEncrypt (BYOK) → kmsBatchEncrypt (miniKMS)
+			// Layer 1: RSA/BYOK encryption (synchronous)
+			const rsaBlobs = envs.map((env: { key: string; value: string }) => ({
+				key: env.key,
+				blob: smartEncrypt(env.value || "", app.public_key!),
+				aad: secretAAD(org_id, app_id, env_type_id, env.key),
+			}));
+			// Layer 2: Batch KMS encryption (single gRPC call, avoids race condition)
+			const kmsValues = await kmsBatchEncrypt(
+				org_id, app_id,
+				rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
 			);
+			const encryptedEnvs = rsaBlobs.map((r, i) => ({
+				key: r.key,
+				value: kmsValues[i],
+			}));
 
 			// Update secrets in Vault (double-encrypted)
 			await SecretService.batchUpdateSecrets(org_id, app_id, env_type_id, encryptedEnvs);

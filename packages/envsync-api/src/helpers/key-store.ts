@@ -174,6 +174,25 @@ export const kmsEncrypt = async (
 };
 
 /**
+ * Batch encrypt multiple values using miniKMS in a single gRPC call.
+ * Avoids the race condition of parallel individual encrypt calls.
+ * Returns formatted strings: KMS:v1:{keyVersionId}:{base64_ciphertext}
+ */
+export const kmsBatchEncrypt = async (
+	orgId: string,
+	appId: string,
+	items: { value: string; aad: string }[],
+): Promise<string[]> => {
+	const kms = await KMSClient.getInstance();
+	const results = await kms.batchEncrypt(
+		orgId,
+		appId,
+		items.map(item => ({ plaintext: item.value, aad: item.aad })),
+	);
+	return results.map(r => `KMS:v1:${r.keyVersionId}:${r.ciphertext}`);
+};
+
+/**
  * Decrypt a KMS-encrypted value. Parses the KMS:v1: format and calls miniKMS.
  * Returns the inner plaintext (which may itself be RSA:/HYB: encrypted for secrets).
  * AAD must match the value used during encryption.
