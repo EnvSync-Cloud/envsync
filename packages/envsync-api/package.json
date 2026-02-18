@@ -18,9 +18,11 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.821.0",
-		"@openfga/sdk": "^0.8.0",
 		"@aws-sdk/lib-storage": "^3.821.0",
+		"@grpc/grpc-js": "^1.14.3",
+		"@grpc/proto-loader": "^0.8.0",
 		"@hono/zod-validator": "^0.7.0",
+		"@openfga/sdk": "^0.8.0",
 		"@scalar/hono-api-reference": "^0.9.1",
 		"@slack/webhook": "^7.0.5",
 		"hono": "^4.7.11",

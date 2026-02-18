@@ -54,10 +54,15 @@ export const env = z.object({
 	VAULT_SECRET_ID: z.string(),
 	VAULT_MOUNT_PATH: z.string().default("envsync"),
 	VAULT_NAMESPACE: z.string().optional(),
+	VAULT_UNSEAL_KEY: z.string().optional(),
 	// OpenFGA configuration
 	OPENFGA_API_URL: z.string().default("http://localhost:8090"),
 	OPENFGA_STORE_ID: z.string().optional(),
 	OPENFGA_MODEL_ID: z.string().optional(),
+	// miniKMS configuration
+	MINIKMS_GRPC_ADDR: z.string().default("localhost:50051"),
+	MINIKMS_TLS_ENABLED: z.string().default("false"),
+	MINIKMS_TLS_CA_CERT: z.string().optional(),
 });
 
 export type Env = z.infer<typeof env>;

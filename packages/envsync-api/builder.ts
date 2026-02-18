@@ -56,6 +56,23 @@ const esmBuild = () => {
 	});
 };
 
-Promise.all([esmBuild()]);
+/** Recursively copy a directory. */
+function copyDirSync(src: string, dest: string) {
+	fs.mkdirSync(dest, { recursive: true });
+	for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+		const srcPath = path.join(src, entry.name);
+		const destPath = path.join(dest, entry.name);
+		if (entry.isDirectory()) {
+			copyDirSync(srcPath, destPath);
+		} else {
+			fs.copyFileSync(srcPath, destPath);
+		}
+	}
+}
+
+Promise.all([esmBuild()]).then(() => {
+	// Copy .proto files so the gRPC client can load them at runtime from dist/
+	copyDirSync("./src/libs/kms/proto", "./dist/libs/kms/proto");
+});
 
 exec("tsc --emitDeclarationOnly --declaration --project tsconfig.build.json");

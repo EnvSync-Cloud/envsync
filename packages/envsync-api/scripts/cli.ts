@@ -11,13 +11,17 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 
 import { config } from "../src/utils/env";
 import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
 import { DB } from "../src/libs/db";
+import { VaultClient } from "../src/libs/vault";
+import { envPath } from "../src/libs/vault/paths";
+import { KMSClient } from "../src/libs/kms/client";
+import { SecretKeyGenerator } from "sk-keygen";
 
 const ZITADEL_PROJECT_NAME = "EnvSync";
 
@@ -244,6 +248,17 @@ async function initRustfsBucket() {
 	throw lastError;
 }
 
+async function initMiniKMS() {
+	// a 32 byte hex string
+	const rootKey = randomBytes(32).toString("hex");
+	console.log("miniKMS: root key", rootKey);
+
+	updateRootEnv({
+		MINIKMS_ROOT_KEY: rootKey,
+	});
+	console.log("miniKMS: root key written to root .env");
+}
+
 async function init() {
 	console.log("EnvSync API init: RustFS bucket + Zitadel OIDC apps\n");
 
@@ -258,6 +273,9 @@ async function init() {
 			"\nZitadel: Set ZITADEL_PAT in .env (or ZITADEL_PAT_FILE to bootstrap admin.pat) and re-run init to create OIDC apps.",
 		);
 	}
+
+	// Initialize miniKMS
+	await initMiniKMS();
 
 	console.log("\nInit done.");
 }
@@ -332,9 +350,285 @@ async function assignFGARoles(
 	console.log(`  FGA: ${written} tuples written, ${skipped} already existed.`);
 }
 
+/**
+ * Write arbitrary FGA tuples, skipping "already exists" errors.
+ * Reuses the same OpenFGA REST pattern as assignFGARoles.
+ */
+async function writeFGATuples(
+	tuples: { user: string; relation: string; object: string }[],
+): Promise<void> {
+	const openfgaUrl = config.OPENFGA_API_URL?.replace(/\/$/, "");
+	const storeId = config.OPENFGA_STORE_ID;
+	const modelId = config.OPENFGA_MODEL_ID;
+
+	if (!openfgaUrl || !storeId) {
+		console.log("  Seed FGA: OPENFGA_API_URL or OPENFGA_STORE_ID not set, skipping tuples.");
+		return;
+	}
+
+	let written = 0;
+	let skipped = 0;
+	for (const tuple of tuples) {
+		const res = await fetch(`${openfgaUrl}/stores/${storeId}/write`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				writes: { tuple_keys: [tuple] },
+				...(modelId ? { authorization_model_id: modelId } : {}),
+			}),
+			signal: AbortSignal.timeout(10000),
+		});
+		if (res.ok) {
+			written++;
+		} else {
+			const body = await res.text();
+			if (body.includes("already exists")) {
+				skipped++;
+			} else {
+				console.warn(`  Seed FGA: Failed to write tuple (${tuple.relation}): ${res.status} ${body}`);
+			}
+		}
+	}
+	console.log(`  Seed FGA: ${written} tuples written, ${skipped} already existed.`);
+}
+
+async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: string, userId: string): Promise<void> {
+	console.log("\nSeed: Populating sample data...");
+
+	// -- a) Create 2 apps (or load existing) --
+	const apps = [
+		{ name: "Acme Backend", description: "Core backend API service" },
+		{ name: "Acme Frontend", description: "Next.js web application" },
+	];
+
+	const envTypeDefs = [
+		{ name: "development", color: "#22c55e", is_default: true, is_protected: false },
+		{ name: "staging", color: "#f59e0b", is_default: false, is_protected: false },
+		{ name: "production", color: "#ef4444", is_default: false, is_protected: true },
+	];
+
+	const existingApp = await db
+		.selectFrom("app")
+		.selectAll()
+		.where("org_id", "=", orgId)
+		.where("name", "=", "Acme Backend")
+		.executeTakeFirst();
+
+	const dbAlreadySeeded = !!existingApp;
+
+	const appIds: Record<string, string> = {};
+	// envTypeIds[appName][envTypeName] = id
+	const envTypeIds: Record<string, Record<string, string>> = {};
+
+	if (dbAlreadySeeded) {
+		console.log("Seed: Sample apps already exist in DB, skipping DB inserts.");
+		// Load existing app and env type IDs for Vault writes
+		for (const app of apps) {
+			const row = await db
+				.selectFrom("app")
+				.select("id")
+				.where("org_id", "=", orgId)
+				.where("name", "=", app.name)
+				.executeTakeFirstOrThrow();
+			appIds[app.name] = row.id;
+		}
+		for (const [appName, appId] of Object.entries(appIds)) {
+			envTypeIds[appName] = {};
+			for (const et of envTypeDefs) {
+				const row = await db
+					.selectFrom("env_type")
+					.select("id")
+					.where("app_id", "=", appId)
+					.where("name", "=", et.name)
+					.executeTakeFirstOrThrow();
+				envTypeIds[appName][et.name] = row.id;
+			}
+		}
+	} else {
+		for (const app of apps) {
+			const appId = randomUUID();
+			await db
+				.insertInto("app")
+				.values({
+					id: appId,
+					name: app.name,
+					org_id: orgId,
+					description: app.description,
+					enable_secrets: false,
+					is_managed_secret: false,
+					metadata: {},
+					created_at: new Date(),
+					updated_at: new Date(),
+				})
+				.execute();
+			appIds[app.name] = appId;
+			console.log(`Seed: Created app "${app.name}" (${appId})`);
+		}
+
+		// -- b) Create 3 env types per app --
+		for (const [appName, appId] of Object.entries(appIds)) {
+			envTypeIds[appName] = {};
+			for (const et of envTypeDefs) {
+				const etId = randomUUID();
+				await db
+					.insertInto("env_type")
+					.values({
+						id: etId,
+						org_id: orgId,
+						app_id: appId,
+						name: et.name,
+						color: et.color,
+						is_default: et.is_default,
+						is_protected: et.is_protected,
+						created_at: new Date(),
+						updated_at: new Date(),
+					})
+					.execute();
+				envTypeIds[appName][et.name] = etId;
+			}
+			console.log(`Seed: Created env types for "${appName}"`);
+		}
+	}
+
+	// -- c) Write sample env vars to Vault (always attempted) --
+	const envVars: Record<string, Record<string, Record<string, string>>> = {
+		"Acme Backend": {
+			development: {
+				DATABASE_URL: "postgresql://dev:dev@localhost:5432/acme_dev",
+				REDIS_URL: "redis://localhost:6379/0",
+				API_PORT: "3000",
+				LOG_LEVEL: "debug",
+				JWT_SECRET: "dev-jwt-secret-change-me",
+			},
+			staging: {
+				DATABASE_URL: "postgresql://staging:staging@db-staging:5432/acme_staging",
+				REDIS_URL: "redis://redis-staging:6379/0",
+				API_PORT: "3000",
+				LOG_LEVEL: "info",
+				JWT_SECRET: "staging-jwt-secret-change-me",
+			},
+			production: {
+				DATABASE_URL: "postgresql://prod:CHANGE_ME@db-prod:5432/acme_prod",
+				REDIS_URL: "redis://redis-prod:6379/0",
+				API_PORT: "3000",
+				LOG_LEVEL: "warn",
+				JWT_SECRET: "CHANGE_ME_IN_PRODUCTION",
+			},
+		},
+		"Acme Frontend": {
+			development: {
+				NEXT_PUBLIC_API_URL: "http://localhost:3000",
+				NEXT_PUBLIC_APP_NAME: "Acme (Dev)",
+				AUTH_SECRET: "dev-auth-secret-change-me",
+			},
+			staging: {
+				NEXT_PUBLIC_API_URL: "https://api-staging.acme.example",
+				NEXT_PUBLIC_APP_NAME: "Acme (Staging)",
+				AUTH_SECRET: "staging-auth-secret-change-me",
+			},
+			production: {
+				NEXT_PUBLIC_API_URL: "https://api.acme.example",
+				NEXT_PUBLIC_APP_NAME: "Acme",
+				AUTH_SECRET: "CHANGE_ME_IN_PRODUCTION",
+			},
+		},
+	};
+
+	let envVarCount = 0;
+	const vault = await VaultClient.getInstance();
+	const kms = await KMSClient.getInstance();
+	const kmsHealthy = await kms.healthCheck();
+	if (!kmsHealthy) {
+		throw new Error("Seed: miniKMS is not healthy. Cannot seed without encryption.");
+	}
+
+	for (const [appName, envsByType] of Object.entries(envVars)) {
+		const appId = appIds[appName];
+		for (const [envTypeName, vars] of Object.entries(envsByType)) {
+			const etId = envTypeIds[appName][envTypeName];
+			for (const [key, value] of Object.entries(vars)) {
+				const aad = `env:${orgId}:${appId}:${etId}:${key}`;
+				const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
+				const writeValue = `KMS:v1:${keyVersionId}:${ciphertext}`;
+				await vault.kvWrite(envPath(orgId, appId, etId, key), { value: writeValue });
+				envVarCount++;
+			}
+		}
+	}
+	console.log(`Seed: Wrote ${envVarCount} env vars to Vault (KMS-encrypted)`);
+
+	if (!dbAlreadySeeded) {
+		// -- d) Create 1 team + add dev user as member --
+		const teamId = randomUUID();
+		await db
+			.insertInto("teams")
+			.values({
+				id: teamId,
+				org_id: orgId,
+				name: "Backend Team",
+				description: "Backend developers",
+				color: "#3b82f6",
+				created_at: new Date(),
+				updated_at: new Date(),
+			})
+			.execute();
+
+		await db
+			.insertInto("team_members")
+			.values({
+				id: randomUUID(),
+				team_id: teamId,
+				user_id: userId,
+				created_at: new Date(),
+			})
+			.execute();
+
+		console.log(`Seed: Created team "Backend Team" (${teamId})`);
+
+		// -- e) Create 1 API key --
+		const apiKey = SecretKeyGenerator.generateKey({ prefix: "eVs" });
+		const apiKeyId = randomUUID();
+		await db
+			.insertInto("api_keys")
+			.values({
+				id: apiKeyId,
+				user_id: userId,
+				org_id: orgId,
+				description: "Dev CLI Key",
+				is_active: true,
+				key: apiKey,
+				created_at: new Date(),
+				updated_at: new Date(),
+			})
+			.execute();
+
+		console.log(`Seed: Created API key for dev user (${apiKey})`);
+
+		// -- FGA tuples for seeded resources --
+		const fgaTuples: { user: string; relation: string; object: string }[] = [];
+
+		for (const [appName, appId] of Object.entries(appIds)) {
+			fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `app:${appId}` });
+			for (const etId of Object.values(envTypeIds[appName])) {
+				fgaTuples.push({ user: `app:${appId}`, relation: "app", object: `env_type:${etId}` });
+				fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `env_type:${etId}` });
+			}
+		}
+
+		fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `team:${teamId}` });
+		fgaTuples.push({ user: `user:${userId}`, relation: "member", object: `team:${teamId}` });
+
+		await writeFGATuples(fgaTuples);
+	}
+
+	console.log("Seed: Done.");
+}
+
 async function createDevUser() {
-	const email = process.argv[3] || "dev@envsync.local";
-	const fullName = process.argv[4] || "Dev User";
+	const seedFlag = process.argv.includes("--seed");
+	const args = process.argv.slice(3).filter(a => a !== "--seed");
+	const email = args[0] || "dev@envsync.local";
+	const fullName = args[1] || "Dev User";
 	const orgName = "EnvSync Dev";
 	const slug = "envsync-dev";
 
@@ -424,6 +718,10 @@ async function createDevUser() {
 		// Ensure FGA tuples exist even for previously created users
 		await assignFGARoles(existingUser.id, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
 
+		if (seedFlag) {
+			await seedData(db, orgId, existingUser.id);
+		}
+
 		console.log("\nDev user ready:");
 		console.log(`  Email:    ${email}`);
 		console.log(`  User ID:  ${existingUser.id}`);
@@ -485,6 +783,10 @@ async function createDevUser() {
 	// Assign FGA roles for the new user
 	await assignFGARoles(userId, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
 
+	if (seedFlag) {
+		await seedData(db, orgId, userId);
+	}
+
 	console.log(`\nDev user created:`);
 	console.log(`  Email:           ${email}`);
 	console.log(`  Full Name:       ${fullName}`);
@@ -510,6 +812,6 @@ if (cmd === "init") {
 	console.log("Usage: bun run scripts/cli.ts <command>\n");
 	console.log("Commands:");
 	console.log("  init                              Create RustFS bucket + Zitadel OIDC apps");
-	console.log("  create-dev-user [email] [name]    Create a local dev user (bypasses Zitadel)");
+	console.log("  create-dev-user [email] [name] [--seed]    Create a local dev user (+ seed data with --seed)");
 	process.exit(cmd ? 1 : 0);
 }

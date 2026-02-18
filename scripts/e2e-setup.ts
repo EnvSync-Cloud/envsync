@@ -25,6 +25,7 @@ import {
 	waitForOpenFGA,
 	waitForMailpit,
 	waitForZitadel,
+	waitForMiniKMS,
 	readPatFromVolume,
 	readLoginPatFromVolume,
 	initVault,
@@ -58,6 +59,9 @@ function dockerComposeUp(): void {
 			"mailpit",
 			"zitadel_db",
 			"zitadel",
+			"minikms_db",
+			"minikms_migrate",
+			"minikms",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -137,6 +141,7 @@ async function init(): Promise<void> {
 	await waitForOpenFGA();
 	await waitForMailpit();
 	await waitForZitadel();
+	await waitForMiniKMS();
 
 	// Read Zitadel PATs
 	const zitadelUrl = "http://localhost:8080";

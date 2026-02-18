@@ -56,6 +56,9 @@ if (!isE2E) {
 		VAULT_ROLE_ID: "test-role-id",
 		VAULT_SECRET_ID: "test-secret-id",
 		VAULT_MOUNT_PATH: "envsync",
+		// miniKMS
+		MINIKMS_GRPC_ADDR: "localhost:50051",
+		MINIKMS_TLS_ENABLED: "false",
 		// OpenFGA
 		OPENFGA_API_URL: "http://localhost:8090",
 		OPENFGA_STORE_ID: "test-store-id",
@@ -104,6 +107,15 @@ if (!isE2E) {
 	mock.module("@/libs/vault/index", () => ({
 		VaultClient: {
 			getInstance: async () => MockVaultClient,
+		},
+	}));
+
+	// Mock KMS — in-memory AES-256-GCM with deterministic test keys
+	const { MockKMSClient } = await import("./kms");
+
+	mock.module("@/libs/kms/client", () => ({
+		KMSClient: {
+			getInstance: async () => MockKMSClient,
 		},
 	}));
 

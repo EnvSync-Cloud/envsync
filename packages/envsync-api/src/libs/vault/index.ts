@@ -41,9 +41,37 @@ export class VaultClient {
 
 	private static async _getInstance(): Promise<VaultClient> {
 		const client = new VaultClient();
+		await client.tryUnseal();
 		await client.authenticate();
 		infoLogs("Vault connected via AppRole", LogTypes.LOGS, "Vault");
 		return client;
+	}
+
+	private async tryUnseal(): Promise<void> {
+		const unsealKey = config.VAULT_UNSEAL_KEY;
+		if (!unsealKey) return;
+
+		const res = await fetch(`${this.addr}/v1/sys/health`, {
+			method: "GET",
+			headers: this.baseHeaders(),
+		});
+
+		if (res.status !== 503) return; // not sealed
+
+		infoLogs("Vault is sealed, attempting auto-unseal...", LogTypes.LOGS, "Vault");
+
+		const unsealRes = await fetch(`${this.addr}/v1/sys/unseal`, {
+			method: "PUT",
+			headers: this.baseHeaders(),
+			body: JSON.stringify({ key: unsealKey }),
+		});
+
+		if (!unsealRes.ok) {
+			const body = await unsealRes.text();
+			throw new Error(`Vault auto-unseal failed (${unsealRes.status}): ${body}`);
+		}
+
+		infoLogs("Vault auto-unsealed successfully", LogTypes.LOGS, "Vault");
 	}
 
 	private async authenticate(): Promise<void> {
@@ -142,6 +170,9 @@ export class VaultClient {
 		const res = await doFetch();
 		if (res.status === 403 || res.status === 503) {
 			infoLogs(`Vault returned ${res.status}, re-authenticating and retrying...`, LogTypes.LOGS, "Vault");
+			if (res.status === 503) {
+				await this.tryUnseal();
+			}
 			await this.authenticate();
 			return doFetch();
 		}

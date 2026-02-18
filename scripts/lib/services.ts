@@ -162,6 +162,30 @@ export async function waitForMailpit(host?: string, port?: number): Promise<void
 	);
 }
 
+// ── miniKMS helpers ─────────────────────────────────────────────────
+
+export async function waitForMiniKMS(host?: string, port?: number): Promise<void> {
+	const h = host ?? "localhost";
+	const p = port ?? parseInt(process.env.MINIKMS_GRPC_PORT ?? "50051", 10);
+	await waitFor(
+		"miniKMS",
+		() =>
+			new Promise<boolean>(resolve => {
+				const s = net.createConnection(p, h, () => {
+					s.destroy();
+					resolve(true);
+				});
+				s.on("error", () => resolve(false));
+				s.setTimeout(2000, () => {
+					s.destroy();
+					resolve(false);
+				});
+			}),
+		3000,
+		20,
+	);
+}
+
 // ── Zitadel helpers ─────────────────────────────────────────────────
 
 export async function waitForZitadel(url?: string): Promise<void> {
@@ -322,7 +346,7 @@ export async function initVault(vaultAddr: string, mountPath: string, policyName
 		console.log(`  KV v2 engine enabled at "${mountPath}/".`);
 	} else if (mountRes.status === 400) {
 		const body = await mountRes.text();
-		if (body.includes("existing mount")) {
+		if (body.includes("existing mount") || body.includes("path is already in use")) {
 			console.log(`  KV v2 engine already mounted at "${mountPath}/".`);
 		} else {
 			throw new Error(`Failed to enable KV v2: ${body}`);
@@ -341,7 +365,7 @@ export async function initVault(vaultAddr: string, mountPath: string, policyName
 		console.log("  AppRole auth method enabled.");
 	} else if (authRes.status === 400) {
 		const body = await authRes.text();
-		if (body.includes("existing mount")) {
+		if (body.includes("existing mount") || body.includes("path is already in use")) {
 			console.log("  AppRole auth method already enabled.");
 		} else {
 			throw new Error(`Failed to enable AppRole: ${body}`);

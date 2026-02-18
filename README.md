@@ -184,6 +184,15 @@ In this repo, the Zitadel container is configured to create the machine user and
 
 ---
 
+## Local Dev
+
+1. Run `bun cli init` to initialize the project locally.
+2. Run `bun cli services up` to start required docker services.
+3. Run `bun cli db latest` to have latest db migrations.
+4. Finally, run `bun dev` to run EnvSync Local.
+
+---
+
 ## Contributing
 
 1. Fork the repository  

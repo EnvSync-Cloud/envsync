@@ -6,7 +6,6 @@
  *
  * Note: GET /api/secret/i/:key is skipped because the controller reads
  * app_id and env_type_id from c.req.param() but they're not URL params.
- * Note: Reveal is skipped because it requires is_managed_secret + private key setup.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
@@ -79,7 +78,7 @@ describe("Secrets CRUD E2E", () => {
 		expect(res.status).toBe(201);
 	});
 
-	test("list secrets", async () => {
+	test("list secrets returns RSA-encrypted blobs (not plaintext)", async () => {
 		const res = await testRequest("/api/secret", {
 			method: "POST",
 			token: seed.masterUser.token,
@@ -90,6 +89,13 @@ describe("Secrets CRUD E2E", () => {
 		const body = await res.json<any[]>();
 		expect(body).toBeArray();
 		expect(body.length).toBeGreaterThanOrEqual(3);
+
+		// Values should be RSA:/HYB: blobs (KMS-unwrapped by the controller)
+		for (const secret of body) {
+			expect(
+				secret.value.startsWith("RSA:") || secret.value.startsWith("HYB:"),
+			).toBe(true);
+		}
 	});
 
 	test("update single secret", async () => {
@@ -144,5 +150,70 @@ describe("Secrets CRUD E2E", () => {
 			},
 		});
 		expect(res.status).toBe(200);
+	});
+});
+
+describe("Managed Secret Reveal E2E", () => {
+	let managedAppId: string;
+	let managedEnvTypeId: string;
+
+	beforeAll(async () => {
+		// Create app with managed secrets enabled
+		const appRes = await testRequest("/api/app", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "E2E Managed Secrets App",
+				description: "For managed secret reveal tests",
+				enable_secrets: true,
+				is_managed_secret: true,
+			},
+		});
+		const appBody = await appRes.json<{ id: string }>();
+		managedAppId = appBody.id;
+
+		// Create env type
+		const envTypeRes = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "managed-staging", app_id: managedAppId },
+		});
+		const envTypeBody = await envTypeRes.json<{ id: string }>();
+		managedEnvTypeId = envTypeBody.id;
+	});
+
+	test("create and reveal managed secret", async () => {
+		const originalValue = "my-super-secret-value-12345";
+
+		// Create secret with plaintext value
+		const createRes = await testRequest("/api/secret/single", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: {
+				app_id: managedAppId,
+				env_type_id: managedEnvTypeId,
+				key: "MANAGED_SECRET",
+				value: originalValue,
+			},
+		});
+		expect(createRes.status).toBe(201);
+
+		// Reveal endpoint should return the original plaintext
+		const revealRes = await testRequest("/api/secret/reveal", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				app_id: managedAppId,
+				env_type_id: managedEnvTypeId,
+				keys: ["MANAGED_SECRET"],
+			},
+		});
+		expect(revealRes.status).toBe(200);
+
+		const revealed = await revealRes.json<any[]>();
+		expect(revealed).toBeArray();
+		expect(revealed.length).toBe(1);
+		expect(revealed[0].key).toBe("MANAGED_SECRET");
+		expect(revealed[0].value).toBe(originalValue);
 	});
 });

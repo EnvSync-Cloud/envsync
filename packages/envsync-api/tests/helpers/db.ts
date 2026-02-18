@@ -219,7 +219,14 @@ export async function seedUser(
  */
 export async function seedApp(
 	orgId: string,
-	overrides?: { name?: string; description?: string; enableSecrets?: boolean },
+	overrides?: {
+		name?: string;
+		description?: string;
+		enableSecrets?: boolean;
+		isManagedSecret?: boolean;
+		publicKey?: string;
+		privateKey?: string;
+	},
 ): Promise<{ id: string; name: string }> {
 	const db = await DB.getInstance();
 	const appId = randomUUID();
@@ -233,7 +240,9 @@ export async function seedApp(
 			name,
 			description: overrides?.description ?? "A test application",
 			enable_secrets: overrides?.enableSecrets ?? false,
-			is_managed_secret: false,
+			is_managed_secret: overrides?.isManagedSecret ?? false,
+			public_key: overrides?.publicKey ?? null,
+			private_key: overrides?.privateKey ?? null,
 			metadata: {},
 			created_at: new Date(),
 			updated_at: new Date(),

@@ -8,6 +8,7 @@
  *   3. OpenFGA: create store + write authorization model
  *   4. Database: run Kysely migrations
  *   5. RustFS: create S3 bucket
+ *   6. miniKMS: verify gRPC reachability
  *
  * Usage (inside Docker):
  *   docker compose -f docker-compose.prod.yaml run --rm envsync_init
@@ -518,57 +519,173 @@ async function main() {
 	console.log("  EnvSync Production Init");
 	console.log("============================================\n");
 
-	// Wait for infrastructure services
+	// ── Step helper ──────────────────────────────────────────────────
+
+	type StepStatus = "completed" | "skipped" | "failed";
+	const tracking: { name: string; status: StepStatus }[] = [];
+	const credentialSections: { name: string; entries: Record<string, string> }[] = [];
+
+	async function step<T>(
+		name: string,
+		requiredEnvKeys: string[],
+		fn: () => Promise<T>,
+		extractCredentials?: (result: T) => Record<string, string>,
+	): Promise<T | null> {
+		const missing = requiredEnvKeys.filter(k => !process.env[k]);
+		if (missing.length > 0) {
+			console.log(`\n=== ${name} === SKIPPED (missing: ${missing.join(", ")})`);
+			tracking.push({ name, status: "skipped" });
+			return null;
+		}
+		try {
+			const result = await fn();
+			tracking.push({ name, status: "completed" });
+			if (extractCredentials) {
+				const entries = extractCredentials(result);
+				if (Object.keys(entries).length > 0) {
+					credentialSections.push({ name, entries });
+				}
+			}
+			return result;
+		} catch (err) {
+			console.error(`\n  [${name}] ERROR: ${err instanceof Error ? err.message : err}`);
+			tracking.push({ name, status: "failed" });
+			return null;
+		}
+	}
+
+	// ── Conditional wait phase ───────────────────────────────────────
+
 	console.log("Waiting for services...");
 
-	const vaultAddr = requireEnv("VAULT_ADDR").replace(/\/$/, "");
-	const openfgaUrl = requireEnv("OPENFGA_API_URL").replace(/\/$/, "");
-	const zitadelUrl = requireEnv("ZITADEL_URL").replace(/\/$/, "");
-	const dbHost = requireEnv("DATABASE_HOST");
-	const dbPort = Number(optionalEnv("DATABASE_PORT", "5432"));
+	const waits: Promise<void>[] = [];
 
-	await Promise.all([
-		waitForTcp("Postgres", dbHost, dbPort),
-		waitForHttp("Vault", `${vaultAddr}/v1/sys/health`, [200, 429, 501, 503]),
-		waitForHttp("OpenFGA", `${openfgaUrl}/healthz`, [200]),
-		waitForHttp("Zitadel", `${zitadelUrl}/.well-known/openid-configuration`, [200]),
-	]);
+	const dbHost = optionalEnv("DATABASE_HOST");
+	if (dbHost) {
+		const dbPort = Number(optionalEnv("DATABASE_PORT", "5432"));
+		waits.push(waitForTcp("Postgres", dbHost, dbPort));
+	}
 
-	// Run init steps sequentially
-	const vault = await initVault();
-	const zitadel = await initZitadel();
-	const openfga = await initOpenFGA();
-	await initDatabase();
-	await initRustfs();
+	const minikmsRaw = optionalEnv("MINIKMS_GRPC_ADDR");
+	if (minikmsRaw) {
+		const [host, portStr] = minikmsRaw.split(":");
+		waits.push(waitForTcp("miniKMS", host, Number(portStr)));
+	}
 
-	// Print credentials summary
+	const vaultAddr = optionalEnv("VAULT_ADDR")?.replace(/\/$/, "");
+	if (vaultAddr) {
+		waits.push(waitForHttp("Vault", `${vaultAddr}/v1/sys/health`, [200, 429, 501, 503]));
+	}
+
+	const openfgaUrl = optionalEnv("OPENFGA_API_URL")?.replace(/\/$/, "");
+	if (openfgaUrl) {
+		waits.push(waitForHttp("OpenFGA", `${openfgaUrl}/healthz`, [200]));
+	}
+
+	const zitadelUrl = optionalEnv("ZITADEL_URL")?.replace(/\/$/, "");
+	if (zitadelUrl) {
+		waits.push(waitForHttp("Zitadel", `${zitadelUrl}/.well-known/openid-configuration`, [200]));
+	}
+
+	if (waits.length === 0) {
+		console.log("  No services configured — nothing to wait for.");
+	}
+	await Promise.all(waits);
+
+	// ── Service steps ────────────────────────────────────────────────
+
+	await step("Vault", ["VAULT_ADDR"], initVault, vault => ({
+		VAULT_TOKEN: vault.rootToken,
+		VAULT_UNSEAL_KEY: vault.unsealKey,
+		VAULT_ROLE_ID: vault.roleId,
+		VAULT_SECRET_ID: vault.secretId,
+	}));
+
+	await step("Zitadel", ["ZITADEL_URL"], initZitadel, zitadel =>
+		zitadel
+			? {
+					ZITADEL_PAT: zitadel.pat,
+					ZITADEL_WEB_CLIENT_ID: zitadel.webClientId,
+					ZITADEL_WEB_CLIENT_SECRET: zitadel.webClientSecret,
+					ZITADEL_CLI_CLIENT_ID: zitadel.cliClientId,
+					ZITADEL_CLI_CLIENT_SECRET: zitadel.cliClientSecret,
+					ZITADEL_API_CLIENT_ID: zitadel.apiClientId,
+					ZITADEL_API_CLIENT_SECRET: zitadel.apiClientSecret,
+				}
+			: {},
+	);
+
+	await step("OpenFGA", ["OPENFGA_API_URL"], initOpenFGA, openfga => ({
+		OPENFGA_STORE_ID: openfga.storeId,
+		OPENFGA_MODEL_ID: openfga.modelId,
+	}));
+
+	await step(
+		"Database",
+		["DATABASE_HOST", "DATABASE_USER", "DATABASE_PASSWORD", "DATABASE_NAME"],
+		initDatabase,
+	);
+
+	await step("RustFS", ["S3_ENDPOINT", "S3_ACCESS_KEY", "S3_SECRET_KEY"], initRustfs);
+
+	await step(
+		"miniKMS",
+		["MINIKMS_GRPC_ADDR"],
+		async () => {
+			const addr = requireEnv("MINIKMS_GRPC_ADDR");
+			console.log(`\n=== miniKMS ===`);
+			console.log(`  gRPC address: ${addr}`);
+			console.log("  miniKMS is reachable (TCP check passed during service wait).");
+		},
+		() => ({
+			MINIKMS_GRPC_ADDR: optionalEnv("MINIKMS_GRPC_ADDR", "minikms:50051"),
+			MINIKMS_TLS_ENABLED: optionalEnv("MINIKMS_TLS_ENABLED", "false"),
+			MINIKMS_ROOT_KEY: optionalEnv("MINIKMS_ROOT_KEY", "(set in .env)"),
+		}),
+	);
+
+	// ── Summary ──────────────────────────────────────────────────────
+
+	const completed = tracking.filter(t => t.status === "completed");
+	const skipped = tracking.filter(t => t.status === "skipped");
+	const failed = tracking.filter(t => t.status === "failed");
+
 	console.log("\n============================================");
 	console.log("  Init complete! Generated credentials:");
 	console.log("============================================\n");
-	console.log("# --- Vault ---");
-	console.log(`VAULT_TOKEN=${vault.rootToken}`);
-	console.log(`VAULT_UNSEAL_KEY=${vault.unsealKey}`);
-	console.log(`VAULT_ROLE_ID=${vault.roleId}`);
-	console.log(`VAULT_SECRET_ID=${vault.secretId}`);
-	console.log("");
-	console.log("# --- OpenFGA ---");
-	console.log(`OPENFGA_STORE_ID=${openfga.storeId}`);
-	console.log(`OPENFGA_MODEL_ID=${openfga.modelId}`);
 
-	if (zitadel) {
-		console.log("");
-		console.log("# --- Zitadel ---");
-		console.log(`ZITADEL_PAT=${zitadel.pat}`);
-		console.log(`ZITADEL_WEB_CLIENT_ID=${zitadel.webClientId}`);
-		console.log(`ZITADEL_WEB_CLIENT_SECRET=${zitadel.webClientSecret}`);
-		console.log(`ZITADEL_CLI_CLIENT_ID=${zitadel.cliClientId}`);
-		console.log(`ZITADEL_CLI_CLIENT_SECRET=${zitadel.cliClientSecret}`);
-		console.log(`ZITADEL_API_CLIENT_ID=${zitadel.apiClientId}`);
-		console.log(`ZITADEL_API_CLIENT_SECRET=${zitadel.apiClientSecret}`);
+	if (credentialSections.length === 0) {
+		console.log("(no credentials to display)\n");
+	} else {
+		for (const section of credentialSections) {
+			console.log(`# --- ${section.name} ---`);
+			for (const [key, value] of Object.entries(section.entries)) {
+				console.log(`${key}=${value}`);
+			}
+			console.log("");
+		}
 	}
 
-	console.log("\nCopy the above into your .env file, then start the API:");
-	console.log("  docker compose -f docker-compose.prod.yaml up -d envsync_api");
+	console.log("--------------------------------------------");
+	console.log(
+		`  Completed: ${completed.length}  |  Skipped: ${skipped.length}  |  Failed: ${failed.length}`,
+	);
+	if (skipped.length > 0) {
+		console.log(`  Skipped services: ${skipped.map(s => s.name).join(", ")}`);
+	}
+	if (failed.length > 0) {
+		console.log(`  Failed services:  ${failed.map(s => s.name).join(", ")}`);
+	}
+	console.log("--------------------------------------------");
+
+	if (credentialSections.length > 0) {
+		console.log("\nCopy the above into your .env file, then start the API:");
+		console.log("  docker compose -f docker-compose.prod.yaml up -d envsync_api");
+	}
+
+	if (failed.length > 0) {
+		process.exit(1);
+	}
 }
 
 await main().catch(err => {
