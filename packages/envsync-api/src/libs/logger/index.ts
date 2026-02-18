@@ -1,4 +1,5 @@
 import { type Bindings, pino } from "pino";
+import { trace, isSpanContextValid } from "@opentelemetry/api";
 
 export enum LogTypes {
 	LOGS = "logs",
@@ -6,11 +7,23 @@ export enum LogTypes {
 	CUSTOMOBJ = "customObj",
 }
 
-const init = () => pino();
-const Logs = (msg: string) => init().info(msg);
-const ErrorLogs = (msg: string) => init().error(msg);
-
-const customLogHandler = (obj: Bindings) => init().child(obj);
+// Singleton Pino instance with trace context mixin for OTEL log-trace correlation
+const logger = pino({
+	mixin() {
+		const span = trace.getActiveSpan();
+		if (span) {
+			const ctx = span.spanContext();
+			if (isSpanContextValid(ctx)) {
+				return {
+					trace_id: ctx.traceId,
+					span_id: ctx.spanId,
+					trace_flags: `0${ctx.traceFlags.toString(16)}`,
+				};
+			}
+		}
+		return {};
+	},
+});
 
 /**
  * Function to log the messages
@@ -27,9 +40,9 @@ const infoLogs = (msg: string | Bindings, logType: LogTypes, generated_by: strin
 	) {
 		msg = `[${generated_by}] ` + msg;
 	}
-	if (logType === LogTypes.LOGS && typeof msg === "string") return Logs(msg);
-	if (logType === LogTypes.ERROR && typeof msg === "string") return ErrorLogs(msg);
-	return customLogHandler(msg as Bindings);
+	if (logType === LogTypes.LOGS && typeof msg === "string") return logger.info(msg);
+	if (logType === LogTypes.ERROR && typeof msg === "string") return logger.error(msg);
+	return logger.child(msg as Bindings);
 };
 
 export default infoLogs;

@@ -1,9 +1,12 @@
 import path from "node:path";
+import { SpanKind } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { externalServiceCalls } from "@/libs/telemetry/metrics";
 
 /**
  * KMS Client wrapping miniKMS gRPC Encrypt/Decrypt/BatchEncrypt/BatchDecrypt RPCs.
@@ -90,22 +93,36 @@ export class KMSClient {
 	}
 
 	/**
-	 * Promisify a unary gRPC call on the given stub.
+	 * Promisify a unary gRPC call on the given stub, wrapped in an OTEL span.
 	 */
 	private rpcCall<TRes>(
 		stub: grpc.Client,
 		method: string,
 		request: Record<string, any>,
 	): Promise<TRes> {
-		return new Promise<TRes>((resolve, reject) => {
-			(stub as any)[method](
-				request,
-				(err: grpc.ServiceError | null, response: TRes) => {
-					if (err) reject(err);
-					else resolve(response);
-				},
-			);
-		});
+		const serviceName = stub === this.kmsStub ? "minikms.v1.KMSService" : "grpc.health.v1.Health";
+		return withSpan(
+			`grpc ${serviceName}/${method}`,
+			{
+				"rpc.system": "grpc",
+				"rpc.service": serviceName,
+				"rpc.method": method,
+				"peer.service": "minikms",
+			},
+			async () => {
+				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
+				return new Promise<TRes>((resolve, reject) => {
+					(stub as any)[method](
+						request,
+						(err: grpc.ServiceError | null, response: TRes) => {
+							if (err) reject(err);
+							else resolve(response);
+						},
+					);
+				});
+			},
+			SpanKind.CLIENT,
+		);
 	}
 
 	/**

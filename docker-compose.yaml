@@ -297,6 +297,55 @@ services:
       - envsync_network
     restart: always
 
+  # --- Observability Stack (OTEL Collector + SigNoz) ---
+  otel-collector:
+    image: signoz/signoz-otel-collector:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./docker/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "${OTEL_COLLECTOR_GRPC_PORT:-4317}:4317"
+      - "${OTEL_COLLECTOR_HTTP_PORT:-4318}:4318"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1-alpine
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - envsync_network
+
+  signoz-query-service:
+    image: signoz/query-service:latest
+    environment:
+      ClickHouseUrl: tcp://clickhouse:9000
+      STORAGE: clickhouse
+    ports:
+      - "${SIGNOZ_QUERY_PORT:-3301}:8080"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  signoz-frontend:
+    image: signoz/frontend:latest
+    ports:
+      - "${SIGNOZ_FRONTEND_PORT:-3302}:3301"
+    depends_on:
+      - signoz-query-service
+    networks:
+      - envsync_network
+
 networks:
   envsync_network:
     driver: bridge
@@ -310,3 +359,4 @@ volumes:
   zitadel_db_data:
   zitadel_data:
   openfga_db_data:
+  clickhouse_data:

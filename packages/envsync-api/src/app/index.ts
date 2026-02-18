@@ -1,3 +1,4 @@
+import { SpanKind, SpanStatusCode, context, propagation, trace } from "@opentelemetry/api";
 import { Scalar } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -7,11 +8,77 @@ import { prettyJSON } from "hono/pretty-json";
 import { openAPISpecs } from "hono-openapi";
 
 import log, { LogTypes } from "@/libs/logger";
+import { getTracer } from "@/libs/telemetry";
+import { httpRequestDuration } from "@/libs/telemetry/metrics";
 import routes from "@/routes";
 import { config } from "@/utils/env";
 import { version } from "package.json";
 
 const app = new Hono();
+
+// OTEL HTTP tracing middleware — must be before all other middleware
+app.use(async (ctx, next) => {
+	const tracer = getTracer();
+	const method = ctx.req.method;
+	const url = new URL(ctx.req.url);
+	const path = url.pathname;
+
+	// Extract W3C trace context from incoming headers
+	const parentContext = propagation.extract(context.active(), ctx.req.raw.headers, {
+		get(carrier, key) {
+			return (carrier as Headers).get(key) ?? undefined;
+		},
+		keys(carrier) {
+			return [...(carrier as Headers).keys()];
+		},
+	});
+
+	await context.with(parentContext, async () => {
+		await tracer.startActiveSpan(
+			`${method} ${path}`,
+			{
+				kind: SpanKind.SERVER,
+				attributes: {
+					"http.method": method,
+					"http.url": ctx.req.url,
+					"url.path": path,
+					"http.target": url.pathname + url.search,
+				},
+			},
+			async span => {
+				const start = performance.now();
+				try {
+					await next();
+					const status = ctx.res.status;
+					span.setAttribute("http.status_code", status);
+					span.setAttribute("http.route", ctx.req.routePath ?? path);
+					if (status >= 400) {
+						span.setStatus({ code: SpanStatusCode.ERROR });
+					} else {
+						span.setStatus({ code: SpanStatusCode.OK });
+					}
+				} catch (error) {
+					span.setStatus({
+						code: SpanStatusCode.ERROR,
+						message: error instanceof Error ? error.message : String(error),
+					});
+					if (error instanceof Error) {
+						span.recordException(error);
+					}
+					throw error;
+				} finally {
+					const duration = performance.now() - start;
+					httpRequestDuration.record(duration, {
+						"http.method": method,
+						"http.route": ctx.req.routePath ?? path,
+						"http.status_code": ctx.res.status,
+					});
+					span.end();
+				}
+			},
+		);
+	});
+});
 
 app.use(
 	cors({

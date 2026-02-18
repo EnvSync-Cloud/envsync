@@ -1,4 +1,5 @@
 import { DB } from "@/libs/db";
+import { variableOperations } from "@/libs/telemetry/metrics";
 import { VaultClient } from "@/libs/vault";
 import { envPath, envScopePath } from "@/libs/vault/paths";
 import { kmsEncrypt, kmsDecrypt, kmsBatchEncrypt } from "@/helpers/key-store";
@@ -50,7 +51,9 @@ async function decryptEnvValue(
 		throw new Error(`Env value for key "${key}" is not KMS-encrypted.`);
 	}
 	const aad = envAAD(org_id, app_id, env_type_id, key);
-	return kmsDecrypt(org_id, app_id, value, aad);
+	const decrypted = await kmsDecrypt(org_id, app_id, value, aad);
+	variableOperations.add(1, { operation: "decrypted" });
+	return decrypted;
 }
 
 export class EnvService {
@@ -82,10 +85,12 @@ export class EnvService {
 		// Encrypt via miniKMS before writing to Vault
 		const aad = envAAD(org_id, app_id, env_type_id, key);
 		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+		variableOperations.add(1, { operation: "encrypted" });
 
 		const vault = await VaultClient.getInstance();
 		const path = envPath(org_id, app_id, env_type_id, key);
 		await vault.kvWrite(path, { value: encryptedValue });
+		variableOperations.add(1, { operation: "created" });
 
 		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
 	};
@@ -149,6 +154,7 @@ export class EnvService {
 		// Encrypt via miniKMS before writing to Vault
 		const aad = envAAD(org_id, app_id, env_type_id, key);
 		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+		variableOperations.add(1, { operation: "encrypted" });
 
 		await vault.kvWrite(path, { value: encryptedValue });
 	};
@@ -252,6 +258,7 @@ export class EnvService {
 				aad: envAAD(org_id, app_id, env_type_id, env.key),
 			})),
 		);
+		variableOperations.add(envs.length, { operation: "encrypted" });
 
 		await Promise.all(
 			envs.map((env, i) => {
@@ -259,6 +266,7 @@ export class EnvService {
 				return vault.kvWrite(path, { value: encryptedValues[i] });
 			}),
 		);
+		variableOperations.add(envs.length, { operation: "created" });
 	};
 
 	public static batchUpdateEnvs = async (
@@ -281,6 +289,7 @@ export class EnvService {
 				aad: envAAD(org_id, app_id, env_type_id, env.key),
 			})),
 		);
+		variableOperations.add(envs.length, { operation: "encrypted" });
 
 		await Promise.all(
 			envs.map((env, i) => {

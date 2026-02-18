@@ -4,6 +4,7 @@ import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { appsCreated } from "@/libs/telemetry/metrics";
 import { VaultClient } from "@/libs/vault";
 import { envScopePath, secretScopePath } from "@/libs/vault/paths";
 import { AuthorizationService } from "@/services/authorization.service";
@@ -58,6 +59,8 @@ export class AppService {
 				"updated_at",
 			])
 			.executeTakeFirstOrThrow();
+
+		appsCreated.add(1);
 
 		// Write structural FGA tuple: app belongs to org
 		await AuthorizationService.writeAppOrgRelation(app.id, org_id);

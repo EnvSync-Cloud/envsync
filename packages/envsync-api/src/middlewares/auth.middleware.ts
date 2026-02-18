@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { getCookie } from "hono/cookie";
 
+import { getActiveSpan } from "@/libs/telemetry";
 import { UserService } from "@/services/user.service";
 import { validateAccess } from "@/helpers/access";
 
@@ -32,6 +33,16 @@ export const authMiddleware = (): MiddlewareHandler => {
 			ctx.set("keycloak_user_id", access_info.user_id); // IdP user id (Zitadel); key name kept for compatibility
 			ctx.set("org_id", user.org_id);
 			ctx.set("role_id", user.role_id);
+
+			// Enrich active OTEL span with user context
+			const span = getActiveSpan();
+			if (span) {
+				span.setAttributes({
+					"envsync.user_id": user.id,
+					"envsync.org_id": user.org_id,
+					"enduser.id": access_info.user_id,
+				});
+			}
 
 			await next();
 		} catch (err) {

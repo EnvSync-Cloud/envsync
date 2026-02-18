@@ -7,6 +7,7 @@ import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
 import { smartEncrypt, kmsEncrypt, kmsDecrypt, kmsBatchEncrypt, rsaLayerDecrypt } from "@/helpers/key-store";
+import { secretOperations } from "@/libs/telemetry/metrics";
 
 /**
  * Build the AAD string for secret encryption.
@@ -130,6 +131,7 @@ export class SecretController {
 			const encryptedValue = await doubleLayerEncrypt(
 				org_id, app_id, env_type_id, key, value || "", app.public_key!,
 			);
+			secretOperations.add(1, { operation: "encrypted" });
 
 			// Create the secret in Vault (double-encrypted)
 			const secret = await SecretService.createSecret({
@@ -139,6 +141,7 @@ export class SecretController {
 				app_id,
 				env_type_id,
 			});
+			secretOperations.add(1, { operation: "created" });
 
 			// Create PiT record with encrypted value
 			await SecretStorePiTService.createSecretStorePiT({
@@ -234,6 +237,7 @@ export class SecretController {
 			const encryptedValue = await doubleLayerEncrypt(
 				org_id, app_id, env_type_id, key, value || "", app.public_key!,
 			);
+			secretOperations.add(1, { operation: "encrypted" });
 
 			// Update the secret in Vault (double-encrypted)
 			await SecretService.updateSecret({
@@ -420,6 +424,7 @@ export class SecretController {
 				org_id, app_id,
 				rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
 			);
+			secretOperations.add(envs.length, { operation: "encrypted" });
 			const encryptedEnvs = rsaBlobs.map((r, i) => ({
 				key: r.key,
 				value: kmsValues[i],
@@ -427,6 +432,7 @@ export class SecretController {
 
 			// Create secrets in Vault (double-encrypted)
 			await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
+			secretOperations.add(envs.length, { operation: "created" });
 
 			// Create PiT record with encrypted values
 			await SecretStorePiTService.createSecretStorePiT({
@@ -542,6 +548,7 @@ export class SecretController {
 				org_id, app_id,
 				rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
 			);
+			secretOperations.add(envs.length, { operation: "encrypted" });
 			const encryptedEnvs = rsaBlobs.map((r, i) => ({
 				key: r.key,
 				value: kmsValues[i],
@@ -708,6 +715,7 @@ export class SecretController {
 					value: await kmsUnwrapSecret(org_id, app_id, env_type_id, secret.key, secret.value),
 				})),
 			);
+			secretOperations.add(unwrappedSecrets.length, { operation: "decrypted" });
 
 			return c.json(unwrappedSecrets);
 		} catch (err) {
@@ -757,9 +765,11 @@ export class SecretController {
 			}
 
 			// KMS-unwrap to return the RSA blob
+			const unwrappedValue = await kmsUnwrapSecret(org_id, app_id, env_type_id, key, secret.value);
+			secretOperations.add(1, { operation: "decrypted" });
 			return c.json({
 				...secret,
-				value: await kmsUnwrapSecret(org_id, app_id, env_type_id, key, secret.value),
+				value: unwrappedValue,
 			});
 		} catch (err) {
 			if (err instanceof Error) {
@@ -1651,6 +1661,7 @@ export class SecretController {
 						};
 					}),
 			);
+			secretOperations.add(filteredSecrets.length, { operation: "decrypted" });
 
 			return c.json(filteredSecrets);
 		} catch (err) {

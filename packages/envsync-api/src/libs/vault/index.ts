@@ -1,4 +1,8 @@
+import { SpanKind } from "@opentelemetry/api";
+
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { externalServiceCalls } from "@/libs/telemetry/metrics";
 import { config } from "@/utils/env";
 
 export interface VaultKVReadResult {
@@ -158,25 +162,41 @@ export class VaultClient {
 	 * or 503 (Vault sealed then unsealed, old token invalid) and retries once.
 	 */
 	private async vaultFetch(url: string, init: RequestInit): Promise<Response> {
-		const doFetch = () =>
-			fetch(url, {
-				...init,
-				headers: {
-					...this.authHeaders(),
-					...((init.headers as Record<string, string>) || {}),
-				},
-			});
+		const method = (init.method || "GET").toUpperCase();
+		return withSpan(
+			`vault ${method}`,
+			{
+				"vault.operation": method,
+				"http.method": method,
+				"http.url": url,
+				"peer.service": "vault",
+			},
+			async span => {
+				externalServiceCalls.add(1, { "peer.service": "vault", "http.method": method });
 
-		const res = await doFetch();
-		if (res.status === 403 || res.status === 503) {
-			infoLogs(`Vault returned ${res.status}, re-authenticating and retrying...`, LogTypes.LOGS, "Vault");
-			if (res.status === 503) {
-				await this.tryUnseal();
-			}
-			await this.authenticate();
-			return doFetch();
-		}
-		return res;
+				const doFetch = () =>
+					fetch(url, {
+						...init,
+						headers: {
+							...this.authHeaders(),
+							...((init.headers as Record<string, string>) || {}),
+						},
+					});
+
+				let res = await doFetch();
+				if (res.status === 403 || res.status === 503) {
+					infoLogs(`Vault returned ${res.status}, re-authenticating and retrying...`, LogTypes.LOGS, "Vault");
+					if (res.status === 503) {
+						await this.tryUnseal();
+					}
+					await this.authenticate();
+					res = await doFetch();
+				}
+				span.setAttribute("http.status_code", res.status);
+				return res;
+			},
+			SpanKind.CLIENT,
+		);
 	}
 
 	/**

@@ -1,3 +1,4 @@
+import "./instrumentation";
 import { app } from "@/app";
 import { CacheClient } from "@/libs/cache";
 import { FGAClient } from "@/libs/openfga";
