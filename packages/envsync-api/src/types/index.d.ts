@@ -109,6 +109,24 @@ type PermissionAuditActions =
 	| "permission_revoked"
 	| "permissions_viewed";
 
+type GpgKeyAuditActions =
+	| "gpg_key_generated"
+	| "gpg_key_imported"
+	| "gpg_key_viewed"
+	| "gpg_key_exported"
+	| "gpg_key_deleted"
+	| "gpg_key_revoked"
+	| "gpg_key_trust_updated"
+	| "gpg_data_signed"
+	| "gpg_signature_verified";
+
+type CertificateAuditActions =
+	| "cert_ca_initialized"
+	| "cert_member_issued"
+	| "certs_viewed"
+	| "cert_viewed"
+	| "cert_revoked";
+
 type CliAuditActions = "cli_command_executed";
 
 type AuditActions =
@@ -125,4 +143,6 @@ type AuditActions =
 	| WebHookAuditActions
 	| TeamAuditActions
 	| PermissionAuditActions
+	| GpgKeyAuditActions
+	| CertificateAuditActions
 	| CliAuditActions;

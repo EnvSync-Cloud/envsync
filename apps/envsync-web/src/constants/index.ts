@@ -6,7 +6,9 @@ import {
   Settings,
   Globe,
   ShieldAlert,
-  Anchor
+  Anchor,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import type { FC } from "react";
 
@@ -22,6 +24,8 @@ export enum API_KEYS {
   ALL_ENVIRONMENT_TYPES = "environment-types/all",
   ALL_ENVIRONMENT_VARIABLES = "environment-variables/all",
   ALL_PITCHANGES = "pit-changes/all",
+  ALL_GPG_KEYS = "gpg-keys/all",
+  ALL_CERTIFICATES = "certificates/all",
 }
 
 export const SCOPES = [
@@ -30,6 +34,8 @@ export const SCOPES = [
   "roles",
   "apikeys",
   "webhooks",
+  "gpgkeys",
+  "certificates",
   "audit",
   "settings",
   "organisation",
@@ -41,6 +47,8 @@ export const navItems = [
   { id: "roles", name: "Roles", icon: ShieldAlert },
   { id: "apikeys", name: "API Keys", icon: Key },
   { id: "webhooks", name: "Webhooks", icon: Anchor },
+  { id: "gpgkeys", name: "GPG Keys", icon: KeyRound },
+  { id: "certificates", name: "Certificates", icon: ShieldCheck },
   { id: "audit", name: "Activity", icon: Activity },
   { id: "settings", name: "Account", icon: Settings },
   { id: "organisation", name: "Organisation", icon: Globe },
@@ -524,6 +532,62 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "apikey_viewed", label: "API Key Viewed" },
       { value: "apikeys_viewed", label: "API Keys Viewed" },
       { value: "apikey_regenerated", label: "API Key Regenerated" }
+    ]
+  },
+  {
+    name: "gpg_keys",
+    label: "GPG Keys",
+    subcategories: [
+      {
+        name: "gpg_key_operations",
+        label: "GPG Key Operations",
+        events: [
+          { value: "gpg_key_generated", label: "GPG Key Generated" },
+          { value: "gpg_key_imported", label: "GPG Key Imported" },
+          { value: "gpg_key_viewed", label: "GPG Key Viewed" },
+          { value: "gpg_key_exported", label: "GPG Key Exported" },
+          { value: "gpg_key_deleted", label: "GPG Key Deleted" },
+          { value: "gpg_key_revoked", label: "GPG Key Revoked" },
+          { value: "gpg_key_trust_updated", label: "GPG Key Trust Updated" },
+          { value: "gpg_data_signed", label: "Data Signed" },
+          { value: "gpg_signature_verified", label: "Signature Verified" }
+        ]
+      }
+    ],
+    events: [
+      { value: "gpg_key_generated", label: "GPG Key Generated" },
+      { value: "gpg_key_imported", label: "GPG Key Imported" },
+      { value: "gpg_key_viewed", label: "GPG Key Viewed" },
+      { value: "gpg_key_exported", label: "GPG Key Exported" },
+      { value: "gpg_key_deleted", label: "GPG Key Deleted" },
+      { value: "gpg_key_revoked", label: "GPG Key Revoked" },
+      { value: "gpg_key_trust_updated", label: "GPG Key Trust Updated" },
+      { value: "gpg_data_signed", label: "Data Signed" },
+      { value: "gpg_signature_verified", label: "Signature Verified" }
+    ]
+  },
+  {
+    name: "certificates",
+    label: "Certificates",
+    subcategories: [
+      {
+        name: "cert_operations",
+        label: "Certificate Operations",
+        events: [
+          { value: "cert_ca_initialized", label: "CA Initialized" },
+          { value: "cert_member_issued", label: "Member Cert Issued" },
+          { value: "cert_revoked", label: "Certificate Revoked" },
+          { value: "certs_viewed", label: "Certificates Viewed" },
+          { value: "cert_viewed", label: "Certificate Viewed" }
+        ]
+      }
+    ],
+    events: [
+      { value: "cert_ca_initialized", label: "CA Initialized" },
+      { value: "cert_member_issued", label: "Member Cert Issued" },
+      { value: "cert_revoked", label: "Certificate Revoked" },
+      { value: "certs_viewed", label: "Certificates Viewed" },
+      { value: "cert_viewed", label: "Certificate Viewed" }
     ]
   },
   {

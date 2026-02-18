@@ -173,6 +173,41 @@ interface TeamMember {
 	created_at: ColumnType<Date>;
 }
 
+interface GpgKey extends BaseTable {
+	org_id: ColumnType<string>;
+	user_id: ColumnType<string>;
+	name: ColumnType<string>;
+	email: ColumnType<string>;
+	fingerprint: ColumnType<string>;
+	key_id: ColumnType<string>;
+	algorithm: ColumnType<string>;
+	key_size?: ColumnType<number | null>;
+	public_key: ColumnType<string>;
+	private_key_ref: ColumnType<string>;
+	usage_flags: ColumnType<string[]>;
+	trust_level: ColumnType<string>;
+	expires_at?: ColumnType<Date | null>;
+	revoked_at?: ColumnType<Date | null>;
+	revocation_reason?: ColumnType<string | null>;
+	is_default: ColumnType<boolean>;
+}
+
+interface OrgCertificate extends BaseTable {
+	org_id: ColumnType<string>;
+	user_id: ColumnType<string>;
+	serial_hex: ColumnType<string>;
+	cert_type: ColumnType<string>;
+	subject_cn: ColumnType<string>;
+	subject_email?: ColumnType<string | null>;
+	status: ColumnType<string>;
+	not_before?: ColumnType<Date | null>;
+	not_after?: ColumnType<Date | null>;
+	description?: ColumnType<string | null>;
+	metadata?: ColumnType<Record<string, string> | null>;
+	revoked_at?: ColumnType<Date | null>;
+	revocation_reason?: ColumnType<number | null>;
+}
+
 export interface Database {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -191,4 +226,6 @@ export interface Database {
 	webhook_store: WebhookStore;
 	teams: Team;
 	team_members: TeamMember;
+	gpg_keys: GpgKey;
+	org_certificates: OrgCertificate;
 }

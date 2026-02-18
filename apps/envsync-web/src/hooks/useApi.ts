@@ -27,5 +27,9 @@ export const useInvalidateQueries = () => {
       }),
     invalidateWebhooks: () =>
       queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_WEBHOOKS] }),
+    invalidateGpgKeys: () =>
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_GPG_KEYS] }),
+    invalidateCertificates: () =>
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_CERTIFICATES] }),
   };
 };

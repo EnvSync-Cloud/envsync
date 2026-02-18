@@ -22,7 +22,7 @@ export class AuditLogsService {
         page: string = '1',
         perPage: string = '20',
         filterByUser?: string,
-        filterByCategory?: 'app*' | 'audit_log*' | 'env*' | 'env_store*' | 'secret_store*' | 'onboarding*' | 'org*' | 'role*' | 'user*' | 'api_key*' | 'webhook*' | 'cli*',
+        filterByCategory?: 'app*' | 'audit_log*' | 'env*' | 'env_store*' | 'secret_store*' | 'onboarding*' | 'org*' | 'role*' | 'user*' | 'api_key*' | 'webhook*' | 'cli*' | 'gpg_key*' | 'cert*',
         filterByPastTime?: 'last_3_hours' | 'last_24_hours' | 'last_7_days' | 'last_30_days' | 'last_90_days' | 'last_180_days' | 'last_1_year' | 'all_time',
     ): CancelablePromise<GetAuditLogsResponseWrapper> {
         return this.httpRequest.request({

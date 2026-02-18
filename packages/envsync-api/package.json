@@ -33,6 +33,7 @@
 		"node-cache": "^5.1.2",
 		"nodemailer": "^8.0.1",
 		"openid-client": "^6.5.0",
+		"openpgp": "^6.3.0",
 		"pg": "^8.16.0",
 		"pino": "^9.7.0",
 		"redis": "^5.5.5",

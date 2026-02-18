@@ -9,9 +9,11 @@ import (
 	"github.com/EnvSync-Cloud/envsync-cli/internal/features/handlers"
 	appUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/app"
 	authUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/auth"
+	certUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/certificate"
 	configUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/config"
 	envUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/environment"
 	genpem "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/gen_pem"
+	gpgUseCases "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/gpg_key"
 	inituc "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/init"
 	"github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/run"
 	syncUseCase "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/sync"
@@ -32,6 +34,8 @@ func main() {
 		container.InitHandler,
 		container.RunHandler,
 		container.GenPEMKeyHandler,
+		container.GpgKeyHandler,
+		container.CertificateHandler,
 	)
 
 	// Build CLI app
@@ -53,6 +57,8 @@ type Container struct {
 	InitHandler        *handlers.InitHandler
 	RunHandler         *handlers.RunHandler
 	GenPEMKeyHandler   *handlers.GenPEMKeyHandler
+	GpgKeyHandler      *handlers.GpgKeyHandler
+	CertificateHandler *handlers.CertificateHandler
 }
 
 // buildDependencyContainer creates and wires all handler dependencies
@@ -96,6 +102,25 @@ func buildDependencyContainer() *Container {
 	runUseCase := run.NewRedactor()
 
 	genPEMKeyUseCase := genpem.NewGenKeyPairUseCase()
+
+	// GPG key use cases
+	gpgListKeysUseCase := gpgUseCases.NewListKeysUseCase()
+	gpgGenerateKeyUseCase := gpgUseCases.NewGenerateKeyUseCase()
+	gpgSignUseCase := gpgUseCases.NewSignUseCase()
+	gpgVerifyUseCase := gpgUseCases.NewVerifyUseCase()
+	gpgExportUseCase := gpgUseCases.NewExportUseCase()
+	gpgRevokeUseCase := gpgUseCases.NewRevokeUseCase()
+	gpgDeleteKeyUseCase := gpgUseCases.NewDeleteKeyUseCase()
+
+	// Certificate use cases
+	certInitCAUseCase := certUseCases.NewInitCAUseCase()
+	certCAStatusUseCase := certUseCases.NewCAStatusUseCase()
+	certIssueCertUseCase := certUseCases.NewIssueCertUseCase()
+	certListCertsUseCase := certUseCases.NewListCertsUseCase()
+	certRevokeCertUseCase := certUseCases.NewRevokeCertUseCase()
+	certCheckOCSPUseCase := certUseCases.NewCheckOCSPUseCase()
+	certGetCRLUseCase := certUseCases.NewGetCRLUseCase()
+	certGetRootCAUseCase := certUseCases.NewGetRootCAUseCase()
 
 	// Initialize handlers
 	c.AppHandler = handlers.NewAppHandler(
@@ -147,6 +172,31 @@ func buildDependencyContainer() *Container {
 
 	c.GenPEMKeyHandler = handlers.NewGenPEMKeyHandler(
 		genPEMKeyUseCase,
+	)
+
+	gpgKeyFormatter := formatters.NewGpgKeyFormatter()
+	c.GpgKeyHandler = handlers.NewGpgKeyHandler(
+		gpgListKeysUseCase,
+		gpgGenerateKeyUseCase,
+		gpgSignUseCase,
+		gpgVerifyUseCase,
+		gpgExportUseCase,
+		gpgRevokeUseCase,
+		gpgDeleteKeyUseCase,
+		gpgKeyFormatter,
+	)
+
+	certFormatter := formatters.NewCertificateFormatter()
+	c.CertificateHandler = handlers.NewCertificateHandler(
+		certInitCAUseCase,
+		certCAStatusUseCase,
+		certIssueCertUseCase,
+		certListCertsUseCase,
+		certRevokeCertUseCase,
+		certCheckOCSPUseCase,
+		certGetCRLUseCase,
+		certGetRootCAUseCase,
+		certFormatter,
 	)
 
 	return c

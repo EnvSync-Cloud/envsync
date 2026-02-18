@@ -12,6 +12,8 @@ import Callback from "@/pages/Callback";
 import NotFound from "@/pages/NotFound";
 import ApiKeys from "@/pages/ApiKeys";
 import Webhooks from "@/pages/Webhooks";
+import GpgKeys from "@/pages/GpgKeys";
+import Certificates from "@/pages/Certificates";
 import ProjectEnvironments from "@/pages/ProjectVariables";
 import ProjectSecrets from "@/pages/ProjectSecrets";
 import CreateProject from "@/pages/CreateProject";
@@ -50,6 +52,8 @@ export const AppRoutes = () => {
           <Route path="audit" element={<AuditLogs />} />
           <Route path="apikeys" element={<ApiKeys />} />
           <Route path="webhooks" element={<Webhooks />} />
+          <Route path="gpgkeys" element={<GpgKeys />} />
+          <Route path="certificates" element={<Certificates />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

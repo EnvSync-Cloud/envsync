@@ -19,6 +19,8 @@ const TABLES_IN_ORDER = [
 	"webhook_store",
 	"audit_log",
 	"api_keys",
+	"org_certificates",
+	"gpg_keys",
 	"settings",
 	"env_type",
 	"app",

@@ -27,6 +27,40 @@ function deriveTestKey(orgId: string, appId: string): Buffer {
  */
 const keyVersionStore = new Map<string, { orgId: string; appId: string }>();
 
+// ── PKI in-memory state ─────────────────────────────────────────────
+
+interface PKICert {
+	serialHex: string;
+	orgId: string;
+	certType: "org_ca" | "member";
+	revoked: boolean;
+	revokedAt: string;
+}
+
+const orgCAs = new Map<string, { certPem: string; serialHex: string }>();
+const pkiCerts = new Map<string, PKICert>();
+
+function nextSerial(): string {
+	return randomBytes(8).toString("hex");
+}
+
+const MOCK_ROOT_CA_PEM =
+	"-----BEGIN CERTIFICATE-----\nMOCKROOTCA\n-----END CERTIFICATE-----";
+
+function mockCertPem(cn: string): string {
+	return `-----BEGIN CERTIFICATE-----\nMOCK-CERT:${cn}\n-----END CERTIFICATE-----`;
+}
+
+function mockKeyPem(): string {
+	return `-----BEGIN EC PRIVATE KEY-----\nMOCK-KEY-${randomUUID().slice(0, 8)}\n-----END EC PRIVATE KEY-----`;
+}
+
+/** Reset all PKI state between tests */
+export function resetPKI(): void {
+	orgCAs.clear();
+	pkiCerts.clear();
+}
+
 export const MockKMSClient = {
 	async encrypt(
 		orgId: string,
@@ -105,5 +139,90 @@ export const MockKMSClient = {
 
 	async healthCheck(): Promise<boolean> {
 		return true;
+	},
+
+	// ─── PKI mock methods ────────────────────────────────────────────
+
+	async createOrgCA(
+		orgId: string,
+		orgName: string,
+	): Promise<{ certPem: string; serialHex: string }> {
+		if (orgCAs.has(orgId)) {
+			throw new Error("Org CA already exists for this org");
+		}
+		const serialHex = nextSerial();
+		const certPem = mockCertPem(`${orgName} CA`);
+		orgCAs.set(orgId, { certPem, serialHex });
+		pkiCerts.set(serialHex, {
+			serialHex,
+			orgId,
+			certType: "org_ca",
+			revoked: false,
+			revokedAt: "",
+		});
+		return { certPem, serialHex };
+	},
+
+	async issueMemberCert(
+		memberId: string,
+		memberEmail: string,
+		orgId: string,
+		_role: string,
+	): Promise<{ certPem: string; keyPem: string; serialHex: string }> {
+		if (!orgCAs.has(orgId)) {
+			throw new Error("Org CA not initialized");
+		}
+		const serialHex = nextSerial();
+		const certPem = mockCertPem(memberEmail);
+		const keyPem = mockKeyPem();
+		pkiCerts.set(serialHex, {
+			serialHex,
+			orgId,
+			certType: "member",
+			revoked: false,
+			revokedAt: "",
+		});
+		return { certPem, keyPem, serialHex };
+	},
+
+	async revokeCert(
+		serialHex: string,
+		orgId: string,
+		_reason: number,
+	): Promise<{ success: boolean }> {
+		const cert = pkiCerts.get(serialHex);
+		if (!cert || cert.orgId !== orgId) {
+			throw new Error("Certificate not found");
+		}
+		cert.revoked = true;
+		cert.revokedAt = new Date().toISOString();
+		return { success: true };
+	},
+
+	async getCRL(
+		orgId: string,
+		deltaOnly: boolean,
+	): Promise<{ crlDer: Buffer; crlNumber: number; isDelta: boolean }> {
+		// Return a fake DER buffer that, when base64-encoded, is a recognisable placeholder
+		const fakeDer = Buffer.from("MOCK-CRL-DER-DATA");
+		return { crlDer: fakeDer, crlNumber: 1, isDelta: deltaOnly };
+	},
+
+	async checkOCSP(
+		serialHex: string,
+		orgId: string,
+	): Promise<{ status: number; revokedAt: string }> {
+		const cert = pkiCerts.get(serialHex);
+		if (!cert || cert.orgId !== orgId) {
+			return { status: 2, revokedAt: "" }; // unknown
+		}
+		if (cert.revoked) {
+			return { status: 1, revokedAt: cert.revokedAt }; // revoked
+		}
+		return { status: 0, revokedAt: "" }; // good
+	},
+
+	async getRootCA(): Promise<{ certPem: string }> {
+		return { certPem: MOCK_ROOT_CA_PEM };
 	},
 };
