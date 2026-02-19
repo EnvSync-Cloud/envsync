@@ -90,14 +90,14 @@ export const ProjectEnvironmentsHeader = ({
           onClick={onBack}
           variant="ghost"
           size="sm"
-          className="text-slate-400 hover:text-white hover:bg-slate-700"
+          className="text-gray-400 hover:text-white hover:bg-gray-800"
         >
           <ArrowLeft className="size-4 mr-1" />
           Back to Projects
         </Button>
-        <span className="text-slate-500">/</span>
-        <span className="text-slate-300">{projectName}</span>
-        <span className="text-slate-500">/</span>
+        <span className="text-gray-500">/</span>
+        <span className="text-gray-300">{projectName}</span>
+        <span className="text-gray-500">/</span>
 
         {/* Section Dropdown (only show when secrets are enabled) */}
         {enableSecrets ? (
@@ -106,7 +106,7 @@ export const ProjectEnvironmentsHeader = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white font-medium hover:bg-slate-700 px-3 py-2 h-auto"
+                className="text-white font-medium hover:bg-gray-800 px-3 py-2 h-auto"
               >
                 {isSecretsPage ? (
                   <Shield className="w-4 h-4 mr-2" />
@@ -118,33 +118,33 @@ export const ProjectEnvironmentsHeader = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="bg-slate-800 border-slate-700 min-w-[200px]"
+              className="bg-gray-900 border-gray-800 min-w-[200px]"
               align="start"
             >
               <DropdownMenuItem
                 onClick={() => handleSectionChange("environments")}
-                className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
-                  !isSecretsPage ? "bg-slate-700" : ""
+                className={`text-white hover:bg-gray-800 cursor-pointer p-3 ${
+                  !isSecretsPage ? "bg-gray-800" : ""
                 }`}
               >
-                <Settings className="w-4 h-4 mr-3 text-emerald-400" />
+                <Settings className="w-4 h-4 mr-3 text-violet-400" />
                 <div className="flex flex-col">
                   <span className="font-medium">Variables</span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-gray-400">
                     Manage variables & configuration
                   </span>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleSectionChange("secrets")}
-                className={`text-white hover:bg-slate-700 cursor-pointer p-3 ${
-                  isSecretsPage ? "bg-slate-700" : ""
+                className={`text-white hover:bg-gray-800 cursor-pointer p-3 ${
+                  isSecretsPage ? "bg-gray-800" : ""
                 }`}
               >
                 <Shield className="w-4 h-4 mr-3 text-red-400" />
                 <div className="flex flex-col">
                   <span className="font-medium">Secrets</span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-gray-400">
                     Manage sensitive variables & credentials
                   </span>
                 </div>
@@ -163,12 +163,12 @@ export const ProjectEnvironmentsHeader = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-electric_indigo-400 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
               <Database className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">{projectName}</h1>
-              <p className="text-slate-400">
+              <p className="text-gray-400">
                 {isSecretsPage
                   ? "Sensitive Variables & Credentials Management"
                   : "Variables & Configuration"}
@@ -182,19 +182,19 @@ export const ProjectEnvironmentsHeader = ({
               <>
                 <Badge
                   variant="secondary"
-                  className="bg-slate-700 text-slate-300"
+                  className="bg-gray-800 text-gray-300"
                 >
                   {totalVariables} Variables
                 </Badge>
                 <Badge
                   variant="secondary"
-                  className="bg-slate-700 text-slate-300"
+                  className="bg-gray-800 text-gray-300"
                 >
                   {totalSecrets} Secrets
                 </Badge>
                 <Badge
                   variant="secondary"
-                  className="bg-emerald-500/20 text-emerald-400"
+                  className="bg-violet-500/10 text-violet-400"
                 >
                   {environmentTypes} Environments
                 </Badge>
@@ -210,13 +210,13 @@ export const ProjectEnvironmentsHeader = ({
                 </Badge>
                 <Badge
                   variant="secondary"
-                  className="bg-slate-700 text-slate-300"
+                  className="bg-gray-800 text-gray-300"
                 >
                   {totalVariables} Total Variables
                 </Badge>
                 <Badge
                   variant="secondary"
-                  className="bg-emerald-500/20 text-emerald-400"
+                  className="bg-violet-500/10 text-violet-400"
                 >
                   {environmentTypes} Environments
                 </Badge>
@@ -233,19 +233,19 @@ export const ProjectEnvironmentsHeader = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-slate-400 border-slate-600 hover:bg-slate-700"
+                className="text-gray-400 border-gray-700 hover:bg-gray-800"
               >
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="bg-slate-800 border-slate-700 min-w-[160px]"
+              className="bg-gray-900 border-gray-800 min-w-[160px]"
               align="end"
             >
               <DropdownMenuItem
                 onClick={onRefresh}
                 disabled={isRefetching}
-                className="text-white hover:bg-slate-700 cursor-pointer"
+                className="text-white hover:bg-gray-800 cursor-pointer"
               >
                 <RefreshCw
                   className={`w-4 h-4 mr-2 ${
@@ -256,7 +256,7 @@ export const ProjectEnvironmentsHeader = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={onExport}
-                className="text-white hover:bg-slate-700 cursor-pointer"
+                className="text-white hover:bg-gray-800 cursor-pointer"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export
@@ -264,7 +264,7 @@ export const ProjectEnvironmentsHeader = ({
               {!isSecretsPage && (
                 <DropdownMenuItem
                   onClick={onRollback}
-                  className="text-white hover:bg-slate-700 cursor-pointer"
+                  className="text-white hover:bg-gray-800 cursor-pointer"
               >
                 <History className="w-4 h-4 mr-2" />
                 Recovery
@@ -272,7 +272,7 @@ export const ProjectEnvironmentsHeader = ({
               {canEdit && (
                 <DropdownMenuItem
                   onClick={onManageEnvironments}
-                  className="text-white hover:bg-slate-700 cursor-pointer"
+                  className="text-white hover:bg-gray-800 cursor-pointer"
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   Manage Environments
@@ -286,7 +286,7 @@ export const ProjectEnvironmentsHeader = ({
               <Button
                 onClick={onBulkImport}
                 variant="outline"
-                className="text-white border-slate-600 hover:bg-slate-700"
+                className="text-white border-gray-700 hover:bg-gray-800"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Bulk Import
@@ -297,7 +297,7 @@ export const ProjectEnvironmentsHeader = ({
                 className={`text-white ${
                   isSecretsPage
                     ? "bg-red-500 hover:bg-red-600"
-                    : "bg-emerald-500 hover:bg-emerald-600"
+                    : "bg-violet-500 hover:bg-violet-600"
                 }`}
               >
                 {isSecretsPage ? (

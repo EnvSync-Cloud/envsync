@@ -16,6 +16,7 @@ import {
   BulkEnvVarData,
   EnvironmentType,
 } from "@/constants";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
@@ -78,10 +79,9 @@ export const ProjectEnvironments = () => {
     [createSecret]
   );
 
-  const handleEditVariable = (data: Partial<EnvVarFormData>) => {
-    console.log(data);
+  const handleEditVariable = (data: Partial<EnvVarFormData>, originalKey: string) => {
     updateSecret.mutate(
-      { data },
+      { data, originalKey },
       {
         onSuccess: () => {
           setShowEditModal(false);
@@ -121,6 +121,27 @@ export const ProjectEnvironments = () => {
     [bulkImportSecrets]
   );
 
+  const handleExport = useCallback(() => {
+    const filtered = secrets.filter(
+      (v) => v.env_type_id === selectedEnvironment
+    );
+    if (filtered.length === 0) {
+      toast.error("No secrets to export for the selected environment");
+      return;
+    }
+    const envTypeName =
+      environmentTypes.find((e) => e.id === selectedEnvironment)?.name ?? selectedEnvironment;
+    const content = filtered.map((v) => `${v.key}=********`).join("\n");
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${project!.id}-${envTypeName}.secret.var`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} secrets`);
+  }, [secrets, selectedEnvironment, environmentTypes, project]);
+
   const handleEditClick = useCallback((variable: EnvironmentVariable) => {
     setSelectedVariable(variable);
     setShowEditModal(true);
@@ -139,7 +160,7 @@ export const ProjectEnvironments = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <p className="text-slate-400 mb-4">Loading user data ...</p>
+          <p className="text-gray-400 mb-4">Loading user data ...</p>
         </div>
       </div>
     );
@@ -166,13 +187,13 @@ export const ProjectEnvironments = () => {
           <h3 className="text-lg font-semibold text-white mb-2">
             Project not found
           </h3>
-          <p className="text-slate-400 mb-4">
+          <p className="text-gray-400 mb-4">
             The requested project could not be found.
           </p>
           <Button
             onClick={onBack}
             variant="outline"
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
@@ -203,7 +224,7 @@ export const ProjectEnvironments = () => {
         onAddVariable={() => setShowAddModal(true)}
         onBulkImport={() => setShowBulkImportModal(true)}
         canEdit={user.role.can_edit}
-        onExport={() => console.log("Export functionality not implemented yet")}
+        onExport={handleExport}
         onRefresh={handleRetry}
         onManageEnvironments={() => {
           navigate(`/applications/${projectNameId}/manage-environments`);

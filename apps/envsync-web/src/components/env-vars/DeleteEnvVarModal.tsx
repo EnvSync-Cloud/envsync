@@ -61,13 +61,13 @@ export const DeleteEnvVarModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-lg">
+      <DialogContent className="bg-gray-900 border-gray-800 max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Delete {variable.sensitive ? "Secret" : "Variable"}:{" "}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-400">
             This action cannot be undone. This will permanently delete the
             {variable.sensitive ? " secret" : " variable"} and remove it from all deployments.
           </DialogDescription>
@@ -75,20 +75,20 @@ export const DeleteEnvVarModal = ({
 
         <div className="space-y-6">
           {/* Variable Info */}
-          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+          <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
             <h4 className="text-sm font-medium text-white mb-3">
               Variable Details
             </h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-slate-800 px-2 py-1 rounded">
+                <span className="text-sm text-gray-400">Key:</span>
+                <code className="text-sm font-mono text-violet-400 bg-gray-800 px-2 py-1 rounded">
                   {variable.key}
                 </code>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Environment:</span>
+                <span className="text-sm text-gray-400">Environment:</span>
                 {environmentType && (
                   <div className="flex items-center space-x-2">
                     <div
@@ -103,12 +103,12 @@ export const DeleteEnvVarModal = ({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Type:</span>
+                <span className="text-sm text-gray-400">Type:</span>
                 <div
                   className={`flex items-center space-x-1 text-xs px-2 py-1 rounded ${
                     variable.sensitive
                       ? "bg-red-900/20 text-red-400"
-                      : "bg-slate-700 text-slate-300"
+                      : "bg-gray-800 text-gray-300"
                   }`}
                 >
                   {variable.sensitive ? (
@@ -121,8 +121,8 @@ export const DeleteEnvVarModal = ({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Value:</span>
-                <code className="text-sm font-mono text-slate-300 bg-slate-800 px-2 py-1 rounded max-w-xs truncate">
+                <span className="text-sm text-gray-400">Value:</span>
+                <code className="text-sm font-mono text-gray-300 bg-gray-800 px-2 py-1 rounded max-w-xs truncate">
                   {variable.sensitive ? "••••••••" : variable.value}
                 </code>
               </div>
@@ -150,7 +150,7 @@ export const DeleteEnvVarModal = ({
           <div className="space-y-2">
             <Label htmlFor="delete-confirm" className="text-white">
               Type{" "}
-              <code className="bg-slate-700 px-1 rounded text-red-400">
+              <code className="bg-gray-800 px-1 rounded font-mono text-red-400">
                 {variable.key}
               </code>{" "}
               to confirm:
@@ -159,7 +159,7 @@ export const DeleteEnvVarModal = ({
               id="delete-confirm"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className={`bg-slate-900 border-slate-700 text-white font-mono ${
+              className={`bg-gray-900 border-gray-800 text-white font-mono ${
                 confirmText && !isConfirmValid ? "border-red-500" : ""
               }`}
               placeholder="Enter the Key"
@@ -175,7 +175,7 @@ export const DeleteEnvVarModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
             disabled={isDeleting}
           >
             Cancel

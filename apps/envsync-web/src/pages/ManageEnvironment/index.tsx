@@ -313,8 +313,8 @@ export const ManageEnvironment = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center space-y-4">
-          <div className="size-12 border-4 border-t-emerald-500 border-slate-700 rounded-full animate-spin"></div>
-          <p className="text-slate-400">Loading environment types...</p>
+          <div className="size-12 border-4 border-t-violet-500 border-gray-800 rounded-full animate-spin"></div>
+          <p className="text-gray-400">Loading environment types...</p>
         </div>
       </div>
     );
@@ -330,20 +330,20 @@ export const ManageEnvironment = () => {
             <h3 className="text-lg font-semibold text-white mb-2">
               Failed to load project
             </h3>
-            <p className="text-slate-400 mb-4">
+            <p className="text-gray-400 mb-4">
               The requested project could not be found or you don't have access
               to it.
             </p>
             <Button
               onClick={() => refetch()}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white mr-2"
+              className="bg-violet-500 hover:bg-violet-600 text-white mr-2"
             >
               Try Again
             </Button>
             <Button
               onClick={handleBack}
               variant="outline"
-              className="text-white border-slate-600 hover:bg-slate-700"
+              className="text-white border-gray-700 hover:bg-gray-800"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Go Back
@@ -365,7 +365,7 @@ export const ManageEnvironment = () => {
             onClick={handleBack}
             variant="ghost"
             size="sm"
-            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            className="text-gray-400 hover:text-white hover:bg-gray-800"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Project
@@ -374,9 +374,9 @@ export const ManageEnvironment = () => {
             <h1 className="text-3xl font-bold text-white">
               Manage Environments
             </h1>
-            <p className="text-slate-400 mt-2">
+            <p className="text-gray-400 mt-2">
               Configure environment types for{" "}
-              <span className="text-emerald-400 font-medium">
+              <span className="text-violet-400 font-medium">
                 {project.name}
               </span>
             </p>
@@ -384,7 +384,7 @@ export const ManageEnvironment = () => {
         </div>
         <Button
           onClick={openCreateDialog}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white"
+          className="bg-violet-500 hover:bg-violet-600 text-white"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Environment Type
@@ -396,7 +396,7 @@ export const ManageEnvironment = () => {
         {environmentTypes.map((envType) => (
           <Card
             key={envType.id}
-            className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors"
+            className="bg-gray-900 border-gray-800 hover:border-gray-700 transition-colors"
           >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -411,7 +411,7 @@ export const ManageEnvironment = () => {
                 </div>
                 <div className="flex items-center space-x-1">
                   {envType.is_default && (
-                    <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-violet-500/10 text-violet-400 rounded-full">
                       Default
                     </span>
                   )}
@@ -426,7 +426,7 @@ export const ManageEnvironment = () => {
             <CardContent>
               <div className="space-y-4">
                 {/* Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-700">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-800">
                   <Button
                     onClick={() =>
                       navigate(
@@ -435,7 +435,7 @@ export const ManageEnvironment = () => {
                     }
                     variant="ghost"
                     size="sm"
-                    className="text-slate-400 hover:text-white hover:bg-slate-700"
+                    className="text-gray-400 hover:text-white hover:bg-gray-800"
                   >
                     <Settings className="w-4 h-4 mr-2" />
                     View Variables
@@ -445,7 +445,7 @@ export const ManageEnvironment = () => {
                       onClick={() => openEditDialog(envType)}
                       variant="ghost"
                       size="sm"
-                      className="text-slate-400 hover:text-white hover:bg-slate-700"
+                      className="text-gray-400 hover:text-white hover:bg-gray-800"
                     >
                       <Edit3 className="w-4 h-4" />
                     </Button>
@@ -453,7 +453,7 @@ export const ManageEnvironment = () => {
                       onClick={() => openDeleteDialog(envType)}
                       variant="ghost"
                       size="sm"
-                      className="text-slate-400 hover:text-red-400 hover:bg-red-900/20"
+                      className="text-gray-400 hover:text-red-400 hover:bg-red-900/20"
                       disabled={envType.is_protected}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -468,20 +468,20 @@ export const ManageEnvironment = () => {
         {/* Empty State */}
         {environmentTypes.length === 0 && (
           <div className="col-span-full">
-            <Card className="bg-slate-800 border-slate-700 border-dashed">
+            <Card className="bg-gray-900 border-gray-800 border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Settings className="w-12 h-12 text-slate-600 mb-4" />
+                <Settings className="w-12 h-12 text-gray-600 mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">
                   No Environment Types
                 </h3>
-                <p className="text-slate-400 text-center mb-6 max-w-md">
+                <p className="text-gray-400 text-center mb-6 max-w-md">
                   Create your first environment type to start organizing your
                   variables. Common types include Development,
                   Staging, and Production.
                 </p>
                 <Button
                   onClick={openCreateDialog}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="bg-violet-500 hover:bg-violet-600 text-white"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Environment Type
@@ -494,12 +494,12 @@ export const ManageEnvironment = () => {
 
       {/* Create Environment Type Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+        <DialogContent className="bg-gray-900 border-gray-800 max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">
               Create Environment Type
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-gray-400">
               Add a new environment type to organize your variables.
             </DialogDescription>
           </DialogHeader>
@@ -514,7 +514,7 @@ export const ManageEnvironment = () => {
                 id="create-env-name"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                className={`bg-slate-900 border-slate-700 text-white ${formErrors.name ? "border-red-500" : ""
+                className={`bg-gray-800 border-gray-800 text-white ${formErrors.name ? "border-red-500" : ""
                   }`}
                 placeholder="e.g., Production, Staging, Development"
                 disabled={createEnvironmentType.isPending}
@@ -523,7 +523,7 @@ export const ManageEnvironment = () => {
               {formErrors.name && (
                 <p className="text-red-400 text-sm">{formErrors.name}</p>
               )}
-              <div className="flex justify-between text-xs text-slate-400">
+              <div className="flex justify-between text-xs text-gray-400">
                 <span>Used to identify this environment type</span>
                 <span>
                   {formData.name.length}/{MAX_NAME_LENGTH}
@@ -547,7 +547,7 @@ export const ManageEnvironment = () => {
                       onClick={() => handleInputChange("color", color)}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color
                           ? "border-white scale-110"
-                          : "border-slate-600 hover:border-slate-400"
+                          : "border-gray-700 hover:border-gray-400"
                         }`}
                       style={{ backgroundColor: color }}
                       disabled={createEnvironmentType.isPending}
@@ -561,14 +561,14 @@ export const ManageEnvironment = () => {
                     type="color"
                     value={formData.color}
                     onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="w-16 h-10 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-16 h-10 bg-gray-800 border-gray-800 cursor-pointer"
                     disabled={createEnvironmentType.isPending}
                   />
                   <Input
                     type="text"
                     value={formData.color}
                     onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-white font-mono"
+                    className="bg-gray-800 border-gray-800 text-white font-mono"
                     placeholder="#6366f1"
                     disabled={createEnvironmentType.isPending}
                   />
@@ -584,10 +584,10 @@ export const ManageEnvironment = () => {
               <Label className="text-white">Environment Settings</Label>
 
               {/* Default Environment */}
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-white">Default Environment</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-400">
                     Make this the default environment for new variables
                   </div>
                 </div>
@@ -595,16 +595,16 @@ export const ManageEnvironment = () => {
                   type="checkbox"
                   checked={formData.is_default}
                   onChange={(e) => handleInputChange("is_default", e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 bg-slate-800 border-slate-600 rounded focus:ring-emerald-500"
+                  className="w-4 h-4 text-violet-600 bg-gray-900 border-gray-700 rounded focus:ring-violet-500"
                   disabled={createEnvironmentType.isPending}
                 />
               </div>
 
               {/* Protected Environment */}
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-white">Protected Environment</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-400">
                     Prevent accidental deletion of this environment
                   </div>
                 </div>
@@ -612,14 +612,14 @@ export const ManageEnvironment = () => {
                   type="checkbox"
                   checked={formData.is_protected}
                   onChange={(e) => handleInputChange("is_protected", e.target.checked)}
-                  className="w-4 h-4 text-red-600 bg-slate-800 border-slate-600 rounded focus:ring-red-500"
+                  className="w-4 h-4 text-red-600 bg-gray-900 border-gray-700 rounded focus:ring-red-500"
                   disabled={createEnvironmentType.isPending}
                 />
               </div>
             </div>
 
             {/* Preview */}
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-800">
               <h4 className="text-sm font-medium text-white mb-3">Preview</h4>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -633,7 +633,7 @@ export const ManageEnvironment = () => {
                 </div>
                 <div className="flex items-center space-x-1">
                   {formData.is_default && (
-                    <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-violet-500/10 text-violet-400 rounded-full">
                       Default
                     </span>
                   )}
@@ -651,14 +651,14 @@ export const ManageEnvironment = () => {
             <Button
               variant="outline"
               onClick={() => setShowCreateDialog(false)}
-              className="text-white border-slate-600 hover:bg-slate-700"
+              className="text-white border-gray-700 hover:bg-gray-800"
               disabled={createEnvironmentType.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreate}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={
                 createEnvironmentType.isPending || !formData.name.trim()
               }
@@ -681,12 +681,12 @@ export const ManageEnvironment = () => {
 
       {/* Edit Environment Type Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+        <DialogContent className="bg-gray-900 border-gray-800 max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-white">
               Edit Environment Type
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-gray-400">
               Update the settings for{" "}
               <strong className="text-white">
                 {selectedEnvironment?.name}
@@ -705,7 +705,7 @@ export const ManageEnvironment = () => {
                 id="edit-env-name"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                className={`bg-slate-900 border-slate-700 text-white ${formErrors.name ? "border-red-500" : ""
+                className={`bg-gray-800 border-gray-800 text-white ${formErrors.name ? "border-red-500" : ""
                   }`}
                 placeholder="Enter environment name"
                 disabled={updateEnvironmentType.isPending}
@@ -714,7 +714,7 @@ export const ManageEnvironment = () => {
               {formErrors.name && (
                 <p className="text-red-400 text-sm">{formErrors.name}</p>
               )}
-              <div className="flex justify-between text-xs text-slate-400">
+              <div className="flex justify-between text-xs text-gray-400">
                 <span>Used to identify this environment type</span>
                 <span>
                   {formData.name.length}/{MAX_NAME_LENGTH}
@@ -738,7 +738,7 @@ export const ManageEnvironment = () => {
                       onClick={() => handleInputChange("color", color)}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${formData.color === color
                           ? "border-white scale-110"
-                          : "border-slate-600 hover:border-slate-400"
+                          : "border-gray-700 hover:border-gray-400"
                         }`}
                       style={{ backgroundColor: color }}
                       disabled={updateEnvironmentType.isPending}
@@ -752,14 +752,14 @@ export const ManageEnvironment = () => {
                     type="color"
                     value={formData.color}
                     onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="w-16 h-10 bg-slate-900 border-slate-700 cursor-pointer"
+                    className="w-16 h-10 bg-gray-800 border-gray-800 cursor-pointer"
                     disabled={updateEnvironmentType.isPending}
                   />
                   <Input
                     type="text"
                     value={formData.color}
                     onChange={(e) => handleInputChange("color", e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-white font-mono"
+                    className="bg-gray-800 border-gray-800 text-white font-mono"
                     placeholder="#6366f1"
                     disabled={updateEnvironmentType.isPending}
                   />
@@ -775,10 +775,10 @@ export const ManageEnvironment = () => {
               <Label className="text-white">Environment Settings</Label>
 
               {/* Default Environment */}
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-white">Default Environment</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-400">
                     Make this the default environment for new variables
                   </div>
                 </div>
@@ -786,16 +786,16 @@ export const ManageEnvironment = () => {
                   type="checkbox"
                   checked={formData.is_default}
                   onChange={(e) => handleInputChange("is_default", e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 bg-slate-800 border-slate-600 rounded focus:ring-emerald-500"
+                  className="w-4 h-4 text-violet-600 bg-gray-900 border-gray-700 rounded focus:ring-violet-500"
                   disabled={updateEnvironmentType.isPending}
                 />
               </div>
 
               {/* Protected Environment */}
-              <div className="flex items-center justify-between p-3 bg-slate-900 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-white">Protected Environment</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-400">
                     Prevent accidental deletion of this environment
                   </div>
                 </div>
@@ -803,14 +803,14 @@ export const ManageEnvironment = () => {
                   type="checkbox"
                   checked={formData.is_protected}
                   onChange={(e) => handleInputChange("is_protected", e.target.checked)}
-                  className="w-4 h-4 text-red-600 bg-slate-800 border-slate-600 rounded focus:ring-red-500"
+                  className="w-4 h-4 text-red-600 bg-gray-900 border-gray-700 rounded focus:ring-red-500"
                   disabled={updateEnvironmentType.isPending}
                 />
               </div>
             </div>
 
             {/* Environment Stats */}
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-800">
               <h4 className="text-sm font-medium text-white mb-3">
                 Environment Info
               </h4>
@@ -819,7 +819,7 @@ export const ManageEnvironment = () => {
                   <div className="text-lg font-bold text-white">
                     {selectedEnvironment?.variable_count || 0}
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-gray-400">
                     Variables
                   </div>
                 </div>
@@ -827,7 +827,7 @@ export const ManageEnvironment = () => {
             </div>
 
             {/* Preview */}
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-800">
               <h4 className="text-sm font-medium text-white mb-3">Preview</h4>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
@@ -841,7 +841,7 @@ export const ManageEnvironment = () => {
                 </div>
                 <div className="flex items-center space-x-1">
                   {formData.is_default && (
-                    <span className="px-2 py-1 text-xs bg-emerald-500/20 text-emerald-400 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-violet-500/10 text-violet-400 rounded-full">
                       Default
                     </span>
                   )}
@@ -859,14 +859,14 @@ export const ManageEnvironment = () => {
             <Button
               variant="outline"
               onClick={() => setShowEditDialog(false)}
-              className="text-white border-slate-600 hover:bg-slate-700"
+              className="text-white border-gray-700 hover:bg-gray-800"
               disabled={updateEnvironmentType.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdate}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={
                 updateEnvironmentType.isPending || !formData.name.trim()
               }
@@ -889,13 +889,13 @@ export const ManageEnvironment = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700">
+        <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center">
               <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
               Delete Environment Type
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-gray-400">
               This action cannot be undone. This will permanently delete the
               environment type
               <strong className="text-white">
@@ -951,7 +951,7 @@ export const ManageEnvironment = () => {
                 <div className="space-y-2">
                   <Label htmlFor="delete-confirm" className="text-white">
                     Type{" "}
-                    <code className="bg-slate-700 px-1 rounded text-red-400">
+                    <code className="bg-gray-800 px-1 rounded text-red-400">
                       {selectedEnvironment?.name}
                     </code>{" "}
                     to confirm:
@@ -960,7 +960,7 @@ export const ManageEnvironment = () => {
                     id="delete-confirm"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    className="bg-slate-900 border-slate-700 text-white"
+                    className="bg-gray-800 border-gray-800 text-white"
                     placeholder="Enter environment type name"
                     disabled={deleteEnvironmentType.isPending}
                   />
@@ -977,7 +977,7 @@ export const ManageEnvironment = () => {
                 setDeleteConfirmText("");
                 setSelectedEnvironment(null);
               }}
-              className="text-white border-slate-600 hover:bg-slate-700"
+              className="text-white border-gray-700 hover:bg-gray-800"
               disabled={deleteEnvironmentType.isPending}
             >
               Cancel
