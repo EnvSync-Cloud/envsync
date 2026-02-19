@@ -56,12 +56,9 @@ const Footer = () => {
         <div className="border-t border-slate-800 pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-slate-400 text-sm">
-              © 2025 EnvSync. All rights reserved.
+              &copy; {new Date().getFullYear()} EnvSync. All rights reserved.
             </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              {/* <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Terms of Service</a>
-              <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Privacy Policy</a> */}
-            </div>
+            <div className="flex space-x-6 mt-4 md:mt-0" />
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import createGlobe from "cobe";
 
 interface ActivityItem {
@@ -36,14 +36,40 @@ const Globe = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Track which item just entered so we can animate it
+  const [enteringId, setEnteringId] = useState<string | null>(null);
+
   useEffect(() => {
-    // Update visible activities
     const newActivity = mockActivities[currentActivity];
+    const key = `${newActivity.id}-${Date.now()}`;
     setVisibleActivities((prev) => {
-      const updated = [newActivity, ...prev.slice(0, 4)];
+      const updated = [{ ...newActivity, _key: key }, ...prev.slice(0, 4)];
       return updated;
     });
+    setEnteringId(key);
+    // Clear entering state after the animation completes
+    const timer = setTimeout(() => setEnteringId(null), 500);
+    return () => clearTimeout(timer);
   }, [currentActivity]);
+
+  const getItemStyle = useCallback(
+    (item: any, index: number) => {
+      const isEntering = item._key === enteringId;
+      return {
+        opacity: isEntering ? 0 : 1 - index * 0.2,
+        transform: isEntering
+          ? "translateY(-20px) scale(0.97)"
+          : `translateY(0px) scale(1)`,
+        transition:
+          "opacity 0.4s cubic-bezier(0.22,1,0.36,1), transform 0.4s cubic-bezier(0.22,1,0.36,1)",
+        // Force reflow so the entering animation plays
+        animation: isEntering
+          ? "activity-enter 0.4s cubic-bezier(0.22,1,0.36,1) forwards"
+          : undefined,
+      } as React.CSSProperties;
+    },
+    [enteringId]
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -121,22 +147,33 @@ const Globe = () => {
               <h3 className="text-white text-lg font-semibold">Live Team Activity</h3>
             </div>
             
+            {/* Keyframes for enter animation */}
+            <style>{`
+              @keyframes activity-enter {
+                from {
+                  opacity: 0;
+                  transform: translateY(-20px) scale(0.97);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0) scale(1);
+                }
+              }
+            `}</style>
+
             <div className="space-y-3 max-h-64 overflow-hidden">
-              {visibleActivities.map((activity, index) => (
+              {visibleActivities.map((activity: any, index) => (
                 <div
-                  key={`${activity.id}-${index}`}
-                  className={`flex items-start space-x-3 p-3 rounded-lg transition-all duration-500 ${
-                    index === 0 
-                      ? 'bg-emerald-500/10 border border-emerald-500/20' 
+                  key={activity._key ?? `${activity.id}-${index}`}
+                  className={`flex items-start space-x-3 p-3 rounded-lg ${
+                    index === 0
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
                       : 'bg-slate-800/50'
                   }`}
-                  style={{
-                    opacity: 1 - (index * 0.2),
-                    transform: `translateY(${index * 2}px)`
-                  }}
+                  style={getItemStyle(activity, index)}
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    {activity.user.split(' ').map(n => n[0]).join('')}
+                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {activity.user.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
