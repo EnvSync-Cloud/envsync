@@ -16,6 +16,9 @@ export const AuthContextProvider = ({
         user.role;
 
       switch (scope) {
+        case "dashboard":
+          return true;
+
         case "apikeys":
           return have_api_access || is_admin || is_master;
 

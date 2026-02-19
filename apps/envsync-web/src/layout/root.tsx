@@ -1,5 +1,8 @@
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { CommandPalette } from "@/components/CommandPalette";
+import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Outlet } from "react-router-dom";
@@ -50,10 +53,16 @@ export const RootLayout = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
+      <div className="flex items-center justify-center h-screen bg-[#0a0f1a]">
         <div className="flex flex-col items-center space-y-4">
-          <div className="size-12 border-4 border-t-emerald-500 border-slate-700 rounded-full animate-spin"></div>
-          <p className="text-slate-400">Loading your data...</p>
+          <div className="relative">
+            <img
+              src="/EnvSync.svg"
+              alt="EnvSync"
+              className="size-16 animate-pulse"
+            />
+          </div>
+          <p className="text-gray-400 text-sm">Loading your workspace...</p>
         </div>
       </div>
     );
@@ -61,24 +70,32 @@ export const RootLayout = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-[#0a0f1a] flex flex-col items-center justify-center px-4">
         <div className="max-w-md w-full space-y-6 text-center">
-          <div className="mx-auto w-20 h-20 rounded-xl flex items-center justify-center mb-6">
-            <img src="/EnvSync.svg" alt="EnvSync Logo" className="w-20 h-20" />
+          <div className="mx-auto mb-6">
+            <img src="/EnvSync.svg" alt="EnvSync" className="w-20 h-20 mx-auto" />
           </div>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-semibold text-gray-100">
             Authentication Required
           </h2>
-          <p className="text-slate-400">
+          <p className="text-gray-400">
             {authError ?? "You need to be signed in to access EnvSync."}
           </p>
+          <div className="pt-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2.5 bg-violet-500 hover:bg-violet-600 text-white font-medium rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-slate-900 text-white flex overflow-hidden">
+    <div className="h-screen bg-[#0a0f1a] text-white flex overflow-hidden">
       <div
         className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 ease-in-out ${
           sidebarExpanded ? "w-64" : "w-16"
@@ -104,14 +121,10 @@ export const RootLayout = () => {
         </main>
       </div>
 
-      {/* Keyboard Shortcut Indicator (Optional - for development/debugging) */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="fixed bottom-4 right-4 bg-slate-800 text-slate-300 px-3 py-2 rounded-lg text-xs opacity-50 hover:opacity-100 transition-opacity">
-          Press{" "}
-          <kbd className="bg-slate-700 px-1 py-0.5 rounded text-xs">Ctrl+B</kbd>{" "}
-          to toggle sidebar
-        </div>
-      )}
+      {/* Global overlays */}
+      <CommandPalette />
+      <KeyboardShortcutsDialog />
+      <NotificationCenter />
     </div>
   );
 };
