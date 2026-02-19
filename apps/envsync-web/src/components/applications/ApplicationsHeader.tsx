@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw } from "lucide-react";
-import { ApplicationStats } from "./ApplicationStats";
+import { Badge } from "@/components/ui/badge";
+import { Plus, RefreshCw, Database } from "lucide-react";
 import { Statistics } from "@/constants";
 
 interface ApplicationsHeaderProps {
@@ -20,19 +20,33 @@ export const ApplicationsHeader = ({
 }: ApplicationsHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Projects</h1>
-        <p className="text-slate-400 mt-2">
-          Manage your applications and their configurations
-        </p>
-        <ApplicationStats statistics={statistics} />
-      </div>
       <div className="flex items-center space-x-3">
+        <div className="p-2 bg-violet-500/10 rounded-lg">
+          <Database className="size-5 text-violet-400" />
+        </div>
+        <div>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-xl font-semibold text-gray-100">Projects</h1>
+            <div className="flex items-center space-x-2">
+              <Badge
+                variant="secondary"
+                className="bg-gray-800 text-gray-400 text-xs"
+              >
+                {statistics.total}
+              </Badge>
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 mt-0.5">
+            Manage your environment configurations
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center space-x-2">
         <Button
           onClick={onRefresh}
           variant="outline"
           size="sm"
-          className="text-slate-400 border-slate-600 hover:bg-slate-700"
+          className="text-gray-400 border-gray-700 hover:bg-gray-800 hover:text-gray-200"
           disabled={isRefetching}
         >
           <RefreshCw
@@ -42,7 +56,8 @@ export const ApplicationsHeader = ({
         {canEdit && (
           <Button
             onClick={onCreateProject}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 rounded-xl"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
+            size="sm"
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Project

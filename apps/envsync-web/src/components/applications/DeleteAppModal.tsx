@@ -37,13 +37,13 @@ export const DeleteAppModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700">
+      <DialogContent className="bg-gray-900 border-gray-800">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Delete Project
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-400">
             Are you sure you want to delete{" "}
             <strong className="text-white">{app.name}</strong>? This action
             cannot be undone.
@@ -72,7 +72,7 @@ export const DeleteAppModal = ({
           <div className="space-y-2">
             <Label htmlFor="delete-confirm" className="text-white">
               Type{" "}
-              <code className="bg-slate-700 px-1 rounded text-red-400">
+              <code className="bg-gray-800 px-1 rounded text-red-400">
                 {app.name}
               </code>{" "}
               to confirm:
@@ -81,7 +81,7 @@ export const DeleteAppModal = ({
               id="delete-confirm"
               value={confirmText}
               onChange={(e) => onConfirmTextChange(e.target.value)}
-              className="bg-slate-900 border-slate-700 text-white"
+              className="bg-gray-900 border-gray-800 text-white"
               placeholder="Enter project name"
               disabled={isDeleting}
             />
@@ -92,7 +92,7 @@ export const DeleteAppModal = ({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
             disabled={isDeleting}
           >
             Cancel
