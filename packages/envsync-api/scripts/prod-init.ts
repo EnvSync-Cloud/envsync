@@ -492,7 +492,7 @@ async function initRustfs(): Promise<void> {
 	const maxRetries = 5;
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			await client.send(new CreateBucketCommand({ Bucket: bucket }));
+			await client.send(new CreateBucketCommand({ Bucket: bucket, ACL: "public-read" }));
 			console.log(`  Bucket '${bucket}' created.`);
 			return;
 		} catch (e: unknown) {
@@ -604,14 +604,14 @@ async function main() {
 	await step("Zitadel", ["ZITADEL_URL"], initZitadel, zitadel =>
 		zitadel
 			? {
-					ZITADEL_PAT: zitadel.pat,
-					ZITADEL_WEB_CLIENT_ID: zitadel.webClientId,
-					ZITADEL_WEB_CLIENT_SECRET: zitadel.webClientSecret,
-					ZITADEL_CLI_CLIENT_ID: zitadel.cliClientId,
-					ZITADEL_CLI_CLIENT_SECRET: zitadel.cliClientSecret,
-					ZITADEL_API_CLIENT_ID: zitadel.apiClientId,
-					ZITADEL_API_CLIENT_SECRET: zitadel.apiClientSecret,
-				}
+					ZITADEL_PAT: zitadel.pat ?? "",
+					ZITADEL_WEB_CLIENT_ID: zitadel.webClientId ?? "",
+					ZITADEL_WEB_CLIENT_SECRET: zitadel.webClientSecret ?? "",
+					ZITADEL_CLI_CLIENT_ID: zitadel.cliClientId ?? "",
+					ZITADEL_CLI_CLIENT_SECRET: zitadel.cliClientSecret ?? "",
+					ZITADEL_API_CLIENT_ID: zitadel.apiClientId ?? "",
+					ZITADEL_API_CLIENT_SECRET: zitadel.apiClientSecret ?? "",
+				} as Record<string, string>
 			: {},
 	);
 

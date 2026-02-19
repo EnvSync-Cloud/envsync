@@ -19,11 +19,12 @@ import * as openpgp from "openpgp";
 
 import { config } from "../src/utils/env";
 import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
-import { DB } from "../src/libs/db";
+import { DB, JsonValue } from "../src/libs/db";
 import { VaultClient } from "../src/libs/vault";
 import { envPath, gpgKeyPath } from "../src/libs/vault/paths";
 import { KMSClient } from "../src/libs/kms/client";
 import { SecretKeyGenerator } from "sk-keygen";
+import type { EllipticCurveName } from "openpgp";
 
 const ZITADEL_PROJECT_NAME = "EnvSync";
 
@@ -227,7 +228,7 @@ async function initRustfsBucket() {
 	let lastError: unknown;
 	for (let attempt = 1; attempt <= RUSTFS_RETRIES; attempt++) {
 		try {
-			await client.send(new CreateBucketCommand({ Bucket: bucket }));
+			await client.send(new CreateBucketCommand({ Bucket: bucket, ACL: "public-read" }));
 			console.log("Rustfs: bucket", bucket, "created.");
 			return;
 		} catch (e: unknown) {
@@ -619,7 +620,7 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 			const passphrase = randomBytes(32).toString("hex");
 			const { privateKey, publicKey } = await openpgp.generateKey({
 				type: "ecc",
-				curve: "curve25519",
+				curve: "ed25519" as EllipticCurveName,
 				userIDs: [{ name: devUser.full_name || "Dev User", email: devUser.email }],
 				passphrase,
 				format: "armored",
@@ -653,7 +654,7 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 					key_size: null,
 					public_key: publicKey,
 					private_key_ref: vaultKeyPath,
-					usage_flags: JSON.stringify(["sign", "certify"]),
+					usage_flags: new JsonValue(["sign", "certify"]),
 					trust_level: "ultimate",
 					expires_at: null,
 					is_default: true,
