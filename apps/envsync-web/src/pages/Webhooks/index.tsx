@@ -1,7 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
   Plus,
   Webhook,
@@ -12,33 +10,20 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useCallback, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState, useCallback } from "react";
 import { api } from "@/api";
 import { toast } from "sonner";
 import { useCopy } from "@/hooks/useClipboard";
 import { cn, formatDate, formatLastUsed } from "@/lib/utils";
-import { WebHooksErrorPage } from "./error";
-import { WebHooksLoadingPage } from "./loading";
 import { CreateWebhookRequest } from "@envsync-cloud/envsync-ts-sdk";
 import { WEBHOOK_EVENT_CATEGORIES } from "@/constants";
 import { Count } from "@/components/ui/count";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  CreateWebhookDialog,
+  WEBHOOK_TYPES,
+  type WebhookFormData,
+} from "@/components/webhooks/CreateWebhookDialog";
 
 // Webhook event types
 const WEBHOOK_EVENTS = [
@@ -53,41 +38,16 @@ const WEBHOOK_EVENTS = [
   { value: "deployment.failed", label: "Deployment Failed" },
 ];
 
-// Webhook types based on the API
-const WEBHOOK_TYPES = [
-  {
-    value: "CUSTOM",
-    label: "HTTP/HTTPS",
-    color: "bg-yellow-500/20 hover:bg-yellow-500/50 border-yellow-700",
-  },
-  {
-    value: "SLACK",
-    label: "SLACK",
-    color: "bg-fuchsia-500/20 hover:bg-fuchsia-500/50 border-fuchsia-700",
-  },
-  {
-    value: "DISCORD",
-    label: "DISCORD",
-    color: "bg-indigo-500/20 hover:bg-indigo-500/50 border-indigo-700",
-  },
-];
-
-// Linked to options
-const LINKED_TO_OPTIONS = [
-  { value: "org", label: "Organization" },
-  { value: "app", label: "Application" },
-];
-
 export const WebHooks = () => {
   const copy = useCopy();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newWebhookData, setNewWebhookData] = useState({
+  const [newWebhookData, setNewWebhookData] = useState<WebhookFormData>({
     name: "",
-    event_types: [] as string[],
+    event_types: [],
     url: "",
-    webhook_type: "CUSTOM" as "CUSTOM" | "SLACK" | "DISCORD",
-    app_id: null as string | null,
-    linked_to: "org" as "org" | "app",
+    webhook_type: "CUSTOM",
+    app_id: null,
+    linked_to: "org",
   });
 
   // Loading states for individual actions
@@ -238,7 +198,6 @@ export const WebHooks = () => {
     }));
   }, []);
 
-  // Add these handler functions in your component
   const handleCategoryToggle = useCallback(
     (categoryName: string) => {
       const category = WEBHOOK_EVENT_CATEGORIES.find(
@@ -252,7 +211,6 @@ export const WebHooks = () => {
       );
 
       if (allSelected) {
-        // Deselect all events in this category
         setNewWebhookData((prev) => ({
           ...prev,
           event_types: prev.event_types.filter(
@@ -260,7 +218,6 @@ export const WebHooks = () => {
           ),
         }));
       } else {
-        // Select all events in this category
         setNewWebhookData((prev) => ({
           ...prev,
           event_types: [
@@ -292,7 +249,6 @@ export const WebHooks = () => {
       );
 
       if (allSelected) {
-        // Deselect all events in this subcategory
         setNewWebhookData((prev) => ({
           ...prev,
           event_types: prev.event_types.filter(
@@ -300,7 +256,6 @@ export const WebHooks = () => {
           ),
         }));
       } else {
-        // Select all events in this subcategory
         setNewWebhookData((prev) => ({
           ...prev,
           event_types: [
@@ -311,12 +266,6 @@ export const WebHooks = () => {
     },
     [newWebhookData.event_types]
   );
-
-  // if (isLoading) {
-  //   return <WebHooksLoadingPage />;
-  // } else if (error) {
-  //   return <WebHooksErrorPage />;
-  // }
 
   const isEmpty = !isLoading && !webhooks.length;
 
@@ -331,285 +280,35 @@ export const WebHooks = () => {
           </p>
         </div>
 
-        {/* Create Webhook Modal */}
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
-              disabled={createWebhook.isPending}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Webhook
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-gray-800 border-gray-700 max-w-4xl">
-            <DialogHeader>
-              <DialogTitle className="text-white">
-                Create New Webhook
-              </DialogTitle>
-              <DialogDescription className="text-gray-400">
-                Create a new webhook to receive notifications about events in
-                your projects.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 overflow-y-auto hide-scrollbar px-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white">
-                    Name *
-                  </Label>
-                  <Input
-                    id="name"
-                    placeholder="My Webhook"
-                    value={newWebhookData.name}
-                    onChange={(e) =>
-                      setNewWebhookData((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    className="bg-gray-900 border-gray-700 text-white"
-                    disabled={createWebhook.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="url" className="text-white">
-                    Payload URL *
-                  </Label>
-                  <Input
-                    id="url"
-                    type="url"
-                    placeholder="https://hook.url/webhook"
-                    value={newWebhookData.url}
-                    onChange={(e) =>
-                      setNewWebhookData((prev) => ({
-                        ...prev,
-                        url: e.target.value,
-                      }))
-                    }
-                    className="bg-gray-900 border-gray-700 text-white"
-                    disabled={createWebhook.isPending}
-                  />
-                </div>
-              </div>
+        <Button
+          className="bg-indigo-500 hover:bg-indigo-600 text-white"
+          disabled={createWebhook.isPending}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Create Webhook
+        </Button>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook_type" className="text-white">
-                    Webhook Type *
-                  </Label>
-                  <Select
-                    value={newWebhookData.webhook_type}
-                    onValueChange={(value: "SLACK" | "DISCORD" | "CUSTOM") =>
-                      setNewWebhookData((prev) => ({
-                        ...prev,
-                        webhook_type: value,
-                      }))
-                    }
-                    disabled={createWebhook.isPending}
-                  >
-                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
-                      <SelectValue placeholder="Select webhook type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700">
-                      {WEBHOOK_TYPES.map((type) => (
-                        <SelectItem
-                          key={type.value}
-                          value={type.value}
-                          className="text-white"
-                        >
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linked_to" className="text-white">
-                    Linked To *
-                  </Label>
-                  <Select
-                    value={newWebhookData.linked_to}
-                    onValueChange={(value: "org" | "app") =>
-                      setNewWebhookData((prev) => ({
-                        ...prev,
-                        linked_to: value,
-                        app_id: value === "org" ? null : prev.app_id,
-                      }))
-                    }
-                    disabled={createWebhook.isPending}
-                  >
-                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
-                      <SelectValue placeholder="Select scope" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700">
-                      {LINKED_TO_OPTIONS.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="text-white"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {newWebhookData.linked_to === "app" && (
-                <div className="space-y-2">
-                  <Label htmlFor="app_id" className="text-white">
-                    Application *
-                  </Label>
-                  <Select
-                    value={newWebhookData.app_id || ""}
-                    onValueChange={(value) =>
-                      setNewWebhookData((prev) => ({
-                        ...prev,
-                        app_id: value || null,
-                      }))
-                    }
-                    disabled={createWebhook.isPending || applicationsLoading}
-                  >
-                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
-                      <SelectValue placeholder="Select an application" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700 max-h-60 overflow-y-auto">
-                      {applicationsLoading ? (
-                        <SelectItem value="" disabled className="text-gray-400">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                            <span>Loading applications...</span>
-                          </div>
-                        </SelectItem>
-                      ) : applications && applications.length > 0 ? (
-                        applications.map((app) => (
-                          <SelectItem
-                            key={app.id}
-                            value={app.id}
-                            className="text-white"
-                          >
-                            <div className="flex flex-col py-1">
-                              <span className="font-medium">{app.name}</span>
-                              <span className="text-xs text-gray-400">
-                                ID: {app.id}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="" disabled className="text-gray-400">
-                          No applications found
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {applicationsError && (
-                    <p className="text-xs text-red-400">
-                      Failed to load applications. Please try again.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <Label className="text-white">Event Types *</Label>
-                <div className="grid grid-cols-2 gap-6 max-h-64 overflow-y-auto p-4 bg-gray-900 rounded-lg">
-                  {WEBHOOK_EVENT_CATEGORIES.map((category) => (
-                    <div key={category.name} className="space-y-3">
-                      <div className="ml-6 space-y-2">
-                        {category.subcategories.map((subcategory) => (
-                          <div key={subcategory.name} className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`subcategory-${subcategory.name}`}
-                                checked={subcategory.events.every((event) =>
-                                  newWebhookData.event_types.includes(
-                                    event.value
-                                  )
-                                )}
-                                onChange={() =>
-                                  handleSubcategoryToggle(
-                                    category.name,
-                                    subcategory.name
-                                  )
-                                }
-                                className="rounded border-gray-600 bg-gray-800 text-electric_indigo-500 scale-90"
-                                disabled={createWebhook.isPending}
-                              />
-                              <Label
-                                htmlFor={`subcategory-${subcategory.name}`}
-                                className="text-xs font-medium text-gray-300 cursor-pointer"
-                              >
-                                {subcategory.label}
-                              </Label>
-                            </div>
-
-                            <div className="ml-4 space-y-1">
-                              {subcategory.events.map((event) => (
-                                <label
-                                  key={event.value}
-                                  className="flex items-center space-x-2 cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={newWebhookData.event_types.includes(
-                                      event.value
-                                    )}
-                                    onChange={() =>
-                                      handleEventToggle(event.value)
-                                    }
-                                    className="rounded border-gray-600 bg-gray-800 text-electric_indigo-500 scale-75"
-                                    disabled={createWebhook.isPending}
-                                  />
-                                  <span className="text-xs text-gray-400">
-                                    {event.label}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateModalOpen(false)}
-                className="text-white border-gray-600 hover:bg-gray-700"
-                disabled={createWebhook.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateWebhook}
-                className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
-                disabled={createWebhook.isPending}
-              >
-                {createWebhook.isPending ? (
-                  <>
-                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Webhook"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CreateWebhookDialog
+          open={isCreateModalOpen}
+          onOpenChange={setIsCreateModalOpen}
+          applications={applications || []}
+          applicationsLoading={applicationsLoading}
+          applicationsError={!!applicationsError}
+          isCreating={createWebhook.isPending}
+          webhookData={newWebhookData}
+          onWebhookDataChange={setNewWebhookData}
+          onEventToggle={handleEventToggle}
+          onCategoryToggle={handleCategoryToggle}
+          onSubcategoryToggle={handleSubcategoryToggle}
+          onCreate={handleCreateWebhook}
+        />
       </div>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <Webhook className="size-8 mr-3 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <Webhook className="size-8 mr-3 bg-indigo-400 border border-indigo-600 p-2 stroke-[3] text-white rounded-md" />
             Webhooks
             <Count
               className="ml-2"
@@ -633,7 +332,7 @@ export const WebHooks = () => {
               </p>
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+                className="bg-indigo-500 hover:bg-indigo-600 text-white"
                 disabled={createWebhook.isPending}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -717,14 +416,14 @@ export const WebHooks = () => {
                     : webhooks?.map((webhook) => (
                         <tr
                           key={webhook.id}
-                          className="border-b border-gray-700 hover:bg-gray-750"
+                          className="border-b border-gray-700 hover:bg-gray-800"
                         >
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
                               <span className="font-medium text-white">
                                 {webhook.name || "Untitled"}
                               </span>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-400 font-mono">
                                 ID: {webhook.id}
                               </span>
                               <span className="text-xs text-gray-500 mt-1">
@@ -748,29 +447,13 @@ export const WebHooks = () => {
                                   "....." +
                                   webhook.url.slice(-5)}
                               </code>
-                              {/* <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-white"
-                          onClick={() => copy.mutate(webhook.url)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-white"
-                          onClick={() => window.open(webhook.url, "_blank")}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Button> */}
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <Badge
                               variant="secondary"
                               className={cn(
-                                "text-xs flex items-center gap-1 w-fit bg-electric_indigo-900/20 text-white/60",
+                                "text-xs flex items-center gap-1 w-fit bg-indigo-900/20 text-white/60",
                                 WEBHOOK_TYPES.find(
                                   (t) => t.value === webhook.webhook_type
                                 )?.color
@@ -796,7 +479,7 @@ export const WebHooks = () => {
                                       event.includes("view")
                                         ? "bg-indigo-500"
                                         : event.includes("create")
-                                        ? "bg-emerald-500"
+                                        ? "bg-violet-500"
                                         : event.includes("update")
                                         ? "bg-amber-500"
                                         : event.includes("delete")
@@ -910,29 +593,6 @@ export const WebHooks = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Webhook Details/Stats Card */}
-      {/* {webhooks && webhooks.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-900/20 rounded-lg">
-                  <ShieldCheck className="h-6 w-6 text-green-400" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-400">
-                    Active Webhooks
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {webhooks.filter((w) => w.is_active).length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )} */}
     </div>
   );
 };

@@ -9,7 +9,7 @@ export const OrgSettingsHeader = ({ orgName }: OrgSettingsHeaderProps) => {
       <p className="text-gray-400 mt-2">
         Manage your organization configuration and preferences
         {orgName && (
-          <span className="ml-2 text-electric_indigo-400">• {orgName}</span>
+          <span className="ml-2 text-violet-400">• {orgName}</span>
         )}
       </p>
     </div>

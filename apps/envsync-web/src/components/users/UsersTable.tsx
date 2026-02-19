@@ -37,10 +37,10 @@ export const UsersTable = ({
   onDeleteUser,
 }: UsersTableProps) => {
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-3">
-          <Users className="size-8 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+          <Users className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
           Team Members
           <Count size="xl" variant="subtle" count={users?.length} />
         </CardTitle>

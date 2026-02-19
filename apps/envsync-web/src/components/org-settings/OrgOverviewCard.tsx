@@ -33,9 +33,9 @@ export const OrgOverviewCard = ({ orgData }: OrgOverviewCardProps) => {
   };
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
       <CardHeader className="flex flex-row gap-2">
-        <Eye className="size-8 mr-1 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+        <Eye className="size-8 mr-1 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
         <CardTitle className="text-white">Organization Overview</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

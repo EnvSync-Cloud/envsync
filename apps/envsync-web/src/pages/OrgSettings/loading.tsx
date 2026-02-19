@@ -1,10 +1,5 @@
-export const OrgSettingsLoadingPage = () => {
-  return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="size-12 border-4 border-t-electric_indigo-500 border-gray-700 rounded-full animate-spin"></div>
-        <p className="text-gray-400">Loading organization settings...</p>
-      </div>
-    </div>
-  );
-};
+import { PageLoader } from "@/components/ui/page-loader";
+
+export const OrgSettingsLoadingPage = () => (
+  <PageLoader fullScreen message="Loading organization settings..." />
+);

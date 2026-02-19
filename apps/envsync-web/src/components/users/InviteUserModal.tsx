@@ -153,7 +153,7 @@ export const InviteUserModal = ({
           </Button>
           <Button
             onClick={onInvite}
-            className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
             disabled={isLoading || !emailAddress || !selectedRoleId}
           >
             {isLoading ? (

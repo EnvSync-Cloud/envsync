@@ -156,7 +156,7 @@ export const Users = () => {
               Manage Invitations
             </Button>
             <Button
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               onClick={() => setShowInviteUserModalOpen(true)}
               disabled={inviteUserMutation.isPending}
             >

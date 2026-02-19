@@ -12,7 +12,7 @@ export const ColorSelector = ({
   setColor: Function<string>;
 }) => {
   return (
-    <div className="bg-slate-900 h-10 size-full rounded-md border border-slate-700 text-white font-mono flex items-center justify-start p-2">
+    <div className="bg-gray-900 h-10 size-full rounded-md border border-gray-800 text-white font-mono flex items-center justify-start p-2">
       <Label
         className="w-5 cursor-pointer aspect-square rounded-full"
         style={{ backgroundColor: color }}
