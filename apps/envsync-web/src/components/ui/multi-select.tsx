@@ -112,7 +112,7 @@ export function MultiSelect({
       >
         <Command>
           {enableSearch && <CommandInput placeholder={placeholder} />}
-          <CommandList className="bg-slate-900">
+          <CommandList className="bg-gray-900">
             <CommandEmpty>No item found.</CommandEmpty>
             <CommandGroup>
               {items.map((item) => (
