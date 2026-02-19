@@ -29,7 +29,7 @@ export const PasswordResetModal = ({
       <DialogContent className="bg-gray-800 border-gray-700">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
-            <Key className="w-5 h-5 text-electric_indigo-500 mr-2" />
+            <Key className="w-5 h-5 text-violet-500 mr-2" />
             Reset Password
           </DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -40,12 +40,12 @@ export const PasswordResetModal = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-electric_indigo-900/20 border border-electric_indigo-800 rounded-lg p-4">
+          <div className="bg-violet-900/20 border border-violet-800 rounded-lg p-4">
             <div className="flex items-start space-x-3">
-              <Key className="w-5 h-5 text-electric_indigo-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-electric_indigo-200">
+              <Key className="w-5 h-5 text-violet-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-violet-200">
                 <p className="font-medium mb-1">What happens next:</p>
-                <ul className="list-disc list-inside space-y-1 text-electric_indigo-300">
+                <ul className="list-disc list-inside space-y-1 text-violet-300">
                   <li>
                     Password reset email sent to: <strong>{userEmail}</strong>
                   </li>
@@ -69,7 +69,7 @@ export const PasswordResetModal = ({
           </Button>
           <Button
             onClick={onResetPassword}
-            className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
             disabled={isLoading}
           >
             {isLoading ? (

@@ -20,17 +20,17 @@ export const Roles = () => {
       <div className="flex justify-between items-center w-full">
         <div>
           <h1 className="text-3xl font-bold text-white">Roles</h1>
-          <p className="text-slate-400 mt-2">
+          <p className="text-gray-400 mt-2">
             Manage roles and assign permissions to control what users can access
             across the platform.
           </p>
         </div>
         <RoleEditForm />
       </div>
-      <Card className="bg-gray-800 w-full mt-2 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl w-full mt-2">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-3">
-            <ShieldAlert className="size-8 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <ShieldAlert className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
             Roles
             <Count size="xl" variant="subtle" count={roles?.length} />
           </CardTitle>

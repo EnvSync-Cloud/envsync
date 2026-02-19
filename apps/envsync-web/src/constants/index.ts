@@ -9,6 +9,7 @@ import {
   Anchor,
   KeyRound,
   ShieldCheck,
+  LayoutDashboard,
 } from "lucide-react";
 import type { FC } from "react";
 
@@ -29,6 +30,7 @@ export enum API_KEYS {
 }
 
 export const SCOPES = [
+  "dashboard",
   "applications",
   "users",
   "roles",
@@ -42,6 +44,7 @@ export const SCOPES = [
 ] as const;
 
 export const navItems = [
+  { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
   { id: "applications", name: "Projects", icon: Database },
   { id: "users", name: "Team", icon: Users },
   { id: "roles", name: "Roles", icon: ShieldAlert },
@@ -57,6 +60,45 @@ export const navItems = [
   name: string;
   icon: FC;
 }[];
+
+export const navGroups = [
+  {
+    label: "Overview",
+    items: [
+      { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
+    ] as typeof navItems,
+  },
+  {
+    label: "Projects",
+    items: [
+      { id: "applications", name: "Projects", icon: Database },
+    ] as typeof navItems,
+  },
+  {
+    label: "Security",
+    items: [
+      { id: "apikeys", name: "API Keys", icon: Key },
+      { id: "gpgkeys", name: "GPG Keys", icon: KeyRound },
+      { id: "certificates", name: "Certificates", icon: ShieldCheck },
+    ] as typeof navItems,
+  },
+  {
+    label: "Collaboration",
+    items: [
+      { id: "users", name: "Team", icon: Users },
+      { id: "roles", name: "Roles", icon: ShieldAlert },
+      { id: "webhooks", name: "Webhooks", icon: Anchor },
+    ] as typeof navItems,
+  },
+  {
+    label: "Admin",
+    items: [
+      { id: "audit", name: "Activity", icon: Activity },
+      { id: "settings", name: "Account", icon: Settings },
+      { id: "organisation", name: "Organisation", icon: Globe },
+    ] as typeof navItems,
+  },
+];
 
 export interface FormData {
   name: string;
@@ -356,7 +398,8 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "user_retrieved", label: "User Retrieved" },
           { value: "users_retrieved", label: "Users Retrieved" },
           { value: "user_role_updated", label: "User Role Updated" },
-          { value: "user_updated", label: "User Updated" }
+          { value: "user_updated", label: "User Updated" },
+          { value: "password_update_requested", label: "Password Update Requested" }
         ]
       },
       {
@@ -367,7 +410,7 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "user_invite_created", label: "User Invite Created" },
           { value: "user_invite_deleted", label: "User Invite Deleted" },
           { value: "user_invite_updated", label: "User Invite Updated" },
-          { value: "user_invite_viewed", label: "User Invite Viewed" }
+          { value: "user_invites_retrieved", label: "User Invites Retrieved" }
         ]
       }
     ],
@@ -377,11 +420,12 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "user_invite_created", label: "User Invite Created" },
       { value: "user_invite_deleted", label: "User Invite Deleted" },
       { value: "user_invite_updated", label: "User Invite Updated" },
-      { value: "user_invite_viewed", label: "User Invite Viewed" },
+      { value: "user_invites_retrieved", label: "User Invites Retrieved" },
       { value: "user_retrieved", label: "User Retrieved" },
       { value: "users_retrieved", label: "Users Retrieved" },
       { value: "user_role_updated", label: "User Role Updated" },
-      { value: "user_updated", label: "User Updated" }
+      { value: "user_updated", label: "User Updated" },
+      { value: "password_update_requested", label: "Password Update Requested" }
     ]
   },
   {
@@ -396,7 +440,9 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "env_updated", label: "Variable Updated" },
           { value: "env_deleted", label: "Variable Deleted" },
           { value: "env_viewed", label: "Variable Viewed" },
-          { value: "envs_viewed", label: "Variables Viewed" }
+          { value: "envs_viewed", label: "Variables Viewed" },
+          { value: "env_variable_diff_viewed", label: "Variable Diff Viewed" },
+          { value: "env_variable_timeline_viewed", label: "Variable Timeline Viewed" }
         ]
       },
       {
@@ -425,6 +471,8 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "env_deleted", label: "Variable Deleted" },
       { value: "env_viewed", label: "Variable Viewed" },
       { value: "envs_viewed", label: "Variables Viewed" },
+      { value: "env_variable_diff_viewed", label: "Variable Diff Viewed" },
+      { value: "env_variable_timeline_viewed", label: "Variable Timeline Viewed" },
       { value: "envs_batch_updated", label: "Variables Batch Updated" },
       { value: "envs_batch_created", label: "Variables Batch Created" },
       { value: "envs_batch_deleted", label: "Variables Batch Deleted" },
@@ -445,8 +493,9 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "secret_created", label: "Secret Created" },
           { value: "secret_updated", label: "Secret Updated" },
           { value: "secret_deleted", label: "Secret Deleted" },
-          { value: "secret_viewed", label: "Secret Viewed" },
-          { value: "secrets_viewed", label: "Secrets Viewed" }
+          { value: "secret_diff_viewed", label: "Secret Diff Viewed" },
+          { value: "secret_history_viewed", label: "Secret History Viewed" },
+          { value: "secret_timeline_viewed", label: "Secret Timeline Viewed" }
         ]
       },
       {
@@ -465,7 +514,9 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "secrets_rollback_pit", label: "Secrets Rollback PIT" },
           { value: "secrets_rollback_timestamp", label: "Secrets Rollback Timestamp" },
           { value: "secret_variable_rollback_pit", label: "Secret Variable Rollback PIT" },
-          { value: "secret_variable_rollback_timestamp", label: "Secret Variable Rollback Timestamp" }
+          { value: "secret_variable_rollback_timestamp", label: "Secret Variable Rollback Timestamp" },
+          { value: "secrets_pit_viewed", label: "Secrets PIT Viewed" },
+          { value: "secrets_timestamp_viewed", label: "Secrets Timestamp Viewed" }
         ]
       }
     ],
@@ -473,15 +524,18 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "secret_created", label: "Secret Created" },
       { value: "secret_updated", label: "Secret Updated" },
       { value: "secret_deleted", label: "Secret Deleted" },
-      { value: "secret_viewed", label: "Secret Viewed" },
-      { value: "secrets_viewed", label: "Secrets Viewed" },
+      { value: "secret_diff_viewed", label: "Secret Diff Viewed" },
+      { value: "secret_history_viewed", label: "Secret History Viewed" },
+      { value: "secret_timeline_viewed", label: "Secret Timeline Viewed" },
       { value: "secrets_batch_updated", label: "Secrets Batch Updated" },
       { value: "secrets_batch_created", label: "Secrets Batch Created" },
       { value: "secrets_batch_deleted", label: "Secrets Batch Deleted" },
       { value: "secrets_rollback_pit", label: "Secrets Rollback PIT" },
       { value: "secrets_rollback_timestamp", label: "Secrets Rollback Timestamp" },
       { value: "secret_variable_rollback_pit", label: "Secret Variable Rollback PIT" },
-      { value: "secret_variable_rollback_timestamp", label: "Secret Variable Rollback Timestamp" }
+      { value: "secret_variable_rollback_timestamp", label: "Secret Variable Rollback Timestamp" },
+      { value: "secrets_pit_viewed", label: "Secrets PIT Viewed" },
+      { value: "secrets_timestamp_viewed", label: "Secrets Timestamp Viewed" }
     ]
   },
   {
@@ -588,6 +642,82 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "cert_revoked", label: "Certificate Revoked" },
       { value: "certs_viewed", label: "Certificates Viewed" },
       { value: "cert_viewed", label: "Certificate Viewed" }
+    ]
+  },
+  {
+    name: "teams",
+    label: "Teams",
+    subcategories: [
+      {
+        name: "team_operations",
+        label: "Team Operations",
+        events: [
+          { value: "team_created", label: "Team Created" },
+          { value: "team_deleted", label: "Team Deleted" },
+          { value: "team_updated", label: "Team Updated" },
+          { value: "team_viewed", label: "Team Viewed" },
+          { value: "teams_viewed", label: "Teams Viewed" }
+        ]
+      },
+      {
+        name: "team_members",
+        label: "Team Members",
+        events: [
+          { value: "team_member_added", label: "Team Member Added" },
+          { value: "team_member_removed", label: "Team Member Removed" }
+        ]
+      }
+    ],
+    events: [
+      { value: "team_created", label: "Team Created" },
+      { value: "team_deleted", label: "Team Deleted" },
+      { value: "team_member_added", label: "Team Member Added" },
+      { value: "team_member_removed", label: "Team Member Removed" },
+      { value: "team_updated", label: "Team Updated" },
+      { value: "team_viewed", label: "Team Viewed" },
+      { value: "teams_viewed", label: "Teams Viewed" }
+    ]
+  },
+  {
+    name: "permissions",
+    label: "Permissions",
+    subcategories: [
+      {
+        name: "permission_operations",
+        label: "Permission Operations",
+        events: [
+          { value: "permission_granted", label: "Permission Granted" },
+          { value: "permission_revoked", label: "Permission Revoked" }
+        ]
+      }
+    ],
+    events: [
+      { value: "permission_granted", label: "Permission Granted" },
+      { value: "permission_revoked", label: "Permission Revoked" }
+    ]
+  },
+  {
+    name: "webhooks",
+    label: "Webhooks",
+    subcategories: [
+      {
+        name: "webhook_operations",
+        label: "Webhook Operations",
+        events: [
+          { value: "webhook_created", label: "Webhook Created" },
+          { value: "webhook_deleted", label: "Webhook Deleted" },
+          { value: "webhook_updated", label: "Webhook Updated" },
+          { value: "webhook_viewed", label: "Webhook Viewed" },
+          { value: "webhooks_viewed", label: "Webhooks Viewed" }
+        ]
+      }
+    ],
+    events: [
+      { value: "webhook_created", label: "Webhook Created" },
+      { value: "webhook_deleted", label: "Webhook Deleted" },
+      { value: "webhook_updated", label: "Webhook Updated" },
+      { value: "webhook_viewed", label: "Webhook Viewed" },
+      { value: "webhooks_viewed", label: "Webhooks Viewed" }
     ]
   },
   {

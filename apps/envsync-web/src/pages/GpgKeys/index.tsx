@@ -159,7 +159,7 @@ const GpgKeys = () => {
     if (key.revoked_at) return <Badge variant="destructive">Revoked</Badge>;
     if (key.expires_at && new Date(key.expires_at) < new Date())
       return <Badge className="bg-yellow-600">Expired</Badge>;
-    return <Badge className="bg-emerald-600">Active</Badge>;
+    return <Badge className="bg-violet-600">Active</Badge>;
   };
 
   if (isLoading) {
@@ -251,7 +251,7 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleSign} disabled={signMutation.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                <Button onClick={handleSign} disabled={signMutation.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                   {signMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Sign
                 </Button>
@@ -304,22 +304,22 @@ const GpgKeys = () => {
                   </Select>
                 </div>
                 {verifyResult && (
-                  <div className={`p-3 rounded-lg ${verifyResult.valid ? "bg-emerald-900/30 border border-emerald-700" : "bg-red-900/30 border border-red-700"}`}>
+                  <div className={`p-3 rounded-lg ${verifyResult.valid ? "bg-violet-900/30 border border-violet-700" : "bg-red-900/30 border border-red-700"}`}>
                     <div className="flex items-center gap-2">
                       {verifyResult.valid ? (
-                        <><CheckCircle className="w-5 h-5 text-emerald-400" /><span className="text-emerald-400 font-medium">Valid Signature</span></>
+                        <><CheckCircle className="w-5 h-5 text-violet-400" /><span className="text-violet-400 font-medium">Valid Signature</span></>
                       ) : (
                         <><XCircle className="w-5 h-5 text-red-400" /><span className="text-red-400 font-medium">Invalid Signature</span></>
                       )}
                     </div>
                     {verifyResult.signer_fingerprint && (
-                      <p className="text-xs text-gray-400 mt-1">Signer: {verifyResult.signer_fingerprint}</p>
+                      <p className="text-xs text-gray-400 mt-1">Signer: <span className="font-mono">{verifyResult.signer_fingerprint}</span></p>
                     )}
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleVerify} disabled={verifyMutation.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                <Button onClick={handleVerify} disabled={verifyMutation.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                   {verifyMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Verify
                 </Button>
@@ -360,7 +360,7 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleImport} disabled={importKey.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                <Button onClick={handleImport} disabled={importKey.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                   {importKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Import
                 </Button>
@@ -371,7 +371,7 @@ const GpgKeys = () => {
           {/* Generate Dialog */}
           <Dialog open={isGenerateOpen} onOpenChange={setIsGenerateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+              <Button className="bg-indigo-500 hover:bg-indigo-600">
                 <Plus className="w-4 h-4 mr-2" /> Generate Key
               </Button>
             </DialogTrigger>
@@ -409,7 +409,7 @@ const GpgKeys = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleGenerate} disabled={generateKey.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                <Button onClick={handleGenerate} disabled={generateKey.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                   {generateKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Generate
                 </Button>
@@ -420,10 +420,10 @@ const GpgKeys = () => {
       </div>
 
       {/* Keys Table */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <KeyRound className="w-5 h-5 mr-2 text-electric_indigo-400" />
+            <KeyRound className="w-5 h-5 mr-2 text-indigo-400" />
             Keys
             {gpgKeys && gpgKeys.length > 0 && (
               <Badge variant="secondary" className="ml-2">{gpgKeys.length}</Badge>

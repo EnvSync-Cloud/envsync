@@ -69,11 +69,11 @@ export const ViewPitChangesModal = ({
       case "CREATE":
         return <Plus className="size-4 text-green-500" />;
       case "UPDATE":
-        return <Edit className="size-4 text-electric_indigo-500" />;
+        return <Edit className="size-4 text-indigo-500" />;
       case "DELETE":
         return <Minus className="size-4 text-red-500" />;
       default:
-        return <Clock className="size-4 text-slate-500" />;
+        return <Clock className="size-4 text-gray-500" />;
     }
   };
 
@@ -82,11 +82,11 @@ export const ViewPitChangesModal = ({
       case "CREATE":
         return "bg-green-500/20 text-green-300 hover:bg-green/40 border-green-500/30";
       case "UPDATE":
-        return "bg-electric_indigo/20 text-electric_indigo-800 hover:bg-electric_indigo/40 border-electric_indigo/30";
+        return "bg-indigo/20 text-indigo-800 hover:bg-indigo/40 border-indigo/30";
       case "DELETE":
         return "bg-red-500/20 text-red-300 hover:bg-red/40 border-red-500/30";
       default:
-        return "bg-slate-500/20 text-slate-300 hover:bg-slate/40 border-slate-500/30";
+        return "bg-gray-500/20 text-gray-300 hover:bg-gray/40 border-gray-500/30";
     }
   };
 
@@ -134,7 +134,7 @@ export const ViewPitChangesModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="py-4 fixed top-0 bg-inherit w-full">
           <DialogTitle className="text-white text-2xl flex items-center gap-3">
             <div className="p-2 bg-purple-500/20 rounded-lg">
@@ -142,42 +142,42 @@ export const ViewPitChangesModal = ({
             </div>
             Point-in-Time Changes
           </DialogTitle>
-          <DialogDescription className="text-slate-300 text-base">
+          <DialogDescription className="text-gray-300 text-base">
             Detailed view of all changes made in this snapshot
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 flex-1 overflow-auto mt-24 hide-scrollbar flex flex-col">
           {/* PIT Information Header */}
-          <Card className="bg-slate-700/30 border-slate-600">
+          <Card className="bg-gray-800/30 border-gray-700">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
                     <GitBranch className="w-4 h-4" />
                     PIT ID
                   </div>
-                  <code className="text-white font-mono text-sm bg-slate-700/50 px-3 py-2 rounded-md block">
+                  <code className="text-white font-mono text-sm bg-gray-800/50 px-3 py-2 rounded-md block">
                     {pitData.id}
                   </code>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
                     <Calendar className="w-4 h-4" />
                     Created On
                   </div>
                   <div className="text-white">
                     <p className="font-medium">{dateTime.date}</p>
-                    <p className="text-slate-400 text-sm">{dateTime.time}</p>
+                    <p className="text-gray-400 text-sm">{dateTime.time}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
                     <User className="w-4 h-4" />
                     Created By
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-electric_indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
                       {getUserInitials(pitData.user_id)}
                     </div>
                     <p className="text-white font-medium text-sm">
@@ -186,7 +186,7 @@ export const ViewPitChangesModal = ({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
                     <Key className="w-4 h-4" />
                     Total Changes
                   </div>
@@ -200,14 +200,14 @@ export const ViewPitChangesModal = ({
                 </div>
               </div>
 
-              <Separator className="bg-slate-600 my-4" />
+              <Separator className="bg-gray-700 my-4" />
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <MessageSquare className="w-4 h-4" />
                   Commit Message
                 </div>
-                <p className="text-slate-300 leading-relaxed bg-slate-700/30 p-3 rounded-lg">
+                <p className="text-gray-300 leading-relaxed bg-gray-800/30 p-3 rounded-lg">
                   {pitData.change_request_message}
                 </p>
               </div>
@@ -216,10 +216,10 @@ export const ViewPitChangesModal = ({
 
           {/* Loading State */}
           {isLoading && (
-            <Card className="bg-slate-700/30 border-slate-600">
+            <Card className="bg-gray-800/30 border-gray-700">
               <CardContent className="p-12 text-center">
-                <Loader2 className="w-12 h-12 text-slate-400 mx-auto mb-4 animate-spin" />
-                <p className="text-slate-400 text-lg font-medium">
+                <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
+                <p className="text-gray-400 text-lg font-medium">
                   Loading changes...
                 </p>
               </CardContent>
@@ -242,7 +242,7 @@ export const ViewPitChangesModal = ({
 
           {/* Change Statistics */}
           {!isLoading && !error && (
-            <Card className="bg-slate-700/30 border-slate-600">
+            <Card className="bg-gray-800/30 border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg text-white">
                   Change Summary
@@ -259,11 +259,11 @@ export const ViewPitChangesModal = ({
                       Created
                     </div>
                   </div>
-                  <div className="text-center p-4 bg-electric_indigo-500/10 rounded-lg border border-electric_indigo-500/20">
-                    <div className="text-2xl font-bold text-electric_indigo-500">
+                  <div className="text-center p-4 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
+                    <div className="text-2xl font-bold text-indigo-500">
                       {changeStats.updated}
                     </div>
-                    <div className="text-sm text-electric_indigo-600 flex items-center justify-center gap-1 mt-1">
+                    <div className="text-sm text-indigo-600 flex items-center justify-center gap-1 mt-1">
                       <Edit className="w-3 h-3" />
                       Updated
                     </div>
@@ -284,7 +284,7 @@ export const ViewPitChangesModal = ({
 
           {/* Detailed Changes List */}
           {!isLoading && !error && (
-            <Card className="flex-1 h-fit border-slate-600">
+            <Card className="flex-1 h-fit border-gray-700">
               <CardContent className="p-0 flex-1">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg text-white">
@@ -295,7 +295,7 @@ export const ViewPitChangesModal = ({
                   {changes.map((change, index) => (
                     <div
                       key={index}
-                      className="border-b border-slate-700 last:border-b-0 p-6 hover:bg-slate-750/30 transition-colors"
+                      className="border-b border-gray-800 last:border-b-0 p-6 hover:bg-gray-800/30 transition-colors"
                     >
                       <div className="space-y-4">
                         {/* Change Header */}
@@ -309,7 +309,7 @@ export const ViewPitChangesModal = ({
                               {getOperationIcon(change.operation)}
                               <span className="ml-1">{change.operation}</span>
                             </Badge>
-                            <code className="text-white font-mono text-sm bg-slate-700/50 px-3 py-1 rounded">
+                            <code className="text-white font-mono text-sm bg-gray-800/50 px-3 py-1 rounded">
                               {change.key}
                             </code>
                           </div>
@@ -320,23 +320,23 @@ export const ViewPitChangesModal = ({
                           {change.operation === "UPDATE" && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                                   <Minus className="w-3 h-3 text-red-400" />
                                   PREVIOUS VALUE
                                 </div>
                                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                                  <code className="text-red-200 text-sm break-all">
+                                  <code className="text-red-200 text-sm font-mono break-all">
                                     {change.key || "N/A"}
                                   </code>
                                 </div>
                               </div>
                               <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                                   <Plus className="w-3 h-3 text-green-400" />
                                   NEW VALUE
                                 </div>
                                 <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                                  <code className="text-green-200 text-sm break-all">
+                                  <code className="text-green-200 text-sm font-mono break-all">
                                     {change.value}
                                   </code>
                                 </div>
@@ -346,12 +346,12 @@ export const ViewPitChangesModal = ({
 
                           {change.operation === "CREATE" && (
                             <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                              <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                                 <Plus className="w-3 h-3 text-green-400" />
                                 NEW VALUE
                               </div>
                               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                                <code className="text-green-200 text-sm break-all">
+                                <code className="text-green-200 text-sm font-mono break-all">
                                   {change.value}
                                 </code>
                               </div>
@@ -360,12 +360,12 @@ export const ViewPitChangesModal = ({
 
                           {change.operation === "DELETE" && (
                             <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                              <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                                 <Minus className="w-3 h-3 text-red-400" />
                                 REMOVED VALUE
                               </div>
                               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                                <code className="text-red-200 text-sm break-all">
+                                <code className="text-red-200 text-sm font-mono break-all">
                                   {change.value}
                                 </code>
                               </div>
@@ -379,12 +379,12 @@ export const ViewPitChangesModal = ({
                   {changes.length === 0 && !isLoading && (
                     <div className="p-12 text-center">
                       <div className="flex flex-col items-center gap-4">
-                        <History className="w-16 h-16 text-slate-500" />
+                        <History className="w-16 h-16 text-gray-500" />
                         <div>
-                          <p className="text-slate-400 text-lg font-medium">
+                          <p className="text-gray-400 text-lg font-medium">
                             No Changes Found
                           </p>
-                          <p className="text-slate-500 text-sm">
+                          <p className="text-gray-500 text-sm">
                             This point-in-time snapshot contains no variable
                             changes
                           </p>

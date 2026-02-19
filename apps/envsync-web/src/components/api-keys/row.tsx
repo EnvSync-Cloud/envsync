@@ -27,13 +27,13 @@ export const ApiKeyRow = ({
   handleDeleteApiKey,
 }: ApiKeyRowProps) => {
   return (
-    <tr key={apiKey.id} className="border-b border-gray-700 hover:bg-gray-750">
+    <tr key={apiKey.id} className="border-b border-gray-700 hover:bg-gray-800">
       <td className="py-4 px-4">
         <div className="flex flex-col">
           <span className="font-medium text-white">
             {apiKey.description || "Untitled"}
           </span>
-          <span className="text-xs text-gray-400">ID: {apiKey.id}</span>
+          <span className="text-xs text-gray-400 font-mono">ID: {apiKey.id}</span>
         </div>
       </td>
       <td className="py-4 px-4">

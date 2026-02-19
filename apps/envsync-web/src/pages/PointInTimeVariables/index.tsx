@@ -243,11 +243,11 @@ const PointInTime = () => {
       case "CREATE":
         return "bg-green-500/20 text-green-400 border-green-500/30";
       case "UPDATE":
-        return "bg-electric_indigo-500/20 text-electric_indigo-400 border-electric_indigo-500/30";
+        return "bg-indigo-500/20 text-indigo-400 border-indigo-500/30";
       case "DELETE":
         return "bg-red-500/20 text-red-400 border-red-500/30";
       default:
-        return "bg-slate-500/20 text-slate-300 border-slate-500/30";
+        return "bg-gray-500/20 text-gray-300 border-gray-500/30";
     }
   };
 
@@ -298,15 +298,15 @@ const PointInTime = () => {
 
       {/* Empty State */}
       {pitHistory.length === 0 && !isHistoryLoading && (
-        <Card className="bg-slate-800 border-slate-700">
+        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="p-4 bg-slate-700/50 rounded-full mb-4">
-              <History className="w-8 h-8 text-slate-400" />
+            <div className="p-4 bg-gray-800/50 rounded-full mb-4">
+              <History className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">
               No Point-in-Time History
             </h3>
-            <p className="text-slate-400 text-center max-w-md">
+            <p className="text-gray-400 text-center max-w-md">
               No variable changes have been recorded yet. Start making changes
               to see the point-in-time history here.
             </p>
@@ -316,23 +316,23 @@ const PointInTime = () => {
 
       {/* Current PIT Overview Card */}
       {currentSelectedPit && (
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 shadow-xl">
+        <Card className="bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-electric_indigo-500/20 rounded-lg">
-                  <Clock className="w-5 h-5 text-electric_indigo-400" />
+                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                  <Clock className="w-5 h-5 text-indigo-400" />
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-white">
                     Selected Point in Time
                   </h2>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-gray-400 text-sm">
                     Snapshot details and metadata
                   </p>
                 </div>
               </div>
-              <Badge className="bg-electric_indigo-500/20 text-electric_indigo-400 border-electric_indigo-500/30 border font-medium">
+              <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 border font-medium">
                 <Clock className="w-3 h-3 mr-1" />
                 SNAPSHOT
               </Badge>
@@ -341,16 +341,16 @@ const PointInTime = () => {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <GitBranch className="w-4 h-4" />
                   PIT ID
                 </div>
-                <p className="text-white font-mono text-sm bg-slate-700/50 px-3 py-2 rounded-md">
+                <p className="text-white font-mono text-sm bg-gray-800/50 px-3 py-2 rounded-md">
                   {currentSelectedPit.id}
                 </p>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <Calendar className="w-4 h-4" />
                   Created On
                 </div>
@@ -358,18 +358,18 @@ const PointInTime = () => {
                   <p className="font-medium">
                     {formatDate(currentSelectedPit.created_at).date}
                   </p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-gray-400 text-sm">
                     {formatDate(currentSelectedPit.created_at).time}
                   </p>
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <User className="w-4 h-4" />
                   Created By
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-electric_indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                  <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
                     {getUserInitials(currentSelectedPit.user_id)}
                   </div>
                   <p className="text-white font-medium">
@@ -378,23 +378,23 @@ const PointInTime = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
                   <MessageSquare className="w-4 h-4" />
                   Change Message
                 </div>
-                <p className="text-slate-300 text-sm leading-relaxed">
+                <p className="text-gray-300 text-sm leading-relaxed">
                   {currentSelectedPit.change_request_message}
                 </p>
               </div>
             </div>
 
-            <Separator className="bg-slate-700" />
+            <Separator className="bg-gray-800" />
 
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <Button
                   variant="outline"
-                  className="text-slate-300 border-slate-600 hover:bg-slate-700"
+                  className="text-gray-300 border-gray-700 hover:bg-gray-800"
                   onClick={() => handleCheckDiff(currentSelectedPit)}
                 >
                   <GitCompare className="w-4 h-4 mr-2" />
@@ -420,7 +420,7 @@ const PointInTime = () => {
                 </Button>
               </div>
               <Button
-                className="bg-electric_indigo-600 hover:bg-electric_indigo-700 text-white shadow-lg"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg"
                 onClick={() => handleViewChanges(currentSelectedPit)}
               >
                 <Eye className="w-4 h-4 mr-2" />
@@ -433,7 +433,7 @@ const PointInTime = () => {
       )}
 
       {/* PIT History Timeline */}
-      <Card className="bg-slate-800 border-slate-700 shadow-lg">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -444,7 +444,7 @@ const PointInTime = () => {
                 <h3 className="text-lg font-semibold text-white">
                   Point-in-Time History
                 </h3>
-                <p className="text-slate-400 text-sm">
+                <p className="text-gray-400 text-sm">
                   Complete timeline of variable changes for{" "}
                   {selectedEnvironment.name}
                 </p>
@@ -453,7 +453,7 @@ const PointInTime = () => {
             <div className="flex items-center gap-3">
               <Badge
                 variant="outline"
-                className="text-slate-300 border-slate-600"
+                className="text-gray-300 border-gray-700"
               >
                 {historyData?.pits.length || pitHistory.length} total snapshots
               </Badge>
@@ -464,11 +464,11 @@ const PointInTime = () => {
                     size="sm"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage <= 1 || isRefetching}
-                    className="text-slate-300 border-slate-600 hover:bg-slate-700"
+                    className="text-gray-300 border-gray-700 hover:bg-gray-800"
                   >
                     Previous
                   </Button>
-                  <span className="text-slate-400 text-sm">
+                  <span className="text-gray-400 text-sm">
                     Page {currentPage} of {totalPages}
                   </span>
                   <Button
@@ -476,7 +476,7 @@ const PointInTime = () => {
                     size="sm"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage >= totalPages || isRefetching}
-                    className="text-slate-300 border-slate-600 hover:bg-slate-700"
+                    className="text-gray-300 border-gray-700 hover:bg-gray-800"
                   >
                     Next
                   </Button>
@@ -494,21 +494,21 @@ const PointInTime = () => {
               return (
                 <div
                   key={pitData.id}
-                  className={`relative flex items-center p-6 border-b border-slate-700 last:border-b-0 transition-all duration-200 ${
+                  className={`relative flex items-center p-6 border-b border-gray-800 last:border-b-0 transition-all duration-200 ${
                     isSelected
-                      ? "bg-electric_indigo-500/10 border-l-4 border-l-electric_indigo-500"
-                      : "hover:bg-slate-750 cursor-pointer"
+                      ? "bg-indigo-500/10 border-l-4 border-l-indigo-500"
+                      : "hover:bg-gray-800 cursor-pointer"
                   }`}
                   onClick={() => setSelectedPitData(pitData)}
                 >
                   {/* Timeline indicator */}
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-12 bg-gradient-to-b from-transparent via-slate-600 to-transparent"></div>
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-12 bg-gradient-to-b from-transparent via-gray-700 to-transparent"></div>
 
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                     {/* PIT ID & Timestamp */}
                     <div className="md:col-span-3 space-y-1">
                       <div className="flex items-center gap-2">
-                        <code className="text-white font-mono text-sm bg-slate-700/50 px-2 py-1 rounded">
+                        <code className="text-white font-mono text-sm bg-gray-800/50 px-2 py-1 rounded">
                           {pitData.id.slice(0, 8)}...
                         </code>
                         <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 border text-xs">
@@ -523,16 +523,16 @@ const PointInTime = () => {
                       <p className="text-white font-medium text-sm">
                         {dateTime.date}
                       </p>
-                      <p className="text-slate-400 text-xs">{dateTime.time}</p>
+                      <p className="text-gray-400 text-xs">{dateTime.time}</p>
                     </div>
 
                     {/* User */}
                     <div className="md:col-span-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-electric_indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                        <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
                           {getUserInitials(pitData.user_id)}
                         </div>
-                        <p className="text-slate-300 text-sm truncate">
+                        <p className="text-gray-300 text-sm truncate">
                           {getUserDisplayName(pitData.user_id)}
                         </p>
                       </div>
@@ -540,7 +540,7 @@ const PointInTime = () => {
 
                     {/* Message */}
                     <div className="md:col-span-4">
-                      <p className="text-slate-300 text-sm line-clamp-2 leading-relaxed">
+                      <p className="text-gray-300 text-sm line-clamp-2 leading-relaxed">
                         {pitData.change_request_message}
                       </p>
                     </div>
@@ -552,13 +552,13 @@ const PointInTime = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-slate-600 text-slate-400 hover:text-white"
+                            className="h-8 w-8 p-0 hover:bg-gray-700 text-gray-400 hover:text-white"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
-                          className="bg-slate-800 border-slate-700 min-w-[180px]"
+                          className="bg-gray-900 border-gray-800 min-w-[180px]"
                           align="end"
                         >
                           <DropdownMenuItem
@@ -566,7 +566,7 @@ const PointInTime = () => {
                               e.stopPropagation();
                               handleRollback(pitData);
                             }}
-                            className="text-white hover:bg-slate-700 cursor-pointer"
+                            className="text-white hover:bg-gray-800 cursor-pointer"
                             disabled={rollbackToPit.isPending}
                           >
                             <RotateCcw className="w-4 h-4 mr-2 text-orange-400" />
@@ -577,9 +577,9 @@ const PointInTime = () => {
                               e.stopPropagation();
                               handleViewChanges(pitData);
                             }}
-                            className="text-white hover:bg-slate-700 cursor-pointer"
+                            className="text-white hover:bg-gray-800 cursor-pointer"
                           >
-                            <History className="w-4 h-4 mr-2 text-electric_indigo-400" />
+                            <History className="w-4 h-4 mr-2 text-indigo-400" />
                             View Changes
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -587,7 +587,7 @@ const PointInTime = () => {
                               e.stopPropagation();
                               handleCheckDiff(pitData);
                             }}
-                            className="text-white hover:bg-slate-700 cursor-pointer"
+                            className="text-white hover:bg-gray-800 cursor-pointer"
                           >
                             <GitCompare className="w-4 h-4 mr-2 text-green-400" />
                             Compare Changes
@@ -600,7 +600,7 @@ const PointInTime = () => {
                   {/* Selection indicator */}
                   {isSelected && (
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      <div className="w-2 h-2 bg-electric_indigo-500 rounded-full animate-pulse"></div>
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
                     </div>
                   )}
                 </div>

@@ -105,7 +105,7 @@ const Certificates = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-emerald-600">Active</Badge>;
+        return <Badge className="bg-violet-600">Active</Badge>;
       case "revoked":
         return <Badge variant="destructive">Revoked</Badge>;
       case "expired":
@@ -145,7 +145,7 @@ const Certificates = () => {
           {hasCA && (
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
               <DialogTrigger asChild>
-                <Button className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                <Button className="bg-indigo-500 hover:bg-indigo-600">
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
@@ -165,7 +165,7 @@ const Certificates = () => {
                       <Input value={issueRole} onChange={(e) => setIssueRole(e.target.value)} className="bg-gray-700 border-gray-600 text-white" placeholder="developer" />
                     </div>
                     <div>
-                      <Label className="text-gray-300">Description (optional)</Label>
+                      <Label className="text-gray-300">Description</Label>
                       <Input value={issueDescription} onChange={(e) => setIssueDescription(e.target.value)} className="bg-gray-700 border-gray-600 text-white" />
                     </div>
                     <div>
@@ -216,7 +216,7 @@ const Certificates = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-400">
+                    <div className="flex items-center gap-2 text-violet-400">
                       <CheckCircle className="w-5 h-5" />
                       <span className="font-medium">Certificate issued successfully</span>
                     </div>
@@ -244,7 +244,7 @@ const Certificates = () => {
                 )}
                 <DialogFooter>
                   {!issuedCert ? (
-                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                       {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Issue
                     </Button>
@@ -261,10 +261,10 @@ const Certificates = () => {
       </div>
 
       {/* CA Status Card */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <ShieldCheck className="w-5 h-5 mr-2 text-electric_indigo-400" />
+            <ShieldCheck className="w-5 h-5 mr-2 text-indigo-400" />
             Organization CA
           </CardTitle>
         </CardHeader>
@@ -273,12 +273,12 @@ const Certificates = () => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle className="w-5 h-5 text-violet-400" />
                   <span className="text-white font-medium">{orgCA.subject_cn}</span>
                   {getStatusBadge(orgCA.status)}
                 </div>
                 <p className="text-gray-500 text-sm mt-1">
-                  Serial: <code className="text-gray-400">{orgCA.serial_hex}</code>
+                  Serial: <code className="text-gray-400 font-mono">{orgCA.serial_hex}</code>
                   {" | "}
                   Created: {new Date(orgCA.created_at).toLocaleDateString()}
                 </p>
@@ -290,7 +290,7 @@ const Certificates = () => {
               <p className="text-gray-400 mb-3">Organization CA not initialized</p>
               <Dialog open={isInitCAOpen} onOpenChange={setIsInitCAOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                  <Button className="bg-indigo-500 hover:bg-indigo-600">
                     Initialize CA
                   </Button>
                 </DialogTrigger>
@@ -305,12 +305,12 @@ const Certificates = () => {
                       <Input value={caOrgName} onChange={(e) => setCAOrgName(e.target.value)} className="bg-gray-700 border-gray-600 text-white" placeholder="My Organization" />
                     </div>
                     <div>
-                      <Label className="text-gray-300">Description (optional)</Label>
+                      <Label className="text-gray-300">Description</Label>
                       <Input value={caDescription} onChange={(e) => setCADescription(e.target.value)} className="bg-gray-700 border-gray-600 text-white" />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-electric_indigo-500 hover:bg-electric_indigo-600">
+                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-indigo-500 hover:bg-indigo-600">
                       {initCA.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Initialize
                     </Button>
@@ -323,7 +323,7 @@ const Certificates = () => {
       </Card>
 
       {/* Certificates Table */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
             Certificates
@@ -406,7 +406,7 @@ const Certificates = () => {
           <DialogHeader>
             <DialogTitle className="text-white">Revoke Certificate</DialogTitle>
             <DialogDescription className="text-gray-400">
-              This action cannot be undone. Serial: <code>{revokeSerial}</code>
+              This action cannot be undone. Serial: <code className="font-mono">{revokeSerial}</code>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

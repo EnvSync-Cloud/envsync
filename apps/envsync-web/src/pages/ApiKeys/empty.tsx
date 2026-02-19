@@ -20,7 +20,7 @@ export const EmptyApiKeys = ({
     </p>
     <Button
       onClick={() => setIsCreateModalOpen(true)}
-      className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+      className="bg-indigo-500 hover:bg-indigo-600 text-white"
       disabled={isCreatingApiKey}
     >
       <Plus className="w-4 h-4 mr-2" />

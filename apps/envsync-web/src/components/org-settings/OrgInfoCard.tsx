@@ -34,11 +34,11 @@ export const OrgInfoCard = ({
   logoPreview,
 }: OrgInfoCardProps) => {
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Globe className="size-8 mr-1 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <Globe className="size-8 mr-1 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
             <CardTitle className="text-white">
               Organization Information
             </CardTitle>
@@ -133,7 +133,7 @@ export const OrgInfoCard = ({
 
         <div className="flex gap-2">
           <Button
-            className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
             onClick={onSaveChanges}
             disabled={isSaving || !hasUnsavedChanges}
           >
@@ -148,7 +148,7 @@ export const OrgInfoCard = ({
           </Button>
           {hasUnsavedChanges && (
             <Button
-              className="border border-electric_indigo-500 bg-electric_indigo-200 hover:bg-electric_indigo-300 text-white/80"
+              className="border border-violet-500 bg-violet-200 hover:bg-violet-300 text-white/80"
               onClick={onResetChanges}
             >
               Cancel Changes

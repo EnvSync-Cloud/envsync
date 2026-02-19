@@ -130,10 +130,13 @@ export const useProjectEnvironments = (projectNameId: string) => {
   const updateVariable = useMutation({
     mutationFn: async ({
       data,
+      originalKey,
     }: {
       data: Partial<EnvVarFormData>;
+      originalKey: string;
     }) => {
-      return await api.environmentVariables.updateEnv(data.key, {
+      return await api.environmentVariables.updateEnv(originalKey, {
+        key: data.key,
         value: data.value,
         env_type_id: data.env_type_id,
         app_id: projectNameId,
@@ -234,10 +237,13 @@ export const useProjectEnvironments = (projectNameId: string) => {
   const updateSecret = useMutation({
     mutationFn: async ({
       data,
+      originalKey,
     }: {
       data: Partial<EnvVarFormData>;
+      originalKey: string;
     }) => {
-      return await api.secrets.updateSecret(data.key, {
+      return await api.secrets.updateSecret(originalKey, {
+        key: data.key,
         value: data.value,
         env_type_id: data.env_type_id,
         app_id: projectNameId,

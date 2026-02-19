@@ -322,7 +322,7 @@ export const InvitationsModal: React.FC<InvitationsModalProps> = ({
             <Button
               onClick={handleUpdateRole}
               disabled={updateInvitationRoleMutation.isPending}
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
             >
               {updateInvitationRoleMutation.isPending ? "Updating..." : "Update Role"}
             </Button>

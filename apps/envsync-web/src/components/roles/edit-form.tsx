@@ -148,7 +148,7 @@ export const RoleEditForm = ({
           })
         ) : (
           <Button
-            className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
             disabled={createRoleMutation.isPending}
           >
             <Plus className="size-4 mr-2" />
@@ -260,7 +260,7 @@ export const RoleEditForm = ({
               value={features}
               onChange={setFeatures}
               placeholder="Select features"
-              className="bg-slate-900 min-h-10 size-full rounded-md border border-slate-700 hover:bg-slate-900 text-white font-mono flex items-center justify-start p-2"
+              className="bg-gray-900 min-h-10 size-full rounded-md border border-gray-800 hover:bg-gray-900 text-white font-mono flex items-center justify-start p-2"
             />
           </div>
         </div>
@@ -276,7 +276,7 @@ export const RoleEditForm = ({
           {edit ? (
             <Button
               onClick={handleUpdateRole}
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={!unsavedChanges || updateRoleMutation.isPending}
             >
               Update
@@ -284,7 +284,7 @@ export const RoleEditForm = ({
           ) : (
             <Button
               onClick={handleCreateRole}
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={!name || createRoleMutation.isPending}
             >
               Create

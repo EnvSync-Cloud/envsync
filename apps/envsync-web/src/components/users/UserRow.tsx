@@ -76,13 +76,13 @@ export const UserRow = ({
     } else if (roleLower.includes("billing")) {
       return "bg-yellow-900 text-yellow-300 border-yellow-800 hover:bg-yellow-700 hover:text-yellow-100 hover:border-yellow-500 select-all";
     } else if (roleLower.includes("admin")) {
-      return "bg-electric_indigo-900 text-electric_indigo-300 border-electric_indigo-800 hover:bg-electric_indigo-700 hover:text-electric_indigo-100 hover:border-electric_indigo-500 select-all";
+      return "bg-indigo-900 text-indigo-300 border-indigo-800 hover:bg-indigo-700 hover:text-indigo-100 hover:border-indigo-500 select-all";
     } else if (
       roleLower.includes("developer") ||
       roleLower.includes("dev") ||
       roleLower.includes("engineer")
     ) {
-      return "bg-electric_indigo-900 text-electric_indigo-300 border-electric_indigo-800 hover:bg-electric_indigo-700 hover:text-electric_indigo-100 hover:border-electric_indigo-500 select-all";
+      return "bg-indigo-900 text-indigo-300 border-indigo-800 hover:bg-indigo-700 hover:text-indigo-100 hover:border-indigo-500 select-all";
     } else if (roleLower.includes("manager") || roleLower.includes("lead")) {
       return "bg-green-900 text-green-300 border-green-800 hover:bg-green-700 hover:text-green-100 hover:border-green-500 select-all";
     } else {

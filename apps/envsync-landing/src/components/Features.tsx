@@ -26,6 +26,11 @@ const features = [
     icon: Users,
     title: "Team collaboration",
     description: "Share secrets securely with team members using role-based permissions and audit logs."
+  },
+  {
+    icon: Lock,
+    title: "Secrets management",
+    description: "Manage GPG keys, certificates, and encrypted secrets throughout their entire lifecycle with ease."
   }
 ];
 

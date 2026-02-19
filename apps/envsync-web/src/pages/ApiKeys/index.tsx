@@ -189,7 +189,7 @@ export const ApiKeys = () => {
               </Button>
               <Button
                 onClick={() => copy.mutate(createdKey || "")}
-                className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+                className="bg-indigo-500 hover:bg-indigo-600 text-white"
               >
                 <Copy className="w-4 h-4 mr-2" />
                 Copy Key
@@ -202,7 +202,7 @@ export const ApiKeys = () => {
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white"
               disabled={createApiKey.isPending}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -245,7 +245,7 @@ export const ApiKeys = () => {
               </Button>
               <Button
                 onClick={handleCreateKey}
-                className="bg-electric_indigo-500 hover:bg-electric_indigo-600 text-white"
+                className="bg-indigo-500 hover:bg-indigo-600 text-white"
                 disabled={createApiKey.isPending}
               >
                 {createApiKey.isPending ? (
@@ -262,10 +262,10 @@ export const ApiKeys = () => {
         </Dialog>
       </div>
 
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <Key className="size-8 mr-3 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <Key className="size-8 mr-3 bg-indigo-400 border border-indigo-600 p-2 stroke-[3] text-white rounded-md" />
             API Keys
             <Count
               count={apiKeys?.length}

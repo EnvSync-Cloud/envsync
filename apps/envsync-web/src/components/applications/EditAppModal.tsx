@@ -145,15 +145,15 @@ export const EditAppModal = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-800 max-w-md">
         <DialogHeader>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-electric_indigo-400 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-500/20 to-indigo-500/20 rounded-lg flex items-center justify-center">
               <Database className="w-5 h-5 text-white" />
             </div>
             <div>
               <DialogTitle className="text-white">Edit Project</DialogTitle>
-              <DialogDescription className="text-slate-400">
+              <DialogDescription className="text-gray-400">
                 Update project information and settings
               </DialogDescription>
             </div>
@@ -170,7 +170,7 @@ export const EditAppModal = ({
               id="edit-name"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              className={`bg-slate-900 border-slate-700 text-white ${
+              className={`bg-gray-900 border-gray-800 text-white ${
                 formErrors.name ? "border-red-500" : ""
               }`}
               placeholder="Enter project name"
@@ -190,17 +190,17 @@ export const EditAppModal = ({
               id="edit-description"
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
-              className={`bg-slate-900 border-slate-700 text-white ${
+              className={`bg-gray-900 border-gray-800 text-white ${
                 formErrors.description ? "border-red-500" : ""
               }`}
-              placeholder="Enter project description (optional)"
+              placeholder="Enter project description"
               rows={3}
               disabled={isSaving}
             />
             {formErrors.description && (
               <p className="text-red-400 text-sm">{formErrors.description}</p>
             )}
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-gray-400">
               {formData.description.length}/500 characters
             </p>
           </div>
@@ -215,15 +215,15 @@ export const EditAppModal = ({
               onValueChange={(value) => handleInputChange("status", value)}
               disabled={isSaving}
             >
-              <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+              <SelectTrigger className="bg-gray-900 border-gray-800 text-white">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-gray-900 border-gray-800">
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="text-white hover:bg-slate-700"
+                    className="text-white hover:bg-gray-800"
                   >
                     {option.label}
                   </SelectItem>
@@ -246,7 +246,7 @@ export const EditAppModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
             disabled={isSaving}
           >
             <X className="w-4 h-4 mr-2" />
@@ -254,7 +254,7 @@ export const EditAppModal = ({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-violet-500 hover:bg-violet-600 text-white"
             disabled={isSaving || !hasUnsavedChanges}
           >
             {isSaving ? (

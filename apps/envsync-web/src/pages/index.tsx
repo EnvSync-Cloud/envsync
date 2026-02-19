@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import RootLayout from "@/layout/root";
 
+import Dashboard from "@/pages/Dashboard";
 import Applications from "@/pages/Applications";
 import AuditLogs from "@/pages/AuditLogs";
 import UserSettings from "@/pages/UserSettings";
@@ -26,7 +27,8 @@ export const AppRoutes = () => {
       <Routes>
         <Route path="/auth/callback" element={<Callback />} />
         <Route path="/" element={<RootLayout />}>
-          <Route index element={<Applications />} />
+          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="applications" element={<Applications />} />
           <Route path="applications/create" element={<CreateProject />} />
           <Route

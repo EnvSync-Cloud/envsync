@@ -60,7 +60,7 @@ export function AvatarGroup({
               src={user.avatar || "/placeholder.svg"}
               alt={user.name}
             />
-            <AvatarFallback className="bg-gradient-to-br from-electric_indigo-500 to-purple-600 text-white">
+            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>

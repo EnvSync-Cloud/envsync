@@ -122,7 +122,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
                   feature === "billing"
                     ? "bg-green-900 text-green-300"
                     : feature === "webhook"
-                    ? "bg-electric_indigo-300 text-electric_indigo-900"
+                    ? "bg-indigo-300 text-indigo-900"
                     : feature === "api"
                     ? "bg-yellow-900 text-yellow-300"
                     : "bg-gray-700 text-gray-300"

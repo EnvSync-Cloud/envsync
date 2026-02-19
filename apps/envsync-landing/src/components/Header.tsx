@@ -48,7 +48,7 @@ const Header = () => {
             </Link>
             <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
             <a href="https://app.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">
-              <Button variant="outline" className="border-slate-700 text-black">
+              <Button variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:text-white hover:bg-slate-800">
                 Sign In
               </Button>
             </a>

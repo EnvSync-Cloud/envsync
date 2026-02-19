@@ -231,21 +231,21 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
   const buttonIcon = isSecretsPage ? Shield : Upload;
   const buttonColor = isSecretsPage
     ? "bg-red-500 hover:bg-red-600"
-    : "bg-emerald-500 hover:bg-emerald-600";
+    : "bg-violet-500 hover:bg-violet-600";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="bg-gray-900 border-gray-800 max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             {isSecretsPage ? (
               <Shield className="w-5 h-5 text-red-500 mr-2" />
             ) : (
-              <Upload className="w-5 h-5 text-emerald-500 mr-2" />
+              <Upload className="w-5 h-5 text-violet-500 mr-2" />
             )}
             {modalTitle}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-400">
             {modalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -279,15 +279,15 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
               onValueChange={setSelectedEnvType}
               disabled={isImporting}
             >
-              <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+              <SelectTrigger className="bg-gray-900 border-gray-800 text-white">
                 <SelectValue placeholder="Select environment type" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-gray-900 border-gray-800">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
                     value={envType.id}
-                    className="text-white hover:bg-slate-700"
+                    className="text-white hover:bg-gray-800"
                   >
                     <div className="flex items-center space-x-2">
                       <div
@@ -308,16 +308,16 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-900">
               <TabsTrigger
                 value="input"
-                className="text-slate-400 data-[state=active]:text-white"
+                className="text-gray-400 data-[state=active]:text-white"
               >
                 Input
               </TabsTrigger>
               <TabsTrigger
                 value="preview"
-                className="text-slate-400 data-[state=active]:text-white"
+                className="text-gray-400 data-[state=active]:text-white"
               >
                 Preview ({parsedVariables.length})
               </TabsTrigger>
@@ -335,7 +335,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
                     onClick={handleLoadExample}
                     variant="ghost"
                     size="sm"
-                    className="text-emerald-400 hover:text-emerald-300"
+                    className="text-violet-400 hover:text-violet-300"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Load Example
@@ -345,7 +345,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
                   id="import-text"
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  className="bg-slate-900 border-slate-700 text-white font-mono min-h-[300px]"
+                  className="bg-gray-900 border-gray-800 text-white font-mono min-h-[300px]"
                   placeholder={
                     isSecretsPage
                       ? `# Enter your secret variables in KEY=value format
@@ -365,22 +365,22 @@ PORT=3000`
                   }
                   disabled={isImporting}
                 />
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex justify-between text-xs text-gray-400">
                   <span>Use KEY=value format, one per line</span>
                   <span>{importText.split("\n").length} lines</span>
                 </div>
               </div>
 
               {/* Format Help */}
-              <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+              <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
                 <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-electric_indigo-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-slate-300">
+                  <Info className="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-gray-300">
                     <p className="font-medium mb-2">Format Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 text-slate-400">
+                    <ul className="list-disc list-inside space-y-1 text-gray-400">
                       <li>
                         Use{" "}
-                        <code className="bg-slate-800 px-1 rounded">
+                        <code className="bg-gray-800 px-1 rounded font-mono">
                           KEY=value
                         </code>{" "}
                         format
@@ -391,7 +391,7 @@ PORT=3000`
                       <li>Lines starting with # are treated as comments</li>
                       <li>
                         Values with spaces can be quoted:{" "}
-                        <code className="bg-slate-800 px-1 rounded">
+                        <code className="bg-gray-800 px-1 rounded font-mono">
                           KEY="value with spaces"
                         </code>
                       </li>
@@ -415,9 +415,9 @@ PORT=3000`
             <TabsContent value="preview" className="space-y-4">
               {parsedVariables.length === 0 ? (
                 <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-400">No variables to preview</p>
-                  <p className="text-slate-500 text-sm">
+                  <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">No variables to preview</p>
+                  <p className="text-gray-500 text-sm">
                     Enter variables in the Input tab to see the preview
                   </p>
                 </div>
@@ -451,23 +451,23 @@ PORT=3000`
                   </div>
 
                   {/* Variables List */}
-                  <div className="max-h-[300px] overflow-y-auto border border-slate-700 rounded-lg">
+                  <div className="max-h-[300px] overflow-y-auto border border-gray-800 rounded-lg">
                     <table className="w-full">
-                      <thead className="bg-slate-900 sticky top-0">
+                      <thead className="bg-gray-900 sticky top-0">
                         <tr>
-                          <th className="text-left py-2 px-3 text-slate-400 text-sm">
+                          <th className="text-left py-2 px-3 text-gray-400 text-sm">
                             Status
                           </th>
-                          <th className="text-left py-2 px-3 text-slate-400 text-sm">
+                          <th className="text-left py-2 px-3 text-gray-400 text-sm">
                             Key
                           </th>
-                          <th className="text-left py-2 px-3 text-slate-400 text-sm">
+                          <th className="text-left py-2 px-3 text-gray-400 text-sm">
                             Value
                           </th>
-                          <th className="text-left py-2 px-3 text-slate-400 text-sm">
+                          <th className="text-left py-2 px-3 text-gray-400 text-sm">
                             Type
                           </th>
-                          <th className="text-left py-2 px-3 text-slate-400 text-sm">
+                          <th className="text-left py-2 px-3 text-gray-400 text-sm">
                             Line
                           </th>
                         </tr>
@@ -476,7 +476,7 @@ PORT=3000`
                         {parsedVariables.map((variable, index) => (
                           <tr
                             key={index}
-                            className="border-b border-slate-700 hover:bg-slate-750"
+                            className="border-b border-gray-800 hover:bg-gray-800"
                           >
                             <td className="py-2 px-3">
                               {variable.valid ? (
@@ -489,7 +489,7 @@ PORT=3000`
                               <code
                                 className={`text-sm font-mono px-2 py-1 rounded ${
                                   variable.valid
-                                    ? "text-emerald-400 bg-slate-900"
+                                    ? "text-violet-400 bg-gray-900"
                                     : "text-red-400 bg-red-900/20"
                                 }`}
                               >
@@ -497,7 +497,7 @@ PORT=3000`
                               </code>
                             </td>
                             <td className="py-2 px-3">
-                              <code className="text-sm font-mono text-slate-300 bg-slate-900 px-2 py-1 rounded max-w-xs truncate block">
+                              <code className="text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded max-w-xs truncate block">
                                 {variable.sensitive || isSecretsPage
                                   ? "••••••••"
                                   : variable.value || "MISSING"}
@@ -508,7 +508,7 @@ PORT=3000`
                                 className={`flex items-center space-x-1 text-xs px-2 py-1 rounded w-fit ${
                                   variable.sensitive || isSecretsPage
                                     ? "bg-red-900/20 text-red-400"
-                                    : "bg-slate-700 text-slate-300"
+                                    : "bg-gray-800 text-gray-300"
                                 }`}
                               >
                                 {variable.sensitive || isSecretsPage ? (
@@ -524,7 +524,7 @@ PORT=3000`
                               </div>
                             </td>
                             <td className="py-2 px-3">
-                              <span className="text-sm text-slate-400">
+                              <span className="text-sm text-gray-400">
                                 {variable.line}
                               </span>
                               {variable.error && (
@@ -576,18 +576,18 @@ PORT=3000`
                       className={`rounded-lg p-4 border ${
                         isSecretsPage
                           ? "bg-red-900/10 border-red-800/30"
-                          : "bg-emerald-900/10 border-emerald-800/30"
+                          : "bg-violet-900/10 border-violet-800/30"
                       }`}
                     >
                       <div className="flex items-start space-x-3">
                         {isSecretsPage ? (
                           <Shield className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
                         ) : (
-                          <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="w-5 h-5 text-violet-400 mt-0.5 flex-shrink-0" />
                         )}
                         <div
                           className={`text-sm ${
-                            isSecretsPage ? "text-red-200" : "text-emerald-200"
+                            isSecretsPage ? "text-red-200" : "text-violet-200"
                           }`}
                         >
                           <p className="font-medium mb-1">
@@ -641,7 +641,7 @@ PORT=3000`
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
             disabled={isImporting}
           >
             Cancel

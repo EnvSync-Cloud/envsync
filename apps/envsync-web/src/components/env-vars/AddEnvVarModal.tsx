@@ -140,21 +140,21 @@ export const AddEnvVarModal = ({
   const buttonIcon = isSecretsPage ? Shield : Plus;
   const buttonColor = isSecretsPage 
     ? "bg-red-500 hover:bg-red-600" 
-    : "bg-emerald-500 hover:bg-emerald-600";
+    : "bg-violet-500 hover:bg-violet-600";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-800 border-slate-700 max-w-2xl">
+      <DialogContent className="bg-gray-900 border-gray-800 max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             {isSecretsPage ? (
               <Shield className="w-5 h-5 text-red-500 mr-2" />
             ) : (
-              <Plus className="w-5 h-5 text-emerald-500 mr-2" />
+              <Plus className="w-5 h-5 text-violet-500 mr-2" />
             )}
             {modalTitle}
           </DialogTitle>
-          <DialogDescription className="text-slate-400">
+          <DialogDescription className="text-gray-400">
             {modalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -189,18 +189,18 @@ export const AddEnvVarModal = ({
               disabled={isSaving}
             >
               <SelectTrigger
-                className={`bg-slate-900 border-slate-700 text-white ${
+                className={`bg-gray-900 border-gray-800 text-white ${
                   formErrors.env_type_id ? "border-red-500" : ""
                 }`}
               >
                 <SelectValue placeholder="Select environment type" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-gray-900 border-gray-800">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
                     value={envType.id}
-                    className="text-white hover:bg-slate-700"
+                    className="text-white hover:bg-gray-800"
                   >
                     <div className="flex items-center space-x-2">
                       <div
@@ -229,7 +229,7 @@ export const AddEnvVarModal = ({
               onChange={(e) =>
                 handleInputChange("key", e.target.value.toUpperCase())
               }
-              className={`bg-slate-900 border-slate-700 text-white font-mono ${
+              className={`bg-gray-900 border-gray-800 text-white font-mono ${
                 formErrors.key ? "border-red-500" : ""
               }`}
               placeholder={isSecretsPage ? "API_SECRET_KEY" : "DATABASE_URL"}
@@ -239,7 +239,7 @@ export const AddEnvVarModal = ({
             {formErrors.key && (
               <p className="text-red-400 text-sm">{formErrors.key}</p>
             )}
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-gray-400">
               Must start with a letter and contain only uppercase letters,
               numbers, and underscores
             </p>
@@ -255,7 +255,7 @@ export const AddEnvVarModal = ({
                 id="var-value"
                 value={formData.value}
                 onChange={(e) => handleInputChange("value", e.target.value)}
-                className={`bg-slate-900 border-slate-700 text-white font-mono min-h-[100px] ${
+                className={`bg-gray-900 border-gray-800 text-white font-mono min-h-[100px] ${
                   formErrors.value ? "border-red-500" : ""
                 } ${formData.sensitive ? "pr-12" : ""}`}
                 placeholder={
@@ -275,7 +275,7 @@ export const AddEnvVarModal = ({
             {formErrors.value && (
               <p className="text-red-400 text-sm">{formErrors.value}</p>
             )}
-            <div className="flex justify-between text-xs text-slate-400">
+            <div className="flex justify-between text-xs text-gray-400">
               <span>
                 {formData.sensitive 
                   ? "This value will be encrypted and stored securely"
@@ -289,38 +289,38 @@ export const AddEnvVarModal = ({
           </div>
 
           {/* Preview */}
-          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+          <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
             <h4 className="text-sm font-medium text-white mb-2">Preview</h4>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-slate-400">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-slate-800 px-2 py-1 rounded">
+                <span className="text-xs text-gray-400">Key:</span>
+                <code className="text-sm font-mono text-violet-400 bg-gray-800 px-2 py-1 rounded">
                   {formData.key || (isSecretsPage ? "SECRET_KEY" : "VARIABLE_KEY")}
                 </code>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-slate-400">Value:</span>
-                <code className="text-sm font-mono text-slate-300 bg-slate-800 px-2 py-1 rounded">
+                <span className="text-xs text-gray-400">Value:</span>
+                <code className="text-sm font-mono text-gray-300 bg-gray-800 px-2 py-1 rounded">
                   {formData.sensitive || isSecretsPage
                     ? "••••••••"
                     : formData.value || "variable_value"}
                 </code>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-slate-400">Type:</span>
+                <span className="text-xs text-gray-400">Type:</span>
                 <span
                   className={`text-xs px-2 py-1 rounded ${
                     formData.sensitive || isSecretsPage
                       ? "bg-red-900/20 text-red-400"
-                      : "bg-slate-700 text-slate-300"
+                      : "bg-gray-800 text-gray-300"
                   }`}
                 >
                   {formData.sensitive || isSecretsPage ? "Secret" : "Variable"}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-slate-400">Environment:</span>
-                <span className="text-xs text-slate-300">
+                <span className="text-xs text-gray-400">Environment:</span>
+                <span className="text-xs text-gray-300">
                   {environmentTypes.find(env => env.id === formData.env_type_id)?.name || "Select environment"}
                 </span>
               </div>
@@ -332,7 +332,7 @@ export const AddEnvVarModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-slate-600 hover:bg-slate-700"
+            className="text-white border-gray-700 hover:bg-gray-800"
             disabled={isSaving}
           >
             Cancel

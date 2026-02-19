@@ -114,7 +114,7 @@ const Hero = () => {
                 <Button 
                   size="lg" 
                   variant="outline" 
-                  className="border-slate-700 px-8 py-4 text-lg text-black"
+                  className="border-slate-700 bg-transparent px-8 py-4 text-lg text-slate-300 hover:text-white hover:bg-slate-800"
                 >
                   <Github className="mr-2 h-5 w-5" />
                   Checkout our GitHub

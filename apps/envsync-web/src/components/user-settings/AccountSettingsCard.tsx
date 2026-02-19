@@ -18,10 +18,10 @@ export const AccountSettingsCard = ({
   userData,
 }: AccountSettingsCardProps) => {
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
       <CardHeader>
         <div className="flex items-center space-x-2">
-          <Bell className="size-8 bg-electric_indigo-400 border border-electric_indigo-600 p-2 stroke-[3] text-white rounded-md" />
+          <Bell className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
           <CardTitle className="text-white">Account Settings</CardTitle>
         </div>
       </CardHeader>
@@ -40,7 +40,7 @@ export const AccountSettingsCard = ({
               checked={emailNotifications}
               onChange={(e) => setEmailNotifications(e.target.checked)}
             />
-            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-electric_indigo-500"></div>
+            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-500"></div>
           </label>
         </div>
 

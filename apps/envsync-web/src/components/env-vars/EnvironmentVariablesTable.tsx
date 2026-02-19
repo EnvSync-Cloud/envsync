@@ -133,14 +133,14 @@ export const EnvironmentVariablesTable = ({
     selectedEnvironment !== getDefaultEnvironmentType(environmentTypes);
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-white flex items-center">
             {isSecrets ? (
               <Shield className="size-8 mr-2 bg-red-500 border border-red-700 p-2 stroke-[3] text-white rounded-md" />
             ) : (
-              <Key className="size-8 mr-2 bg-emerald-500 border border-emerald-700 p-2 stroke-[3] text-white rounded-md" />
+              <Key className="size-8 mr-2 bg-violet-500 border border-violet-700 p-2 stroke-[3] text-white rounded-md" />
             )}
             {isSecrets ? "Secrets" : "Variables"}
             <Count
@@ -155,17 +155,17 @@ export const EnvironmentVariablesTable = ({
           <div className="flex items-center space-x-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search variables..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64 bg-slate-900 border-slate-700 text-white"
+                className="pl-10 w-64 bg-gray-900 border-gray-800 text-white"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -177,11 +177,11 @@ export const EnvironmentVariablesTable = ({
               value={selectedEnvironment}
               onValueChange={setSelectedEnvironment}
             >
-              <SelectTrigger className="w-48 bg-slate-900 border-slate-700 text-white">
+              <SelectTrigger className="w-48 bg-gray-900 border-gray-800 text-white">
                 <Filter className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-gray-900 border-gray-800">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
@@ -205,11 +205,11 @@ export const EnvironmentVariablesTable = ({
         {/* Active Filters */}
         {hasActiveFilters && (
           <div className="flex items-center space-x-2 pt-2">
-            <span className="text-sm text-slate-400">Active filters:</span>
+            <span className="text-sm text-gray-400">Active filters:</span>
             {searchQuery && (
               <Badge
                 variant="secondary"
-                className="bg-slate-700 text-slate-300"
+                className="bg-gray-800 text-gray-300"
               >
                 Search: "{searchQuery}"
               </Badge>
@@ -218,7 +218,7 @@ export const EnvironmentVariablesTable = ({
               getDefaultEnvironmentType(environmentTypes) && (
               <Badge
                 variant="secondary"
-                className="bg-slate-700 text-slate-300"
+                className="bg-gray-800 text-gray-300"
               >
                 Environment:{" "}
                 {environmentTypesMap.get(selectedEnvironment)?.name}
@@ -233,7 +233,7 @@ export const EnvironmentVariablesTable = ({
               }}
               variant="ghost"
               size="sm"
-              className="text-slate-400 hover:text-white h-6 px-2"
+              className="text-gray-400 hover:text-white h-6 px-2"
             >
               Clear
             </Button>
@@ -244,13 +244,13 @@ export const EnvironmentVariablesTable = ({
       <CardContent>
         {filteredVariables.length === 0 ? (
           <div className="text-center py-12">
-            <Key className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <Key className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">
               {hasActiveFilters
                 ? "No variables found"
                 : "No variables"}
             </h3>
-            <p className="text-slate-400 mb-4">
+            <p className="text-gray-400 mb-4">
               {hasActiveFilters
                 ? "No variables match your current filters"
                 : "Add your first variable to get started"}
@@ -264,7 +264,7 @@ export const EnvironmentVariablesTable = ({
                   );
                 }}
                 variant="outline"
-                className="text-white border-slate-600 hover:bg-slate-700"
+                className="text-white border-gray-700 hover:bg-gray-800"
               >
                 Clear Filters
               </Button>
@@ -274,24 +274,24 @@ export const EnvironmentVariablesTable = ({
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">
+                <tr className="border-b border-gray-800">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Key
                   </th>
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Value
                   </th>
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Environment
                   </th>
-                  {/* <th className="text-left py-3 px-4 text-slate-400 font-medium">
+                  {/* <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Type
                   </th> */}
-                  <th className="text-left py-3 px-4 text-slate-400 font-medium">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Updated
                   </th>
                   {canEdit && (
-                    <th className="text-right py-3 px-4 text-slate-400 font-medium">
+                    <th className="text-right py-3 px-4 text-gray-400 font-medium">
                       Actions
                     </th>
                   )}
@@ -301,17 +301,17 @@ export const EnvironmentVariablesTable = ({
                 {filteredVariables.map((variable) => (
                   <tr
                     key={variable.id}
-                    className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
+                    className="border-b border-gray-800 hover:bg-gray-800 transition-colors"
                   >
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
-                        <code className="text-sm font-mono text-emerald-400 bg-slate-900 px-2 py-1 rounded">
+                        <code className="text-sm font-mono text-violet-400 bg-gray-900 px-2 py-1 rounded">
                           {variable.key}
                         </code>
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                           onClick={() => copy.mutate(variable.key)}
                         >
                           <Copy className="h-3 w-3" />
@@ -323,7 +323,7 @@ export const EnvironmentVariablesTable = ({
                       <div className="flex items-center space-x-2 max-w-xs">
                         {variable.sensitive ? (
                           <div className="flex items-center space-x-2">
-                            <code className="select-none text-sm font-mono text-slate-300 bg-slate-900 px-2 py-1 rounded flex-1 truncate">
+                            <code className="select-none text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
                               {showSensitive[variable.id]
                                 ? variable.value
                                 : "••••••••"}
@@ -331,7 +331,7 @@ export const EnvironmentVariablesTable = ({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                               onClick={() =>
                                 toggleSensitiveVisibility(variable.id)
                               }
@@ -347,7 +347,7 @@ export const EnvironmentVariablesTable = ({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                                 onClick={() => copy.mutate(variable.value)}
                                 disabled={variable.sensitive}
                               >
@@ -357,13 +357,13 @@ export const EnvironmentVariablesTable = ({
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <code className="select-all text-sm font-mono text-slate-300 bg-slate-900 px-2 py-1 rounded flex-1 truncate">
+                            <code className="select-all text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
                               {variable.value}
                             </code>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0 text-slate-400 hover:text-white"
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-white"
                               onClick={() => copy.mutate(variable.value)}
                             >
                               <Copy className="h-3 w-3" />
@@ -383,7 +383,7 @@ export const EnvironmentVariablesTable = ({
                         className={`${
                           variable.sensitive
                             ? "bg-red-900/20 text-red-400 border-red-800"
-                            : "bg-slate-700 text-slate-300 border-slate-600"
+                            : "bg-gray-800 text-gray-300 border-gray-700"
                         } border flex items-center space-x-1 w-fit`}
                       >
                         {variable.sensitive ? (
@@ -398,12 +398,12 @@ export const EnvironmentVariablesTable = ({
                     </td> */}
 
                     <td className="py-4 px-4">
-                      <div className="flex items-center space-x-1 text-sm text-slate-400">
+                      <div className="flex items-center space-x-1 text-sm text-gray-400">
                         <Calendar className="w-3 h-3" />
                         <span>{formatDate(variable.updated_at)}</span>
                       </div>
                       {variable.created_by && (
-                        <div className="flex items-center space-x-1 text-xs text-slate-500 mt-1">
+                        <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
                           <User className="w-3 h-3" />
                           <span>{variable.created_by.name}</span>
                         </div>
@@ -416,24 +416,24 @@ export const EnvironmentVariablesTable = ({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="text-slate-400 hover:text-white hover:bg-slate-700 h-8 w-8"
+                              className="text-gray-400 hover:text-white hover:bg-gray-800 h-8 w-8"
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
-                            className="bg-slate-800 border-slate-700"
+                            className="bg-gray-900 border-gray-800"
                             align="end"
                           >
                             <DropdownMenuItem
-                              className="text-white hover:bg-slate-700 cursor-pointer"
+                              className="text-white hover:bg-gray-800 cursor-pointer"
                               onClick={() => onEdit(variable)}
                             >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Variable
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              className="text-red-400 hover:bg-slate-700 cursor-pointer"
+                              className="text-red-400 hover:bg-gray-800 cursor-pointer"
                               onClick={() => onDelete(variable)}
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
