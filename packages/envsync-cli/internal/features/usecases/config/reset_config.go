@@ -76,7 +76,7 @@ func (uc *resetConfigUseCase) resetConfigKey(cfg *config.AppConfig, key string) 
 
 	switch normalizedKey {
 	case "backend_url", "backendurl":
-		cfg.BackendURL = "https://api.envsync.dev/api"
+		cfg.BackendURL = "https://api.envsync.dev"
 	default:
 		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url", key)
 	}

@@ -62,7 +62,7 @@ beforeAll(async () => {
 	stopServer = server.stop;
 
 	// Build CLI binary with test server URL
-	cliBinary = await buildCLI({ backendURL: `${serverUrl}/api` });
+	cliBinary = await buildCLI({ backendURL: serverUrl });
 });
 
 afterAll(() => {
