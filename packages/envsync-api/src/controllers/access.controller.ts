@@ -6,6 +6,13 @@ import { getZitadelIssuer, zitadelTokenExchange } from "@/helpers/zitadel";
 
 const zitadelDiscoveryUrl = () => `${getZitadelIssuer()}/.well-known/openid-configuration`;
 
+const clientMetadata: openid.ClientMetadata = {
+	client_id: config.ZITADEL_CLI_CLIENT_ID,
+	client_secret: config.ZITADEL_CLI_CLIENT_SECRET,
+	redirect_uris: [],
+};
+const clientAuth: openid.ClientAuth = openid.None();
+
 export class AccessController {
 	public static readonly createCliLogin = async (c: Context) => {
 		try {
@@ -14,6 +21,11 @@ export class AccessController {
 			const authConfig: openid.Configuration = await openid.discovery(
 				new URL(zitadelDiscoveryUrl()),
 				ZITADEL_CLI_CLIENT_ID,
+				clientMetadata,
+				clientAuth,
+				{
+					execute: [openid.allowInsecureRequests],
+				}
 			);
 
 			const deviceAuthInit = await openid.initiateDeviceAuthorization(authConfig, {
@@ -29,11 +41,12 @@ export class AccessController {
 					expires_in: deviceAuthInit.expires_in,
 					interval: deviceAuthInit.interval,
 					client_id: ZITADEL_CLI_CLIENT_ID,
-					domain: new URL(config.ZITADEL_URL).host,
+					token_url: authConfig.serverMetadata().token_endpoint
 				},
 				201,
 			);
 		} catch (err) {
+			console.error(err);
 			if (err instanceof Error) {
 				return c.json({ error: err.message }, 500);
 			}

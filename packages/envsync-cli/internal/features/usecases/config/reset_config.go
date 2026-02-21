@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 )
 
 type resetConfigUseCase struct{}
@@ -76,7 +76,7 @@ func (uc *resetConfigUseCase) resetConfigKey(cfg *config.AppConfig, key string) 
 
 	switch normalizedKey {
 	case "backend_url", "backendurl":
-		cfg.BackendURL = "https://api.envsync.dev/api"
+		cfg.BackendURL = "https://api.envsync.dev"
 	default:
 		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url", key)
 	}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/utils"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
 )
 
 type injectSecretUseCase struct {

@@ -1,13 +1,14 @@
 package responses
 
 type DeviceCodeResponse struct {
+	Message         string `json:"message"`
 	DeviceCode      string `json:"device_code"`
 	UserCode        string `json:"user_code"`
 	VerificationUri string `json:"verification_uri_complete"`
 	ExpiresIn       int    `json:"expires_in"`
 	Interval        int    `json:"interval"`
 	ClientId        string `json:"client_id"`
-	AuthDomain      string `json:"domain"`
+	TokenUrl        string `json:"token_url"`
 }
 
 type LoginTokenResponse struct {

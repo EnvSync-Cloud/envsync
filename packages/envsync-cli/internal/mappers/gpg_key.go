@@ -3,8 +3,8 @@ package mappers
 import (
 	"time"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 func GpgKeyResponseToDomain(res responses.GpgKeyResponse) domain.GpgKey {

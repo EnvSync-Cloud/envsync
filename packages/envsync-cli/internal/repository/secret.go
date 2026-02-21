@@ -1,12 +1,12 @@
 package repository
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
-	"resty.dev/v3"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
+
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type SecretRepository interface {
@@ -15,11 +15,11 @@ type SecretRepository interface {
 }
 
 type secretRepo struct {
-	client *resty.Client
+	client *sdkclient.Client
 }
 
 func NewSecretRepository() SecretRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 
 	return &secretRepo{
 		client: client,
@@ -27,60 +27,54 @@ func NewSecretRepository() SecretRepository {
 }
 
 func (s *secretRepo) GetAll(appID, envTypeID string) ([]responses.SecretResponse, error) {
-	var response []responses.SecretResponse
-
-	body := requests.GetAllRequest{
-		AppID:     appID,
-		EnvTypeID: envTypeID,
-	}
-
-	resp, err := s.client.R().
-		SetBody(body).
-		SetResult(&response).
-		Post("/secret")
+	secrets, err := s.client.Secrets.GetSecrets(context.Background(), &sdk.GetSecretRequest{
+		AppId:     appID,
+		EnvTypeId: envTypeID,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		var errResp struct {
-			Error string `json:"error"`
+	result := make([]responses.SecretResponse, len(secrets))
+	for i, sec := range secrets {
+		result[i] = responses.SecretResponse{
+			ID:        sec.Id,
+			Key:       sec.Key,
+			Value:     sec.Value,
+			AppID:     sec.AppId,
+			EnvTypeID: sec.EnvTypeId,
+			OrgID:     sec.OrgId,
+			CreatedAt: sec.CreatedAt,
+			UpdatedAt: sec.UpdatedAt,
 		}
-		if err := json.Unmarshal(resp.Bytes(), &errResp); err == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("%s", errResp.Error)
-		}
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	return response, nil
+	return result, nil
 }
 
 func (s *secretRepo) Reveal(appID, envTypeID string, keys []string) ([]responses.SecretResponse, error) {
-	var response []responses.SecretResponse
-
-	body := requests.RevelRequest{
-		AppID:     appID,
-		EnvTypeID: envTypeID,
+	secrets, err := s.client.Secrets.RevealSecrets(context.Background(), &sdk.RevealSecretsRequest{
+		AppId:     appID,
+		EnvTypeId: envTypeID,
 		Keys:      keys,
-	}
-
-	resp, err := s.client.R().
-		SetBody(body).
-		SetResult(&response).
-		Post("/secret/reveal")
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		var errResp struct {
-			Error string `json:"error"`
+	result := make([]responses.SecretResponse, len(secrets))
+	for i, sec := range secrets {
+		result[i] = responses.SecretResponse{
+			ID:        sec.Id,
+			Key:       sec.Key,
+			Value:     sec.Value,
+			AppID:     sec.AppId,
+			EnvTypeID: sec.EnvTypeId,
+			OrgID:     sec.OrgId,
+			CreatedAt: sec.CreatedAt,
+			UpdatedAt: sec.UpdatedAt,
 		}
-		if err := json.Unmarshal(resp.Bytes(), &errResp); err == nil && errResp.Error != "" {
-			return nil, fmt.Errorf("%s", errResp.Error)
-		}
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
 	}
 
-	return response, nil
+	return result, nil
 }

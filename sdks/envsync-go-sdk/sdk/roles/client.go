@@ -4,10 +4,10 @@ package roles
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -40,7 +40,7 @@ func (c *Client) GetAllRoles(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/role"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) CreateRole(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/role"
 	headers := internal.MergeHeaders(
@@ -131,7 +131,7 @@ func (c *Client) GetRoleStats(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/role/stats"
 	headers := internal.MergeHeaders(
@@ -176,7 +176,7 @@ func (c *Client) GetRole(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/role/%v",
@@ -224,7 +224,7 @@ func (c *Client) DeleteRole(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/role/%v",
@@ -273,7 +273,7 @@ func (c *Client) UpdateRole(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/role/%v",

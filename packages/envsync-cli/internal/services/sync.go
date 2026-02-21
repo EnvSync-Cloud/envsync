@@ -7,10 +7,10 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/joho/godotenv"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/constants"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/mappers"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type SyncService interface {

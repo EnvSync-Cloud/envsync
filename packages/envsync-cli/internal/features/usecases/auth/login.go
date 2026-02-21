@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/browser"
 	"github.com/savioxavier/termlink"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/style"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type loginUseCase struct {

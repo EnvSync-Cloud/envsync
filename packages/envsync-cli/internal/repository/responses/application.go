@@ -16,16 +16,3 @@ type AppResponse struct {
 	PublicKey       string            `json:"public_key,omitempty"`
 	IsManagedSecret bool              `json:"is_managed_secret"`
 }
-
-// NewAppResponse creates a new AppResponse instance
-func NewAppResponse(id, name, description, orgID string, metadata map[string]any, createdAt, updatedAt time.Time) *AppResponse {
-	return &AppResponse{
-		ID:          id,
-		Name:        name,
-		Description: description,
-		Metadata:    metadata,
-		OrgID:       orgID,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
-	}
-}

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
 )
 
 // ErrorDecoder decodes *http.Response errors and returns a

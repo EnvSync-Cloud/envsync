@@ -4,10 +4,10 @@ package users
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -40,7 +40,7 @@ func (c *Client) GetUsers(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/user"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) GetUserById(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/user/%v",
@@ -133,7 +133,7 @@ func (c *Client) DeleteUser(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/user/%v",
@@ -182,7 +182,7 @@ func (c *Client) UpdateUser(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/user/%v",
@@ -233,7 +233,7 @@ func (c *Client) UpdateRole(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/user/role/%v",
@@ -283,7 +283,7 @@ func (c *Client) UpdatePassword(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/user/password/%v",

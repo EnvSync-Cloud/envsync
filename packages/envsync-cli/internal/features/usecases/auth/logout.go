@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type logoutUseCase struct {

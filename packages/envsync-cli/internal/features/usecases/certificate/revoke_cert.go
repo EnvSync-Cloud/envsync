@@ -3,8 +3,8 @@ package certificate
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type revokeCertUseCase struct {

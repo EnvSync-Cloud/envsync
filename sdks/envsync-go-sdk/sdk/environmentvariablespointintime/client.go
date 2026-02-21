@@ -4,10 +4,10 @@ package environmentvariablespointintime
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -41,7 +41,7 @@ func (c *Client) GetEnvHistory(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/history"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetEnvsAtPointInTime(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/pit"
 	headers := internal.MergeHeaders(
@@ -135,7 +135,7 @@ func (c *Client) GetEnvsAtTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/timestamp"
 	headers := internal.MergeHeaders(
@@ -182,7 +182,7 @@ func (c *Client) GetEnvDiff(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/diff"
 	headers := internal.MergeHeaders(
@@ -230,7 +230,7 @@ func (c *Client) GetVariableTimeline(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/timeline/%v",

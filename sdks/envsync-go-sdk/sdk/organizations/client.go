@@ -4,10 +4,10 @@ package organizations
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -40,7 +40,7 @@ func (c *Client) GetOrg(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/org"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) UpdateOrg(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/org"
 	headers := internal.MergeHeaders(
@@ -132,7 +132,7 @@ func (c *Client) CheckIfSlugExists(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/org/check-slug"
 	queryParams, err := internal.QueryValues(request)

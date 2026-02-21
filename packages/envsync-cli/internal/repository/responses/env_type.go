@@ -14,17 +14,3 @@ type EnvTypeResponse struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
-
-func NewEnvTypeResponse(id, orgID, name, appID string, isDefault, isProtected bool, color string, createdAt, updatedAt time.Time) *EnvTypeResponse {
-	return &EnvTypeResponse{
-		ID:          id,
-		OrgID:       orgID,
-		Name:        name,
-		AppID:       appID,
-		IsDefault:   isDefault,
-		IsProtected: isProtected,
-		Color:       color,
-		CreatedAt:   createdAt,
-		UpdatedAt:   updatedAt,
-	}
-}

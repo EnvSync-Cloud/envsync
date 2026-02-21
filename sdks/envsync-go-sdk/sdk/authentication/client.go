@@ -4,10 +4,10 @@ package authentication
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -40,7 +40,7 @@ func (c *Client) Whoami(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/auth/me"
 	headers := internal.MergeHeaders(

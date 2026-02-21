@@ -1,9 +1,10 @@
-module github.com/EnvSync-Cloud/envsync-cli
+module github.com/EnvSync-Cloud/envsync/packages/envsync-cli
 
 go 1.24.3
 
 require (
 	github.com/BurntSushi/toml v1.5.0
+	github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/aymanbagabas/go-pty v0.2.2
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.5
@@ -18,6 +19,8 @@ require (
 	resty.dev/v3 v3.0.0-beta.3
 )
 
+replace github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk => ../../sdks/envsync-go-sdk
+
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -30,6 +33,7 @@ require (
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect

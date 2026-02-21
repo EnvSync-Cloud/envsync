@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/mappers"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type AuthService interface {
@@ -48,7 +48,7 @@ func (s *auth) InitiateLogin() (*domain.LoginCredentials, error) {
 
 // CompleteLogin attempts to exchange device code for access token
 func (s *auth) CompleteLogin(credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
-	tokenResp, err := s.repo.LoginToken(credentials.DeviceCode, credentials.ClientId, credentials.AuthDomain)
+	tokenResp, err := s.repo.LoginToken(credentials.DeviceCode, credentials.ClientId, credentials.TokenUrl)
 	if err != nil {
 		return nil, err
 	}

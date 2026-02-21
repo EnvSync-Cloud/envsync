@@ -3,7 +3,7 @@
 package client
 
 import (
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	assert "github.com/stretchr/testify/assert"
 	http "net/http"
 	testing "testing"

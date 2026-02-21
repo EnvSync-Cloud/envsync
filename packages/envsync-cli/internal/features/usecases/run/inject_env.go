@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type injectEnv struct {

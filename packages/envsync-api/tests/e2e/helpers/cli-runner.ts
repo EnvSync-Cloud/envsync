@@ -26,7 +26,7 @@ export async function buildCLI({
 		return cachedBinaryPath;
 
 	const output = join(mkdtempSync(join(tmpdir(), "envsync-cli-")), "envsync");
-	const ldflags = `-X github.com/EnvSync-Cloud/envsync-cli/internal/config.backendURL=${backendURL}`;
+	const ldflags = `-X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=${backendURL}`;
 
 	const proc = Bun.spawn(
 		["go", "build", `-ldflags=${ldflags}`, "-o", output, "./cmd/cli/main.go"],

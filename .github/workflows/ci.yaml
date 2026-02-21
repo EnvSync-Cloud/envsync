@@ -17,6 +17,31 @@ jobs:
       - run: bun i
       - run: bun run build
 
+  build-cli:
+    name: Build CLI (Go)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go toolchain
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: packages/envsync-cli/go.sum
+      - name: Build CLI binary
+        run: go build -ldflags="-s -w" -o /dev/null ./cmd/cli/main.go
+        working-directory: packages/envsync-cli
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+      - name: Run go vet
+        run: go vet ./...
+        working-directory: packages/envsync-cli
+
   test-mock:
     name: Mock Tests
     runs-on: ubuntu-latest

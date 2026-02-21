@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	genpem "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/gen_pem"
+	genpem "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gen_pem"
 	"github.com/urfave/cli/v3"
 )
 

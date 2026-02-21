@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/run"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/run"
 	"github.com/urfave/cli/v3"
 )
 

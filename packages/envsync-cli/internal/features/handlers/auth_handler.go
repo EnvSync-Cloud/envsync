@@ -2,16 +2,13 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/savioxavier/termlink"
 	"github.com/urfave/cli/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/auth"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/style"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/auth"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type AuthHandler struct {
@@ -76,45 +73,6 @@ func (h *AuthHandler) Whoami(ctx context.Context, cmd *cli.Command) error {
 }
 
 // Helper methods
-
-func (h *AuthHandler) displayLoginInstructions(cmd *cli.Command, credentials interface{}) error {
-	// Print as JSON if requested
-	if cmd.Bool("json") {
-		return h.formatter.FormatJSON(cmd.Writer, map[string]interface{}{
-			"credentials": credentials,
-			"message":     "Complete authentication using the provided credentials",
-		})
-	}
-
-	// Type assert to get verification details
-	// This assumes credentials has methods GetVerificationUri() and GetUserCode()
-	fmt.Println("🔐 Authentication Required")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-	// We'll need to access the credentials fields directly since we don't have the exact type
-	// For now, we'll use a generic approach
-	if credMap, ok := credentials.(map[string]interface{}); ok {
-		if uri, exists := credMap["verification_uri"]; exists {
-			fmt.Println(termlink.Link("1. Open this URL in your browser: ", style.LinkStyle.Render(fmt.Sprintf("%v", uri)), true))
-		}
-		if code, exists := credMap["user_code"]; exists {
-			fmt.Printf("2. Enter this verification code: %v\n", code)
-		}
-	} else {
-		// Fallback to JSON output if we can't parse the structure
-		jsonData, _ := json.MarshalIndent(credentials, "", "  ")
-		fmt.Printf("Login credentials:\n%s\n", string(jsonData))
-	}
-
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println()
-
-	return nil
-}
-
-// func (h *AuthHandler) openBrowserForLogin(verificationUri string) error {
-// 	return browser.OpenURL(verificationUri)
-// }
 
 func (h *AuthHandler) formatWhoamiResponse(cmd *cli.Command, response *auth.WhoamiResponse) error {
 	if !response.IsLoggedIn {

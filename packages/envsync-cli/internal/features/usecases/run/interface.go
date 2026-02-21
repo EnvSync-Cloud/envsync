@@ -3,7 +3,7 @@ package run
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 )
 
 type ReadConfigUseCase interface {

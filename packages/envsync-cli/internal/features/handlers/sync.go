@@ -6,8 +6,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/sync"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/sync"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type SyncHandler struct {

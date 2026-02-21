@@ -115,7 +115,7 @@ Deploy the `dist/` directory to any static hosting service (Vercel, Netlify, etc
 
 ## 🌟 EnvSync Ecosystem
 
-- **[envsync-cli](https://github.com/EnvSync-Cloud/envsync-cli)** - Command line interface
+- **[envsync-cli](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli)** - Command line interface
 - **[envsync-web](https://github.com/EnvSync-Cloud/envsync-web)** - Web dashboard for managing configurations
 - **[envsync-api](https://github.com/EnvSync-Cloud/envsync-api)** - REST API and backend services  
 - **envsync-landing** - Landing page (this repo)

@@ -4,10 +4,10 @@ package onboarding
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -41,7 +41,7 @@ func (c *Client) CreateOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/onboarding/org"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetOrgInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/org/%v",
@@ -137,7 +137,7 @@ func (c *Client) AcceptOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/org/%v/accept",
@@ -187,7 +187,7 @@ func (c *Client) GetUserInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -236,7 +236,7 @@ func (c *Client) UpdateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -287,7 +287,7 @@ func (c *Client) AcceptUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v/accept",
@@ -336,7 +336,7 @@ func (c *Client) GetAllUserInvites(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -381,7 +381,7 @@ func (c *Client) CreateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -422,14 +422,13 @@ func (c *Client) CreateUserInvite(
 func (c *Client) DeleteUserInvite(
 	ctx context.Context,
 	inviteId string,
-	request *sdk.DeleteUserInviteResponse,
 	opts ...option.RequestOption,
 ) (*sdk.DeleteUserInviteResponse, error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -439,7 +438,6 @@ func (c *Client) DeleteUserInvite(
 		c.header.Clone(),
 		options.ToHeader(),
 	)
-	headers.Set("Content-Type", "application/json")
 	errorCodes := internal.ErrorCodes{
 		500: func(apiError *core.APIError) error {
 			return &sdk.InternalServerError{
@@ -459,7 +457,6 @@ func (c *Client) DeleteUserInvite(
 			BodyProperties:  options.BodyProperties,
 			QueryParameters: options.QueryParameters,
 			Client:          options.HTTPClient,
-			Request:         request,
 			Response:        &response,
 			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
 		},

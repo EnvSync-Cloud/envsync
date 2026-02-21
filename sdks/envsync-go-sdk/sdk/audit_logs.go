@@ -5,12 +5,15 @@ package api
 import (
 	json "encoding/json"
 	fmt "fmt"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
 type GetAuditLogsRequest struct {
-	Page    *string `json:"-" url:"page,omitempty"`
-	PerPage *string `json:"-" url:"per_page,omitempty"`
+	Page             *string                              `json:"-" url:"page,omitempty"`
+	PerPage          *string                              `json:"-" url:"per_page,omitempty"`
+	FilterByUser     *string                              `json:"-" url:"filter_by_user,omitempty"`
+	FilterByCategory *GetAuditLogsRequestFilterByCategory `json:"-" url:"filter_by_category,omitempty"`
+	FilterByPastTime *GetAuditLogsRequestFilterByPastTime `json:"-" url:"filter_by_past_time,omitempty"`
 }
 
 type GetAuditLogsResponse = []*GetAuditLogsResponseItem
@@ -170,4 +173,104 @@ func (g *GetAuditLogsResponseWrapper) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", g)
+}
+
+// Filter by action category, e.g., 'app*', 'env*'
+type GetAuditLogsRequestFilterByCategory string
+
+const (
+	GetAuditLogsRequestFilterByCategoryApp         GetAuditLogsRequestFilterByCategory = "app*"
+	GetAuditLogsRequestFilterByCategoryAuditLog    GetAuditLogsRequestFilterByCategory = "audit_log*"
+	GetAuditLogsRequestFilterByCategoryEnv         GetAuditLogsRequestFilterByCategory = "env*"
+	GetAuditLogsRequestFilterByCategoryEnvStore    GetAuditLogsRequestFilterByCategory = "env_store*"
+	GetAuditLogsRequestFilterByCategorySecretStore GetAuditLogsRequestFilterByCategory = "secret_store*"
+	GetAuditLogsRequestFilterByCategoryOnboarding  GetAuditLogsRequestFilterByCategory = "onboarding*"
+	GetAuditLogsRequestFilterByCategoryOrg         GetAuditLogsRequestFilterByCategory = "org*"
+	GetAuditLogsRequestFilterByCategoryRole        GetAuditLogsRequestFilterByCategory = "role*"
+	GetAuditLogsRequestFilterByCategoryUser        GetAuditLogsRequestFilterByCategory = "user*"
+	GetAuditLogsRequestFilterByCategoryApiKey      GetAuditLogsRequestFilterByCategory = "api_key*"
+	GetAuditLogsRequestFilterByCategoryWebhook     GetAuditLogsRequestFilterByCategory = "webhook*"
+	GetAuditLogsRequestFilterByCategoryCli         GetAuditLogsRequestFilterByCategory = "cli*"
+	GetAuditLogsRequestFilterByCategoryGpgKey      GetAuditLogsRequestFilterByCategory = "gpg_key*"
+	GetAuditLogsRequestFilterByCategoryCert        GetAuditLogsRequestFilterByCategory = "cert*"
+)
+
+func NewGetAuditLogsRequestFilterByCategoryFromString(s string) (GetAuditLogsRequestFilterByCategory, error) {
+	switch s {
+	case "app*":
+		return GetAuditLogsRequestFilterByCategoryApp, nil
+	case "audit_log*":
+		return GetAuditLogsRequestFilterByCategoryAuditLog, nil
+	case "env*":
+		return GetAuditLogsRequestFilterByCategoryEnv, nil
+	case "env_store*":
+		return GetAuditLogsRequestFilterByCategoryEnvStore, nil
+	case "secret_store*":
+		return GetAuditLogsRequestFilterByCategorySecretStore, nil
+	case "onboarding*":
+		return GetAuditLogsRequestFilterByCategoryOnboarding, nil
+	case "org*":
+		return GetAuditLogsRequestFilterByCategoryOrg, nil
+	case "role*":
+		return GetAuditLogsRequestFilterByCategoryRole, nil
+	case "user*":
+		return GetAuditLogsRequestFilterByCategoryUser, nil
+	case "api_key*":
+		return GetAuditLogsRequestFilterByCategoryApiKey, nil
+	case "webhook*":
+		return GetAuditLogsRequestFilterByCategoryWebhook, nil
+	case "cli*":
+		return GetAuditLogsRequestFilterByCategoryCli, nil
+	case "gpg_key*":
+		return GetAuditLogsRequestFilterByCategoryGpgKey, nil
+	case "cert*":
+		return GetAuditLogsRequestFilterByCategoryCert, nil
+	}
+	var t GetAuditLogsRequestFilterByCategory
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (g GetAuditLogsRequestFilterByCategory) Ptr() *GetAuditLogsRequestFilterByCategory {
+	return &g
+}
+
+// Filter by past time, e.g., 'last_3_hours', 'last_24_hours', 'last_7_days', 'last_30_days', 'last_90_days', 'last_180_days', 'last_1_year', 'all_time'
+type GetAuditLogsRequestFilterByPastTime string
+
+const (
+	GetAuditLogsRequestFilterByPastTimeLast3Hours  GetAuditLogsRequestFilterByPastTime = "last_3_hours"
+	GetAuditLogsRequestFilterByPastTimeLast24Hours GetAuditLogsRequestFilterByPastTime = "last_24_hours"
+	GetAuditLogsRequestFilterByPastTimeLast7Days   GetAuditLogsRequestFilterByPastTime = "last_7_days"
+	GetAuditLogsRequestFilterByPastTimeLast30Days  GetAuditLogsRequestFilterByPastTime = "last_30_days"
+	GetAuditLogsRequestFilterByPastTimeLast90Days  GetAuditLogsRequestFilterByPastTime = "last_90_days"
+	GetAuditLogsRequestFilterByPastTimeLast180Days GetAuditLogsRequestFilterByPastTime = "last_180_days"
+	GetAuditLogsRequestFilterByPastTimeLast1Year   GetAuditLogsRequestFilterByPastTime = "last_1_year"
+	GetAuditLogsRequestFilterByPastTimeAllTime     GetAuditLogsRequestFilterByPastTime = "all_time"
+)
+
+func NewGetAuditLogsRequestFilterByPastTimeFromString(s string) (GetAuditLogsRequestFilterByPastTime, error) {
+	switch s {
+	case "last_3_hours":
+		return GetAuditLogsRequestFilterByPastTimeLast3Hours, nil
+	case "last_24_hours":
+		return GetAuditLogsRequestFilterByPastTimeLast24Hours, nil
+	case "last_7_days":
+		return GetAuditLogsRequestFilterByPastTimeLast7Days, nil
+	case "last_30_days":
+		return GetAuditLogsRequestFilterByPastTimeLast30Days, nil
+	case "last_90_days":
+		return GetAuditLogsRequestFilterByPastTimeLast90Days, nil
+	case "last_180_days":
+		return GetAuditLogsRequestFilterByPastTimeLast180Days, nil
+	case "last_1_year":
+		return GetAuditLogsRequestFilterByPastTimeLast1Year, nil
+	case "all_time":
+		return GetAuditLogsRequestFilterByPastTimeAllTime, nil
+	}
+	var t GetAuditLogsRequestFilterByPastTime
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (g GetAuditLogsRequestFilterByPastTime) Ptr() *GetAuditLogsRequestFilterByPastTime {
+	return &g
 }

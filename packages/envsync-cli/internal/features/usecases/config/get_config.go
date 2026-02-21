@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 )
 
 type getConfigUseCase struct{}

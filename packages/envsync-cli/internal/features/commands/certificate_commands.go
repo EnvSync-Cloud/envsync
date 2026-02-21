@@ -3,13 +3,13 @@ package commands
 import (
 	"github.com/urfave/cli/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/handlers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 )
 
 func CertificateCommands(handler *handlers.CertificateHandler) *cli.Command {
 	return &cli.Command{
-		Name:    "cert",
-		Usage:   "Manage PKI certificates",
+		Name:  "cert",
+		Usage: "Manage PKI certificates",
 		Commands: []*cli.Command{
 			certCACommands(handler),
 			certIssueCommand(handler),
