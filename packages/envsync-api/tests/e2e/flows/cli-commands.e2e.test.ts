@@ -48,7 +48,7 @@ beforeAll(async () => {
 	stopServer = server.stop;
 
 	// Build CLI binary with test server URL
-	cliBinary = await buildCLI({ backendURL: `${serverUrl}/api` });
+	cliBinary = await buildCLI({ backendURL: serverUrl });
 
 	// Create a project dir for CLI commands
 	projectDir = createProjectDir({
@@ -68,9 +68,11 @@ describe("CLI Commands E2E", () => {
 			cwd: projectDir.dir,
 			env: { API_KEY: apiKey },
 		});
-		// The CLI may print user info or handle API key whoami differently
-		// Key assertion: no panic, exit code 0
 		expect(result.exitCode).toBe(0);
+		expect(result.stderr).not.toContain("panic");
+		// Should display some user/org info from the API
+		const output = result.stdout + result.stderr;
+		expect(output).not.toContain("404");
 	});
 
 	test("app list shows apps", async () => {
@@ -78,10 +80,11 @@ describe("CLI Commands E2E", () => {
 			cwd: projectDir.dir,
 			env: { API_KEY: apiKey },
 		});
-		// CLI may error on JSON unmarshal due to envCount type mismatch
-		// between API (number) and Go struct (string). Assert no panic.
+		expect(result.exitCode).toBe(0);
 		expect(result.stderr).not.toContain("panic");
 		expect(result.stdout).not.toContain("panic");
+		// Should contain the app we created in setup
+		expect(result.stdout).toContain("CLI Commands App");
 	});
 
 	test("no auth fails gracefully", async () => {
@@ -89,7 +92,8 @@ describe("CLI Commands E2E", () => {
 			cwd: projectDir.dir,
 			env: { API_KEY: "" },
 		});
-		// Should not panic
+		// Should fail but not panic
+		expect(result.exitCode).not.toBe(0);
 		expect(result.stderr).not.toContain("panic");
 		expect(result.stdout).not.toContain("panic");
 	});
