@@ -212,7 +212,7 @@ This API uses **Zitadel** for authentication and authorization:
 
 ## 🌟 EnvSync Ecosystem
 
-- **[envsync-cli](https://github.com/EnvSync-Cloud/envsync-cli)** - Command line interface
+- **[envsync-cli](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli)** - Command line interface
 - **[envsync-web](https://github.com/EnvSync-Cloud/envsync-web)** - Web dashboard for managing configurations
 - **envsync-api** - REST API and backend services (this repo)
 - **[envsync-landing](https://github.com/EnvSync-Cloud/envsync-landing)** - Landing page

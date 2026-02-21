@@ -148,6 +148,48 @@ async function createZitadelOIDCApp(
 	return { clientId, clientSecret: oidc.clientSecret ?? data.clientSecret };
 }
 
+async function createZitadelNativeApp(
+	pat: string,
+	projectId: string,
+	appName: string,
+): Promise<{ clientId: string }> {
+	const base = zitadelBase();
+	const url = `${base}/zitadel.application.v2.ApplicationService/CreateApplication`;
+	const payload = {
+		projectId,
+		name: appName,
+		applicationType: "APPLICATION_TYPE_OIDC",
+		oidcConfiguration: {
+			applicationType: "OIDC_APP_TYPE_NATIVE",
+			redirectUris: [],
+			responseTypes: ["OIDC_RESPONSE_TYPE_CODE"],
+			grantTypes: ["OIDC_GRANT_TYPE_DEVICE_CODE"],
+			appType: "OIDC_APP_TYPE_NATIVE",
+			authMethodType: "OIDC_AUTH_METHOD_TYPE_NONE",
+			accessTokenType: "OIDC_TOKEN_TYPE_JWT",
+		},
+	};
+
+	const res = await fetch(url, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${pat}`,
+			"Content-Type": "application/json",
+			"Connect-Protocol-Version": "1",
+			Accept: "application/json",
+		},
+		body: JSON.stringify(payload),
+	});
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(`Zitadel CreateApplication ${appName} failed: ${res.status} ${text}`);
+	}
+	const data = (await res.json()) as { 
+		oidcConfiguration: { clientId: string };
+	};
+	return { clientId: data.oidcConfiguration.clientId };
+}
+
 async function initZitadelApps(): Promise<Record<string, string>> {
 	const { pat, fromFile } = resolveZitadelPat();
 	if (!pat) {
@@ -178,13 +220,8 @@ async function initZitadelApps(): Promise<Record<string, string>> {
 	console.log("Zitadel: Web app created.", web.clientId);
 
 	// CLI app (native / public)
-	const cli = await createZitadelOIDCApp(pat, projectId, "EnvSync CLI", {
-		redirectUris: ["http://localhost:8081/callback"],
-		appType: "OIDC_APP_TYPE_NATIVE",
-		authMethodType: "OIDC_AUTH_METHOD_TYPE_NONE",
-	});
+	const cli = await createZitadelNativeApp(pat, projectId, "EnvSync CLI");
 	updates.ZITADEL_CLI_CLIENT_ID = cli.clientId;
-	if (cli.clientSecret) updates.ZITADEL_CLI_CLIENT_SECRET = cli.clientSecret;
 	console.log("Zitadel: CLI app created.", cli.clientId);
 
 	// API app (confidential)
@@ -620,7 +657,7 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 			const passphrase = randomBytes(32).toString("hex");
 			const { privateKey, publicKey } = await openpgp.generateKey({
 				type: "ecc",
-				curve: "ed25519" as EllipticCurveName,
+				curve: "ed25519Legacy",
 				userIDs: [{ name: devUser.full_name || "Dev User", email: devUser.email }],
 				passphrase,
 				format: "armored",

@@ -22,7 +22,7 @@ export const cliLoginResponseSchema = z
 		device_code: z.string().openapi({ example: "def456" }),
 		expires_in: z.number().openapi({ example: 300 }),
 		client_id: z.string().openapi({ example: "envsync-web" }),
-		domain: z.string().openapi({ example: "zitadel.example.com" }),
+		token_url: z.string().url().openapi({ example: "https://zitadel.example.com/oauth/token" }),
 		interval: z.number().openapi({ example: 5 }),
 	})
 	.openapi({ ref: "CliLoginResponse" });
