@@ -6,8 +6,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	gpg_key "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/gpg_key"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	gpg_key "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type GpgKeyHandler struct {

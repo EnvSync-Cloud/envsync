@@ -1,11 +1,11 @@
 package repository
 
 import (
-	"fmt"
+	"context"
 
-	"resty.dev/v3"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type UserRepository interface {
@@ -13,11 +13,11 @@ type UserRepository interface {
 }
 
 type userRepo struct {
-	client *resty.Client
+	client *sdkclient.Client
 }
 
 func NewUserRepository() UserRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 
 	return &userRepo{
 		client: client,
@@ -25,19 +25,22 @@ func NewUserRepository() UserRepository {
 }
 
 func (a *userRepo) GetAll() ([]responses.UserResponse, error) {
-	var users []responses.UserResponse
-
-	resp, err := a.client.R().
-		SetResult(&users).
-		Get("/user")
-
+	users, err := a.client.Users.GetUsers(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	result := make([]responses.UserResponse, len(users))
+	for i, u := range users {
+		result[i] = responses.UserResponse{
+			ID:        u.Id,
+			Email:     u.Email,
+			OrgID:     u.OrgId,
+			RoleID:    u.RoleId,
+			CreatedAt: u.CreatedAt,
+			UpdatedAt: u.UpdatedAt,
+		}
 	}
 
-	return users, nil
+	return result, nil
 }

@@ -1,59 +1,84 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	"resty.dev/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	config "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type AuthRepository interface {
 	LoginDeviceCode() (responses.DeviceCodeResponse, error)
-	LoginToken(deviceCode, clientID, authDomain string) (responses.LoginTokenResponse, error)
+	LoginToken(deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error)
 	Whoami() (responses.UserInfoResponse, error)
 }
 
 type authRepo struct {
-	client *resty.Client
+	httpClient *resty.Client
+	sdkClient  *sdkclient.Client
 }
 
 // NewAuthRepository creates a new instance of AuthRepository
 func NewAuthRepository() AuthRepository {
-	client := createHTTPClient()
+	httpClient := createHTTPClient()
+	sdkClient := createSDKClient()
 
 	return &authRepo{
-		client: client,
+		httpClient: httpClient,
+		sdkClient:  sdkClient,
 	}
 }
 
 // LoginDeviceCode retrieves a device code and verification uri for the authentication flow
 func (s *authRepo) LoginDeviceCode() (responses.DeviceCodeResponse, error) {
-	var resBody responses.DeviceCodeResponse
-
-	res, err := s.client.
-		R().
-		SetResult(&resBody).
-		Get("/access/cli")
-
+	resp, err := s.sdkClient.Access.CreateCliLogin(
+		context.Background(),
+		option.WithBaseURL(config.New().BackendURL),
+	)
 	if err != nil {
 		return responses.DeviceCodeResponse{}, fmt.Errorf("failed to get login URL: %w", err)
 	}
 
-	if res.StatusCode() != 201 {
-		return responses.DeviceCodeResponse{}, fmt.Errorf("unexpected status code while fetching login URL: %d", res.StatusCode())
+	extra := resp.GetExtraProperties()
+
+	var result responses.DeviceCodeResponse
+	result.Message = resp.GetMessage()
+	if v, ok := extra["device_code"].(string); ok {
+		result.DeviceCode = v
+	}
+	if v, ok := extra["user_code"].(string); ok {
+		result.UserCode = v
+	}
+	if v, ok := extra["verification_uri_complete"].(string); ok {
+		result.VerificationUri = v
+	}
+	if v, ok := extra["expires_in"].(float64); ok {
+		result.ExpiresIn = int(v)
+	}
+	if v, ok := extra["interval"].(float64); ok {
+		result.Interval = int(v)
+	}
+	if v, ok := extra["client_id"].(string); ok {
+		result.ClientId = v
+	}
+	if v, ok := extra["token_url"].(string); ok {
+		result.TokenUrl = v
 	}
 
-	return resBody, nil
+	return result, nil
 }
 
 // LoginToken exchanges a device code for an authentication token
-func (s *authRepo) LoginToken(deviceCode, clientID, authDomain string) (responses.LoginTokenResponse, error) {
+func (s *authRepo) LoginToken(deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error) {
 	var resBody responses.LoginTokenResponse
 
-	res, err := s.client.
-		SetBaseURL("https://" + authDomain).
+	res, err := s.httpClient.
+		SetBaseURL(TokenUrl).
 		R().
 		SetResult(&resBody).
 		SetFormData(map[string]string{
@@ -61,7 +86,7 @@ func (s *authRepo) LoginToken(deviceCode, clientID, authDomain string) (response
 			"device_code": deviceCode,
 			"client_id":   clientID,
 		}).
-		Post("/oauth/token")
+		Post(TokenUrl)
 
 	if err != nil {
 		return responses.LoginTokenResponse{}, fmt.Errorf("failed to get login token: %w", err)
@@ -75,21 +100,59 @@ func (s *authRepo) LoginToken(deviceCode, clientID, authDomain string) (response
 }
 
 func (s *authRepo) Whoami() (responses.UserInfoResponse, error) {
-	var resBody responses.UserInfoResponse
-
-	res, err := s.client.
-		R().
-		SetAuthToken(config.New().AccessToken).
-		SetResult(&resBody).
-		Get("/auth/me")
-
+	resp, err := s.sdkClient.Authentication.Whoami(context.Background(), option.WithBaseURL(config.New().BackendURL))
 	if err != nil {
 		return responses.UserInfoResponse{}, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	if res.StatusCode() != 200 {
-		return responses.UserInfoResponse{}, fmt.Errorf("unexpected status code while fetching user info: %d", res.StatusCode())
+	var result responses.UserInfoResponse
+
+	if resp.User != nil {
+		result.User.Id = resp.User.Id
+		result.User.Email = resp.User.Email
+		result.User.OrgId = resp.User.OrgId
+		result.User.RoleId = resp.User.RoleId
+		result.User.FullName = resp.User.FullName
+		result.User.IsActive = resp.User.IsActive
+		result.User.CreatedAt = resp.User.CreatedAt
+		result.User.UpdatedAt = resp.User.UpdatedAt
+		if resp.User.ProfilePictureUrl != nil {
+			result.User.ProfilePictureUrl = *resp.User.ProfilePictureUrl
+		}
 	}
 
-	return resBody, nil
+	if resp.Org != nil {
+		result.Org.Id = resp.Org.Id
+		result.Org.Name = resp.Org.Name
+		result.Org.Slug = resp.Org.Slug
+		result.Org.Metadata = resp.Org.Metadata
+		result.Org.CreatedAt = resp.Org.CreatedAt
+		result.Org.UpdatedAt = resp.Org.UpdatedAt
+		if resp.Org.LogoUrl != nil {
+			result.Org.LogoUrl = *resp.Org.LogoUrl
+		}
+		if resp.Org.Size != nil {
+			result.Org.Size = *resp.Org.Size
+		}
+		if resp.Org.Website != nil {
+			result.Org.Website = *resp.Org.Website
+		}
+	}
+
+	if resp.Role != nil {
+		result.Role.Id = resp.Role.Id
+		result.Role.OrgId = resp.Role.OrgId
+		result.Role.Name = resp.Role.Name
+		result.Role.IsAdmin = resp.Role.IsAdmin
+		result.Role.CanView = resp.Role.CanView
+		result.Role.CanEdit = resp.Role.CanEdit
+		result.Role.HavingBillingOptions = resp.Role.HaveBillingOptions
+		result.Role.HavingApiAccess = resp.Role.HaveApiAccess
+		result.Role.HavingWebhookAccess = resp.Role.HaveWebhookAccess
+		result.Role.IsMaster = resp.Role.IsMaster
+		result.Role.CreatedAt = resp.Role.CreatedAt
+		result.Role.UpdatedAt = resp.Role.UpdatedAt
+	}
+
+	return result, nil
 }

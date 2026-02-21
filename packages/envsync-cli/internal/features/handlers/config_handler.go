@@ -7,8 +7,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	configUseCase "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/config"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	configUseCase "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type ConfigHandler struct {
@@ -200,7 +200,7 @@ func (h *ConfigHandler) extractKeyValuePairs(args cli.Args) (map[string]string, 
 		arg := args.Get(i)
 		parts := strings.SplitN(arg, "=", 2)
 		if len(parts) != 2 {
-			errors.New("Invalid format: '" + arg + "'. Expected format: key=value")
+			return nil, errors.New("Invalid format: '" + arg + "'. Expected format: key=value")
 		}
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])

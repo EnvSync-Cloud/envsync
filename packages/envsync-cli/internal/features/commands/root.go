@@ -6,9 +6,9 @@ import (
 	"github.com/urfave/cli/v3"
 	"go.uber.org/zap"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/constants"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/handlers"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/logger"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/logger"
 )
 
 // ExecutionMode represents how the command should be executed
@@ -20,16 +20,16 @@ const (
 )
 
 type CommandRegistry struct {
-	appHandler          *handlers.AppHandler
-	authHandler         *handlers.AuthHandler
-	configHandler       *handlers.ConfigHandler
-	environmentHandler  *handlers.EnvironmentHandler
-	syncHandler         *handlers.SyncHandler
-	initHandler         *handlers.InitHandler
-	runHandler          *handlers.RunHandler
-	genPEMKeyHandler    *handlers.GenPEMKeyHandler
-	gpgKeyHandler       *handlers.GpgKeyHandler
-	certificateHandler  *handlers.CertificateHandler
+	appHandler         *handlers.AppHandler
+	authHandler        *handlers.AuthHandler
+	configHandler      *handlers.ConfigHandler
+	environmentHandler *handlers.EnvironmentHandler
+	syncHandler        *handlers.SyncHandler
+	initHandler        *handlers.InitHandler
+	runHandler         *handlers.RunHandler
+	genPEMKeyHandler   *handlers.GenPEMKeyHandler
+	gpgKeyHandler      *handlers.GpgKeyHandler
+	certificateHandler *handlers.CertificateHandler
 }
 
 func NewCommandRegistry(
@@ -45,16 +45,16 @@ func NewCommandRegistry(
 	certificateHandler *handlers.CertificateHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
-		appHandler:          appHandler,
-		authHandler:         authHandler,
-		configHandler:       configHandler,
-		environmentHandler:  environmentHandler,
-		syncHandler:         syncHandler,
-		initHandler:         initHandler,
-		runHandler:          runHandler,
-		genPEMKeyHandler:    genPEMKeyHandler,
-		gpgKeyHandler:       gpgKeyHandler,
-		certificateHandler:  certificateHandler,
+		appHandler:         appHandler,
+		authHandler:        authHandler,
+		configHandler:      configHandler,
+		environmentHandler: environmentHandler,
+		syncHandler:        syncHandler,
+		initHandler:        initHandler,
+		runHandler:         runHandler,
+		genPEMKeyHandler:   genPEMKeyHandler,
+		gpgKeyHandler:      gpgKeyHandler,
+		certificateHandler: certificateHandler,
 	}
 }
 

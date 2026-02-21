@@ -1,12 +1,13 @@
 package repository
 
 import (
-	"fmt"
+	"context"
 
-	"resty.dev/v3"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type EnvVariableRepository interface {
@@ -17,13 +18,13 @@ type EnvVariableRepository interface {
 }
 
 type syncRepo struct {
-	client    *resty.Client
+	client    *sdkclient.Client
 	appID     string
 	envTypeID string
 }
 
 func NewEnvVariableRepository(appID, envTypeID string) EnvVariableRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 
 	return &syncRepo{
 		client:    client,
@@ -33,76 +34,70 @@ func NewEnvVariableRepository(appID, envTypeID string) EnvVariableRepository {
 }
 
 func (s *syncRepo) GetAllEnv() ([]responses.EnvironmentVariable, error) {
-	var env []responses.EnvironmentVariable
-
-	res, err := s.client.
-		R().
-		SetResult(&env).
-		SetBody(requests.EnvVariableRequest{
-			AppID:     s.appID,
-			EnvTypeID: s.envTypeID,
-		}).
-		Post("/env")
-
+	envs, err := s.client.EnvironmentVariables.GetEnvs(context.Background(), &sdk.GetEnvRequest{
+		AppId:     s.appID,
+		EnvTypeId: s.envTypeID,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode())
+	result := make([]responses.EnvironmentVariable, len(envs))
+	for i, env := range envs {
+		result[i] = responses.EnvironmentVariable{
+			ID:        env.Id,
+			Key:       env.Key,
+			Value:     env.Value,
+			AppID:     env.AppId,
+			EnvTypeID: env.EnvTypeId,
+			OrgID:     env.OrgId,
+			CreatedAt: env.CreatedAt,
+			UpdatedAt: env.UpdatedAt,
+		}
 	}
 
-	return env, nil
+	return result, nil
 }
 
 func (s *syncRepo) BatchCreateEnv(env requests.BatchSyncEnvRequest) error {
-	res, err := s.client.
-		R().
-		SetBody(env).
-		Put("/env/batch")
-
-	if err != nil {
-		return err
+	sdkEnvs := make([]*sdk.BatchCreateEnvsRequestEnvsItem, len(env.Envs))
+	for i, e := range env.Envs {
+		sdkEnvs[i] = &sdk.BatchCreateEnvsRequestEnvsItem{
+			Key:   e.Key,
+			Value: e.Value,
+		}
 	}
 
-	if res.StatusCode() != 201 {
-		return fmt.Errorf("unexpected status code: %d", res.StatusCode())
-	}
-
-	return nil
+	_, err := s.client.EnvironmentVariables.BatchCreateEnvs(context.Background(), &sdk.BatchCreateEnvsRequest{
+		AppId:     env.AppID,
+		EnvTypeId: env.EnvTypeID,
+		Envs:      sdkEnvs,
+	})
+	return err
 }
 
 func (s *syncRepo) BatchUpdateEnv(env requests.BatchSyncEnvRequest) error {
-	res, err := s.client.
-		R().
-		SetBody(env).
-		Patch("/env/batch")
-
-	if err != nil {
-		return err
+	sdkEnvs := make([]*sdk.BatchCreateEnvsRequestEnvsItem, len(env.Envs))
+	for i, e := range env.Envs {
+		sdkEnvs[i] = &sdk.BatchCreateEnvsRequestEnvsItem{
+			Key:   e.Key,
+			Value: e.Value,
+		}
 	}
 
-	if res.StatusCode() != 200 {
-		return fmt.Errorf("unexpected status code: %d", res.StatusCode())
-	}
-
-	return nil
+	_, err := s.client.EnvironmentVariables.BatchUpdateEnvs(context.Background(), &sdk.BatchCreateEnvsRequest{
+		AppId:     env.AppID,
+		EnvTypeId: env.EnvTypeID,
+		Envs:      sdkEnvs,
+	})
+	return err
 }
 
 func (s *syncRepo) BatchDeleteEnv(env requests.BatchDeleteRequest) error {
-	res, err := s.client.
-		R().
-		SetAllowMethodDeletePayload(true).
-		SetBody(env).
-		Delete("/env/batch")
-
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode() != 200 {
-		return fmt.Errorf("unexpected status code: %d", res.StatusCode())
-	}
-
-	return nil
+	_, err := s.client.EnvironmentVariables.DeleteBatchEnv(context.Background(), &sdk.BatchDeleteEnvsRequest{
+		AppId:     env.AppID,
+		EnvTypeId: env.EnvTypeID,
+		Keys:      env.Keys,
+	})
+	return err
 }

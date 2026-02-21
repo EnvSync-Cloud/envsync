@@ -3,7 +3,7 @@ package config
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 )
 
 // SetConfigUseCase defines the interface for setting configuration values

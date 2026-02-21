@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/app"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/app"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type AppHandler struct {
@@ -45,18 +45,7 @@ func (h *AppHandler) Create(ctx context.Context, cmd *cli.Command) error {
 	if cmd.IsSet("metadata") {
 		metadata := cmd.String("metadata")
 		if metadata != "" {
-			// Parse metadata JSON string into a map
-			// Assuming metadata is in format key-value pairs like "key1=value1,key2=value2"
 			metadataMap := make(map[string]any)
-			// pairs := utils.ParseKeyValuePairs(metadata)
-			// for _, pair := range pairs {
-			// 	parts := utils.SplitKeyValue(pair)
-			// 	if len(parts) == 2 {
-			// 		metadataMap[parts[0]] = parts[1]
-			// 	} else {
-			// 		return h.formatter.FormatError(cmd.Writer, "Invalid metadata format. Use key=value pairs.")
-			// 	}
-			// }
 			application.Metadata = metadataMap
 		}
 	}

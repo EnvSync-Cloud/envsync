@@ -1,12 +1,14 @@
 package repository
 
 import (
-	"fmt"
+	"context"
+	"time"
 
-	"resty.dev/v3"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type EnvTypeRepository interface {
@@ -18,11 +20,11 @@ type EnvTypeRepository interface {
 }
 
 type envTypeRepo struct {
-	client *resty.Client
+	client *sdkclient.Client
 }
 
 func NewEnvTypeRepository() EnvTypeRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 
 	return &envTypeRepo{
 		client: client,
@@ -30,98 +32,84 @@ func NewEnvTypeRepository() EnvTypeRepository {
 }
 
 func (e *envTypeRepo) Create(req *requests.EnvTypeRequest) (responses.EnvTypeResponse, error) {
-	var res responses.EnvTypeResponse
-
-	resp, err := e.client.R().
-		SetBody(req).
-		SetResult(&res).
-		Post("/env_type")
-
-	if err != nil {
-		return responses.EnvTypeResponse{}, fmt.Errorf("failed to create environment type: %w", err)
+	isDefault := req.IsDefault
+	isProtected := req.IsProtected
+	var color *string
+	if req.Color != "" {
+		color = &req.Color
 	}
 
-	if resp.StatusCode() != 201 {
-		return responses.EnvTypeResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return res, nil
-}
-
-func (e *envTypeRepo) GetAll() ([]responses.EnvTypeResponse, error) {
-	var response []responses.EnvTypeResponse
-
-	resp, err := e.client.R().
-		SetResult(&response).
-		Get("/env_type")
-
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return response, nil
-}
-
-func (e *envTypeRepo) GetByID(id string) (responses.EnvTypeResponse, error) {
-	var response responses.EnvTypeResponse
-
-	resp, err := e.client.R().
-		SetResult(&response).
-		Get(fmt.Sprintf("/env_type/%s", id))
-
+	resp, err := e.client.EnvironmentTypes.CreateEnvType(context.Background(), &sdk.CreateEnvTypeRequest{
+		Name:        req.Name,
+		Color:       color,
+		IsDefault:   &isDefault,
+		IsProtected: &isProtected,
+		AppId:       req.AppID,
+	})
 	if err != nil {
 		return responses.EnvTypeResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.EnvTypeResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return response, nil
+	return sdkEnvTypeToResponse(resp), nil
 }
 
-func (e *envTypeRepo) GetByAppID(appID string) ([]responses.EnvTypeResponse, error) {
-	var response []responses.EnvTypeResponse
-
-	resp, err := e.client.R().
-		SetResult(&response).
-		Get("/env_type")
-
+func (e *envTypeRepo) GetAll() ([]responses.EnvTypeResponse, error) {
+	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	result := make([]responses.EnvTypeResponse, len(envTypes))
+	for i, et := range envTypes {
+		result[i] = sdkEnvTypeToResponse(et)
 	}
 
-	// Filter the response by appID
-	var filteredResponse []responses.EnvTypeResponse
-	for _, envType := range response {
-		if envType.AppID == appID {
-			filteredResponse = append(filteredResponse, envType)
+	return result, nil
+}
+
+func (e *envTypeRepo) GetByID(id string) (responses.EnvTypeResponse, error) {
+	resp, err := e.client.EnvironmentTypes.GetEnvType(context.Background(), id)
+	if err != nil {
+		return responses.EnvTypeResponse{}, err
+	}
+
+	return sdkEnvTypeToResponse(resp), nil
+}
+
+func (e *envTypeRepo) GetByAppID(appID string) ([]responses.EnvTypeResponse, error) {
+	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []responses.EnvTypeResponse
+	for _, et := range envTypes {
+		if et.AppId == appID {
+			filtered = append(filtered, sdkEnvTypeToResponse(et))
 		}
 	}
 
-	return filteredResponse, nil
+	return filtered, nil
 }
 
 func (e *envTypeRepo) Delete(id string) error {
-	resp, err := e.client.R().
-		SetPathParam("id", id).
-		Delete("/env_type/{id}")
+	_, err := e.client.EnvironmentTypes.DeleteEnvType(context.Background(), id)
+	return err
+}
 
-	if err != nil {
-		return fmt.Errorf("failed to delete environment type: %w", err)
+func sdkEnvTypeToResponse(et *sdk.EnvTypeResponse) responses.EnvTypeResponse {
+	createdAt, _ := time.Parse(time.RFC3339, et.CreatedAt)
+	updatedAt, _ := time.Parse(time.RFC3339, et.UpdatedAt)
+
+	return responses.EnvTypeResponse{
+		ID:          et.Id,
+		OrgID:       et.OrgId,
+		Name:        et.Name,
+		AppID:       et.AppId,
+		IsDefault:   et.IsDefault,
+		IsProtected: et.IsProtected,
+		Color:       et.Color,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
 	}
-
-	if resp.StatusCode() != 200 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return nil
 }

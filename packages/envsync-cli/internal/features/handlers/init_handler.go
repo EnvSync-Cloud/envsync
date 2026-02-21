@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	inituc "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/init"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	inituc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/init"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v3"
 )

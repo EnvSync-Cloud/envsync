@@ -10,7 +10,7 @@ BACKEND_URL ?= http://localhost:8600/api
 .PHONY: build
 build:
 	@echo "Building binary"
-	@go build -ldflags="-X github.com/EnvSync-Cloud/envsync-cli/internal/config.backendURL=$(BACKEND_URL)" -o bin/$(BINARY_NAME) $(MAIN_PACKAGE)
+	@go build -ldflags="-X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=$(BACKEND_URL)" -o bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 
 ## install: install the binary
 .PHONY: install

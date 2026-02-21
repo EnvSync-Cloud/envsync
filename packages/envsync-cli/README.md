@@ -26,7 +26,7 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 
 ### Install from Release
 
-Download the latest release binary for your platform from the [Releases page](https://github.com/EnvSync-Cloud/envsync-cli/releases/) and follow these steps:
+Download the latest release binary for your platform from the [Releases page](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/releases/) and follow these steps:
 
 1. Download the binary for your OS (Linux, macOS, Windows)
 2. Make it executable (if necessary)   
@@ -45,7 +45,7 @@ Download the latest release binary for your platform from the [Releases page](ht
 ### Install from Source
 
 ```bash
-git clone https://github.com/EnvSync-Cloud/envsync-cli.git
+git clone https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli.git
 cd envsync-cli
 make build
 sudo mv bin/envsync /usr/local/bin/
@@ -283,7 +283,7 @@ The project uses a Makefile for development automation:
 
 ```bash
 # Clone the repository
-git clone https://github.com/EnvSync-Cloud/envsync-cli.git
+git clone https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli.git
 cd envsync-cli
 ```
 
@@ -360,13 +360,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 📧 **Email:** hi@envsync.cloud
 - 📖 **Blog:** [docs.envsync.cloud](https://blog.envsync.cloud)
-- 🐛 **Issues:** [GitHub Issues](https://github.com/EnvSync-Cloud/envsync-cli/issues)
+- 🐛 **Issues:** [GitHub Issues](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/issues)
 
 ## 🔗 Useful Links
 
 - 🌐 **Web Dashboard:** [envsync.cloud](https://envsync.cloud)
 - 📚 **API Documentation:** [api.envsync.cloud/docs](https://api.envsync.cloud/docs)
-- 📦 **Releases:** [GitHub Releases](https://github.com/EnvSync-Cloud/envsync-cli/releases)
+- 📦 **Releases:** [GitHub Releases](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/releases)
 
 ---
 

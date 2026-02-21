@@ -7,20 +7,20 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	certUC "github.com/EnvSync-Cloud/envsync-cli/internal/features/usecases/certificate"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/formatters"
+	certUC "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/certificate"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 )
 
 type CertificateHandler struct {
-	initCAUseCase    certUC.InitCAUseCase
-	caStatusUseCase  certUC.CAStatusUseCase
-	issueCertUseCase certUC.IssueCertUseCase
-	listCertsUseCase certUC.ListCertsUseCase
+	initCAUseCase     certUC.InitCAUseCase
+	caStatusUseCase   certUC.CAStatusUseCase
+	issueCertUseCase  certUC.IssueCertUseCase
+	listCertsUseCase  certUC.ListCertsUseCase
 	revokeCertUseCase certUC.RevokeCertUseCase
-	checkOCSPUseCase certUC.CheckOCSPUseCase
-	getCRLUseCase    certUC.GetCRLUseCase
-	getRootCAUseCase certUC.GetRootCAUseCase
-	formatter        *formatters.CertificateFormatter
+	checkOCSPUseCase  certUC.CheckOCSPUseCase
+	getCRLUseCase     certUC.GetCRLUseCase
+	getRootCAUseCase  certUC.GetRootCAUseCase
+	formatter         *formatters.CertificateFormatter
 }
 
 func NewCertificateHandler(
@@ -35,15 +35,15 @@ func NewCertificateHandler(
 	formatter *formatters.CertificateFormatter,
 ) *CertificateHandler {
 	return &CertificateHandler{
-		initCAUseCase:    initCAUseCase,
-		caStatusUseCase:  caStatusUseCase,
-		issueCertUseCase: issueCertUseCase,
-		listCertsUseCase: listCertsUseCase,
+		initCAUseCase:     initCAUseCase,
+		caStatusUseCase:   caStatusUseCase,
+		issueCertUseCase:  issueCertUseCase,
+		listCertsUseCase:  listCertsUseCase,
 		revokeCertUseCase: revokeCertUseCase,
-		checkOCSPUseCase: checkOCSPUseCase,
-		getCRLUseCase:    getCRLUseCase,
-		getRootCAUseCase: getRootCAUseCase,
-		formatter:        formatter,
+		checkOCSPUseCase:  checkOCSPUseCase,
+		getCRLUseCase:     getCRLUseCase,
+		getRootCAUseCase:  getRootCAUseCase,
+		formatter:         formatter,
 	}
 }
 

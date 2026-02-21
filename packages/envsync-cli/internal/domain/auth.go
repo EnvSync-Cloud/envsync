@@ -10,7 +10,7 @@ type LoginCredentials struct {
 	ExpiresIn       int
 	Interval        int
 	ClientId        string
-	AuthDomain      string
+	TokenUrl        string
 }
 
 // GetVerificationUri returns the verification URI for user authentication

@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/handlers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 	"github.com/urfave/cli/v3"
 )
 

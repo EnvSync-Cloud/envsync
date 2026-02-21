@@ -3,7 +3,7 @@ package gpg_key
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 )
 
 type ListKeysUseCase interface {

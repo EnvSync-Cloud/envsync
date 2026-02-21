@@ -1,11 +1,11 @@
 package repository
 
 import (
-	"fmt"
+	"context"
 
-	"resty.dev/v3"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type RoleRepository interface {
@@ -13,11 +13,11 @@ type RoleRepository interface {
 }
 
 type roleRepo struct {
-	client *resty.Client
+	client *sdkclient.Client
 }
 
 func NewRoleRepository() RoleRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 
 	return &roleRepo{
 		client: client,
@@ -25,19 +25,34 @@ func NewRoleRepository() RoleRepository {
 }
 
 func (a *roleRepo) GetAll() ([]responses.RoleResponse, error) {
-	var roles []responses.RoleResponse
-
-	resp, err := a.client.R().
-		SetResult(&roles).
-		Get("/role")
-
+	roles, err := a.client.Roles.GetAllRoles(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	result := make([]responses.RoleResponse, len(roles))
+	for i, r := range roles {
+		var color string
+		if r.Color != nil {
+			color = *r.Color
+		}
+
+		result[i] = responses.RoleResponse{
+			ID:          r.Id,
+			OrgID:       r.OrgId,
+			Name:        r.Name,
+			CanEdit:     r.CanEdit,
+			CanView:     r.CanView,
+			HaveAPI:     r.HaveApiAccess,
+			HaveBilling: r.HaveBillingOptions,
+			HaveWebhook: r.HaveWebhookAccess,
+			Color:       color,
+			IsAdmin:     r.IsAdmin,
+			IsMaster:    r.IsMaster,
+			CreatedAt:   r.CreatedAt,
+			UpdatedAt:   r.UpdatedAt,
+		}
 	}
 
-	return roles, nil
+	return result, nil
 }

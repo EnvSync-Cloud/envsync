@@ -1,43 +1,67 @@
 package repository
 
 import (
+	"net/http"
 	"os"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	"resty.dev/v3"
 )
 
-// createHTTPClient initializes and returns a new HTTP client with proper authentication
+// createSDKClient initializes and returns a new SDK client with proper authentication
 // and configuration for API requests.
-func createHTTPClient() *resty.Client {
-	// Initialize variables for authentication token and application configuration
-	var cfg config.AppConfig
-	var cliCmd string
-
-	// Check if API key is provided as an environment variable
+func createSDKClient() *sdkclient.Client {
+	cfg := config.New()
 	apiKey, hasAPIKey := os.LookupEnv("API_KEY")
 
-	// Always load config to get BackendURL and potentially AccessToken
-	cfg = config.New()
-
-	// get the args passed to the CLI
+	var cliCmd string
 	if len(os.Args) > 1 {
 		cliCmd = os.Args[1]
 	}
 
-	// Create and configure a new REST client
+	headers := http.Header{}
+	headers.Set("Content-Type", "application/json")
+	headers.Set("X-CLI-CMD", cliCmd)
+
+	opts := []option.RequestOption{
+		option.WithBaseURL(cfg.BackendURL),
+		option.WithHTTPHeader(headers),
+	}
+
+	if hasAPIKey && apiKey != "" {
+		opts = append(opts, option.WithApiKey(apiKey))
+	} else if cfg.AccessToken != "" {
+		opts = append(opts, option.WithToken(cfg.AccessToken))
+	}
+
+	return sdkclient.NewClient(opts...)
+}
+
+// createHTTPClient initializes and returns a new HTTP client with proper authentication
+// and configuration for API requests. Used only for auth login flows.
+func createHTTPClient() *resty.Client {
+	var cfg config.AppConfig
+	var cliCmd string
+
+	apiKey, hasAPIKey := os.LookupEnv("API_KEY")
+
+	cfg = config.New()
+
+	if len(os.Args) > 1 {
+		cliCmd = os.Args[1]
+	}
+
 	client := resty.New().
 		SetDisableWarn(true).
 		SetBaseURL(cfg.BackendURL).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-CLI-CMD", cliCmd)
 
-	// Set authentication headers based on available credentials
 	if hasAPIKey && apiKey != "" {
-		// Priority 1: Use API key from environment variable
 		client.SetHeader("X-API-Key", apiKey)
 	} else if cfg.AccessToken != "" {
-		// Priority 2: Use JWT token from config as Bearer token
 		client.SetHeader("Authorization", "Bearer "+cfg.AccessToken)
 	}
 

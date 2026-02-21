@@ -1,12 +1,13 @@
 package repository
 
 import (
-	"fmt"
+	"context"
 
-	"resty.dev/v3"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type GpgKeyRepository interface {
@@ -21,159 +22,194 @@ type GpgKeyRepository interface {
 }
 
 type gpgKeyRepo struct {
-	client *resty.Client
+	client *sdkclient.Client
 }
 
 func NewGpgKeyRepository() GpgKeyRepository {
-	client := createHTTPClient()
+	client := createSDKClient()
 	return &gpgKeyRepo{client: client}
 }
 
 func (r *gpgKeyRepo) List() ([]responses.GpgKeyResponse, error) {
-	var result []responses.GpgKeyResponse
-
-	resp, err := r.client.R().
-		SetResult(&result).
-		Get("/gpg_key")
-
+	keys, err := r.client.GpgKeys.ListGpgKeys(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	result := make([]responses.GpgKeyResponse, len(keys))
+	for i, k := range keys {
+		result[i] = sdkGpgKeyToResponse(k)
 	}
 
 	return result, nil
 }
 
 func (r *gpgKeyRepo) Get(id string) (responses.GpgKeyResponse, error) {
-	var result responses.GpgKeyResponse
-
-	resp, err := r.client.R().
-		SetPathParam("id", id).
-		SetResult(&result).
-		Get("/gpg_key/{id}")
-
+	key, err := r.client.GpgKeys.GetGpgKey(context.Background(), id)
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.GpgKeyResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return result, nil
+	return sdkGpgKeyDetailToResponse(key), nil
 }
 
 func (r *gpgKeyRepo) Generate(req requests.GenerateGpgKeyRequest) (responses.GpgKeyResponse, error) {
-	var result responses.GpgKeyResponse
-
-	resp, err := r.client.R().
-		SetBody(req).
-		SetResult(&result).
-		Put("/gpg_key/generate")
-
+	algo, err := sdk.NewGenerateGpgKeyRequestAlgorithmFromString(req.Algorithm)
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
 
-	if resp.StatusCode() != 201 {
-		return responses.GpgKeyResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	usageFlags := make([]sdk.GenerateGpgKeyRequestUsageFlagsItem, len(req.UsageFlags))
+	for i, f := range req.UsageFlags {
+		flag, err := sdk.NewGenerateGpgKeyRequestUsageFlagsItemFromString(f)
+		if err != nil {
+			return responses.GpgKeyResponse{}, err
+		}
+		usageFlags[i] = flag
 	}
 
-	return result, nil
+	isDefault := req.IsDefault
+	key, err := r.client.GpgKeys.GenerateGpgKey(context.Background(), &sdk.GenerateGpgKeyRequest{
+		Name:          req.Name,
+		Email:         req.Email,
+		Algorithm:     algo,
+		KeySize:       req.KeySize,
+		UsageFlags:    usageFlags,
+		ExpiresInDays: req.ExpiresInDays,
+		IsDefault:     &isDefault,
+	})
+	if err != nil {
+		return responses.GpgKeyResponse{}, err
+	}
+
+	return sdkGpgKeyToResponse(key), nil
 }
 
 func (r *gpgKeyRepo) Delete(id string) error {
-	resp, err := r.client.R().
-		SetPathParam("id", id).
-		Delete("/gpg_key/{id}")
-
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != 200 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return nil
+	_, err := r.client.GpgKeys.DeleteGpgKey(context.Background(), id)
+	return err
 }
 
 func (r *gpgKeyRepo) Revoke(id string, reason string) (responses.GpgKeyResponse, error) {
-	var result responses.GpgKeyResponse
+	var reasonPtr *string
+	if reason != "" {
+		reasonPtr = &reason
+	}
 
-	resp, err := r.client.R().
-		SetPathParam("id", id).
-		SetBody(map[string]string{"reason": reason}).
-		SetResult(&result).
-		Post("/gpg_key/{id}/revoke")
-
+	key, err := r.client.GpgKeys.RevokeGpgKey(context.Background(), id, &sdk.RevokeGpgKeyRequest{
+		Reason: reasonPtr,
+	})
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.GpgKeyResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return result, nil
+	return sdkGpgKeyDetailToResponse(key), nil
 }
 
 func (r *gpgKeyRepo) Export(id string) (responses.GpgExportResponse, error) {
-	var result responses.GpgExportResponse
-
-	resp, err := r.client.R().
-		SetPathParam("id", id).
-		SetResult(&result).
-		Get("/gpg_key/{id}/export")
-
+	resp, err := r.client.GpgKeys.ExportGpgPublicKey(context.Background(), id)
 	if err != nil {
 		return responses.GpgExportResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.GpgExportResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return result, nil
+	return responses.GpgExportResponse{
+		PublicKey:   resp.PublicKey,
+		Fingerprint: resp.Fingerprint,
+	}, nil
 }
 
 func (r *gpgKeyRepo) Sign(req requests.SignDataRequest) (responses.GpgSignatureResponse, error) {
-	var result responses.GpgSignatureResponse
+	var mode *sdk.SignDataRequestMode
+	if req.Mode != "" {
+		m, err := sdk.NewSignDataRequestModeFromString(req.Mode)
+		if err != nil {
+			return responses.GpgSignatureResponse{}, err
+		}
+		mode = &m
+	}
 
-	resp, err := r.client.R().
-		SetBody(req).
-		SetResult(&result).
-		Post("/gpg_key/sign")
-
+	detached := req.Detached
+	resp, err := r.client.GpgKeys.SignDataWithGpgKey(context.Background(), &sdk.SignDataRequest{
+		GpgKeyId: req.GpgKeyID,
+		Data:     req.Data,
+		Mode:     mode,
+		Detached: &detached,
+	})
 	if err != nil {
 		return responses.GpgSignatureResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.GpgSignatureResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
-	}
-
-	return result, nil
+	return responses.GpgSignatureResponse{
+		Signature:   resp.Signature,
+		KeyID:       resp.KeyId,
+		Fingerprint: resp.Fingerprint,
+	}, nil
 }
 
 func (r *gpgKeyRepo) Verify(req requests.VerifySignatureRequest) (responses.GpgVerifyResponse, error) {
-	var result responses.GpgVerifyResponse
-
-	resp, err := r.client.R().
-		SetBody(req).
-		SetResult(&result).
-		Post("/gpg_key/verify")
-
+	resp, err := r.client.GpgKeys.VerifyGpgSignature(context.Background(), &sdk.VerifySignatureRequest{
+		Data:      req.Data,
+		Signature: req.Signature,
+		GpgKeyId:  req.GpgKeyID,
+	})
 	if err != nil {
 		return responses.GpgVerifyResponse{}, err
 	}
 
-	if resp.StatusCode() != 200 {
-		return responses.GpgVerifyResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode())
+	return responses.GpgVerifyResponse{
+		Valid:             resp.Valid,
+		SignerFingerprint: resp.SignerFingerprint,
+		SignerKeyID:       resp.SignerKeyId,
+	}, nil
+}
+
+func sdkGpgKeyToResponse(k *sdk.GpgKeyResponse) responses.GpgKeyResponse {
+	var keySize *int
+	if k.KeySize != nil {
+		ks := int(*k.KeySize)
+		keySize = &ks
 	}
 
-	return result, nil
+	return responses.GpgKeyResponse{
+		ID:          k.Id,
+		Name:        k.Name,
+		Email:       k.Email,
+		Fingerprint: k.Fingerprint,
+		KeyID:       k.KeyId,
+		Algorithm:   k.Algorithm,
+		KeySize:     keySize,
+		UsageFlags:  k.UsageFlags,
+		TrustLevel:  k.TrustLevel,
+		ExpiresAt:   k.ExpiresAt,
+		RevokedAt:   k.RevokedAt,
+		IsDefault:   k.IsDefault,
+		CreatedAt:   k.CreatedAt,
+		UpdatedAt:   k.UpdatedAt,
+	}
+}
+
+func sdkGpgKeyDetailToResponse(k *sdk.GpgKeyDetailResponse) responses.GpgKeyResponse {
+	var keySize *int
+	if k.KeySize != nil {
+		ks := int(*k.KeySize)
+		keySize = &ks
+	}
+
+	return responses.GpgKeyResponse{
+		ID:          k.Id,
+		Name:        k.Name,
+		Email:       k.Email,
+		Fingerprint: k.Fingerprint,
+		KeyID:       k.KeyId,
+		Algorithm:   k.Algorithm,
+		KeySize:     keySize,
+		UsageFlags:  k.UsageFlags,
+		TrustLevel:  k.TrustLevel,
+		ExpiresAt:   k.ExpiresAt,
+		RevokedAt:   k.RevokedAt,
+		IsDefault:   k.IsDefault,
+		PublicKey:   k.PublicKey,
+		CreatedAt:   k.CreatedAt,
+		UpdatedAt:   k.UpdatedAt,
+	}
 }

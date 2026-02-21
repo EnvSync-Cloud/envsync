@@ -3,8 +3,8 @@ package mappers
 import (
 	"time"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 // DeviceCodeResponseToDomain converts repository response to domain model
@@ -16,7 +16,7 @@ func DeviceCodeResponseToDomain(resp responses.DeviceCodeResponse) *domain.Login
 		ExpiresIn:       resp.ExpiresIn,
 		Interval:        resp.Interval,
 		ClientId:        resp.ClientId,
-		AuthDomain:      resp.AuthDomain,
+		TokenUrl:        resp.TokenUrl,
 	}
 }
 

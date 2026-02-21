@@ -3,7 +3,7 @@ package commands
 import (
 	"github.com/urfave/cli/v3"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/features/handlers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 )
 
 // AppCommands returns all app-related commands

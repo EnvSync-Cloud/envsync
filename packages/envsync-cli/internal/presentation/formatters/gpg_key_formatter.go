@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 )
 
 type GpgKeyFormatter struct {

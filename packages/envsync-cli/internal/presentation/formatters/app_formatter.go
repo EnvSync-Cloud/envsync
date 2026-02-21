@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/style"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
 )
 
 type AppFormatter struct {

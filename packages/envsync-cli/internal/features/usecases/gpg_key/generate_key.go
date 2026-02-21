@@ -3,9 +3,9 @@ package gpg_key
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type generateKeyUseCase struct {

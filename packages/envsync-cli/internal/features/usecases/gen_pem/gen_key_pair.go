@@ -3,7 +3,7 @@ package genpem
 import (
 	"context"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/utils"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
 )
 
 var (

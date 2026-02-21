@@ -3,7 +3,7 @@ package factory
 import (
 	"fmt"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/charmbracelet/huh"
 )
 

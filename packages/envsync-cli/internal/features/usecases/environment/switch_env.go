@@ -5,9 +5,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/presentation/tui/factory"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type switchEnvUseCase struct {

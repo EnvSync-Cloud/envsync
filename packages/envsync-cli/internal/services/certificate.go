@@ -1,11 +1,11 @@
 package services
 
 import (
-	"github.com/EnvSync-Cloud/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/mappers"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/requests"
-	"github.com/EnvSync-Cloud/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type CertificateService interface {
