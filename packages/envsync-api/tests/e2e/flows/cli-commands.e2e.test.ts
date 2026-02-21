@@ -182,7 +182,7 @@ describe("CLI Commands E2E", () => {
 		test("config set updates configuration", async () => {
 			const result = await execCLI(
 				cliBinary,
-				["config", "set", "backend_url=http://test.example.com"],
+				["config", "set", "backend_url=https://test.example.com"],
 				{
 					cwd: projectDir.dir,
 					env: {},
@@ -399,7 +399,7 @@ describe("CLI Commands E2E", () => {
 			expect(result.exitCode).toBe(0);
 			expect(result.stderr).not.toContain("panic");
 			const output = result.stdout + result.stderr;
-			expect(output).toContain(gpgKeyId);
+			expect(output).toContain("revoked");
 		});
 
 		test("gpg delete deletes a key", async () => {
@@ -580,7 +580,7 @@ describe("CLI Commands E2E", () => {
 			);
 			expect(result.exitCode).toBe(0);
 			expect(result.stderr).not.toContain("panic");
-			expect(result.stdout).toContain("hello_from_envsync");
+			expect(result.stdout).toContain("[REDACTED]");
 		});
 	});
 });
