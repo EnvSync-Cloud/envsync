@@ -2,7 +2,18 @@
 
 [![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=EnvsyncCloud%2FGo)
 
-The EnvsyncCloud Go library provides convenient access to the EnvsyncCloud API from Go.
+The EnvsyncCloud Go library provides convenient access to the EnvsyncCloud APIs from Go.
+
+## Table of Contents
+
+- [Usage](#usage)
+- [Environments](#environments)
+- [Errors](#errors)
+- [Request Options](#request-options)
+- [Advanced](#advanced)
+  - [Retries](#retries)
+  - [Timeouts](#timeouts)
+- [Contributing](#contributing)
 
 ## Usage
 
@@ -12,10 +23,10 @@ Instantiate and use the client with the following:
 package example
 
 import (
-    client "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/client"
-    option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+    client "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
+    option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
     context "context"
-    sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
+    sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
 
 func do() () {

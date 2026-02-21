@@ -9,5 +9,5 @@ package api
 var Environments = struct {
 	Default string
 }{
-	Default: "http://localhost:8600",
+	Default: "http://localhost:4000",
 }

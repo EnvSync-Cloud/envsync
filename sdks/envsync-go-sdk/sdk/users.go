@@ -5,7 +5,7 @@ package api
 import (
 	json "encoding/json"
 	fmt "fmt"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
 type UserResponse struct {
@@ -15,7 +15,7 @@ type UserResponse struct {
 	ProfilePictureUrl *string `json:"profile_picture_url,omitempty" url:"profile_picture_url,omitempty"`
 	OrgId             string  `json:"org_id" url:"org_id"`
 	RoleId            string  `json:"role_id" url:"role_id"`
-	Auth0Id           *string `json:"auth0_id,omitempty" url:"auth0_id,omitempty"`
+	AuthServiceId     *string `json:"auth_service_id,omitempty" url:"auth_service_id,omitempty"`
 	IsActive          bool    `json:"is_active" url:"is_active"`
 	CreatedAt         string  `json:"created_at" url:"created_at"`
 	UpdatedAt         string  `json:"updated_at" url:"updated_at"`
@@ -66,11 +66,11 @@ func (u *UserResponse) GetRoleId() string {
 	return u.RoleId
 }
 
-func (u *UserResponse) GetAuth0Id() *string {
+func (u *UserResponse) GetAuthServiceId() *string {
 	if u == nil {
 		return nil
 	}
-	return u.Auth0Id
+	return u.AuthServiceId
 }
 
 func (u *UserResponse) GetIsActive() bool {

@@ -3,27 +3,31 @@
 package client
 
 import (
-	access "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/access"
-	apikeys "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/apikeys"
-	applications "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/applications"
-	auditlogs "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/auditlogs"
-	authentication "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/authentication"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	environmenttypes "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/environmenttypes"
-	environmentvariables "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/environmentvariables"
-	environmentvariablespointintime "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/environmentvariablespointintime"
-	environmentvariablesrollback "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/environmentvariablesrollback"
-	fileupload "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/fileupload"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	onboarding "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/onboarding"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
-	organizations "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/organizations"
-	roles "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/roles"
-	secrets "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/secrets"
-	secretspointintime "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/secretspointintime"
-	secretsrollback "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/secretsrollback"
-	users "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/users"
-	webhooks "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/webhooks"
+	access "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/access"
+	apikeys "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/apikeys"
+	applications "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/applications"
+	auditlogs "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/auditlogs"
+	authentication "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/authentication"
+	certificates "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/certificates"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	environmenttypes "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmenttypes"
+	environmentvariables "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariables"
+	environmentvariablespointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariablespointintime"
+	environmentvariablesrollback "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariablesrollback"
+	fileupload "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/fileupload"
+	gpgkeys "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/gpgkeys"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	onboarding "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/onboarding"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
+	organizations "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/organizations"
+	permissions "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/permissions"
+	roles "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/roles"
+	secrets "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secrets"
+	secretspointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretspointintime"
+	secretsrollback "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretsrollback"
+	teams "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/teams"
+	users "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/users"
+	webhooks "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/webhooks"
 	http "net/http"
 )
 
@@ -49,7 +53,11 @@ type Client struct {
 	SecretsRollback                 *secretsrollback.Client
 	FileUpload                      *fileupload.Client
 	Users                           *users.Client
+	Teams                           *teams.Client
+	Permissions                     *permissions.Client
 	Webhooks                        *webhooks.Client
+	GpgKeys                         *gpgkeys.Client
+	Certificates                    *certificates.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -80,6 +88,10 @@ func NewClient(opts ...option.RequestOption) *Client {
 		SecretsRollback:                 secretsrollback.NewClient(opts...),
 		FileUpload:                      fileupload.NewClient(opts...),
 		Users:                           users.NewClient(opts...),
+		Teams:                           teams.NewClient(opts...),
+		Permissions:                     permissions.NewClient(opts...),
 		Webhooks:                        webhooks.NewClient(opts...),
+		GpgKeys:                         gpgkeys.NewClient(opts...),
+		Certificates:                    certificates.NewClient(opts...),
 	}
 }

@@ -4,10 +4,10 @@ package access
 
 import (
 	context "context"
-	sdk "github.com/EnvSync-Cloud/envsync-go-sdk/sdk"
-	core "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
-	option "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/option"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	http "net/http"
 )
 
@@ -40,7 +40,7 @@ func (c *Client) CreateCliLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/access/cli"
 	headers := internal.MergeHeaders(
@@ -84,7 +84,7 @@ func (c *Client) CreateWebLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/access/web"
 	headers := internal.MergeHeaders(
@@ -119,7 +119,7 @@ func (c *Client) CreateWebLogin(
 	return response, nil
 }
 
-// Handle web login callback from Auth0
+// Handle web login callback from Zitadel
 func (c *Client) CallbackWebLogin(
 	ctx context.Context,
 	request *sdk.CallbackWebLoginRequest,
@@ -129,7 +129,7 @@ func (c *Client) CallbackWebLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/access/web/callback"
 	queryParams, err := internal.QueryValues(request)
@@ -178,7 +178,7 @@ func (c *Client) CreateApiLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/access/api"
 	headers := internal.MergeHeaders(
@@ -213,7 +213,7 @@ func (c *Client) CreateApiLogin(
 	return response, nil
 }
 
-// Handle API login callback from Auth0
+// Handle API login callback from Zitadel
 func (c *Client) CallbackApiLogin(
 	ctx context.Context,
 	request *sdk.CallbackApiLoginRequest,
@@ -223,7 +223,7 @@ func (c *Client) CallbackApiLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:8600",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/access/api/callback"
 	queryParams, err := internal.QueryValues(request)

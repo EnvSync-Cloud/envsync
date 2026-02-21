@@ -1,4 +1,4 @@
-module github.com/EnvSync-Cloud/envsync-go-sdk
+module github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk
 
 go 1.22.3
 

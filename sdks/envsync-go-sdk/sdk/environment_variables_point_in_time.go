@@ -5,7 +5,7 @@ package api
 import (
 	json "encoding/json"
 	fmt "fmt"
-	internal "github.com/EnvSync-Cloud/envsync-go-sdk/sdk/internal"
+	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 	time "time"
 )
 
@@ -455,9 +455,10 @@ func (e *EnvHistoryResponsePitsItem) String() string {
 type EnvPitStateResponse = []*EnvPitStateResponseItem
 
 type EnvPitStateResponseItem struct {
-	Key         string `json:"key" url:"key"`
-	Value       string `json:"value" url:"value"`
-	LastUpdated string `json:"last_updated" url:"last_updated"`
+	Key         string                           `json:"key" url:"key"`
+	Value       string                           `json:"value" url:"value"`
+	LastUpdated string                           `json:"last_updated" url:"last_updated"`
+	Operation   EnvPitStateResponseItemOperation `json:"operation" url:"operation"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -482,6 +483,13 @@ func (e *EnvPitStateResponseItem) GetLastUpdated() string {
 		return ""
 	}
 	return e.LastUpdated
+}
+
+func (e *EnvPitStateResponseItem) GetOperation() EnvPitStateResponseItemOperation {
+	if e == nil {
+		return ""
+	}
+	return e.Operation
 }
 
 func (e *EnvPitStateResponseItem) GetExtraProperties() map[string]interface{} {
@@ -514,6 +522,31 @@ func (e *EnvPitStateResponseItem) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", e)
+}
+
+type EnvPitStateResponseItemOperation string
+
+const (
+	EnvPitStateResponseItemOperationCreate EnvPitStateResponseItemOperation = "CREATE"
+	EnvPitStateResponseItemOperationUpdate EnvPitStateResponseItemOperation = "UPDATE"
+	EnvPitStateResponseItemOperationDelete EnvPitStateResponseItemOperation = "DELETE"
+)
+
+func NewEnvPitStateResponseItemOperationFromString(s string) (EnvPitStateResponseItemOperation, error) {
+	switch s {
+	case "CREATE":
+		return EnvPitStateResponseItemOperationCreate, nil
+	case "UPDATE":
+		return EnvPitStateResponseItemOperationUpdate, nil
+	case "DELETE":
+		return EnvPitStateResponseItemOperationDelete, nil
+	}
+	var t EnvPitStateResponseItemOperation
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (e EnvPitStateResponseItemOperation) Ptr() *EnvPitStateResponseItemOperation {
+	return &e
 }
 
 type VariableTimelineResponse = []*VariableTimelineResponseItem

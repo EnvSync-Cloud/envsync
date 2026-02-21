@@ -12,4 +12,4 @@ groups:
           location: local-file-system
           path: ../sdk
         config:
-          importPath: github.com/EnvSync-Cloud/envsync-go-sdk/sdk
+          importPath: github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk

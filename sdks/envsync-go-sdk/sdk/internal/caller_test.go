@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/EnvSync-Cloud/envsync-go-sdk/sdk/core"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
