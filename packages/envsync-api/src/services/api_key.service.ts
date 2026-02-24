@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
+import { orNotFound } from "@/libs/errors";
 import { SecretKeyGenerator } from "sk-keygen";
 
 export class ApiKeyService {
@@ -45,27 +46,31 @@ export class ApiKeyService {
 	public static getKey = async (id: string) => {
 		const db = await DB.getInstance();
 
-		const key = await db
-			.selectFrom("api_keys")
-			.selectAll()
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		const key = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow(),
+			"API Key",
+			id,
+		);
 
 		return key;
 	};
 
-	public static getAllKeys = async (orgId: string) => {
-		return cacheAside(CacheKeys.apiKeysByOrg(orgId), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+	public static getAllKeys = async (orgId: string, page = 1, per_page = 50) => {
+		const db = await DB.getInstance();
 
-			const keys = await db
-				.selectFrom("api_keys")
-				.selectAll()
-				.where("org_id", "=", orgId)
-				.execute();
+		const keys = await db
+			.selectFrom("api_keys")
+			.selectAll()
+			.where("org_id", "=", orgId)
+			.limit(per_page)
+			.offset((page - 1) * per_page)
+			.execute();
 
-			return keys;
-		});
+		return keys;
 	};
 
 	public static updateKey = async (
@@ -79,11 +84,15 @@ export class ApiKeyService {
 		const db = await DB.getInstance();
 
 		// Fetch key before update for invalidation
-		const existing = await db
-			.selectFrom("api_keys")
-			.select(["key", "org_id", "user_id"])
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		const existing = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.select(["key", "org_id", "user_id"])
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow(),
+			"API Key",
+			id,
+		);
 
 		await db
 			.updateTable("api_keys")
@@ -105,11 +114,15 @@ export class ApiKeyService {
 		const db = await DB.getInstance();
 
 		// Fetch key before delete for invalidation
-		const existing = await db
-			.selectFrom("api_keys")
-			.select(["key", "org_id", "user_id"])
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		const existing = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.select(["key", "org_id", "user_id"])
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow(),
+			"API Key",
+			id,
+		);
 
 		await db.deleteFrom("api_keys").where("id", "=", id).executeTakeFirstOrThrow();
 
@@ -124,11 +137,15 @@ export class ApiKeyService {
 		const db = await DB.getInstance();
 
 		// Fetch old key for invalidation
-		const existing = await db
-			.selectFrom("api_keys")
-			.select(["key", "org_id"])
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		const existing = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.select(["key", "org_id"])
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow(),
+			"API Key",
+			id,
+		);
 
 		const newKey = SecretKeyGenerator.generateKey({
 			prefix: "eVs",
@@ -169,11 +186,14 @@ export class ApiKeyService {
 		return cacheAside(CacheKeys.apiKeyByCreds(api_key), CacheTTL.SHORT, async () => {
 			const db = await DB.getInstance();
 
-			const key = await db
-				.selectFrom("api_keys")
-				.where("key", "=", api_key)
-				.selectAll()
-				.executeTakeFirstOrThrow();
+			const key = await orNotFound(
+				db
+					.selectFrom("api_keys")
+					.where("key", "=", api_key)
+					.selectAll()
+					.executeTakeFirstOrThrow(),
+				"API Key",
+			);
 
 			return key;
 		});

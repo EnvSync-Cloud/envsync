@@ -40,6 +40,10 @@ export const CacheKeys = {
 	webhook: (id: string) => `es:webhook:${id}`,
 	webhooksByOrg: (orgId: string) => `es:org:${orgId}:webhooks`,
 
+	// GPG Key
+	gpgKey: (id: string) => `es:gpgkey:${id}`,
+	gpgKeysByOrg: (orgId: string) => `es:org:${orgId}:gpgkeys`,
+
 	// Certificate
 	certsByOrg: (orgId: string) => `es:org:${orgId}:certs`,
 

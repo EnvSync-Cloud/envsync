@@ -1,9 +1,26 @@
 import { DB } from "@/libs/db";
+import { ConflictError, NotFoundError, ValidationError } from "@/libs/errors";
+import { variableOperations } from "@/libs/telemetry/metrics";
 import { VaultClient } from "@/libs/vault";
 import { envPath, envScopePath } from "@/libs/vault/paths";
 import { kmsEncrypt, kmsDecrypt, kmsBatchEncrypt } from "@/helpers/key-store";
 
 import { KeyValidationService } from "./key_validation.service";
+
+/** Simple concurrency limiter for parallel operations. */
+function pLimit(concurrency: number) {
+	let active = 0;
+	const queue: (() => void)[] = [];
+	const next = () => { if (queue.length > 0 && active < concurrency) { active++; queue.shift()!(); } };
+	return <T>(fn: () => Promise<T>): Promise<T> =>
+		new Promise<T>((resolve, reject) => {
+			const run = () => fn().then(resolve, reject).finally(() => { active--; next(); });
+			queue.push(run);
+			next();
+		});
+}
+
+const limit = pLimit(10);
 
 /**
  * Synthesize a response object matching the previous PG row shape.
@@ -47,10 +64,12 @@ async function decryptEnvValue(
 	value: string,
 ): Promise<string> {
 	if (!value.startsWith("KMS:v1:")) {
-		throw new Error(`Env value for key "${key}" is not KMS-encrypted.`);
+		throw new ValidationError(`Env value for key "${key}" is not KMS-encrypted.`);
 	}
 	const aad = envAAD(org_id, app_id, env_type_id, key);
-	return kmsDecrypt(org_id, app_id, value, aad);
+	const decrypted = await kmsDecrypt(org_id, app_id, value, aad);
+	variableOperations.add(1, { operation: "decrypted" });
+	return decrypted;
 }
 
 export class EnvService {
@@ -76,16 +95,18 @@ export class EnvService {
 		});
 
 		if (keyCheck.exists) {
-			throw new Error(keyCheck.message!);
+			throw new ConflictError(keyCheck.message!);
 		}
 
 		// Encrypt via miniKMS before writing to Vault
 		const aad = envAAD(org_id, app_id, env_type_id, key);
 		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+		variableOperations.add(1, { operation: "encrypted" });
 
 		const vault = await VaultClient.getInstance();
 		const path = envPath(org_id, app_id, env_type_id, key);
 		await vault.kvWrite(path, { value: encryptedValue });
+		variableOperations.add(1, { operation: "created" });
 
 		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
 	};
@@ -143,12 +164,13 @@ export class EnvService {
 		// Verify the key exists before updating
 		const existing = await vault.kvRead(path);
 		if (!existing) {
-			throw new Error("no result");
+			throw new NotFoundError("Env", key);
 		}
 
 		// Encrypt via miniKMS before writing to Vault
 		const aad = envAAD(org_id, app_id, env_type_id, key);
 		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
+		variableOperations.add(1, { operation: "encrypted" });
 
 		await vault.kvWrite(path, { value: encryptedValue });
 	};
@@ -170,7 +192,7 @@ export class EnvService {
 		// Verify the key exists before deleting
 		const existing = await vault.kvRead(path);
 		if (!existing) {
-			throw new Error("no result");
+			throw new NotFoundError("Env", key);
 		}
 
 		await vault.kvMetadataDelete(path);
@@ -194,7 +216,7 @@ export class EnvService {
 		}
 
 		const results = await Promise.all(
-			keys.map(async key => {
+			keys.map(key => limit(async () => {
 				const path = envPath(org_id, app_id, env_type_id, key);
 				const result = await vault.kvRead(path);
 				if (!result) return null;
@@ -212,7 +234,7 @@ export class EnvService {
 					decryptedValue,
 					result.metadata.created_time,
 				);
-			}),
+			})),
 		);
 
 		return results.filter(r => r !== null);
@@ -238,7 +260,7 @@ export class EnvService {
 
 		if (conflicts.length > 0) {
 			const conflictMessages = conflicts.map(c => c.message).join(", ");
-			throw new Error(`Key conflicts found: ${conflictMessages}`);
+			throw new ConflictError(`Key conflicts found: ${conflictMessages}`);
 		}
 
 		const vault = await VaultClient.getInstance();
@@ -252,13 +274,15 @@ export class EnvService {
 				aad: envAAD(org_id, app_id, env_type_id, env.key),
 			})),
 		);
+		variableOperations.add(envs.length, { operation: "encrypted" });
 
 		await Promise.all(
-			envs.map((env, i) => {
+			envs.map((env, i) => limit(() => {
 				const path = envPath(org_id, app_id, env_type_id, env.key);
 				return vault.kvWrite(path, { value: encryptedValues[i] });
-			}),
+			})),
 		);
+		variableOperations.add(envs.length, { operation: "created" });
 	};
 
 	public static batchUpdateEnvs = async (
@@ -281,12 +305,13 @@ export class EnvService {
 				aad: envAAD(org_id, app_id, env_type_id, env.key),
 			})),
 		);
+		variableOperations.add(envs.length, { operation: "encrypted" });
 
 		await Promise.all(
-			envs.map((env, i) => {
+			envs.map((env, i) => limit(() => {
 				const path = envPath(org_id, app_id, env_type_id, env.key);
 				return vault.kvWrite(path, { value: encryptedValues[i] });
-			}),
+			})),
 		);
 	};
 
@@ -299,10 +324,10 @@ export class EnvService {
 		const vault = await VaultClient.getInstance();
 
 		await Promise.all(
-			keys.map(key => {
+			keys.map(key => limit(() => {
 				const path = envPath(org_id, app_id, env_type_id, key);
 				return vault.kvMetadataDelete(path);
-			}),
+			})),
 		);
 	};
 

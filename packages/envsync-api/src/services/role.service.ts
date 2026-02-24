@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
+import { orNotFound, BusinessRuleError, ValidationError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
 
 export class RoleService {
@@ -137,28 +138,32 @@ export class RoleService {
 		return cacheAside(CacheKeys.role(id), CacheTTL.LONG, async () => {
 			const db = await DB.getInstance();
 
-			const role = await db
-				.selectFrom("org_role")
-				.selectAll()
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow();
+			const role = await orNotFound(
+				db
+					.selectFrom("org_role")
+					.selectAll()
+					.where("id", "=", id)
+					.executeTakeFirstOrThrow(),
+				"Role",
+				id,
+			);
 
 			return role;
 		});
 	};
 
-	public static getRoles = async (org_id: string) => {
-		return cacheAside(CacheKeys.rolesByOrg(org_id), CacheTTL.LONG, async () => {
-			const db = await DB.getInstance();
+	public static getRoles = async (org_id: string, page = 1, per_page = 50) => {
+		const db = await DB.getInstance();
 
-			const role = await db
-				.selectFrom("org_role")
-				.selectAll()
-				.where("org_id", "=", org_id)
-				.execute();
+		const role = await db
+			.selectFrom("org_role")
+			.selectAll()
+			.where("org_id", "=", org_id)
+			.limit(per_page)
+			.offset((page - 1) * per_page)
+			.execute();
 
-			return role;
-		});
+		return role;
 	};
 
 	public static getRoleStats = async (org_id: string) => {
@@ -200,7 +205,7 @@ export class RoleService {
 
 		// is_master is not allowed to be updated after creation
 		if (data.is_master !== undefined) {
-			throw new Error("is_master cannot be updated after creation");
+			throw new BusinessRuleError("is_master cannot be updated after creation");
 		}
 
 		await db
@@ -224,15 +229,19 @@ export class RoleService {
 		const db = await DB.getInstance();
 
 		// is_master role cannot be deleted
-		const role = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("id", "=", id)
-			.where("org_id", "=", org_id)
-			.executeTakeFirstOrThrow();
+		const role = await orNotFound(
+			db
+				.selectFrom("org_role")
+				.selectAll()
+				.where("id", "=", id)
+				.where("org_id", "=", org_id)
+				.executeTakeFirstOrThrow(),
+			"Role",
+			id,
+		);
 
 		if (role.is_master) {
-			throw new Error("Cannot delete master role");
+			throw new BusinessRuleError("Cannot delete master role");
 		}
 
 		await db.deleteFrom("org_role").where("id", "=", id).executeTakeFirstOrThrow();
@@ -254,7 +263,7 @@ export class RoleService {
 		const role = await RoleService.getRole(role_id);
 
 		if (!role) {
-			throw new Error("Role not found");
+			throw new ValidationError("Role not found");
 		}
 
 		if (role.is_master) {
@@ -267,7 +276,7 @@ export class RoleService {
 
 		// Check if the permission exists on the role
 		if (role[permission] === undefined) {
-			throw new Error(`Permission ${permission} does not exist on role`);
+			throw new ValidationError(`Permission ${permission} does not exist on role`);
 		}
 
 		return role[permission];

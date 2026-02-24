@@ -24,37 +24,39 @@ export class SecretStorePiTService {
 	}) => {
 		const db = await DB.getInstance();
 
-		const { id } = await db
-			.insertInto("secret_store_pit")
-			.values({
-				id: uuidv4(),
-				org_id,
-				app_id,
-				env_type_id,
-				change_request_message,
-				user_id,
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.returning("id")
-			.executeTakeFirstOrThrow();
-
-		await db
-			.insertInto("secret_store_pit_change_request")
-			.values(
-				envs.map(env => ({
+		return await db.transaction().execute(async (trx) => {
+			const { id } = await trx
+				.insertInto("secret_store_pit")
+				.values({
 					id: uuidv4(),
-					key: env.key,
-					value: env.value,
-					operation: env.operation || "UPDATE",
-					secret_store_pit_id: id,
+					org_id,
+					app_id,
+					env_type_id,
+					change_request_message,
+					user_id,
 					created_at: new Date(),
 					updated_at: new Date(),
-				})),
-			)
-			.execute();
+				})
+				.returning("id")
+				.executeTakeFirstOrThrow();
 
-		return { id };
+			await trx
+				.insertInto("secret_store_pit_change_request")
+				.values(
+					envs.map(env => ({
+						id: uuidv4(),
+						key: env.key,
+						value: env.value,
+						operation: env.operation || "UPDATE",
+						secret_store_pit_id: id,
+						created_at: new Date(),
+						updated_at: new Date(),
+					})),
+				)
+				.execute();
+
+			return { id };
+		});
 	};
 
 	public static getSecretStorePiTById = async ({ id }: { id: string }) => {
@@ -147,6 +149,15 @@ export class SecretStorePiTService {
 	};
 
 	// Get environment state at a specific point in time
+	//
+	// TODO(perf #56): This method replays ALL change-request rows from epoch up to
+	// the target PiT. For long-lived apps this becomes a full-scan of
+	// secret_store_pit x secret_store_pit_change_request. Two mitigations:
+	//   1. Add a composite index on secret_store_pit(org_id, app_id, env_type_id, created_at)
+	//      so the DB can range-scan efficiently.
+	//   2. Implement materialized snapshots: periodically persist the full secret state
+	//      at a known PiT, then only replay changes *after* the snapshot. This
+	//      reduces replay from O(total_changes) to O(changes_since_snapshot).
 	public static getEnvsTillPiTId = async ({
 		org_id,
 		app_id,
@@ -279,6 +290,11 @@ export class SecretStorePiTService {
 	};
 
 	// Get the difference between two points in time
+	//
+	// Perf fix (#57): Previously called getEnvsTillPiTId twice, issuing two
+	// independent full-replays from epoch. Since `from` is always <= `to`, the
+	// `from` replay is a prefix of the `to` replay. We now fetch all changes up
+	// to `to` in a single query and compute both snapshots from one pass.
 	public static getEnvDiff = async ({
 		org_id,
 		app_id,
@@ -292,13 +308,68 @@ export class SecretStorePiTService {
 		from_pit_id: string;
 		to_pit_id: string;
 	}) => {
-		const [fromState, toState] = await Promise.all([
-			this.getEnvsTillPiTId({ org_id, app_id, env_type_id, secret_store_pit_id: from_pit_id }),
-			this.getEnvsTillPiTId({ org_id, app_id, env_type_id, secret_store_pit_id: to_pit_id }),
+		const db = await DB.getInstance();
+
+		// Fetch timestamps for both PiTs in parallel
+		const [fromPiT, toPiT] = await Promise.all([
+			db.selectFrom("secret_store_pit").select("created_at").where("id", "=", from_pit_id).executeTakeFirstOrThrow(),
+			db.selectFrom("secret_store_pit").select("created_at").where("id", "=", to_pit_id).executeTakeFirstOrThrow(),
 		]);
 
-		const fromMap = new Map(fromState.map(env => [env.key, env.value]));
-		const toMap = new Map(toState.map(env => [env.key, env.value]));
+		// Single query: fetch all changes up to the later PiT (to)
+		const allChanges = await db
+			.selectFrom("secret_store_pit")
+			.innerJoin(
+				"secret_store_pit_change_request",
+				"secret_store_pit.id",
+				"secret_store_pit_change_request.secret_store_pit_id",
+			)
+			.select([
+				"secret_store_pit_change_request.key",
+				"secret_store_pit_change_request.value",
+				"secret_store_pit_change_request.operation",
+				"secret_store_pit.created_at",
+			])
+			.where("secret_store_pit.org_id", "=", org_id)
+			.where("secret_store_pit.app_id", "=", app_id)
+			.where("secret_store_pit.env_type_id", "=", env_type_id)
+			.where("secret_store_pit.created_at", "<=", toPiT.created_at)
+			.orderBy("secret_store_pit.created_at", "asc")
+			.orderBy("secret_store_pit_change_request.created_at", "asc")
+			.execute();
+
+		// Replay changes once, building both snapshots in a single pass
+		const fromState = new Map<string, string>();
+		const toState = new Map<string, string>();
+
+		for (const change of allChanges) {
+			const operation = change.operation || "UPDATE";
+			const isBeforeOrAtFrom = change.created_at <= fromPiT.created_at;
+
+			// Apply to the `from` snapshot while we haven't passed the from timestamp
+			if (isBeforeOrAtFrom) {
+				switch (operation) {
+					case "CREATE":
+					case "UPDATE":
+						fromState.set(change.key, change.value);
+						break;
+					case "DELETE":
+						fromState.delete(change.key);
+						break;
+				}
+			}
+
+			// Always apply to the `to` snapshot
+			switch (operation) {
+				case "CREATE":
+				case "UPDATE":
+					toState.set(change.key, change.value);
+					break;
+				case "DELETE":
+					toState.delete(change.key);
+					break;
+			}
+		}
 
 		const diff = {
 			added: [] as Array<{ key: string; value: string }>,
@@ -307,21 +378,21 @@ export class SecretStorePiTService {
 		};
 
 		// Find added and modified
-		for (const [key, value] of toMap) {
-			if (!fromMap.has(key)) {
+		for (const [key, value] of toState) {
+			if (!fromState.has(key)) {
 				diff.added.push({ key, value });
-			} else if (fromMap.get(key) !== value) {
+			} else if (fromState.get(key) !== value) {
 				diff.modified.push({
 					key,
-					old_value: fromMap.get(key)!,
+					old_value: fromState.get(key)!,
 					new_value: value,
 				});
 			}
 		}
 
 		// Find deleted
-		for (const [key, value] of fromMap) {
-			if (!toMap.has(key)) {
+		for (const [key, value] of fromState) {
+			if (!toState.has(key)) {
 				diff.deleted.push({ key, value });
 			}
 		}
@@ -343,6 +414,9 @@ export class SecretStorePiTService {
 		key: string;
 		limit?: number;
 	}) => {
+		// Clamp limit to [1, 100] to protect against direct service calls bypassing validation
+		limit = Math.min(100, Math.max(1, limit));
+
 		const db = await DB.getInstance();
 
 		const timeline = await db

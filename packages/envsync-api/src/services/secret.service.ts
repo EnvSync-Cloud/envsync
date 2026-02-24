@@ -1,8 +1,24 @@
 import { DB } from "@/libs/db";
+import { ConflictError, NotFoundError } from "@/libs/errors";
 import { VaultClient } from "@/libs/vault";
 import { secretPath, secretScopePath } from "@/libs/vault/paths";
 
 import { KeyValidationService } from "./key_validation.service";
+
+/** Simple concurrency limiter for parallel operations. */
+function pLimit(concurrency: number) {
+	let active = 0;
+	const queue: (() => void)[] = [];
+	const next = () => { if (queue.length > 0 && active < concurrency) { active++; queue.shift()!(); } };
+	return <T>(fn: () => Promise<T>): Promise<T> =>
+		new Promise<T>((resolve, reject) => {
+			const run = () => fn().then(resolve, reject).finally(() => { active--; next(); });
+			queue.push(run);
+			next();
+		});
+}
+
+const limit = pLimit(10);
 
 /**
  * Synthesize a response object matching the previous PG row shape.
@@ -50,7 +66,7 @@ export class SecretService {
 		});
 
 		if (keyCheck.exists) {
-			throw new Error(keyCheck.message!);
+			throw new ConflictError(keyCheck.message!);
 		}
 
 		const vault = await VaultClient.getInstance();
@@ -107,7 +123,7 @@ export class SecretService {
 
 		const existing = await vault.kvRead(path);
 		if (!existing) {
-			throw new Error("no result");
+			throw new NotFoundError("Secret", key);
 		}
 
 		const result = await vault.kvWrite(path, { value });
@@ -130,7 +146,7 @@ export class SecretService {
 
 		const existing = await vault.kvRead(path);
 		if (!existing) {
-			throw new Error("no result");
+			throw new NotFoundError("Secret", key);
 		}
 
 		await vault.kvMetadataDelete(path);
@@ -154,7 +170,7 @@ export class SecretService {
 		}
 
 		const results = await Promise.all(
-			keys.map(async key => {
+			keys.map(key => limit(async () => {
 				const path = secretPath(org_id, app_id, env_type_id, key);
 				const result = await vault.kvRead(path);
 				if (!result) return null;
@@ -166,7 +182,7 @@ export class SecretService {
 					result.data.value,
 					result.metadata.created_time,
 				);
-			}),
+			})),
 		);
 
 		return results.filter(r => r !== null);
@@ -192,17 +208,17 @@ export class SecretService {
 
 		if (conflicts.length > 0) {
 			const conflictMessages = conflicts.map(c => c.message).join(", ");
-			throw new Error(`Key conflicts found: ${conflictMessages}`);
+			throw new ConflictError(`Key conflicts found: ${conflictMessages}`);
 		}
 
 		const vault = await VaultClient.getInstance();
 
 		const results = await Promise.all(
-			envs.map(async env => {
+			envs.map(env => limit(async () => {
 				const path = secretPath(org_id, app_id, env_type_id, env.key);
 				const result = await vault.kvWrite(path, { value: env.value });
 				return { key: env.key, vault_version: result.version };
-			}),
+			})),
 		);
 
 		return results;
@@ -220,11 +236,11 @@ export class SecretService {
 		const vault = await VaultClient.getInstance();
 
 		const results = await Promise.all(
-			envs.map(async env => {
+			envs.map(env => limit(async () => {
 				const path = secretPath(org_id, app_id, env_type_id, env.key);
 				const result = await vault.kvWrite(path, { value: env.value });
 				return { key: env.key, vault_version: result.version };
-			}),
+			})),
 		);
 
 		return results;
@@ -239,10 +255,10 @@ export class SecretService {
 		const vault = await VaultClient.getInstance();
 
 		await Promise.all(
-			keys.map(key => {
+			keys.map(key => limit(() => {
 				const path = secretPath(org_id, app_id, env_type_id, key);
 				return vault.kvMetadataDelete(path);
-			}),
+			})),
 		);
 	};
 

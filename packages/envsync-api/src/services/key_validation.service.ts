@@ -107,4 +107,27 @@ export class KeyValidationService {
 
 		return conflicts;
 	}
+
+	/**
+	 * Filter out conflicting keys from a batch, returning only safe-to-write keys.
+	 * Use this for idempotent batch operations where partial success is acceptable.
+	 */
+	public static async filterConflicts({
+		keys,
+		app_id,
+		env_type_id,
+		org_id,
+		excludeTable,
+	}: {
+		keys: string[];
+		app_id: string;
+		env_type_id: string;
+		org_id: string;
+		excludeTable?: "env_store" | "secret_store";
+	}): Promise<{ safeKeys: string[]; conflicts: { key: string; type: string | null; message: string | null }[] }> {
+		const conflicts = await this.validateKeys({ keys, app_id, env_type_id, org_id, excludeTable });
+		const conflictKeySet = new Set(conflicts.map(c => c.key));
+		const safeKeys = keys.filter(k => !conflictKeySet.has(k));
+		return { safeKeys, conflicts };
+	}
 }

@@ -27,6 +27,10 @@ export const validateAccess = async ({
 				throw new Error("Invalid API key");
 			}
 
+			if (!apiKey.is_active) {
+				throw new Error("API key is deactivated");
+			}
+
 			// registerKeyUsage
 			await ApiKeyService.registerKeyUsage(apiKey.id);
 
