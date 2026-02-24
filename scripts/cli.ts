@@ -28,6 +28,7 @@ import {
 	waitForVault,
 	waitForOpenFGA,
 	waitForZitadel,
+	waitForGrafana,
 	readPatFromVolume,
 	initVault,
 } from "./lib/services";
@@ -79,7 +80,7 @@ async function ensureEnv(): Promise<void> {
 }
 
 function dockerUp(): void {
-	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault, openfga)...");
+	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault, openfga, otel)...");
 	const result = spawnSync(
 		"docker",
 		[
@@ -99,6 +100,12 @@ function dockerUp(): void {
 			"minikms_db",
 			"minikms_migrate",
 			"minikms",
+			"tempo",
+			"loki",
+			"prometheus",
+			"otel-collector",
+			"grafana",
+			"httpbin",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -270,6 +277,9 @@ async function init(): Promise<void> {
 	await initVaultAndSave();
 	await initOpenFGA();
 
+	// Wait for Grafana (dashboards are auto-provisioned)
+	await waitForGrafana();
+
 	runMigrations();
 	runApiInit();
 
@@ -318,6 +328,12 @@ function servicesUp(): void {
 			"minikms_db",
 			"minikms_migrate",
 			"minikms",
+			"tempo",
+			"loki",
+			"prometheus",
+			"otel-collector",
+			"grafana",
+			"httpbin",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);

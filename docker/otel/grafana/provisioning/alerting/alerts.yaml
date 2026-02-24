@@ -1,0 +1,221 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: envsync-alerts
+    folder: EnvSync
+    interval: 1m
+    rules:
+      - uid: high-error-rate
+        title: High Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: rate(http_server_request_duration_milliseconds_count{http_status_code=~"5.."}[5m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: rate(http_server_request_duration_milliseconds_count[5m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: "$A / $B"
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.01
+              refId: C
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "Error rate exceeds 1% of total requests"
+          description: "The 5xx error rate has been above 1% for the last 2 minutes."
+        labels:
+          severity: critical
+
+      - uid: high-p99-latency
+        title: High p99 Latency
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.99, rate(http_server_request_duration_milliseconds_bucket[5m]))
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 2000
+              refId: B
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "p99 latency exceeds 2 seconds"
+          description: "The p99 request latency has been above 2s for the last 5 minutes."
+        labels:
+          severity: warning
+
+      - uid: otel-dropped-spans
+        title: OTel Collector Dropped Spans
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: rate(otelcol_exporter_send_failed_spans_total[5m])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0
+              refId: B
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: "OTel Collector is dropping spans"
+          description: "The OTel Collector has been failing to export spans for the last 2 minutes."
+        labels:
+          severity: warning
+
+      - uid: otel-memory-usage
+        title: OTel Collector High Memory
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: otelcol_process_memory_rss
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 858993459
+              refId: B
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "OTel Collector memory usage exceeds 800MB"
+          description: "The OTel Collector RSS memory has been above 800MB for 5 minutes, approaching the 1GB limit."
+        labels:
+          severity: warning
+
+      - uid: service-high-error-rate-per-route
+        title: High Error Rate Per Route
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: sum by (http_route) (rate(http_server_request_duration_milliseconds_count{http_status_code=~"5.."}[5m])) > 0.5
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params:
+                      - 0.5
+              refId: B
+        noDataState: OK
+        execErrState: Alerting
+        for: 3m
+        annotations:
+          summary: "A specific route is producing high error rates"
+          description: "One or more API routes are generating more than 0.5 errors/sec for the last 3 minutes."
+        labels:
+          severity: warning
+
+contactPoints:
+  - orgId: 1
+    name: default-email
+    receivers:
+      - uid: default-email
+        type: email
+        settings:
+          addresses: admin@envsync.local
+
+policies:
+  - orgId: 1
+    receiver: default-email
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h

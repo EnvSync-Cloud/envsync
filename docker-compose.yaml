@@ -23,6 +23,8 @@ services:
   minikms_db:
     image: postgres:17
     restart: unless-stopped
+    ports:
+      - "${MINIKMS_DB_PORT:-5544}:5432"
     volumes:
       - minikms_db_data:/var/lib/postgresql/data
     environment:
@@ -66,13 +68,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
-    networks:
-      - envsync_network
-  redis:
-    image: redis:latest
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    restart: always
     networks:
       - envsync_network
 
@@ -293,13 +288,145 @@ services:
       openfga_migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8081"]
-      interval: 5s
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8091"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1"
+    networks:
+      - envsync_network
+    restart: always
+
+  # --- Observability Stack (Grafana LGTM) ---
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./docker/otel/tempo-config.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+    networks:
+      - envsync_network
+
+  loki:
+    image: grafana/loki:3
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./docker/otel/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - envsync_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./docker/otel/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - envsync_network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./docker/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "${OTEL_COLLECTOR_GRPC_PORT:-4317}:4317"
+      - "${OTEL_COLLECTOR_HTTP_PORT:-4318}:4318"
+      - "8888:8888"
+      - "13133:13133"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "2"
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  promtail:
+    image: grafana/promtail:3
+    command: ["-config.file=/etc/promtail/config.yaml"]
+    volumes:
+      - ./docker/otel/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_started
+    networks:
+      - envsync_network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "${GRAFANA_PORT:-3302}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-EnvSync@2024!}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/otel/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/otel/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - envsync_network
+
+  redis:
+    image: ghcr.io/envsync-cloud/chabi:0.1.0-rc3
     restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - envsync_network
+    volumes:
+      - redis_data:/data
+
+  httpbin:
+    image: kong/httpbin:latest
+    ports:
+      - "${HTTPBIN_PORT:-8181}:80"
+    networks:
+      - envsync_network
 
 networks:
   envsync_network:
@@ -314,4 +441,8 @@ volumes:
   zitadel_db_data:
   zitadel_data:
   openfga_db_data:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
   minikms_db_data:
