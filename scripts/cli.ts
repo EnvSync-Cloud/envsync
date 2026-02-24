@@ -106,6 +106,7 @@ function dockerUp(): void {
 			"otel-collector",
 			"grafana",
 			"httpbin",
+			"hdx",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -334,6 +335,7 @@ function servicesUp(): void {
 			"otel-collector",
 			"grafana",
 			"httpbin",
+			"hdx",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -359,6 +361,87 @@ function servicesStatus(): void {
 	if (result.status !== 0) throw new Error("Docker Compose ps failed.");
 }
 
+// ── HyperDX helpers ─────────────────────────────────────────────────
+
+function hyperdxUp(): void {
+	console.log("Starting HyperDX...");
+	const result = spawnSync("docker", ["compose", "up", "-d", "hdx"], {
+		cwd: rootDir,
+		stdio: "inherit",
+		env: process.env,
+	});
+	if (result.status !== 0) throw new Error("HyperDX docker compose up failed.");
+}
+
+function hyperdxDown(): void {
+	console.log("Stopping HyperDX...");
+	const result = spawnSync("docker", ["compose", "stop", "hdx"], {
+		cwd: rootDir,
+		stdio: "inherit",
+		env: process.env,
+	});
+	if (result.status !== 0) throw new Error("HyperDX docker compose stop failed.");
+}
+
+async function hyperdxInit(): Promise<void> {
+	// Remove hdx container and its volumes
+	spawnSync("docker", ["compose", "rm", "-sf", "hdx"], {
+		cwd: rootDir,
+		stdio: "inherit",
+		env: process.env,
+	});
+	spawnSync("docker", ["volume", "rm", "-f", "monorepo_hdx_data", "monorepo_hdx_ch_data", "monorepo_hdx_ch_logs"], {
+		cwd: rootDir,
+		stdio: "inherit",
+		env: process.env,
+	});
+
+	console.log("Initializing HyperDX stack...");
+	const result = spawnSync("docker", ["compose", "up", "-d", "hdx"], {
+		cwd: rootDir,
+		stdio: "inherit",
+		env: process.env,
+	});
+	if (result.status !== 0) throw new Error("HyperDX docker compose init failed.");
+
+	const hdxPort = Number(process.env.HDX_PORT || "8800");
+	await waitFor(
+		"HyperDX",
+		() =>
+			new Promise<boolean>(resolve => {
+				const s = net.createConnection(hdxPort, "localhost", () => {
+					s.destroy();
+					resolve(true);
+				});
+				s.on("error", () => resolve(false));
+				s.setTimeout(2000, () => {
+					s.destroy();
+					resolve(false);
+				});
+			}),
+		2000,
+		25,
+	);
+
+	console.log("HyperDX is ready.");
+
+	// wait for service to be fully ready
+	await new Promise(r => setTimeout(r, 5000));
+
+	// Register a new user
+	const registerResult = await fetch(`http://localhost:${hdxPort}/api/register/password`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ email: "dev@envsync.local", password: "TestDev@1234", confirmPassword: "TestDev@1234" }),
+	});
+	if (!registerResult.ok) {
+		throw new Error(`Failed to register HyperDX user (${registerResult.status}): ${await registerResult.text()}`);
+	}
+	const registerData = (await registerResult.json()) as { status: string };
+	console.log(`HyperDX user registered: ${registerData.status}`);
+	console.log(`  Email:    dev@envsync.local`);
+	console.log(`  Password: TestDev@1234`);
+}
 function printUsage(): void {
 	console.log("Usage: bun run cli <command> [options]");
 	console.log("");
@@ -367,6 +450,7 @@ function printUsage(): void {
 	console.log("  db <migrate-cmd>  Run DB migrations (packages/envsync-api/scripts/migrate.ts)");
 	console.log("                    e.g. db latest | db list | db rollback | db backup | db restore | db migrate_to <name> | db step | db drop | db init");
 	console.log("  services <sub>    Docker Compose: up | down | status");
+	console.log("  hyperdx <sub>     HyperDX session replay: init | up | down");
 	console.log("");
 }
 
@@ -392,6 +476,15 @@ if (cmd === "init") {
 	else if (sub === "status") servicesStatus();
 	else {
 		console.log("Usage: bun run cli services <up|down|status>");
+		process.exit(sub ? 1 : 0);
+	}
+} else if (cmd === "hyperdx") {
+	const sub = process.argv[3];
+	if (sub === "init") hyperdxInit();
+	else if (sub === "up") hyperdxUp();
+	else if (sub === "down") hyperdxDown();
+	else {
+		console.log("Usage: bun run cli hyperdx <init|up|down>");
 		process.exit(sub ? 1 : 0);
 	}
 } else {
