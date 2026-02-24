@@ -2,6 +2,8 @@ import NodeCache from "node-cache";
 import * as redis from "redis";
 
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { cacheOperations } from "@/libs/telemetry/metrics";
 import { config } from "@/utils/env";
 
 type CacheEnvironment = "development" | "production";
@@ -49,7 +51,9 @@ export class CacheClient {
 				url: redisUrl,
 				name: "ec-cache",
 			});
-			this._redisClient.connect();
+			this._redisClient.connect().catch(err => {
+				infoLogs(`Redis connection failed: ${err}`, LogTypes.ERROR, "CACHE:INIT");
+			});
 		}
 
 		this._nodeClient = new NodeCache();
@@ -63,15 +67,22 @@ export class CacheClient {
 	 * @param ttl Time to live in seconds (0 = no expiry)
 	 */
 	static async set(key: string, value: string, ttl?: number) {
-		if (this._clientMode === "production") {
-			if (ttl && ttl > 0) {
-				await this._redisClient.SETEX(key, ttl, value);
+		return withSpan("cache SET", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "SET",
+			"cache.key": key,
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "SET" });
+			if (this._clientMode === "production") {
+				if (ttl && ttl > 0) {
+					await this._redisClient.SETEX(key, ttl, value);
+				} else {
+					await this._redisClient.SET(key, value);
+				}
 			} else {
-				await this._redisClient.SET(key, value);
+				this._nodeClient.set(key, value, ttl ?? 0);
 			}
-		} else {
-			this._nodeClient.set(key, value, ttl ?? 0);
-		}
+		});
 	}
 
 	/**
@@ -80,9 +91,16 @@ export class CacheClient {
 	 * @returns Value of the key
 	 */
 	static async get(key: string): Promise<string | null> {
-		return this._clientMode === "production"
-			? await this._redisClient.get(key)
-			: (this._nodeClient.get(key) as string) || null;
+		return withSpan("cache GET", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "GET",
+			"cache.key": key,
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "GET" });
+			return this._clientMode === "production"
+				? await this._redisClient.get(key)
+				: (this._nodeClient.get(key) as string) || null;
+		});
 	}
 
 	/**
@@ -90,11 +108,18 @@ export class CacheClient {
 	 * @param key Key to delete
 	 */
 	static async del(key: string): Promise<void> {
-		if (this._clientMode === "production") {
-			await this._redisClient.del(key);
-		} else {
-			this._nodeClient.del(key);
-		}
+		return withSpan("cache DEL", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "DEL",
+			"cache.key": key,
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "DEL" });
+			if (this._clientMode === "production") {
+				await this._redisClient.del(key);
+			} else {
+				this._nodeClient.del(key);
+			}
+		});
 	}
 
 	/**
@@ -102,23 +127,30 @@ export class CacheClient {
 	 * @param pattern Glob pattern (e.g. "es:org:123:*")
 	 */
 	static async delByPattern(pattern: string): Promise<void> {
-		if (this._clientMode === "production") {
-			let cursor = "0";
-			do {
-				const result = await this._redisClient.scan(cursor as any, { MATCH: pattern, COUNT: 100 });
-				cursor = String(result.cursor);
-				if (result.keys.length > 0) {
-					await this._redisClient.del(result.keys);
+		return withSpan("cache DEL_PATTERN", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "DEL_PATTERN",
+			"cache.key": pattern,
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "DEL_PATTERN" });
+			if (this._clientMode === "production") {
+				let cursor = "0";
+				do {
+					const result = await this._redisClient.scan(cursor, { MATCH: pattern, COUNT: 100 });
+					cursor = String(result.cursor);
+					if (result.keys.length > 0) {
+						await this._redisClient.del(result.keys);
+					}
+				} while (cursor !== "0");
+			} else {
+				const regex = new RegExp("^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+				const allKeys = this._nodeClient.keys();
+				const matching = allKeys.filter(k => regex.test(k));
+				if (matching.length > 0) {
+					this._nodeClient.del(matching);
 				}
-			} while (cursor !== "0");
-		} else {
-			const regex = new RegExp("^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
-			const allKeys = this._nodeClient.keys();
-			const matching = allKeys.filter(k => regex.test(k));
-			if (matching.length > 0) {
-				this._nodeClient.del(matching);
 			}
-		}
+		});
 	}
 
 	/**
@@ -129,12 +161,19 @@ export class CacheClient {
 	static async mget(keys: string[]): Promise<(string | null)[]> {
 		if (keys.length === 0) return [];
 
-		if (this._clientMode === "production") {
-			const results = await this._redisClient.mGet(keys);
-			return results;
-		} else {
-			return keys.map(k => (this._nodeClient.get(k) as string) || null);
-		}
+		return withSpan("cache MGET", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "MGET",
+			"cache.key": keys.join(","),
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "MGET" });
+			if (this._clientMode === "production") {
+				const results = await this._redisClient.mGet(keys);
+				return results;
+			} else {
+				return keys.map(k => (this._nodeClient.get(k) as string) || null);
+			}
+		});
 	}
 
 	/**
@@ -143,11 +182,18 @@ export class CacheClient {
 	 * @returns true if the key exists
 	 */
 	static async exists(key: string): Promise<boolean> {
-		if (this._clientMode === "production") {
-			const result = await this._redisClient.exists(key);
-			return result === 1;
-		} else {
-			return this._nodeClient.has(key);
-		}
+		return withSpan("cache EXISTS", {
+			"db.system": this._clientMode === "production" ? "redis" : "node-cache",
+			"db.operation.name": "EXISTS",
+			"cache.key": key,
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "EXISTS" });
+			if (this._clientMode === "production") {
+				const result = await this._redisClient.exists(key);
+				return result === 1;
+			} else {
+				return this._nodeClient.has(key);
+			}
+		});
 	}
 }

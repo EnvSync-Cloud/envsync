@@ -1,9 +1,12 @@
 import path from "node:path";
+import { SpanKind } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { externalServiceCalls } from "@/libs/telemetry/metrics";
 
 /**
  * KMS Client wrapping miniKMS gRPC Encrypt/Decrypt/BatchEncrypt/BatchDecrypt RPCs.
@@ -79,8 +82,27 @@ const PROTO_LOADER_OPTIONS: protoLoader.Options = {
 	oneofs: true,
 };
 
+/** Type for service constructor extracted from a loaded proto definition */
+type GrpcServiceCtor = new (addr: string, creds: grpc.ChannelCredentials) => grpc.Client;
+
+/** Helper to navigate nested proto package definitions by string keys */
+interface NestedProto { [key: string]: NestedProto & GrpcServiceCtor }
+
+// gRPC response shapes (wire format from proto stubs)
+interface GrpcEncryptResponse { ciphertext: string; key_version_id: string }
+interface GrpcDecryptResponse { plaintext: Buffer | string }
+interface GrpcBatchEncryptResponse { items: Array<{ ciphertext: string; key_version_id: string }> }
+interface GrpcBatchDecryptResponse { items: Array<{ plaintext: Buffer | string }> }
+interface GrpcHealthResponse { status: string }
+interface GrpcCreateOrgCAResponse { cert_pem: string; serial_hex: string }
+interface GrpcIssueMemberCertResponse { cert_pem: string; key_pem: string; serial_hex: string }
+interface GrpcRevokeCertResponse { success: boolean }
+interface GrpcGetCRLResponse { crl_der: Buffer | string; crl_number: string | number; is_delta: boolean }
+interface GrpcCheckOCSPResponse { status: number; revoked_at: string }
+interface GrpcGetRootCAResponse { cert_pem: string }
+
 export class KMSClient {
-	private static instance: KMSClient | null = null;
+	private static instance: Promise<KMSClient> | undefined;
 	private grpcAddr: string;
 	private kmsStub: grpc.Client;
 	private healthStub: grpc.Client;
@@ -100,51 +122,73 @@ export class KMSClient {
 		// Load KMS service proto
 		const kmsPackageDef = protoLoader.loadSync(KMS_PROTO_PATH, PROTO_LOADER_OPTIONS);
 		const kmsProto = grpc.loadPackageDefinition(kmsPackageDef);
-		const KMSService = (kmsProto.minikms as any).v1.KMSService;
+		const KMSService = (kmsProto as unknown as NestedProto).minikms.v1.KMSService;
 		this.kmsStub = new KMSService(this.grpcAddr, credentials);
 
 		// Load gRPC health check proto
 		const healthPackageDef = protoLoader.loadSync(HEALTH_PROTO_PATH, PROTO_LOADER_OPTIONS);
 		const healthProto = grpc.loadPackageDefinition(healthPackageDef);
-		const HealthService = (healthProto.grpc as any).health.v1.Health;
+		const HealthService = (healthProto as unknown as NestedProto).grpc.health.v1.Health;
 		this.healthStub = new HealthService(this.grpcAddr, credentials);
 
 		// Load PKI service proto
 		const pkiPackageDef = protoLoader.loadSync(PKI_PROTO_PATH, PROTO_LOADER_OPTIONS);
 		const pkiProto = grpc.loadPackageDefinition(pkiPackageDef);
-		const PKIService = (pkiProto.minikms as any).v1.PKIService;
+		const PKIService = (pkiProto as unknown as NestedProto).minikms.v1.PKIService;
 		this.pkiStub = new PKIService(this.grpcAddr, credentials);
 	}
 
-	public static async getInstance(): Promise<KMSClient> {
-		if (!KMSClient.instance) {
-			KMSClient.instance = new KMSClient();
-			infoLogs(
-				`KMS client initialized, connecting to ${KMSClient.instance.grpcAddr}`,
-				LogTypes.LOGS,
-				"KMSClient",
-			);
-		}
-		return KMSClient.instance;
+	public static getInstance(): Promise<KMSClient> {
+		this.instance ??= this._getInstance().catch(err => {
+			this.instance = undefined;
+			throw err;
+		});
+		return this.instance;
+	}
+
+	private static async _getInstance(): Promise<KMSClient> {
+		const client = new KMSClient();
+		infoLogs(
+			`KMS client initialized, connecting to ${client.grpcAddr}`,
+			LogTypes.LOGS,
+			"KMSClient",
+		);
+		return client;
 	}
 
 	/**
-	 * Promisify a unary gRPC call on the given stub.
+	 * Promisify a unary gRPC call on the given stub, wrapped in an OTEL span.
 	 */
 	private rpcCall<TRes>(
 		stub: grpc.Client,
 		method: string,
-		request: Record<string, any>,
+		request: Record<string, unknown>,
 	): Promise<TRes> {
-		return new Promise<TRes>((resolve, reject) => {
-			(stub as any)[method](
-				request,
-				(err: grpc.ServiceError | null, response: TRes) => {
-					if (err) reject(err);
-					else resolve(response);
-				},
-			);
-		});
+		const serviceName = stub === this.kmsStub ? "minikms.v1.KMSService" : stub === this.pkiStub ? "minikms.v1.PKIService" : "grpc.health.v1.Health";
+		return withSpan(
+			`grpc ${serviceName}/${method}`,
+			{
+				"rpc.system": "grpc",
+				"rpc.service": serviceName,
+				"rpc.method": method,
+				"peer.service": "minikms",
+			},
+			async () => {
+				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
+				return new Promise<TRes>((resolve, reject) => {
+					const deadline = new Date(Date.now() + 10_000);
+					(stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
+						request,
+						{ deadline },
+						(err: grpc.ServiceError | null, response: TRes) => {
+							if (err) reject(err);
+							else resolve(response);
+						},
+					);
+				});
+			},
+			SpanKind.CLIENT,
+		);
 	}
 
 	/**
@@ -158,7 +202,7 @@ export class KMSClient {
 		aad: string,
 	): Promise<EncryptResult> {
 		try {
-			const response = await this.rpcCall<any>(this.kmsStub, "Encrypt", {
+			const response = await this.rpcCall<GrpcEncryptResponse>(this.kmsStub, "Encrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				plaintext: Buffer.from(plaintext, "utf-8"),
@@ -192,7 +236,7 @@ export class KMSClient {
 		keyVersionId: string,
 	): Promise<DecryptResult> {
 		try {
-			const response = await this.rpcCall<any>(this.kmsStub, "Decrypt", {
+			const response = await this.rpcCall<GrpcDecryptResponse>(this.kmsStub, "Decrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				ciphertext,
@@ -224,7 +268,7 @@ export class KMSClient {
 		items: BatchEncryptItem[],
 	): Promise<EncryptResult[]> {
 		try {
-			const response = await this.rpcCall<any>(this.kmsStub, "BatchEncrypt", {
+			const response = await this.rpcCall<GrpcBatchEncryptResponse>(this.kmsStub, "BatchEncrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				items: items.map((item) => ({
@@ -233,7 +277,7 @@ export class KMSClient {
 				})),
 			});
 
-			return response.items.map((item: any) => ({
+			return response.items.map((item) => ({
 				ciphertext: item.ciphertext,
 				keyVersionId: item.key_version_id,
 			}));
@@ -258,7 +302,7 @@ export class KMSClient {
 		items: BatchDecryptItem[],
 	): Promise<DecryptResult[]> {
 		try {
-			const response = await this.rpcCall<any>(this.kmsStub, "BatchDecrypt", {
+			const response = await this.rpcCall<GrpcBatchDecryptResponse>(this.kmsStub, "BatchDecrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				items: items.map((item) => ({
@@ -268,7 +312,7 @@ export class KMSClient {
 				})),
 			});
 
-			return response.items.map((item: any) => ({
+			return response.items.map((item) => ({
 				plaintext: Buffer.from(item.plaintext).toString("utf-8"),
 			}));
 		} catch (error) {
@@ -288,7 +332,7 @@ export class KMSClient {
 	 */
 	public async healthCheck(): Promise<boolean> {
 		try {
-			const response = await this.rpcCall<any>(this.healthStub, "Check", {
+			const response = await this.rpcCall<GrpcHealthResponse>(this.healthStub, "Check", {
 				service: "minikms",
 			});
 			return response.status === "SERVING";
@@ -304,7 +348,7 @@ export class KMSClient {
 	 */
 	public async createOrgCA(orgId: string, orgName: string): Promise<CreateOrgCAResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "CreateOrgCA", {
+			const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateOrgCA", {
 				org_id: orgId,
 				org_name: orgName,
 			});
@@ -330,7 +374,7 @@ export class KMSClient {
 		role: string,
 	): Promise<IssueMemberCertResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "IssueMemberCert", {
+			const response = await this.rpcCall<GrpcIssueMemberCertResponse>(this.pkiStub, "IssueMemberCert", {
 				member_id: memberId,
 				member_email: memberEmail,
 				org_id: orgId,
@@ -354,7 +398,7 @@ export class KMSClient {
 	 */
 	public async revokeCert(serialHex: string, orgId: string, reason: number): Promise<RevokeCertResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "RevokeCert", {
+			const response = await this.rpcCall<GrpcRevokeCertResponse>(this.pkiStub, "RevokeCert", {
 				serial_hex: serialHex,
 				org_id: orgId,
 				reason,
@@ -373,7 +417,7 @@ export class KMSClient {
 	 */
 	public async getCRL(orgId: string, deltaOnly: boolean): Promise<GetCRLResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "GetCRL", {
+			const response = await this.rpcCall<GrpcGetCRLResponse>(this.pkiStub, "GetCRL", {
 				org_id: orgId,
 				delta_only: deltaOnly,
 			});
@@ -395,7 +439,7 @@ export class KMSClient {
 	 */
 	public async checkOCSP(serialHex: string, orgId: string): Promise<CheckOCSPResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "CheckOCSP", {
+			const response = await this.rpcCall<GrpcCheckOCSPResponse>(this.pkiStub, "CheckOCSP", {
 				serial_hex: serialHex,
 				org_id: orgId,
 			});
@@ -416,7 +460,7 @@ export class KMSClient {
 	 */
 	public async getRootCA(): Promise<GetRootCAResult> {
 		try {
-			const response = await this.rpcCall<any>(this.pkiStub, "GetRootCA", {});
+			const response = await this.rpcCall<GrpcGetRootCAResponse>(this.pkiStub, "GetRootCA", {});
 			return { certPem: response.cert_pem };
 		} catch (error) {
 			if (error instanceof Error) {

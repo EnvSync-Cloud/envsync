@@ -11,6 +11,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type loginUseCase struct {
@@ -25,8 +26,11 @@ func NewLoginUseCase() LoginUseCase {
 }
 
 func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "auth.login")
+	defer span.End()
+
 	// Check if user is already logged in
-	userInfo, err := uc.checkCurrentLoginStatus()
+	userInfo, err := uc.checkCurrentLoginStatus(ctx)
 	if err == nil && userInfo != nil {
 		// If we can get user info, assume already logged in
 		return &LoginResponse{
@@ -37,7 +41,7 @@ func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
 	}
 
 	// Step 1: Initiate the login process
-	credentials, err := uc.authService.InitiateLogin()
+	credentials, err := uc.authService.InitiateLogin(ctx)
 	if err != nil {
 		return nil, NewLoginFailedError("failed to initiate login process", err)
 	}
@@ -50,7 +54,7 @@ func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
 	}
 
 	// Step 2: Poll for token completion
-	token, err := uc.authService.PollForToken(credentials)
+	token, err := uc.authService.PollForToken(ctx, credentials)
 	if err != nil {
 		return nil, uc.handlePollingError(err)
 	}
@@ -68,9 +72,9 @@ func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
 }
 
 // checkCurrentLoginStatus checks if the user is already logged in by trying to get their info
-func (uc *loginUseCase) checkCurrentLoginStatus() (*domain.UserInfo, error) {
+func (uc *loginUseCase) checkCurrentLoginStatus(ctx context.Context) (*domain.UserInfo, error) {
 	// Try to get current user info to check if already logged in
-	userInfo, err := uc.authService.Whoami()
+	userInfo, err := uc.authService.Whoami(ctx)
 	if err != nil {
 		// If we can't get user info, assume not logged in
 		return nil, err

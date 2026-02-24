@@ -20,7 +20,7 @@ func (uc *exportUseCase) Execute(ctx context.Context, keyID string) (string, str
 		return "", "", NewValidationError("key ID is required", ErrKeyIDRequired)
 	}
 
-	publicKey, fingerprint, err := uc.service.ExportKey(keyID)
+	publicKey, fingerprint, err := uc.service.ExportKey(ctx, keyID)
 	if err != nil {
 		return "", "", NewServiceError("failed to export GPG key", err)
 	}

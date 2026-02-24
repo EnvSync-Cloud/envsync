@@ -186,6 +186,27 @@ export async function waitForMiniKMS(host?: string, port?: number): Promise<void
 	);
 }
 
+// ── Grafana helpers ─────────────────────────────────────────────────
+
+export async function waitForGrafana(grafanaUrl?: string): Promise<void> {
+	const url = (grafanaUrl ?? `http://localhost:${process.env.GRAFANA_PORT ?? "3302"}`).replace(/\/$/, "");
+	await waitFor(
+		"Grafana",
+		async () => {
+			try {
+				const res = await fetch(`${url}/api/health`, {
+					signal: AbortSignal.timeout(3000),
+				});
+				return res.ok;
+			} catch {
+				return false;
+			}
+		},
+		3000,
+		30,
+	);
+}
+
 // ── Zitadel helpers ─────────────────────────────────────────────────
 
 export async function waitForZitadel(url?: string): Promise<void> {

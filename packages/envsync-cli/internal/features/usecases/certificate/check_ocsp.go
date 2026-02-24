@@ -21,7 +21,7 @@ func (uc *checkOCSPUseCase) Execute(ctx context.Context, serialHex string) (*dom
 		return nil, NewValidationError("certificate serial number is required", ErrSerialRequired)
 	}
 
-	result, err := uc.service.CheckOCSP(serialHex)
+	result, err := uc.service.CheckOCSP(ctx, serialHex)
 	if err != nil {
 		return nil, NewServiceError("failed to check OCSP status", err)
 	}

@@ -11,14 +11,14 @@ import (
 )
 
 type GpgKeyRepository interface {
-	List() ([]responses.GpgKeyResponse, error)
-	Get(id string) (responses.GpgKeyResponse, error)
-	Generate(req requests.GenerateGpgKeyRequest) (responses.GpgKeyResponse, error)
-	Delete(id string) error
-	Revoke(id string, reason string) (responses.GpgKeyResponse, error)
-	Export(id string) (responses.GpgExportResponse, error)
-	Sign(req requests.SignDataRequest) (responses.GpgSignatureResponse, error)
-	Verify(req requests.VerifySignatureRequest) (responses.GpgVerifyResponse, error)
+	List(ctx context.Context) ([]responses.GpgKeyResponse, error)
+	Get(ctx context.Context, id string) (responses.GpgKeyResponse, error)
+	Generate(ctx context.Context, req requests.GenerateGpgKeyRequest) (responses.GpgKeyResponse, error)
+	Delete(ctx context.Context, id string) error
+	Revoke(ctx context.Context, id string, reason string) (responses.GpgKeyResponse, error)
+	Export(ctx context.Context, id string) (responses.GpgExportResponse, error)
+	Sign(ctx context.Context, req requests.SignDataRequest) (responses.GpgSignatureResponse, error)
+	Verify(ctx context.Context, req requests.VerifySignatureRequest) (responses.GpgVerifyResponse, error)
 }
 
 type gpgKeyRepo struct {
@@ -30,8 +30,8 @@ func NewGpgKeyRepository() GpgKeyRepository {
 	return &gpgKeyRepo{client: client}
 }
 
-func (r *gpgKeyRepo) List() ([]responses.GpgKeyResponse, error) {
-	keys, err := r.client.GpgKeys.ListGpgKeys(context.Background())
+func (r *gpgKeyRepo) List(ctx context.Context) ([]responses.GpgKeyResponse, error) {
+	keys, err := r.client.GpgKeys.ListGpgKeys(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +44,8 @@ func (r *gpgKeyRepo) List() ([]responses.GpgKeyResponse, error) {
 	return result, nil
 }
 
-func (r *gpgKeyRepo) Get(id string) (responses.GpgKeyResponse, error) {
-	key, err := r.client.GpgKeys.GetGpgKey(context.Background(), id)
+func (r *gpgKeyRepo) Get(ctx context.Context, id string) (responses.GpgKeyResponse, error) {
+	key, err := r.client.GpgKeys.GetGpgKey(ctx, id)
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
@@ -53,7 +53,7 @@ func (r *gpgKeyRepo) Get(id string) (responses.GpgKeyResponse, error) {
 	return sdkGpgKeyDetailToResponse(key), nil
 }
 
-func (r *gpgKeyRepo) Generate(req requests.GenerateGpgKeyRequest) (responses.GpgKeyResponse, error) {
+func (r *gpgKeyRepo) Generate(ctx context.Context, req requests.GenerateGpgKeyRequest) (responses.GpgKeyResponse, error) {
 	algo, err := sdk.NewGenerateGpgKeyRequestAlgorithmFromString(req.Algorithm)
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
@@ -69,7 +69,7 @@ func (r *gpgKeyRepo) Generate(req requests.GenerateGpgKeyRequest) (responses.Gpg
 	}
 
 	isDefault := req.IsDefault
-	key, err := r.client.GpgKeys.GenerateGpgKey(context.Background(), &sdk.GenerateGpgKeyRequest{
+	key, err := r.client.GpgKeys.GenerateGpgKey(ctx, &sdk.GenerateGpgKeyRequest{
 		Name:          req.Name,
 		Email:         req.Email,
 		Algorithm:     algo,
@@ -85,18 +85,18 @@ func (r *gpgKeyRepo) Generate(req requests.GenerateGpgKeyRequest) (responses.Gpg
 	return sdkGpgKeyToResponse(key), nil
 }
 
-func (r *gpgKeyRepo) Delete(id string) error {
-	_, err := r.client.GpgKeys.DeleteGpgKey(context.Background(), id)
+func (r *gpgKeyRepo) Delete(ctx context.Context, id string) error {
+	_, err := r.client.GpgKeys.DeleteGpgKey(ctx, id)
 	return err
 }
 
-func (r *gpgKeyRepo) Revoke(id string, reason string) (responses.GpgKeyResponse, error) {
+func (r *gpgKeyRepo) Revoke(ctx context.Context, id string, reason string) (responses.GpgKeyResponse, error) {
 	var reasonPtr *string
 	if reason != "" {
 		reasonPtr = &reason
 	}
 
-	key, err := r.client.GpgKeys.RevokeGpgKey(context.Background(), id, &sdk.RevokeGpgKeyRequest{
+	key, err := r.client.GpgKeys.RevokeGpgKey(ctx, id, &sdk.RevokeGpgKeyRequest{
 		Reason: reasonPtr,
 	})
 	if err != nil {
@@ -106,8 +106,8 @@ func (r *gpgKeyRepo) Revoke(id string, reason string) (responses.GpgKeyResponse,
 	return sdkGpgKeyDetailToResponse(key), nil
 }
 
-func (r *gpgKeyRepo) Export(id string) (responses.GpgExportResponse, error) {
-	resp, err := r.client.GpgKeys.ExportGpgPublicKey(context.Background(), id)
+func (r *gpgKeyRepo) Export(ctx context.Context, id string) (responses.GpgExportResponse, error) {
+	resp, err := r.client.GpgKeys.ExportGpgPublicKey(ctx, id)
 	if err != nil {
 		return responses.GpgExportResponse{}, err
 	}
@@ -118,7 +118,7 @@ func (r *gpgKeyRepo) Export(id string) (responses.GpgExportResponse, error) {
 	}, nil
 }
 
-func (r *gpgKeyRepo) Sign(req requests.SignDataRequest) (responses.GpgSignatureResponse, error) {
+func (r *gpgKeyRepo) Sign(ctx context.Context, req requests.SignDataRequest) (responses.GpgSignatureResponse, error) {
 	var mode *sdk.SignDataRequestMode
 	if req.Mode != "" {
 		m, err := sdk.NewSignDataRequestModeFromString(req.Mode)
@@ -129,7 +129,7 @@ func (r *gpgKeyRepo) Sign(req requests.SignDataRequest) (responses.GpgSignatureR
 	}
 
 	detached := req.Detached
-	resp, err := r.client.GpgKeys.SignDataWithGpgKey(context.Background(), &sdk.SignDataRequest{
+	resp, err := r.client.GpgKeys.SignDataWithGpgKey(ctx, &sdk.SignDataRequest{
 		GpgKeyId: req.GpgKeyID,
 		Data:     req.Data,
 		Mode:     mode,
@@ -146,8 +146,8 @@ func (r *gpgKeyRepo) Sign(req requests.SignDataRequest) (responses.GpgSignatureR
 	}, nil
 }
 
-func (r *gpgKeyRepo) Verify(req requests.VerifySignatureRequest) (responses.GpgVerifyResponse, error) {
-	resp, err := r.client.GpgKeys.VerifyGpgSignature(context.Background(), &sdk.VerifySignatureRequest{
+func (r *gpgKeyRepo) Verify(ctx context.Context, req requests.VerifySignatureRequest) (responses.GpgVerifyResponse, error) {
+	resp, err := r.client.GpgKeys.VerifyGpgSignature(ctx, &sdk.VerifySignatureRequest{
 		Data:      req.Data,
 		Signature: req.Signature,
 		GpgKeyId:  req.GpgKeyID,

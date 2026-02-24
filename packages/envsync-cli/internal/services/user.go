@@ -1,13 +1,15 @@
 package services
 
 import (
+	"context"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type UserService interface {
-	GetAllUsers() ([]domain.User, error)
+	GetAllUsers(ctx context.Context) ([]domain.User, error)
 }
 
 type user struct {
@@ -25,13 +27,13 @@ func NewUserService() UserService {
 	}
 }
 
-func (u *user) GetAllUsers() ([]domain.User, error) {
-	userRes, err := u.userRepo.GetAll()
+func (u *user) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+	userRes, err := u.userRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	roleRes, err := u.roleRepo.GetAll()
+	roleRes, err := u.roleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -12,14 +12,14 @@ import (
 )
 
 type CertificateRepository interface {
-	InitCA(req requests.InitOrgCARequest) (responses.OrgCAResponse, error)
-	GetCA() (responses.OrgCAResponse, error)
-	GetRootCA() (responses.RootCAResponse, error)
-	IssueMemberCert(req requests.IssueMemberCertRequest) (responses.MemberCertResponse, error)
-	List() ([]responses.CertificateResponse, error)
-	Revoke(serialHex string, req requests.RevokeCertRequest) (responses.RevokeCertResponse, error)
-	GetCRL() (responses.CRLResponse, error)
-	CheckOCSP(serialHex string) (responses.OCSPResponse, error)
+	InitCA(ctx context.Context, req requests.InitOrgCARequest) (responses.OrgCAResponse, error)
+	GetCA(ctx context.Context) (responses.OrgCAResponse, error)
+	GetRootCA(ctx context.Context) (responses.RootCAResponse, error)
+	IssueMemberCert(ctx context.Context, req requests.IssueMemberCertRequest) (responses.MemberCertResponse, error)
+	List(ctx context.Context) ([]responses.CertificateResponse, error)
+	Revoke(ctx context.Context, serialHex string, req requests.RevokeCertRequest) (responses.RevokeCertResponse, error)
+	GetCRL(ctx context.Context) (responses.CRLResponse, error)
+	CheckOCSP(ctx context.Context, serialHex string) (responses.OCSPResponse, error)
 }
 
 type certRepo struct {
@@ -31,13 +31,13 @@ func NewCertificateRepository() CertificateRepository {
 	return &certRepo{client: client}
 }
 
-func (r *certRepo) InitCA(req requests.InitOrgCARequest) (responses.OrgCAResponse, error) {
+func (r *certRepo) InitCA(ctx context.Context, req requests.InitOrgCARequest) (responses.OrgCAResponse, error) {
 	var desc *string
 	if req.Description != "" {
 		desc = &req.Description
 	}
 
-	resp, err := r.client.Certificates.InitOrgCa(context.Background(), &sdk.InitOrgCaRequest{
+	resp, err := r.client.Certificates.InitOrgCa(ctx, &sdk.InitOrgCaRequest{
 		OrgName:     req.OrgName,
 		Description: desc,
 	})
@@ -48,8 +48,8 @@ func (r *certRepo) InitCA(req requests.InitOrgCARequest) (responses.OrgCARespons
 	return sdkOrgCaToResponse(resp), nil
 }
 
-func (r *certRepo) GetCA() (responses.OrgCAResponse, error) {
-	resp, err := r.client.Certificates.GetOrgCa(context.Background())
+func (r *certRepo) GetCA(ctx context.Context) (responses.OrgCAResponse, error) {
+	resp, err := r.client.Certificates.GetOrgCa(ctx)
 	if err != nil {
 		return responses.OrgCAResponse{}, err
 	}
@@ -57,8 +57,8 @@ func (r *certRepo) GetCA() (responses.OrgCAResponse, error) {
 	return sdkOrgCaToResponse(resp), nil
 }
 
-func (r *certRepo) GetRootCA() (responses.RootCAResponse, error) {
-	resp, err := r.client.Certificates.GetRootCa(context.Background())
+func (r *certRepo) GetRootCA(ctx context.Context) (responses.RootCAResponse, error) {
+	resp, err := r.client.Certificates.GetRootCa(ctx)
 	if err != nil {
 		return responses.RootCAResponse{}, err
 	}
@@ -68,13 +68,13 @@ func (r *certRepo) GetRootCA() (responses.RootCAResponse, error) {
 	}, nil
 }
 
-func (r *certRepo) IssueMemberCert(req requests.IssueMemberCertRequest) (responses.MemberCertResponse, error) {
+func (r *certRepo) IssueMemberCert(ctx context.Context, req requests.IssueMemberCertRequest) (responses.MemberCertResponse, error) {
 	var desc *string
 	if req.Description != "" {
 		desc = &req.Description
 	}
 
-	resp, err := r.client.Certificates.IssueMemberCert(context.Background(), &sdk.IssueMemberCertRequest{
+	resp, err := r.client.Certificates.IssueMemberCert(ctx, &sdk.IssueMemberCertRequest{
 		MemberEmail: req.MemberEmail,
 		Role:        req.Role,
 		Description: desc,
@@ -106,8 +106,8 @@ func (r *certRepo) IssueMemberCert(req requests.IssueMemberCertRequest) (respons
 	}, nil
 }
 
-func (r *certRepo) List() ([]responses.CertificateResponse, error) {
-	certs, err := r.client.Certificates.ListCertificates(context.Background())
+func (r *certRepo) List(ctx context.Context) ([]responses.CertificateResponse, error) {
+	certs, err := r.client.Certificates.ListCertificates(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +142,8 @@ func (r *certRepo) List() ([]responses.CertificateResponse, error) {
 	return result, nil
 }
 
-func (r *certRepo) Revoke(serialHex string, req requests.RevokeCertRequest) (responses.RevokeCertResponse, error) {
-	resp, err := r.client.Certificates.RevokeCert(context.Background(), serialHex, &sdk.RevokeCertRequest{
+func (r *certRepo) Revoke(ctx context.Context, serialHex string, req requests.RevokeCertRequest) (responses.RevokeCertResponse, error) {
+	resp, err := r.client.Certificates.RevokeCert(ctx, serialHex, &sdk.RevokeCertRequest{
 		Reason: req.Reason,
 	})
 	if err != nil {
@@ -157,8 +157,8 @@ func (r *certRepo) Revoke(serialHex string, req requests.RevokeCertRequest) (res
 	}, nil
 }
 
-func (r *certRepo) GetCRL() (responses.CRLResponse, error) {
-	resp, err := r.client.Certificates.GetCrl(context.Background())
+func (r *certRepo) GetCRL(ctx context.Context) (responses.CRLResponse, error) {
+	resp, err := r.client.Certificates.GetCrl(ctx)
 	if err != nil {
 		return responses.CRLResponse{}, err
 	}
@@ -170,8 +170,8 @@ func (r *certRepo) GetCRL() (responses.CRLResponse, error) {
 	}, nil
 }
 
-func (r *certRepo) CheckOCSP(serialHex string) (responses.OCSPResponse, error) {
-	resp, err := r.client.Certificates.CheckOcsp(context.Background(), serialHex)
+func (r *certRepo) CheckOCSP(ctx context.Context, serialHex string) (responses.OCSPResponse, error) {
+	resp, err := r.client.Certificates.CheckOcsp(ctx, serialHex)
 	if err != nil {
 		return responses.OCSPResponse{}, fmt.Errorf("failed to check OCSP status: %w", err)
 	}

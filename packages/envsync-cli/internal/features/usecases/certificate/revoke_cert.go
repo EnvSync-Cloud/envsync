@@ -21,7 +21,7 @@ func (uc *revokeCertUseCase) Execute(ctx context.Context, serialHex string, reas
 		return nil, NewValidationError("certificate serial number is required", ErrSerialRequired)
 	}
 
-	result, err := uc.service.RevokeCert(serialHex, reason)
+	result, err := uc.service.RevokeCert(ctx, serialHex, reason)
 	if err != nil {
 		return nil, NewServiceError("failed to revoke certificate", err)
 	}

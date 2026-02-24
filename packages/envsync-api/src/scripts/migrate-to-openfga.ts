@@ -9,18 +9,19 @@
 import { DB } from "@/libs/db";
 import { FGAClient } from "@/libs/openfga";
 import { AuthorizationService } from "@/services/authorization.service";
+import infoLogs, { LogTypes } from "@/libs/logger";
 
 async function main() {
-	console.log("Starting OpenFGA data migration...\n");
+	infoLogs("Starting OpenFGA data migration...", LogTypes.LOGS, "Migration:OpenFGA");
 
 	// 1. Initialize FGA (creates store + model if needed)
 	const fga = await FGAClient.getInstance();
-	console.log("FGA client initialized.\n");
+	infoLogs("FGA client initialized.", LogTypes.LOGS, "Migration:OpenFGA");
 
 	const db = await DB.getInstance();
 
 	// 2. Migrate users → write FGA tuples based on role flags
-	console.log("--- Migrating users ---");
+	infoLogs("--- Migrating users ---", LogTypes.LOGS, "Migration:OpenFGA");
 	const users = await db
 		.selectFrom("users")
 		.select(["id", "org_id", "role_id"])
@@ -32,16 +33,16 @@ async function main() {
 			await AuthorizationService.assignRoleToUser(user.id, user.org_id, user.role_id);
 			userCount++;
 			if (userCount % 50 === 0) {
-				console.log(`  Processed ${userCount}/${users.length} users`);
+				infoLogs(`  Processed ${userCount}/${users.length} users`, LogTypes.LOGS, "Migration:OpenFGA");
 			}
 		} catch (err) {
-			console.error(`  Failed to migrate user ${user.id}:`, err);
+			infoLogs(`  Failed to migrate user ${user.id}: ${err}`, LogTypes.ERROR, "Migration:OpenFGA");
 		}
 	}
-	console.log(`  Migrated ${userCount}/${users.length} users\n`);
+	infoLogs(`  Migrated ${userCount}/${users.length} users`, LogTypes.LOGS, "Migration:OpenFGA");
 
 	// 3. Migrate apps → write structural tuples (app → org)
-	console.log("--- Migrating apps ---");
+	infoLogs("--- Migrating apps ---", LogTypes.LOGS, "Migration:OpenFGA");
 	const apps = await db
 		.selectFrom("app")
 		.select(["id", "org_id"])
@@ -53,13 +54,13 @@ async function main() {
 			await AuthorizationService.writeAppOrgRelation(app.id, app.org_id);
 			appCount++;
 		} catch (err) {
-			console.error(`  Failed to migrate app ${app.id}:`, err);
+			infoLogs(`  Failed to migrate app ${app.id}: ${err}`, LogTypes.ERROR, "Migration:OpenFGA");
 		}
 	}
-	console.log(`  Migrated ${appCount}/${apps.length} apps\n`);
+	infoLogs(`  Migrated ${appCount}/${apps.length} apps`, LogTypes.LOGS, "Migration:OpenFGA");
 
 	// 4. Migrate env_types → write structural tuples (env_type → app, env_type → org)
-	console.log("--- Migrating env_types ---");
+	infoLogs("--- Migrating env_types ---", LogTypes.LOGS, "Migration:OpenFGA");
 	const envTypes = await db
 		.selectFrom("env_type")
 		.select(["id", "app_id", "org_id"])
@@ -71,13 +72,13 @@ async function main() {
 			await AuthorizationService.writeEnvTypeRelations(envType.id, envType.app_id, envType.org_id);
 			envTypeCount++;
 		} catch (err) {
-			console.error(`  Failed to migrate env_type ${envType.id}:`, err);
+			infoLogs(`  Failed to migrate env_type ${envType.id}: ${err}`, LogTypes.ERROR, "Migration:OpenFGA");
 		}
 	}
-	console.log(`  Migrated ${envTypeCount}/${envTypes.length} env_types\n`);
+	infoLogs(`  Migrated ${envTypeCount}/${envTypes.length} env_types`, LogTypes.LOGS, "Migration:OpenFGA");
 
 	// 5. Verification — sample batch checks
-	console.log("--- Verification ---");
+	infoLogs("--- Verification ---", LogTypes.LOGS, "Migration:OpenFGA");
 	if (users.length > 0) {
 		const sampleUser = users[0];
 		const allowed = await fga.check(
@@ -85,20 +86,22 @@ async function main() {
 			"member",
 			`org:${sampleUser.org_id}`,
 		);
-		console.log(
+		infoLogs(
 			`  Sample check: user:${sampleUser.id} is member of org:${sampleUser.org_id} => ${allowed}`,
+			LogTypes.LOGS,
+			"Migration:OpenFGA",
 		);
 	}
 
-	console.log("\nMigration complete!");
-	console.log(`  Users: ${userCount}`);
-	console.log(`  Apps: ${appCount}`);
-	console.log(`  Env Types: ${envTypeCount}`);
+	infoLogs("Migration complete!", LogTypes.LOGS, "Migration:OpenFGA");
+	infoLogs(`  Users: ${userCount}`, LogTypes.LOGS, "Migration:OpenFGA");
+	infoLogs(`  Apps: ${appCount}`, LogTypes.LOGS, "Migration:OpenFGA");
+	infoLogs(`  Env Types: ${envTypeCount}`, LogTypes.LOGS, "Migration:OpenFGA");
 
 	process.exit(0);
 }
 
 main().catch(err => {
-	console.error("Migration failed:", err);
+	infoLogs(`Migration failed: ${err}`, LogTypes.ERROR, "Migration:OpenFGA");
 	process.exit(1);
 });

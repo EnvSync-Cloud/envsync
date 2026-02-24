@@ -6,6 +6,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type logoutUseCase struct {
@@ -20,6 +21,9 @@ func NewLogoutUseCase() LogoutUseCase {
 }
 
 func (uc *logoutUseCase) Execute(ctx context.Context) error {
+	_, span := telemetry.Tracer().Start(ctx, "auth.logout")
+	defer span.End()
+
 	// Perform logout
 	if err := uc.authService.Logout(); err != nil {
 		return NewServiceError("failed to logout", err)

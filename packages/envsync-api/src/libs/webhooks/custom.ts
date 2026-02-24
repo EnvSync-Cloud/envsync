@@ -1,3 +1,5 @@
+import infoLogs, { LogTypes } from "@/libs/logger";
+
 export const customWebhook = (
     url: string,
     payload: {
@@ -17,7 +19,8 @@ export const customWebhook = (
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
     })
     .then(response => {
         if (!response.ok) {
@@ -26,7 +29,7 @@ export const customWebhook = (
         return response.json();
     })
     .catch(error => {
-        console.error("Error triggering custom webhook:", error);
+        infoLogs(`Error triggering custom webhook: ${error}`, LogTypes.ERROR, "Webhook:Custom");
         throw error;
     });
 }

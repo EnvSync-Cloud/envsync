@@ -1,4 +1,8 @@
+import { SpanKind } from "@opentelemetry/api";
+
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { externalServiceCalls } from "@/libs/telemetry/metrics";
 import { config } from "@/utils/env";
 
 export interface VaultKVReadResult {
@@ -54,6 +58,7 @@ export class VaultClient {
 		const res = await fetch(`${this.addr}/v1/sys/health`, {
 			method: "GET",
 			headers: this.baseHeaders(),
+			signal: AbortSignal.timeout(10_000),
 		});
 
 		if (res.status !== 503) return; // not sealed
@@ -64,6 +69,7 @@ export class VaultClient {
 			method: "PUT",
 			headers: this.baseHeaders(),
 			body: JSON.stringify({ key: unsealKey }),
+			signal: AbortSignal.timeout(10_000),
 		});
 
 		if (!unsealRes.ok) {
@@ -82,6 +88,7 @@ export class VaultClient {
 				role_id: this.roleId,
 				secret_id: this.secretId,
 			}),
+			signal: AbortSignal.timeout(10_000),
 		});
 
 		if (!res.ok) {
@@ -123,6 +130,7 @@ export class VaultClient {
 		const res = await fetch(`${this.addr}/v1/auth/token/renew-self`, {
 			method: "POST",
 			headers: this.authHeaders(),
+			signal: AbortSignal.timeout(10_000),
 		});
 
 		if (!res.ok) {
@@ -158,25 +166,42 @@ export class VaultClient {
 	 * or 503 (Vault sealed then unsealed, old token invalid) and retries once.
 	 */
 	private async vaultFetch(url: string, init: RequestInit): Promise<Response> {
-		const doFetch = () =>
-			fetch(url, {
-				...init,
-				headers: {
-					...this.authHeaders(),
-					...((init.headers as Record<string, string>) || {}),
-				},
-			});
+		const method = (init.method || "GET").toUpperCase();
+		return withSpan(
+			`vault ${method}`,
+			{
+				"vault.operation": method,
+				"http.method": method,
+				"http.url": url,
+				"peer.service": "vault",
+			},
+			async span => {
+				externalServiceCalls.add(1, { "peer.service": "vault", "http.method": method });
 
-		const res = await doFetch();
-		if (res.status === 403 || res.status === 503) {
-			infoLogs(`Vault returned ${res.status}, re-authenticating and retrying...`, LogTypes.LOGS, "Vault");
-			if (res.status === 503) {
-				await this.tryUnseal();
-			}
-			await this.authenticate();
-			return doFetch();
-		}
-		return res;
+				const doFetch = () =>
+					fetch(url, {
+						...init,
+						headers: {
+							...this.authHeaders(),
+							...((init.headers as Record<string, string>) || {}),
+						},
+						signal: AbortSignal.timeout(10_000),
+					});
+
+				let res = await doFetch();
+				if (res.status === 403 || res.status === 503) {
+					infoLogs(`Vault returned ${res.status}, re-authenticating and retrying...`, LogTypes.LOGS, "Vault");
+					if (res.status === 503) {
+						await this.tryUnseal();
+					}
+					await this.authenticate();
+					res = await doFetch();
+				}
+				span.setAttribute("http.status_code", res.status);
+				return res;
+			},
+			SpanKind.CLIENT,
+		);
 	}
 
 	/**
@@ -328,6 +353,7 @@ export class VaultClient {
 			const res = await fetch(`${this.addr}/v1/sys/health`, {
 				method: "GET",
 				headers: this.authHeaders(),
+				signal: AbortSignal.timeout(10_000),
 			});
 			const ok = res.ok || res.status === 429 || res.status === 472 || res.status === 473;
 			if (ok) {
@@ -341,4 +367,36 @@ export class VaultClient {
 			return false;
 		}
 	}
+
+	/**
+	 * Stop the token renewal timer and clean up resources.
+	 * Called during graceful shutdown.
+	 */
+	shutdown(): void {
+		if (this.renewalTimer) {
+			clearInterval(this.renewalTimer);
+			this.renewalTimer = null;
+			infoLogs("Vault renewal timer stopped", LogTypes.LOGS, "Vault");
+		}
+	}
+
+	/**
+	 * Shutdown the singleton instance and clear the renewal timer.
+	 */
+	static async shutdownInstance(): Promise<void> {
+		if (this.instance) {
+			try {
+				const client = await this.instance;
+				client.shutdown();
+			} catch {
+				// Instance failed to initialize; nothing to shut down
+			}
+			this.instance = undefined;
+		}
+	}
 }
+
+// Graceful shutdown: clear the renewal timer on process exit signals
+const shutdownVault = () => VaultClient.shutdownInstance();
+process.on("SIGTERM", shutdownVault);
+process.on("SIGINT", shutdownVault);

@@ -19,7 +19,7 @@ func NewFetchAppUseCase() FetchAppUseCase {
 }
 
 func (f *fetchAppUseCase) Execute(ctx context.Context, appID string) (*domain.Application, error) {
-	app, err := f.appService.GetAppByID(appID)
+	app, err := f.appService.GetAppByID(ctx, appID)
 	if err != nil {
 		return nil, err
 	}

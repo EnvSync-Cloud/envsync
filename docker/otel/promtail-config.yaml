@@ -1,0 +1,99 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Extract container name
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: container
+
+      # Extract compose service label
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: compose_service
+
+      # Extract compose project label
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: compose_project
+
+      # Drop containers without a compose project (not part of our stack)
+      - source_labels: ["compose_project"]
+        regex: ""
+        action: drop
+
+      # Drop short-lived migration/init containers
+      - source_labels: ["compose_service"]
+        regex: ".*_(migrate|init)|vault-init|minikms_migrate|openfga_migrate|envsync_init"
+        action: drop
+
+      # Categorize services: databases
+      - source_labels: ["compose_service"]
+        regex: "postgres|zitadel_db|openfga_db|minikms_db"
+        target_label: service_category
+        replacement: databases
+
+      # Categorize services: cache
+      - source_labels: ["compose_service"]
+        regex: "redis"
+        target_label: service_category
+        replacement: cache
+
+      # Categorize services: auth & security
+      - source_labels: ["compose_service"]
+        regex: "zitadel|zitadel_login|openfga|vault|minikms"
+        target_label: service_category
+        replacement: auth_security
+
+      # Categorize services: infrastructure
+      - source_labels: ["compose_service"]
+        regex: "rustfs|mailpit|envsync_api"
+        target_label: service_category
+        replacement: infrastructure
+
+      # Categorize services: observability
+      - source_labels: ["compose_service"]
+        regex: "otel-collector|tempo|loki|prometheus|grafana|promtail"
+        target_label: service_category
+        replacement: observability
+
+      # Default category for uncategorized services
+      - source_labels: ["service_category"]
+        regex: ""
+        target_label: service_category
+        replacement: uncategorized
+
+    pipeline_stages:
+      # Unwrap Docker JSON log format
+      - docker: {}
+
+      # Try to extract level from JSON logs
+      - json:
+          expressions:
+            level: level
+            msg: msg
+
+      # Normalize level values to lowercase
+      - template:
+          source: level
+          template: "{{ ToLower .Value }}"
+
+      # Map common level aliases
+      - template:
+          source: level
+          template: >-
+            {{ if or (eq .Value "warning") (eq .Value "warn") }}warn{{ else if or (eq .Value "err") (eq .Value "error") }}error{{ else if or (eq .Value "inf") (eq .Value "info") }}info{{ else if or (eq .Value "dbg") (eq .Value "debug") }}debug{{ else if or (eq .Value "fat") (eq .Value "fatal") (eq .Value "crit") (eq .Value "critical") }}fatal{{ else }}{{ .Value }}{{ end }}
+
+      # Set detected_level label from extracted level
+      - labels:
+          detected_level: level

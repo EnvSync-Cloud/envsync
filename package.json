@@ -14,7 +14,8 @@
     "cli": "bun run scripts/cli.ts",
     "e2e-setup": "bun run scripts/e2e-setup.ts",
     "test:mock": "turbo test:mock",
-    "test:e2e": "turbo test:e2e"
+    "test:e2e": "turbo test:e2e",
+    "cli:init": "bun run packages/envsync-api/scripts/cli.ts create-dev-user --seed"
   },
   "peerDependencies": {
     "typescript": "^5",

@@ -4,7 +4,10 @@ import "zod-openapi/extend";
 
 export const getAuditLogsQuerySchema = z.object({
 	page: z.string().default("1").openapi({ example: "1" }),
-	per_page: z.string().default("20").openapi({ example: "20" }),
+	per_page: z.string().default("20").refine((val) => {
+		const num = Number(val);
+		return Number.isInteger(num) && num >= 1 && num <= 100;
+	}, { message: "per_page must be an integer between 1 and 100" }).openapi({ example: "20" }),
 	filter_by_user: z.string().optional().openapi({ example: "user_123" }),
 	filter_by_category: ActionCategories
 		.optional()

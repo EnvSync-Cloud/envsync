@@ -12,11 +12,11 @@ import (
 )
 
 type EnvTypeRepository interface {
-	Create(*requests.EnvTypeRequest) (responses.EnvTypeResponse, error)
-	GetAll() ([]responses.EnvTypeResponse, error)
-	GetByID(id string) (responses.EnvTypeResponse, error)
-	GetByAppID(appID string) ([]responses.EnvTypeResponse, error)
-	Delete(string) error
+	Create(ctx context.Context, req *requests.EnvTypeRequest) (responses.EnvTypeResponse, error)
+	GetAll(ctx context.Context) ([]responses.EnvTypeResponse, error)
+	GetByID(ctx context.Context, id string) (responses.EnvTypeResponse, error)
+	GetByAppID(ctx context.Context, appID string) ([]responses.EnvTypeResponse, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type envTypeRepo struct {
@@ -31,7 +31,7 @@ func NewEnvTypeRepository() EnvTypeRepository {
 	}
 }
 
-func (e *envTypeRepo) Create(req *requests.EnvTypeRequest) (responses.EnvTypeResponse, error) {
+func (e *envTypeRepo) Create(ctx context.Context, req *requests.EnvTypeRequest) (responses.EnvTypeResponse, error) {
 	isDefault := req.IsDefault
 	isProtected := req.IsProtected
 	var color *string
@@ -39,7 +39,7 @@ func (e *envTypeRepo) Create(req *requests.EnvTypeRequest) (responses.EnvTypeRes
 		color = &req.Color
 	}
 
-	resp, err := e.client.EnvironmentTypes.CreateEnvType(context.Background(), &sdk.CreateEnvTypeRequest{
+	resp, err := e.client.EnvironmentTypes.CreateEnvType(ctx, &sdk.CreateEnvTypeRequest{
 		Name:        req.Name,
 		Color:       color,
 		IsDefault:   &isDefault,
@@ -53,8 +53,8 @@ func (e *envTypeRepo) Create(req *requests.EnvTypeRequest) (responses.EnvTypeRes
 	return sdkEnvTypeToResponse(resp), nil
 }
 
-func (e *envTypeRepo) GetAll() ([]responses.EnvTypeResponse, error) {
-	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(context.Background())
+func (e *envTypeRepo) GetAll(ctx context.Context) ([]responses.EnvTypeResponse, error) {
+	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -67,8 +67,8 @@ func (e *envTypeRepo) GetAll() ([]responses.EnvTypeResponse, error) {
 	return result, nil
 }
 
-func (e *envTypeRepo) GetByID(id string) (responses.EnvTypeResponse, error) {
-	resp, err := e.client.EnvironmentTypes.GetEnvType(context.Background(), id)
+func (e *envTypeRepo) GetByID(ctx context.Context, id string) (responses.EnvTypeResponse, error) {
+	resp, err := e.client.EnvironmentTypes.GetEnvType(ctx, id)
 	if err != nil {
 		return responses.EnvTypeResponse{}, err
 	}
@@ -76,8 +76,8 @@ func (e *envTypeRepo) GetByID(id string) (responses.EnvTypeResponse, error) {
 	return sdkEnvTypeToResponse(resp), nil
 }
 
-func (e *envTypeRepo) GetByAppID(appID string) ([]responses.EnvTypeResponse, error) {
-	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(context.Background())
+func (e *envTypeRepo) GetByAppID(ctx context.Context, appID string) ([]responses.EnvTypeResponse, error) {
+	envTypes, err := e.client.EnvironmentTypes.GetEnvTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (e *envTypeRepo) GetByAppID(appID string) ([]responses.EnvTypeResponse, err
 	return filtered, nil
 }
 
-func (e *envTypeRepo) Delete(id string) error {
-	_, err := e.client.EnvironmentTypes.DeleteEnvType(context.Background(), id)
+func (e *envTypeRepo) Delete(ctx context.Context, id string) error {
+	_, err := e.client.EnvironmentTypes.DeleteEnvType(ctx, id)
 	return err
 }
 

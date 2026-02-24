@@ -102,11 +102,12 @@ describe("App Lifecycle E2E", () => {
 		expect(res.status).toBe(200);
 	});
 
-	test("deleted app returns 500 (not found)", async () => {
+	test("deleted app returns 404 (not found)", async () => {
 		const res = await testRequest(`/api/app/${appId}`, {
 			token: seed.masterUser.token,
 		});
-		// executeTakeFirstOrThrow will throw → 500
-		expect(res.status).toBe(500);
+		expect(res.status).toBe(404);
+		const body = await res.json<{ error: string; code: string }>();
+		expect(body.code).toBe("NOT_FOUND");
 	});
 });

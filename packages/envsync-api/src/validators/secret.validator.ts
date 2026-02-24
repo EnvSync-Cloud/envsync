@@ -38,7 +38,7 @@ export const batchSecretsRequestSchema = z
 				key: z.string().openapi({ example: "JWT_SECRET" }),
 				value: z.string().openapi({ example: "super_secret_jwt_key_123" }),
 			}),
-		),
+		).max(100),
 	})
 	.openapi({ ref: "BatchCreateSecretsRequest" });
 
@@ -46,7 +46,7 @@ export const batchSecretsDeleteRequestSchema = z
 	.object({
 		app_id: z.string().openapi({ example: "app_123" }),
 		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })),
+		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })).max(100),
 	})
 	.openapi({ ref: "BatchDeleteSecretsRequest" });
 
@@ -54,7 +54,7 @@ export const revealSecretsRequestSchema = z
 	.object({
 		app_id: z.string().openapi({ example: "app_123" }),
 		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })),
+		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })).max(100),
 	})
 	.openapi({ ref: "RevealSecretsRequest" });
 
@@ -86,8 +86,8 @@ export const secretHistoryRequestSchema = z
 	.object({
 		app_id: z.string().openapi({ example: "app_123" }),
 		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		page: z.string().openapi({ example: "1" }),
-		per_page: z.string().openapi({ example: "20" }),
+		page: z.coerce.number().int().min(1).default(1).openapi({ example: 1 }),
+		per_page: z.coerce.number().int().min(1).max(100).default(20).openapi({ example: 20 }),
 	})
 	.openapi({ ref: "SecretHistoryRequest" });
 

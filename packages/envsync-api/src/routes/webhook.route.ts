@@ -76,6 +76,7 @@ app.get(
             },
         },
     }),
+    requirePermission("can_view", "org"),
     WebhookController.getWebhook,
 );
 
@@ -105,6 +106,7 @@ app.get(
             },
         },
     }),
+    requirePermission("can_view", "org"),
     WebhookController.getWebhooks,
 );
 

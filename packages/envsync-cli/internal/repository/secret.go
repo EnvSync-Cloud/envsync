@@ -10,8 +10,8 @@ import (
 )
 
 type SecretRepository interface {
-	GetAll(string, string) ([]responses.SecretResponse, error)
-	Reveal(string, string, []string) ([]responses.SecretResponse, error)
+	GetAll(ctx context.Context, appID string, envTypeID string) ([]responses.SecretResponse, error)
+	Reveal(ctx context.Context, appID string, envTypeID string, keys []string) ([]responses.SecretResponse, error)
 }
 
 type secretRepo struct {
@@ -26,8 +26,8 @@ func NewSecretRepository() SecretRepository {
 	}
 }
 
-func (s *secretRepo) GetAll(appID, envTypeID string) ([]responses.SecretResponse, error) {
-	secrets, err := s.client.Secrets.GetSecrets(context.Background(), &sdk.GetSecretRequest{
+func (s *secretRepo) GetAll(ctx context.Context, appID, envTypeID string) ([]responses.SecretResponse, error) {
+	secrets, err := s.client.Secrets.GetSecrets(ctx, &sdk.GetSecretRequest{
 		AppId:     appID,
 		EnvTypeId: envTypeID,
 	})
@@ -52,8 +52,8 @@ func (s *secretRepo) GetAll(appID, envTypeID string) ([]responses.SecretResponse
 	return result, nil
 }
 
-func (s *secretRepo) Reveal(appID, envTypeID string, keys []string) ([]responses.SecretResponse, error) {
-	secrets, err := s.client.Secrets.RevealSecrets(context.Background(), &sdk.RevealSecretsRequest{
+func (s *secretRepo) Reveal(ctx context.Context, appID, envTypeID string, keys []string) ([]responses.SecretResponse, error) {
+	secrets, err := s.client.Secrets.RevealSecrets(ctx, &sdk.RevealSecretsRequest{
 		AppId:     appID,
 		EnvTypeId: envTypeID,
 		Keys:      keys,

@@ -72,13 +72,15 @@ describe("POST /api/certificate/ca/init", () => {
 		expect(res.status).toBe(403);
 	});
 
-	test("duplicate init returns 500", async () => {
+	test("duplicate init returns 409 (conflict)", async () => {
 		const res = await testRequest("/api/certificate/ca/init", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: { org_name: seed.org.name },
 		});
-		expect(res.status).toBe(500);
+		expect(res.status).toBe(409);
+		const body = await res.json<{ error: string; code: string }>();
+		expect(body.code).toBe("CONFLICT");
 	});
 });
 

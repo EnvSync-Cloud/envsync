@@ -26,7 +26,7 @@ func (i *injectSecretUseCase) Execute(ctx context.Context) (map[string]string, e
 	appID := ctx.Value("appID").(string)
 	envTypeID := ctx.Value("envTypeID").(string)
 
-	secrets, err := i.getAllSecrets(appID, envTypeID)
+	secrets, err := i.getAllSecrets(ctx, appID, envTypeID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (i *injectSecretUseCase) Execute(ctx context.Context) (map[string]string, e
 		}
 	} else {
 		// If it is managed then decrypt using the managed secret decryption logic
-		decryptedSecrets, err = i.decryptManagedSecrets(secrets, appID, envTypeID)
+		decryptedSecrets, err = i.decryptManagedSecrets(ctx, secrets, appID, envTypeID)
 		if err != nil {
 			return nil, err
 		}
@@ -59,8 +59,8 @@ func (i *injectSecretUseCase) Execute(ctx context.Context) (map[string]string, e
 	return injectedSecrets, nil
 }
 
-func (i *injectSecretUseCase) getAllSecrets(appID, envTypeID string) ([]domain.Secret, error) {
-	secrets, err := i.secretService.GetAllSecrets(appID, envTypeID)
+func (i *injectSecretUseCase) getAllSecrets(ctx context.Context, appID, envTypeID string) ([]domain.Secret, error) {
+	secrets, err := i.secretService.GetAllSecrets(ctx, appID, envTypeID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +87,13 @@ func (i *injectSecretUseCase) extractPrivateKey(keyPath string) (string, error) 
 	return privateKey, nil
 }
 
-func (i *injectSecretUseCase) decryptManagedSecrets(secrets []domain.Secret, appID, envTypeID string) ([]domain.Secret, error) {
+func (i *injectSecretUseCase) decryptManagedSecrets(ctx context.Context, secrets []domain.Secret, appID, envTypeID string) ([]domain.Secret, error) {
 	keys := make([]string, len(secrets))
 	for i, secret := range secrets {
 		keys[i] = secret.Key
 	}
 
-	decryptedSecrets, err := i.secretService.RevelSecrets(appID, envTypeID, keys)
+	decryptedSecrets, err := i.secretService.RevelSecrets(ctx, appID, envTypeID, keys)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
+import { orNotFound } from "@/libs/errors";
 import { WebhookHandler } from "@/libs/webhooks";
 import { config } from "@/utils/env";
 import { JsonValue } from "@/libs/db";
@@ -62,23 +63,29 @@ export class WebhookService {
             })
             .execute();
 
-        await invalidateCache(CacheKeys.webhooksByOrg(org_id));
+        // Note: webhooksByOrg list is not cached (paginated endpoint), so no list invalidation needed.
 
         return id;
     }
 
-    public static getWebhookByOrgId = async (org_id: string) => {
-        return cacheAside(CacheKeys.webhooksByOrg(org_id), CacheTTL.SHORT, async () => {
-            const db = await DB.getInstance();
+    // Perf note (#58): cacheAside is intentionally NOT used here because
+    // the endpoint is paginated (page/per_page). Caching paginated list
+    // responses would require a cache key per (org_id, page, per_page)
+    // combination, and invalidation of *all* page variants on mutation,
+    // which adds complexity without clear benefit for a low-traffic list.
+    // The single-webhook read (getWebhookById) is already cached.
+    public static getWebhookByOrgId = async (org_id: string, page = 1, per_page = 50) => {
+        const db = await DB.getInstance();
 
-            const webhooks = await db
-                .selectFrom("webhook_store")
-                .selectAll()
-                .where("org_id", "=", org_id)
-                .execute();
+        const webhooks = await db
+            .selectFrom("webhook_store")
+            .selectAll()
+            .where("org_id", "=", org_id)
+            .limit(per_page)
+            .offset((page - 1) * per_page)
+            .execute();
 
-            return webhooks;
-        });
+        return webhooks;
     };
 
     public static getWebhookByAppId = async (app_id: string) => {
@@ -109,11 +116,15 @@ export class WebhookService {
         return cacheAside(CacheKeys.webhook(id), CacheTTL.SHORT, async () => {
             const db = await DB.getInstance();
 
-            const webhook = await db
-                .selectFrom("webhook_store")
-                .selectAll()
-                .where("id", "=", id)
-                .executeTakeFirstOrThrow();
+            const webhook = await orNotFound(
+                db
+                    .selectFrom("webhook_store")
+                    .selectAll()
+                    .where("id", "=", id)
+                    .executeTakeFirstOrThrow(),
+                "Webhook",
+                id,
+            );
 
             return webhook;
         });
@@ -132,13 +143,6 @@ export class WebhookService {
     ): Promise<void> => {
         const db = await DB.getInstance();
 
-        // Fetch webhook to get org_id for invalidation
-        const webhook = await db
-            .selectFrom("webhook_store")
-            .select("org_id")
-            .where("id", "=", id)
-            .executeTakeFirstOrThrow();
-
         await db
             .updateTable("webhook_store")
             .set({
@@ -148,24 +152,19 @@ export class WebhookService {
             .where("id", "=", id)
             .execute();
 
-        await invalidateCache(CacheKeys.webhook(id), CacheKeys.webhooksByOrg(webhook.org_id));
+        // Note: webhooksByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
+        await invalidateCache(CacheKeys.webhook(id));
     };
 
     public static deleteWebhook = async (id: string): Promise<void> => {
         const db = await DB.getInstance();
 
-        // Fetch webhook to get org_id for invalidation
-        const webhook = await db
-            .selectFrom("webhook_store")
-            .select("org_id")
-            .where("id", "=", id)
-            .executeTakeFirstOrThrow();
-
         await db.deleteFrom("webhook_store")
             .where("id", "=", id)
             .execute();
 
-        await invalidateCache(CacheKeys.webhook(id), CacheKeys.webhooksByOrg(webhook.org_id));
+        // Note: webhooksByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
+        await invalidateCache(CacheKeys.webhook(id));
     };
 
     public static triggerWebhook = async (
@@ -197,27 +196,28 @@ export class WebhookService {
                 "triggerWebhook"
             )
 
+            // Hoist org/app/user lookups outside the per-webhook loop to avoid N+1 queries
+            const org = await db
+                .selectFrom("orgs")
+                .select(["name"])
+                .where("id", "=", payload.org_id)
+                .executeTakeFirstOrThrow();
+
+            const app = payload.app_id
+                ? await db
+                    .selectFrom("app")
+                    .select(["name", "id"])
+                    .where("id", "=", payload.app_id)
+                    .executeTakeFirst()
+                : null;
+
+            const user = await db
+                .selectFrom("users")
+                .select(["full_name", "email"])
+                .where("id", "=", payload.user_id)
+                .executeTakeFirstOrThrow();
+
             await Promise.all(webhooks.map(async (webhook) => {
-                const org = await db
-                    .selectFrom("orgs")
-                    .select(["name"])
-                    .where("id", "=", payload.org_id)
-                    .executeTakeFirstOrThrow();
-
-                const app = payload.app_id
-                    ? await db
-                        .selectFrom("app")
-                        .select(["name", "id"])
-                        .where("id", "=", payload.app_id)
-                        .executeTakeFirst()
-                    : null;
-
-                const user = await db
-                    .selectFrom("users")
-                    .select(["full_name", "email"])
-                    .where("id", "=", payload.user_id)
-                    .executeTakeFirstOrThrow();
-
                 let url_for_entity_in_question = "";
 
                 switch (payload.event_type) {

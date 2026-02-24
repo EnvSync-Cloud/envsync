@@ -1,4 +1,5 @@
 import { IncomingWebhook } from "@slack/webhook";
+import infoLogs, { LogTypes } from "@/libs/logger";
 
 export const slackWebhook = (
     url: string,
@@ -73,7 +74,7 @@ export const slackWebhook = (
             blocks: templateText.blocks
         });
     } catch (error) {
-        console.error("Failed to send Slack webhook:", error);
+        infoLogs(`Failed to send Slack webhook: ${error}`, LogTypes.ERROR, "Webhook:Slack");
         throw error; // Re-throw the error to ensure the caller is aware of the failure
     }
 }

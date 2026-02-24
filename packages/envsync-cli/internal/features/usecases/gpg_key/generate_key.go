@@ -39,7 +39,7 @@ func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorith
 		IsDefault:     isDefault,
 	}
 
-	key, err := uc.service.GenerateKey(req)
+	key, err := uc.service.GenerateKey(ctx, req)
 	if err != nil {
 		return nil, NewServiceError("failed to generate GPG key", err)
 	}

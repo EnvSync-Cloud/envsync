@@ -34,7 +34,7 @@ func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType)
 		return err
 	}
 
-	envs, err := uc.fetchAvailableEnvs(syncConfig.AppID)
+	envs, err := uc.fetchAvailableEnvs(ctx, syncConfig.AppID)
 	if err != nil {
 		return err
 	}
@@ -59,8 +59,8 @@ func (uc *switchEnvUseCase) readSyncConfig() (*domain.SyncConfig, error) {
 	return &syncConfig, nil
 }
 
-func (uc *switchEnvUseCase) fetchAvailableEnvs(appID string) ([]domain.EnvType, error) {
-	envs, err := uc.envTypeService.GetEnvTypesByAppID(appID)
+func (uc *switchEnvUseCase) fetchAvailableEnvs(ctx context.Context, appID string) ([]domain.EnvType, error) {
+	envs, err := uc.envTypeService.GetEnvTypesByAppID(ctx, appID)
 	if err != nil {
 		return nil, NewServiceError("failed to fetch environment types", err)
 	}

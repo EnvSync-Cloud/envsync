@@ -16,7 +16,7 @@ func NewGetRootCAUseCase() GetRootCAUseCase {
 }
 
 func (uc *getRootCAUseCase) Execute(ctx context.Context) (string, error) {
-	certPEM, err := uc.service.GetRootCA()
+	certPEM, err := uc.service.GetRootCA(ctx)
 	if err != nil {
 		return "", NewServiceError("failed to get root CA", err)
 	}

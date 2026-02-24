@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"os"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"resty.dev/v3"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
-	"resty.dev/v3"
 )
 
 // createSDKClient initializes and returns a new SDK client with proper authentication
@@ -28,6 +30,9 @@ func createSDKClient() *sdkclient.Client {
 	opts := []option.RequestOption{
 		option.WithBaseURL(cfg.BackendURL),
 		option.WithHTTPHeader(headers),
+		option.WithHTTPClient(&http.Client{
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		}),
 	}
 
 	if hasAPIKey && apiKey != "" {
@@ -57,7 +62,8 @@ func createHTTPClient() *resty.Client {
 		SetDisableWarn(true).
 		SetBaseURL(cfg.BackendURL).
 		SetHeader("Content-Type", "application/json").
-		SetHeader("X-CLI-CMD", cliCmd)
+		SetHeader("X-CLI-CMD", cliCmd).
+		SetTransport(otelhttp.NewTransport(http.DefaultTransport))
 
 	if hasAPIKey && apiKey != "" {
 		client.SetHeader("X-API-Key", apiKey)

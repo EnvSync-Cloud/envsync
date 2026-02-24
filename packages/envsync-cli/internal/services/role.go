@@ -1,13 +1,15 @@
 package services
 
 import (
+	"context"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type RoleService interface {
-	GetAllRoles() ([]domain.Role, error)
+	GetAllRoles(ctx context.Context) ([]domain.Role, error)
 }
 
 type role struct {
@@ -22,8 +24,8 @@ func NewRoleService() RoleService {
 	}
 }
 
-func (r *role) GetAllRoles() ([]domain.Role, error) {
-	roleRes, err := r.roleRepo.GetAll()
+func (r *role) GetAllRoles(ctx context.Context) ([]domain.Role, error) {
+	roleRes, err := r.roleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}

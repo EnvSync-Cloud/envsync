@@ -27,7 +27,7 @@ func (uc *initCAUseCase) Execute(ctx context.Context, orgName, description strin
 		Description: description,
 	}
 
-	cert, err := uc.service.InitCA(req)
+	cert, err := uc.service.InitCA(ctx, req)
 	if err != nil {
 		return nil, NewServiceError("failed to initialize organization CA", err)
 	}

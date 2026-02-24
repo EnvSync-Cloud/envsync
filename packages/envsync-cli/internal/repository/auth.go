@@ -13,9 +13,9 @@ import (
 )
 
 type AuthRepository interface {
-	LoginDeviceCode() (responses.DeviceCodeResponse, error)
-	LoginToken(deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error)
-	Whoami() (responses.UserInfoResponse, error)
+	LoginDeviceCode(ctx context.Context) (responses.DeviceCodeResponse, error)
+	LoginToken(ctx context.Context, deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error)
+	Whoami(ctx context.Context) (responses.UserInfoResponse, error)
 }
 
 type authRepo struct {
@@ -35,9 +35,9 @@ func NewAuthRepository() AuthRepository {
 }
 
 // LoginDeviceCode retrieves a device code and verification uri for the authentication flow
-func (s *authRepo) LoginDeviceCode() (responses.DeviceCodeResponse, error) {
+func (s *authRepo) LoginDeviceCode(ctx context.Context) (responses.DeviceCodeResponse, error) {
 	resp, err := s.sdkClient.Access.CreateCliLogin(
-		context.Background(),
+		ctx,
 		option.WithBaseURL(config.New().BackendURL),
 	)
 	if err != nil {
@@ -74,7 +74,7 @@ func (s *authRepo) LoginDeviceCode() (responses.DeviceCodeResponse, error) {
 }
 
 // LoginToken exchanges a device code for an authentication token
-func (s *authRepo) LoginToken(deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error) {
+func (s *authRepo) LoginToken(ctx context.Context, deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error) {
 	var resBody responses.LoginTokenResponse
 
 	res, err := s.httpClient.
@@ -99,8 +99,8 @@ func (s *authRepo) LoginToken(deviceCode, clientID, TokenUrl string) (responses.
 	return resBody, nil
 }
 
-func (s *authRepo) Whoami() (responses.UserInfoResponse, error) {
-	resp, err := s.sdkClient.Authentication.Whoami(context.Background(), option.WithBaseURL(config.New().BackendURL))
+func (s *authRepo) Whoami(ctx context.Context) (responses.UserInfoResponse, error) {
+	resp, err := s.sdkClient.Authentication.Whoami(ctx, option.WithBaseURL(config.New().BackendURL))
 	if err != nil {
 		return responses.UserInfoResponse{}, fmt.Errorf("failed to get user info: %w", err)
 	}

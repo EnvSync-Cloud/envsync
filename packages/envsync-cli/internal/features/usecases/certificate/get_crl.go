@@ -17,7 +17,7 @@ func NewGetCRLUseCase() GetCRLUseCase {
 }
 
 func (uc *getCRLUseCase) Execute(ctx context.Context) (*domain.CRLResult, error) {
-	result, err := uc.service.GetCRL()
+	result, err := uc.service.GetCRL(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to get CRL", err)
 	}

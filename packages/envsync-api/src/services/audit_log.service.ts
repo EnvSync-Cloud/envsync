@@ -64,7 +64,7 @@ export class AuditLogService {
 		details,
 		message,
 	}: {
-		details: Record<string, any>;
+		details: Record<string, unknown>;
 		action: AuditActions;
 		org_id: string;
 		user_id: string;
@@ -76,57 +76,59 @@ export class AuditLogService {
 		const timestamp = now.toISOString();
 		const detailsStr = JSON.stringify(details);
 
-		// Fetch the most recent audit log's entry_hash for the org (Issue #11)
-		let previousHash = GENESIS_HASH;
-		try {
-			const latestEntry = await db
-				.selectFrom("audit_log")
-				.select("entry_hash")
-				.where("org_id", "=", org_id)
-				.where("entry_hash", "is not", null)
-				.orderBy("created_at", "desc")
-				.limit(1)
-				.executeTakeFirst();
+		await db.transaction().execute(async (trx) => {
+			// Lock the latest audit entry for this org to prevent concurrent hash chain forks
+			let previousHash = GENESIS_HASH;
+			try {
+				const latestEntry = await trx
+					.selectFrom("audit_log")
+					.select("entry_hash")
+					.where("org_id", "=", org_id)
+					.where("entry_hash", "is not", null)
+					.orderBy("created_at", "desc")
+					.limit(1)
+					.forUpdate()
+					.executeTakeFirst();
 
-			if (latestEntry?.entry_hash) {
-				previousHash = latestEntry.entry_hash;
+				if (latestEntry?.entry_hash) {
+					previousHash = latestEntry.entry_hash;
+				}
+			} catch {
+				// If entry_hash column doesn't exist yet (pre-migration), use genesis hash
 			}
-		} catch {
-			// If entry_hash column doesn't exist yet (pre-migration), use genesis hash
-		}
 
-		// Compute the entry hash for hash chaining
-		const entryHash = computeEntryHash(
-			previousHash,
-			timestamp,
-			action,
-			org_id,
-			user_id,
-			detailsStr,
-		);
-
-		await db
-			.insertInto("audit_log")
-			.values({
-				id: uuidv4(),
+			const entryHash = computeEntryHash(
+				previousHash,
+				timestamp,
 				action,
 				org_id,
 				user_id,
-				details: detailsStr,
-				message,
-				previous_hash: previousHash,
-				entry_hash: entryHash,
-				created_at: now,
-				updated_at: now,
-			})
-			.execute();
+				detailsStr,
+			);
+
+			await trx
+				.insertInto("audit_log")
+				.values({
+					id: uuidv4(),
+					action,
+					org_id,
+					user_id,
+					details: detailsStr,
+					message,
+					previous_hash: previousHash,
+					entry_hash: entryHash,
+					created_at: now,
+					updated_at: now,
+				})
+				.execute();
+		});
 
 		WebhookService.triggerWebhook({
 			event_type: action,
 			org_id: org_id || "",
 			user_id: user_id || "",
 			message: JSON.stringify(details || {}),
-		});
+		}).catch(() => {});
 	};
 
 	public static getAuditLogs = async (

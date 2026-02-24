@@ -17,7 +17,7 @@ func NewListCertsUseCase() ListCertsUseCase {
 }
 
 func (uc *listCertsUseCase) Execute(ctx context.Context) ([]domain.Certificate, error) {
-	certs, err := uc.service.ListCerts()
+	certs, err := uc.service.ListCerts(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to list certificates", err)
 	}

@@ -51,7 +51,7 @@ func (uc *signUseCase) Execute(ctx context.Context, keyID, filePath, mode string
 		Detached: detached,
 	}
 
-	result, err := uc.service.Sign(req)
+	result, err := uc.service.Sign(ctx, req)
 	if err != nil {
 		return nil, NewServiceError("failed to sign data", err)
 	}

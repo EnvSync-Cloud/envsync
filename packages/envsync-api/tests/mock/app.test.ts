@@ -174,7 +174,7 @@ describe("DELETE /api/app/:id", () => {
 		const getRes = await testRequest(`/api/app/${id}`, {
 			token: seed.masterUser.token,
 		});
-		expect(getRes.status).toBe(500); // executeTakeFirstOrThrow will error
+		expect(getRes.status).toBe(404); // orNotFound throws NotFoundError
 	});
 
 	test("returns 403 for viewer", async () => {

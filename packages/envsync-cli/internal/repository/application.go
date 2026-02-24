@@ -13,10 +13,10 @@ import (
 )
 
 type ApplicationRepository interface {
-	Create(app requests.ApplicationRequest) (responses.AppResponse, error)
-	GetAll() ([]responses.AppResponse, error)
-	Delete(id string) error
-	GetByID(id string) (responses.AppResponse, error)
+	Create(ctx context.Context, app requests.ApplicationRequest) (responses.AppResponse, error)
+	GetAll(ctx context.Context) ([]responses.AppResponse, error)
+	Delete(ctx context.Context, id string) error
+	GetByID(ctx context.Context, id string) (responses.AppResponse, error)
 }
 
 type appRepo struct {
@@ -31,14 +31,14 @@ func NewApplicationRepository() ApplicationRepository {
 	}
 }
 
-func (a *appRepo) Create(app requests.ApplicationRequest) (responses.AppResponse, error) {
+func (a *appRepo) Create(ctx context.Context, app requests.ApplicationRequest) (responses.AppResponse, error) {
 	enableSecrets := app.EnableSecrets
 	var publicKey *string
 	if app.PublicKey != "" {
 		publicKey = &app.PublicKey
 	}
 
-	resp, err := a.client.Applications.CreateApp(context.Background(), &sdk.CreateAppRequest{
+	resp, err := a.client.Applications.CreateApp(ctx, &sdk.CreateAppRequest{
 		Name:          app.Name,
 		Description:   app.Description,
 		EnableSecrets: &enableSecrets,
@@ -55,8 +55,8 @@ func (a *appRepo) Create(app requests.ApplicationRequest) (responses.AppResponse
 	}, nil
 }
 
-func (a *appRepo) GetAll() ([]responses.AppResponse, error) {
-	apps, err := a.client.Applications.GetApps(context.Background())
+func (a *appRepo) GetAll(ctx context.Context) ([]responses.AppResponse, error) {
+	apps, err := a.client.Applications.GetApps(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +69,13 @@ func (a *appRepo) GetAll() ([]responses.AppResponse, error) {
 	return result, nil
 }
 
-func (a *appRepo) Delete(id string) error {
-	_, err := a.client.Applications.DeleteApp(context.Background(), id)
+func (a *appRepo) Delete(ctx context.Context, id string) error {
+	_, err := a.client.Applications.DeleteApp(ctx, id)
 	return err
 }
 
-func (a *appRepo) GetByID(id string) (responses.AppResponse, error) {
-	app, err := a.client.Applications.GetApp(context.Background(), id)
+func (a *appRepo) GetByID(ctx context.Context, id string) (responses.AppResponse, error) {
+	app, err := a.client.Applications.GetApp(ctx, id)
 	if err != nil {
 		return responses.AppResponse{}, err
 	}

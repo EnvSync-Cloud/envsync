@@ -5,12 +5,17 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"go.opentelemetry.io/contrib/bridges/otelzap"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func NewLogger() *zap.Logger {
+// NewLogger creates a zap.Logger that writes to stdout and a rotating log file.
+// When lp is non-nil an otelzap core is added so log records are also exported
+// as OTEL log signals.
+func NewLogger(lp *sdklog.LoggerProvider) *zap.Logger {
 	stdout := zapcore.AddSync(os.Stdout)
 
 	file := zapcore.AddSync(&lumberjack.Logger{
@@ -32,10 +37,16 @@ func NewLogger() *zap.Logger {
 	consoleEncoder := zapcore.NewConsoleEncoder(developmentCfg)
 	fileEncoder := zapcore.NewJSONEncoder(productionCfg)
 
-	core := zapcore.NewTee(
+	cores := []zapcore.Core{
 		zapcore.NewCore(consoleEncoder, stdout, level),
 		zapcore.NewCore(fileEncoder, file, level),
-	)
+	}
+
+	if lp != nil {
+		cores = append(cores, otelzap.NewCore("envsync-cli", otelzap.WithLoggerProvider(lp)))
+	}
+
+	core := zapcore.NewTee(cores...)
 
 	return zap.New(core)
 }

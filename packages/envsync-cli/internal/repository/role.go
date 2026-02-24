@@ -9,7 +9,7 @@ import (
 )
 
 type RoleRepository interface {
-	GetAll() ([]responses.RoleResponse, error)
+	GetAll(ctx context.Context) ([]responses.RoleResponse, error)
 }
 
 type roleRepo struct {
@@ -24,8 +24,8 @@ func NewRoleRepository() RoleRepository {
 	}
 }
 
-func (a *roleRepo) GetAll() ([]responses.RoleResponse, error) {
-	roles, err := a.client.Roles.GetAllRoles(context.Background())
+func (a *roleRepo) GetAll(ctx context.Context) ([]responses.RoleResponse, error) {
+	roles, err := a.client.Roles.GetAllRoles(ctx)
 	if err != nil {
 		return nil, err
 	}

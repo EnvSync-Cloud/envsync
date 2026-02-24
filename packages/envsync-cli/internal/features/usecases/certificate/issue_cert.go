@@ -32,7 +32,7 @@ func (uc *issueCertUseCase) Execute(ctx context.Context, email, role, descriptio
 		Metadata:    metadata,
 	}
 
-	cert, err := uc.service.IssueMemberCert(req)
+	cert, err := uc.service.IssueMemberCert(ctx, req)
 	if err != nil {
 		return nil, NewServiceError("failed to issue member certificate", err)
 	}

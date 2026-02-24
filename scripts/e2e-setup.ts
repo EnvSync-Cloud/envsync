@@ -26,6 +26,7 @@ import {
 	waitForMailpit,
 	waitForZitadel,
 	waitForMiniKMS,
+	waitForGrafana,
 	readPatFromVolume,
 	readLoginPatFromVolume,
 	initVault,
@@ -62,6 +63,11 @@ function dockerComposeUp(): void {
 			"minikms_db",
 			"minikms_migrate",
 			"minikms",
+			"tempo",
+			"loki",
+			"prometheus",
+			"otel-collector",
+			"grafana",
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
@@ -142,6 +148,7 @@ async function init(): Promise<void> {
 	await waitForMailpit();
 	await waitForZitadel();
 	await waitForMiniKMS();
+	await waitForGrafana();
 
 	// Read Zitadel PATs
 	const zitadelUrl = "http://localhost:8080";
@@ -190,6 +197,8 @@ async function init(): Promise<void> {
 		ZITADEL_LOGIN_PAT: effectiveLoginPat,
 		ZITADEL_E2E_CLIENT_ID: zitadelApp.appClientId,
 		ZITADEL_E2E_CLIENT_SECRET: zitadelApp.appClientSecret,
+		OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+		OTEL_SERVICE_NAME: "envsync-api",
 	};
 
 	updateEnvFile(envE2EPath, e2eEnv);
