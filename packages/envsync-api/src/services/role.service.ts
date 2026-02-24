@@ -5,6 +5,7 @@ import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { orNotFound, BusinessRuleError, ValidationError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
+import infoLogs, { LogTypes } from "@/libs/logger";
 
 export class RoleService {
 	public static createRole = async ({
@@ -15,6 +16,9 @@ export class RoleService {
 		have_api_access,
 		have_billing_options,
 		have_webhook_access,
+		have_gpg_access,
+		have_cert_access,
+		have_audit_access,
 		is_admin,
 		is_master,
 		color,
@@ -26,6 +30,9 @@ export class RoleService {
 		have_api_access: boolean;
 		have_billing_options: boolean;
 		have_webhook_access: boolean;
+		have_gpg_access: boolean;
+		have_cert_access: boolean;
+		have_audit_access: boolean;
 		is_admin: boolean;
 		is_master: boolean;
 		color: string;
@@ -44,6 +51,9 @@ export class RoleService {
 				have_api_access,
 				have_billing_options,
 				have_webhook_access,
+				have_gpg_access,
+				have_cert_access,
+				have_audit_access,
 				is_admin,
 				is_master,
 				created_at: new Date(),
@@ -68,6 +78,9 @@ export class RoleService {
 				have_api_access: true,
 				have_billing_options: true,
 				have_webhook_access: true,
+				have_gpg_access: true,
+				have_cert_access: true,
+				have_audit_access: true,
 				is_admin: true,
 				is_master: true,
 				color: "#FF5733", // Example color for Org Admin
@@ -79,6 +92,9 @@ export class RoleService {
 				have_api_access: false,
 				have_billing_options: true,
 				have_webhook_access: false,
+				have_gpg_access: false,
+				have_cert_access: false,
+				have_audit_access: false,
 				is_admin: false,
 				color: "#33FF57", // Example color for Billing Admin
 			},
@@ -89,6 +105,9 @@ export class RoleService {
 				have_api_access: true,
 				have_billing_options: false,
 				have_webhook_access: true,
+				have_gpg_access: false,
+				have_cert_access: false,
+				have_audit_access: true,
 				is_admin: false,
 				color: "#3357FF", // Example color for Manager
 			},
@@ -99,6 +118,9 @@ export class RoleService {
 				have_api_access: false,
 				have_billing_options: false,
 				have_webhook_access: false,
+				have_gpg_access: false,
+				have_cert_access: false,
+				have_audit_access: false,
 				is_admin: false,
 				color: "#572F13", // Example color for Developer
 			},
@@ -109,6 +131,9 @@ export class RoleService {
 				have_api_access: false,
 				have_billing_options: false,
 				have_webhook_access: false,
+				have_gpg_access: false,
+				have_cert_access: false,
+				have_audit_access: false,
 				is_admin: false,
 				color: "#FF33A1", // Example color for Viewer
 			},
@@ -180,6 +205,9 @@ export class RoleService {
 			billing_access_count: stats.filter(role => role.have_billing_options).length,
 			api_access_count: stats.filter(role => role.have_api_access).length,
 			webhook_access_count: stats.filter(role => role.have_webhook_access).length,
+			gpg_access_count: stats.filter(role => role.have_gpg_access).length,
+			cert_access_count: stats.filter(role => role.have_cert_access).length,
+			audit_access_count: stats.filter(role => role.have_audit_access).length,
 			view_access_count: stats.filter(role => role.can_view).length,
 			edit_access_count: stats.filter(role => role.can_edit).length,
 			total_roles: stats.length,
@@ -196,6 +224,9 @@ export class RoleService {
 			have_api_access?: boolean;
 			have_billing_options?: boolean;
 			have_webhook_access?: boolean;
+			have_gpg_access?: boolean;
+			have_cert_access?: boolean;
+			have_audit_access?: boolean;
 			is_admin?: boolean;
 			is_master?: boolean;
 			color?: string;
@@ -257,6 +288,9 @@ export class RoleService {
 			| "have_api_access"
 			| "have_billing_options"
 			| "have_webhook_access"
+			| "have_gpg_access"
+			| "have_cert_access"
+			| "have_audit_access"
 			| "is_admin"
 			| "is_master",
 	) => {

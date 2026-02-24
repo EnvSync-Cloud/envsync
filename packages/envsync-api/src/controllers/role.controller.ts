@@ -2,6 +2,7 @@ import { type Context } from "hono";
 
 import { RoleService } from "@/services/role.service";
 import { AuditLogService } from "@/services/audit_log.service";
+import infoLogs, { LogTypes} from "@/libs/logger";
 
 export class RoleController {
 	public static readonly getAllRoles = async (c: Context) => {
@@ -39,6 +40,9 @@ export class RoleController {
 			have_api_access,
 			have_billing_options,
 			have_webhook_access,
+			have_gpg_access,
+			have_cert_access,
+			have_audit_access,
 			is_admin,
 			color,
 		} = await c.req.json();
@@ -55,6 +59,9 @@ export class RoleController {
 			have_api_access,
 			have_billing_options,
 			have_webhook_access,
+			have_gpg_access: have_gpg_access ?? false,
+			have_cert_access: have_cert_access ?? false,
+			have_audit_access: have_audit_access ?? false,
 			is_admin,
 			is_master: false,
 			color,
@@ -123,6 +130,9 @@ export class RoleController {
 			have_api_access,
 			have_billing_options,
 			have_webhook_access,
+			have_gpg_access,
+			have_cert_access,
+			have_audit_access,
 			is_admin,
 			color,
 		} = await c.req.json();
@@ -131,6 +141,20 @@ export class RoleController {
 			return c.json({ error: "Role ID is required." }, 400);
 		}
 
+		infoLogs(`Updating role ${id} with data: ${JSON.stringify({
+			name,
+			can_edit,
+			can_view,
+			have_api_access,
+			have_billing_options,
+			have_webhook_access,
+			have_gpg_access,
+			have_cert_access,
+			have_audit_access,
+			is_admin,
+			color,
+		})}`, LogTypes.LOGS, "RoleController.updateRole");
+
 		await RoleService.updateRole(id, org_id, {
 			name,
 			can_edit,
@@ -138,6 +162,9 @@ export class RoleController {
 			have_api_access,
 			have_billing_options,
 			have_webhook_access,
+			have_gpg_access,
+			have_cert_access,
+			have_audit_access,
 			is_admin,
 			color,
 		});

@@ -77,6 +77,21 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
 					},
 				},
+				have_gpg_access: {
+					union: {
+						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+				have_cert_access: {
+					union: {
+						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
+				have_audit_access: {
+					union: {
+						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
+					},
+				},
 
 				// Computed management permissions
 				can_manage_roles: {
@@ -111,9 +126,7 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					},
 				},
 				can_view_audit_logs: {
-					union: {
-						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_audit_access" },
 				},
 				can_manage_org_settings: {
 					computedUserset: { relation: "master" },
@@ -126,31 +139,21 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 
 				// GPG key management
 				can_manage_gpg_keys: {
-					union: {
-						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_gpg_access" },
 				},
 
 				// Certificate management
 				can_view_certificates: {
-					union: {
-						child: [{ this: {} }, { computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_cert_access" },
 				},
 				can_manage_certificates: {
-					union: {
-						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_cert_access" },
 				},
 				can_issue_certificates: {
-					union: {
-						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_cert_access" },
 				},
 				can_revoke_certificates: {
-					union: {
-						child: [{ computedUserset: { relation: "admin" } }, { computedUserset: { relation: "master" } }],
-					},
+					computedUserset: { relation: "have_cert_access" },
 				},
 			},
 			metadata: {
@@ -177,6 +180,15 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					have_webhook_access: {
 						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
 					},
+					have_gpg_access: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					have_cert_access: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
+					have_audit_access: {
+						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
+					},
 					can_manage_roles: {},
 					can_manage_users: {},
 					can_manage_apps: {},
@@ -186,9 +198,7 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					can_manage_org_settings: {},
 					can_manage_invites: {},
 					can_manage_gpg_keys: {},
-					can_view_certificates: {
-						directly_related_user_types: [{ type: "user" }, { type: "team", relation: "member" }],
-					},
+					can_view_certificates: {},
 					can_manage_certificates: {},
 					can_issue_certificates: {},
 					can_revoke_certificates: {},
