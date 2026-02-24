@@ -323,7 +323,7 @@ export const EnvironmentVariablesTable = ({
                       <div className="flex items-center space-x-2 max-w-xs">
                         {variable.sensitive ? (
                           <div className="flex items-center space-x-2">
-                            <code className="select-none text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
+                            <code className="hdx-mask select-none text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
                               {showSensitive[variable.id]
                                 ? variable.value
                                 : "••••••••"}
@@ -357,7 +357,7 @@ export const EnvironmentVariablesTable = ({
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <code className="select-all text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
+                            <code className="hdx-mask select-all text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded flex-1 truncate">
                               {variable.value}
                             </code>
                             <Button
