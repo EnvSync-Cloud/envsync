@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { MutationOptions, sdk } from "./base";
 import {
@@ -176,7 +177,7 @@ const useRegenerateApiKey = ({
 
 const useRefreshApiKeys = () => {
   const { invalidateApiKeys } = useInvalidateQueries();
-  invalidateApiKeys();
+  return useCallback(() => { invalidateApiKeys(); }, [invalidateApiKeys]);
 };
 
 export const apiKeys = {

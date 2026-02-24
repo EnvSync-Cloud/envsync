@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { API_KEYS } from "@/constants";
 import { api as Api } from "@/api";
 
 export function useDashboard() {
@@ -28,9 +27,9 @@ export function useDashboard() {
     data: apiKeysData,
     isLoading: apiKeysLoading,
   } = useQuery({
-    queryKey: [API_KEYS.ALL_API_KEYS],
+    queryKey: ["dashboard-api-keys"],
     queryFn: async () => {
-      const keys = await api.apiKeys.getApiKeys();
+      const keys = await api.apiKeys.getAllApiKeys();
       return keys;
     },
     staleTime: 5 * 60 * 1000,
@@ -43,11 +42,8 @@ export function useDashboard() {
   } = useQuery({
     queryKey: ["dashboard-audit"],
     queryFn: async () => {
-      const logs = await api.audit.getAuditLogs({
-        limit: 10,
-        page: 1,
-      });
-      return logs.data ?? [];
+      const logs = await api.auditLogs.getAuditLogs("1", "20");
+      return logs.auditLogs ?? [];
     },
     staleTime: 2 * 60 * 1000,
     retry: 2,
