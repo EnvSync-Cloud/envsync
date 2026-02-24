@@ -40,6 +40,12 @@ const app = new Hono();
 app.use(authMiddleware());
 app.use(cliMiddleware());
 
+// Note: Route-level requirePermission middleware is intentionally omitted here.
+// Each controller method performs inline FGA authorization checks via
+// AuthorizationService.check() against the specific env_type_id, which provides
+// more granular, resource-level permission enforcement than route-level middleware
+// could offer (e.g., can_view, can_edit, can_manage_protected per env_type).
+
 // Basic CRUD routes
 app.post(
 	"/",

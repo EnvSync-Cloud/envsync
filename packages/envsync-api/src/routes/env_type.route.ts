@@ -6,6 +6,7 @@ import {
 } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { requirePermission } from "@/middlewares/permission.middleware";
 import { EnvTypeController } from "@/controllers/env_type.controller";
 import {
 	createEnvTypeRequestSchema,
@@ -49,6 +50,7 @@ app.get(
 			},
 		},
 	}),
+	requirePermission("can_view", "org"),
 	EnvTypeController.getEnvTypes,
 );
 
@@ -78,6 +80,7 @@ app.get(
 			},
 		},
 	}),
+	requirePermission("can_view", "org"),
 	EnvTypeController.getEnvType,
 );
 
@@ -108,6 +111,7 @@ app.post(
 		},
 	}),
 	zValidator("json", createEnvTypeRequestSchema),
+	requirePermission("can_manage_apps", "org"),
 	EnvTypeController.createEnvType,
 );
 
@@ -138,6 +142,7 @@ app.patch(
 		},
 	}),
 	zValidator("json", updateEnvTypeRequestSchema),
+	requirePermission("can_manage_apps", "org"),
 	EnvTypeController.updateEnvType,
 );
 
@@ -167,6 +172,7 @@ app.delete(
 			},
 		},
 	}),
+	requirePermission("can_manage_apps", "org"),
 	EnvTypeController.deleteEnvType,
 );
 

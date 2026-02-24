@@ -23,6 +23,7 @@ async function mgmtFetch(path: string, options: RequestInit = {}) {
 			"Content-Type": "application/json",
 			...(options.headers as Record<string, string>),
 		},
+		signal: options.signal ?? AbortSignal.timeout(10_000),
 	});
 	return res;
 }
@@ -37,6 +38,7 @@ async function v2Fetch(path: string, options: RequestInit = {}) {
 			"Content-Type": "application/json",
 			...(options.headers as Record<string, string>),
 		},
+		signal: options.signal ?? AbortSignal.timeout(10_000),
 	});
 	return res;
 }
@@ -146,6 +148,7 @@ export async function zitadelTokenExchange(
 			client_id: clientId,
 			client_secret: clientSecret,
 		}),
+		signal: AbortSignal.timeout(10_000),
 	});
 	if (!res.ok) {
 		const text = await res.text();

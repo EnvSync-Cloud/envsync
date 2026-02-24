@@ -1,3 +1,5 @@
+import infoLogs, { LogTypes } from "@/libs/logger";
+
 export const discordWebhook = (
     url: string,
     payload: {
@@ -71,7 +73,8 @@ export const discordWebhook = (
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify(templateText)
+        body: JSON.stringify(templateText),
+        signal: AbortSignal.timeout(10_000),
     })
     .then(response => {
         if (!response.ok) {
@@ -80,7 +83,7 @@ export const discordWebhook = (
         return response.json();
     })
     .catch(error => {
-        console.error("Error triggering Discord webhook:", error);
+        infoLogs(`Error triggering Discord webhook: ${error}`, LogTypes.ERROR, "Webhook:Discord");
         throw error;
     });
 }

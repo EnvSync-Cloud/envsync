@@ -9,18 +9,15 @@ import { config } from "@/utils/env";
  * Uploader class
  */
 export class Uploader {
-	private static _s3Client: S3Client;
-	private static _s3Opts: { bucket: string };
+	private _s3Client: S3Client;
+	private _s3Opts: { bucket: string };
 
 	/**
 	 * Initialize the uploader
 	 * @param bucket Bucket name
 	 */
 	constructor(bucket: string) {
-		const options = {
-			bucket,
-		};
-		Uploader._s3Opts = options;
+		this._s3Opts = { bucket };
 		const s3ClientOpts: S3ClientConfig = {
 			region: config.S3_REGION,
 			endpoint: config.S3_ENDPOINT,
@@ -30,8 +27,7 @@ export class Uploader {
 				secretAccessKey: config.S3_SECRET_KEY,
 			},
 		};
-		const client = new S3Client(s3ClientOpts);
-		Uploader._s3Client = client;
+		this._s3Client = new S3Client(s3ClientOpts);
 	}
 
 	/**
@@ -43,9 +39,9 @@ export class Uploader {
 	async uploadFile(folderName: string, file: File, acl: ObjectCannedACL) {
 		const s3Key = folderName + "/" + randomUUIDv7() + "-" + file.name;
 		const parallelUploads3 = new Upload({
-			client: Uploader._s3Client,
+			client: this._s3Client,
 			params: {
-				Bucket: Uploader._s3Opts.bucket,
+				Bucket: this._s3Opts.bucket,
 				ACL: acl,
 				Body: file,
 				Key: s3Key,

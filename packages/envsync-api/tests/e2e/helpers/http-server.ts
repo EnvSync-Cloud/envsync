@@ -18,7 +18,7 @@ export async function startTestServer(): Promise<{
 
 	return {
 		url: `http://localhost:${server.port}`,
-		port: server.port,
+		port: server.port!,
 		stop: () => server.stop(true),
 	};
 }

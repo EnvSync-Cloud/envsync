@@ -38,7 +38,7 @@ export const batchEnvsRequestSchema = z
 				key: z.string().openapi({ example: "API_KEY" }),
 				value: z.string().openapi({ example: "secret_key_123" }),
 			}),
-		),
+		).max(100),
 	})
 	.openapi({ ref: "BatchCreateEnvsRequest" });
 
@@ -46,7 +46,7 @@ export const batchEnvsDeleteRequestSchema = z
 	.object({
 		app_id: z.string().openapi({ example: "app_123" }),
 		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		keys: z.array(z.string().openapi({ example: "API_KEY" })),
+		keys: z.array(z.string().openapi({ example: "API_KEY" })).max(100),
 	})
 	.openapi({ ref: "BatchDeleteEnvsRequest" });
 

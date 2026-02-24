@@ -19,7 +19,9 @@ export class PostgresDB {
 			user: config.DATABASE_USER,
 			password: config.DATABASE_PASSWORD,
 			port: Number(config.DATABASE_PORT),
-			max: 10,
+			max: Number(process.env.DB_POOL_MAX ?? 25),
+			idleTimeoutMillis: 30_000,
+			connectionTimeoutMillis: 5_000,
 			ssl: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
 		});
 
