@@ -44,9 +44,10 @@ describe("Env Type CRUD E2E", () => {
 		});
 		expect(res.status).toBe(201);
 
-		const body = await res.json<{ id: string; name: string }>();
+		const body = await res.json<{ id: string; name: string; app_id: string; org_id: string }>();
 		expect(body.id).toBeDefined();
 		expect(body.name).toBe("staging");
+		expect(body.app_id).toBe(appId);
 		stagingId = body.id;
 	});
 
@@ -58,8 +59,9 @@ describe("Env Type CRUD E2E", () => {
 		});
 		expect(res.status).toBe(201);
 
-		const body = await res.json<{ id: string; name: string }>();
+		const body = await res.json<{ id: string; name: string; app_id: string }>();
 		expect(body.id).toBeDefined();
+		expect(body.app_id).toBe(appId);
 		productionId = body.id;
 	});
 
@@ -119,5 +121,16 @@ describe("Env Type CRUD E2E", () => {
 		const body = await res.json<any[]>();
 		const found = body.find((et: any) => et.id === productionId);
 		expect(found).toBeUndefined();
+	});
+
+	test("create env type with invalid app_id returns 422", async () => {
+		const res = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "should-fail", app_id: "nonexistent-app-id" },
+		});
+		expect(res.status).toBe(422);
+		const body = await res.json<{ error: string; code: string }>();
+		expect(body.code).toBe("VALIDATION_ERROR");
 	});
 });
