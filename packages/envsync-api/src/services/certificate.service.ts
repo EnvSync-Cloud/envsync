@@ -4,6 +4,8 @@ import { DB, JsonValue } from "@/libs/db";
 import { KMSClient } from "@/libs/kms/client";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
+import { orNotFound, ConflictError, BusinessRuleError } from "@/libs/errors";
+import { runSaga } from "@/helpers/saga";
 import { AuthorizationService } from "@/services/authorization.service";
 
 const OCSP_STATUS_MAP: Record<number, string> = {
@@ -29,7 +31,6 @@ export class CertificateService {
 		description?: string,
 		metadata?: Record<string, string>,
 	) => {
-		// Check if org CA already exists
 		const db = await DB.getInstance();
 		const existing = await db
 			.selectFrom("org_certificates")
@@ -40,37 +41,76 @@ export class CertificateService {
 			.executeTakeFirst();
 
 		if (existing) {
-			throw new Error("Organization CA already initialized");
+			throw new ConflictError("Organization CA already initialized");
 		}
 
-		const kms = await KMSClient.getInstance();
-		const result = await kms.createOrgCA(org_id, org_name);
+		let certRow: (Record<string, unknown> & { id: string; serial_hex: string }) | undefined;
+		let certId: string | undefined;
+		let certPem = "";
+		let serialHex = "";
 
-		const now = new Date();
-		const cert = await db
-			.insertInto("org_certificates")
-			.values({
-				id: uuidv4(),
-				org_id,
-				user_id,
-				serial_hex: result.serialHex,
-				cert_type: "org_ca",
-				subject_cn: `${org_name} CA`,
-				status: "active",
-				description: description || null,
-				metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
-				created_at: now,
-				updated_at: now,
-			})
-			.returningAll()
-			.executeTakeFirstOrThrow();
-
-		await AuthorizationService.writeCertificateRelations(cert.id, org_id, user_id);
-		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		await runSaga("initOrgCA", {}, [
+			{
+				name: "kms-create-ca",
+				execute: async () => {
+					const kms = await KMSClient.getInstance();
+					const result = await kms.createOrgCA(org_id, org_name);
+					certPem = result.certPem;
+					serialHex = result.serialHex;
+				},
+			},
+			{
+				name: "db-insert",
+				execute: async () => {
+					const now = new Date();
+					const result = await db
+						.insertInto("org_certificates")
+						.values({
+							id: uuidv4(),
+							org_id,
+							user_id,
+							serial_hex: serialHex,
+							cert_type: "org_ca",
+							subject_cn: `${org_name} CA`,
+							status: "active",
+							description: description || null,
+							metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
+							created_at: now,
+							updated_at: now,
+						})
+						.returningAll()
+						.executeTakeFirstOrThrow();
+					certRow = result;
+					certId = result.id;
+				},
+				compensate: async () => {
+					if (certId) {
+						await db.deleteFrom("org_certificates").where("id", "=", certId).execute();
+					}
+				},
+			},
+			{
+				name: "fga-write",
+				execute: async () => {
+					await AuthorizationService.writeCertificateRelations(certId!, org_id, user_id);
+				},
+				compensate: async () => {
+					if (certId) {
+						await AuthorizationService.deleteResourceTuples("certificate", certId);
+					}
+				},
+			},
+			{
+				name: "cache-invalidate",
+				execute: async () => {
+					await invalidateCache(CacheKeys.certsByOrg(org_id));
+				},
+			},
+		]);
 
 		return {
-			...cert,
-			cert_pem: result.certPem,
+			...certRow!,
+			cert_pem: certPem,
 		};
 	};
 
@@ -82,7 +122,6 @@ export class CertificateService {
 		description?: string,
 		metadata?: Record<string, string>,
 	) => {
-		// Verify org CA exists
 		const db = await DB.getInstance();
 		const orgCA = await db
 			.selectFrom("org_certificates")
@@ -93,61 +132,106 @@ export class CertificateService {
 			.executeTakeFirst();
 
 		if (!orgCA) {
-			throw new Error("Organization CA not initialized. Initialize CA first.");
+			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.");
 		}
 
-		const kms = await KMSClient.getInstance();
-		const result = await kms.issueMemberCert(user_id, member_email, org_id, role);
+		let memberCertRow: (Record<string, unknown> & { id: string; serial_hex: string }) | undefined;
+		let memberCertId: string | undefined;
+		let memberCertPem = "";
+		let memberKeyPem = "";
+		let memberSerialHex = "";
 
-		const now = new Date();
-		const cert = await db
-			.insertInto("org_certificates")
-			.values({
-				id: uuidv4(),
-				org_id,
-				user_id,
-				serial_hex: result.serialHex,
-				cert_type: "member",
-				subject_cn: member_email,
-				subject_email: member_email,
-				status: "active",
-				description: description || null,
-				metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
-				created_at: now,
-				updated_at: now,
-			})
-			.returningAll()
-			.executeTakeFirstOrThrow();
-
-		await AuthorizationService.writeCertificateRelations(cert.id, org_id, user_id);
-		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		await runSaga("issueMemberCert", {}, [
+			{
+				name: "kms-issue-cert",
+				execute: async () => {
+					const kms = await KMSClient.getInstance();
+					const result = await kms.issueMemberCert(user_id, member_email, org_id, role);
+					memberCertPem = result.certPem;
+					memberKeyPem = result.keyPem;
+					memberSerialHex = result.serialHex;
+				},
+			},
+			{
+				name: "db-insert",
+				execute: async () => {
+					const now = new Date();
+					const result = await db
+						.insertInto("org_certificates")
+						.values({
+							id: uuidv4(),
+							org_id,
+							user_id,
+							serial_hex: memberSerialHex,
+							cert_type: "member",
+							subject_cn: member_email,
+							subject_email: member_email,
+							status: "active",
+							description: description || null,
+							metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
+							created_at: now,
+							updated_at: now,
+						})
+						.returningAll()
+						.executeTakeFirstOrThrow();
+					memberCertRow = result;
+					memberCertId = result.id;
+				},
+				compensate: async () => {
+					if (memberCertId) {
+						await db.deleteFrom("org_certificates").where("id", "=", memberCertId).execute();
+					}
+				},
+			},
+			{
+				name: "fga-write",
+				execute: async () => {
+					await AuthorizationService.writeCertificateRelations(memberCertId!, org_id, user_id);
+				},
+				compensate: async () => {
+					if (memberCertId) {
+						await AuthorizationService.deleteResourceTuples("certificate", memberCertId);
+					}
+				},
+			},
+			{
+				name: "cache-invalidate",
+				execute: async () => {
+					await invalidateCache(CacheKeys.certsByOrg(org_id));
+				},
+			},
+		]);
 
 		return {
-			...cert,
-			cert_pem: result.certPem,
-			key_pem: result.keyPem,
+			...memberCertRow!,
+			cert_pem: memberCertPem,
+			key_pem: memberKeyPem,
 		};
 	};
 
-	public static listCertificates = async (org_id: string) => {
-		return cacheAside(CacheKeys.certsByOrg(org_id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
-			return db
-				.selectFrom("org_certificates")
-				.selectAll()
-				.where("org_id", "=", org_id)
-				.orderBy("created_at", "desc")
-				.execute();
-		});
-	};
-
-	public static getCertificate = async (id: string) => {
+	public static listCertificates = async (org_id: string, page = 1, per_page = 50) => {
 		const db = await DB.getInstance();
 		return db
 			.selectFrom("org_certificates")
 			.selectAll()
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+			.where("org_id", "=", org_id)
+			.orderBy("created_at", "desc")
+			.limit(per_page)
+			.offset((page - 1) * per_page)
+			.execute();
+	};
+
+	public static getCertificate = async (id: string) => {
+		const db = await DB.getInstance();
+		return orNotFound(
+			db
+				.selectFrom("org_certificates")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirstOrThrow(),
+			"Certificate",
+			id,
+		);
 	};
 
 	public static getOrgCA = async (org_id: string) => {
