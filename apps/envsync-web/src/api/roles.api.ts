@@ -18,15 +18,19 @@ const getAccessLevel = (
 };
 
 const extractFeatures = (
-  payload: Pick<
-    RoleResponse,
-    "have_api_access" | "have_billing_options" | "have_webhook_access"
-  >
+  payload: RoleResponse & {
+    have_gpg_access?: boolean;
+    have_cert_access?: boolean;
+    have_audit_access?: boolean;
+  }
 ) => {
   const features: string[] = [];
   if (payload.have_api_access) features.push("api");
   if (payload.have_billing_options) features.push("billing");
   if (payload.have_webhook_access) features.push("webhook");
+  if (payload.have_gpg_access) features.push("gpg");
+  if (payload.have_cert_access) features.push("certificates");
+  if (payload.have_audit_access) features.push("audit");
 
   return features;
 };
@@ -90,10 +94,9 @@ const useUpdateRole = () => {
   const { invalidateRoles } = useInvalidateQueries();
 
   return useMutation({
-    mutationFn: async ({ role_id }: UpdateRoleRequest) => {
-      console.log("Updating role with payload:");
+    mutationFn: async ({ role_id, payload }: { role_id: string; payload: UpdateRoleRequest }) => {
       const role = await sdk.roles.updateRole(role_id, {
-        role_id
+        ...payload,
       });
       return role;
     },
