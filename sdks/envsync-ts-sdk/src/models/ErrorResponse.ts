@@ -4,5 +4,6 @@
 /* eslint-disable */
 export type ErrorResponse = {
     error: string;
+    code?: string;
 };
 
