@@ -1,6 +1,9 @@
-import { OpenFgaClient, type ClientCheckRequest, type ClientWriteRequest, type TupleKey } from "@openfga/sdk";
+import { OpenFgaClient, type ClientCheckRequest, type ClientReadRequest, type ClientWriteRequest, type TupleKey } from "@openfga/sdk";
+import { SpanKind } from "@opentelemetry/api";
 
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { withSpan } from "@/libs/telemetry";
+import { externalServiceCalls } from "@/libs/telemetry/metrics";
 import { config } from "@/utils/env";
 
 import { authorizationModelDef } from "./model";
@@ -86,28 +89,43 @@ export class FGAClient {
 	 * Check if a user has a relation to an object.
 	 */
 	async check(user: string, relation: string, object: string): Promise<boolean> {
-		const { allowed } = await this.client.check({ user, relation, object });
-		return allowed ?? false;
+		return withSpan("openfga check", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+			"fga.relation": relation,
+			"fga.object": object,
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "check" });
+			const { allowed } = await this.client.check({ user, relation, object });
+			return allowed ?? false;
+		}, SpanKind.CLIENT);
 	}
 
 	/**
 	 * Batch check multiple permission queries using parallel individual checks.
 	 */
 	async batchCheck(checks: ClientCheckRequest[]): Promise<Map<string, boolean>> {
-		const results = new Map<string, boolean>();
+		return withSpan("openfga batchCheck", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+			"fga.batch_size": checks.length,
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "batchCheck" });
+			const results = new Map<string, boolean>();
 
-		const responses = await Promise.all(
-			checks.map(async c => {
-				const { allowed } = await this.client.check(c);
-				return { key: `${c.relation}:${c.object}`, allowed: allowed ?? false };
-			}),
-		);
+			const responses = await Promise.all(
+				checks.map(async c => {
+					const { allowed } = await this.client.check(c);
+					return { key: `${c.relation}:${c.object}`, allowed: allowed ?? false };
+				}),
+			);
 
-		for (const r of responses) {
-			results.set(r.key, r.allowed);
-		}
+			for (const r of responses) {
+				results.set(r.key, r.allowed);
+			}
 
-		return results;
+			return results;
+		}, SpanKind.CLIENT);
 	}
 
 	/**
@@ -115,28 +133,42 @@ export class FGAClient {
 	 * OpenFGA allows max 10 writes per call; this method handles batching.
 	 */
 	async writeTuples(tuples: TupleKey[]): Promise<void> {
-		const BATCH_SIZE = 10;
-		for (let i = 0; i < tuples.length; i += BATCH_SIZE) {
-			const batch = tuples.slice(i, i + BATCH_SIZE);
-			await this.client.write(
-				{ writes: batch },
-				{ authorizationModelId: this.modelId },
-			);
-		}
+		return withSpan("openfga writeTuples", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+			"fga.batch_size": tuples.length,
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "writeTuples" });
+			const BATCH_SIZE = 10;
+			for (let i = 0; i < tuples.length; i += BATCH_SIZE) {
+				const batch = tuples.slice(i, i + BATCH_SIZE);
+				await this.client.write(
+					{ writes: batch },
+					{ authorizationModelId: this.modelId },
+				);
+			}
+		}, SpanKind.CLIENT);
 	}
 
 	/**
 	 * Delete relationship tuples (revocations).
 	 */
 	async deleteTuples(tuples: TupleKey[]): Promise<void> {
-		const BATCH_SIZE = 10;
-		for (let i = 0; i < tuples.length; i += BATCH_SIZE) {
-			const batch = tuples.slice(i, i + BATCH_SIZE);
-			await this.client.write(
-				{ deletes: batch },
-				{ authorizationModelId: this.modelId },
-			);
-		}
+		return withSpan("openfga deleteTuples", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+			"fga.batch_size": tuples.length,
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "deleteTuples" });
+			const BATCH_SIZE = 10;
+			for (let i = 0; i < tuples.length; i += BATCH_SIZE) {
+				const batch = tuples.slice(i, i + BATCH_SIZE);
+				await this.client.write(
+					{ deletes: batch },
+					{ authorizationModelId: this.modelId },
+				);
+			}
+		}, SpanKind.CLIENT);
 	}
 
 	/**
@@ -150,8 +182,16 @@ export class FGAClient {
 	 * List all objects of a given type that a user has a relation to.
 	 */
 	async listObjects(user: string, relation: string, type: string): Promise<string[]> {
-		const { objects } = await this.client.listObjects({ user, relation, type });
-		return objects ?? [];
+		return withSpan("openfga listObjects", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+			"fga.relation": relation,
+			"fga.object": type,
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "listObjects" });
+			const { objects } = await this.client.listObjects({ user, relation, type });
+			return objects ?? [];
+		}, SpanKind.CLIENT);
 	}
 
 	/**
@@ -159,8 +199,14 @@ export class FGAClient {
 	 * Useful for finding all tuples for a user/object.
 	 */
 	async readTuples(tupleKey: Partial<TupleKey>): Promise<TupleKey[]> {
-		const response = await this.client.read(tupleKey as any);
-		return (response.tuples ?? []).map(t => t.key as TupleKey);
+		return withSpan("openfga readTuples", {
+			"rpc.system": "http",
+			"peer.service": "openfga",
+		}, async () => {
+			externalServiceCalls.add(1, { "peer.service": "openfga", "rpc.method": "readTuples" });
+			const response = await this.client.read(tupleKey as ClientReadRequest);
+			return (response.tuples ?? []).map(t => t.key as TupleKey);
+		}, SpanKind.CLIENT);
 	}
 
 	/**

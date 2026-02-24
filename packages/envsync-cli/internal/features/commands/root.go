@@ -2,13 +2,17 @@ package commands
 
 import (
 	"context"
+	"time"
 
 	"github.com/urfave/cli/v3"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/logger"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 // ExecutionMode represents how the command should be executed
@@ -92,14 +96,43 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 }
 
 func (r *CommandRegistry) beforeHook(ctx context.Context, cmd *cli.Command) (context.Context, error) {
-	l := logger.NewLogger()
+	// Initialise OpenTelemetry (graceful degradation on failure)
+	shutdown, lp, _ := telemetry.Init(ctx)
+	ctx = context.WithValue(ctx, constants.TelemetryShutdownKey, shutdown)
+
+	// Start root span for the CLI command
+	cmdName := "cli"
+	if cmd.Name != "" {
+		cmdName = "cli/" + cmd.Name
+	}
+	var span trace.Span
+	ctx, span = telemetry.Tracer().Start(ctx, cmdName,
+		trace.WithAttributes(attribute.String("cli.command", cmd.Name)),
+	)
+	ctx = context.WithValue(ctx, constants.RootSpanKey, span)
+
+	l := logger.NewLogger(lp)
 	return context.WithValue(ctx, constants.LoggerKey, l), nil
 }
 
 func (r *CommandRegistry) afterHook(ctx context.Context, cmd *cli.Command) error {
+	// End root span
+	if span, ok := ctx.Value(constants.RootSpanKey).(trace.Span); ok && span != nil {
+		span.End()
+	}
+
+	// Sync logger
 	if l, ok := ctx.Value(constants.LoggerKey).(*zap.Logger); ok && l != nil {
 		l.Sync()
 	}
+
+	// Shutdown telemetry with timeout
+	if shutdown, ok := ctx.Value(constants.TelemetryShutdownKey).(func(context.Context) error); ok && shutdown != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		shutdown(shutdownCtx)
+	}
+
 	return nil
 }
 

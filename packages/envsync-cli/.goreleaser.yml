@@ -19,7 +19,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL="${.Env.ENVSYNC_API_URL}"
+      - -s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL="${.Env.ENVSYNC_API_URL}" -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version={{.Version}}
     hooks:
       post:
         - cmd: scripts/generate-completions.sh "{{ .Path }}"

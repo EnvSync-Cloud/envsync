@@ -1,4 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { trace, context, SpanStatusCode } from "@opentelemetry/api";
+import { SeverityNumber } from "@opentelemetry/api-logs";
+import { getLoggerProvider } from "@/telemetry/logs";
 
 interface Props {
   children: ReactNode;
@@ -18,6 +21,27 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("App error:", error, errorInfo);
+
+    const activeSpan = trace.getSpan(context.active());
+    if (activeSpan) {
+      activeSpan.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      activeSpan.recordException(error);
+    }
+
+    const loggerProvider = getLoggerProvider();
+    if (loggerProvider) {
+      const logger = loggerProvider.getLogger("error-boundary");
+      logger.emit({
+        severityNumber: SeverityNumber.ERROR,
+        severityText: "ERROR",
+        body: error.message,
+        attributes: {
+          "error.type": "react.error_boundary",
+          "error.stack": error.stack ?? "",
+          "error.component_stack": errorInfo.componentStack ?? "",
+        },
+      });
+    }
   }
 
   render() {

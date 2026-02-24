@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { RouteChangeTracker } from "@/telemetry";
 
 import RootLayout from "@/layout/root";
 
@@ -24,6 +25,7 @@ import PointInTimeVariables from "@/pages/PointInTimeVariables";
 export const AppRoutes = () => {
   return (
     <BrowserRouter>
+      <RouteChangeTracker />
       <Routes>
         <Route path="/auth/callback" element={<Callback />} />
         <Route path="/" element={<RootLayout />}>
