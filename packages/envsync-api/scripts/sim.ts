@@ -1,23 +1,27 @@
 #!/usr/bin/env bun
 /**
- * High-Throughput Full-API Traffic Simulator
+ * High-Throughput Full-API Traffic Simulator with Rotating Orgs
  *
  * Generates high-volume realistic traffic across all 115+ API endpoints.
  * 18 weighted scenarios simulate real-life user workflows to populate
  * Grafana/Tempo dashboards with meaningful traces and metrics.
  *
  * Architecture:
+ *   - Rotating orgs: new org every 2 minutes, decommissioned after 4 minutes
+ *   - At steady state: ~2-3 concurrent active orgs with fresh FGA state
  *   - Configurable concurrent workers running weighted-random scenarios in tight loops
  *   - ResourcePoolManager refreshes DB lookups every 30s for realistic IDs
  *   - MetricsCollector reports RPS, p50/p95/p99 latency every 5s
  *   - Graceful shutdown on SIGINT/SIGTERM
  *
  * Environment variables:
- *   SIM_WORKERS      - Number of concurrent worker pools (default: 200, ~20K RPS)
- *                      Use 1000 for ~100K RPS
- *   SIM_DELAY_MS     - Inter-request delay in ms (default: 0)
- *   SIM_MAX_SAMPLES  - Max latency samples for percentile calculation (default: 100000)
- *   SIM_TIMEOUT_MS   - Per-request timeout in ms (default: 30000)
+ *   SIM_WORKERS          - Number of concurrent worker pools (default: 200, ~20K RPS)
+ *                          Use 1000 for ~100K RPS
+ *   SIM_DELAY_MS         - Inter-request delay in ms (default: 0)
+ *   SIM_MAX_SAMPLES      - Max latency samples for percentile calculation (default: 100000)
+ *   SIM_TIMEOUT_MS       - Per-request timeout in ms (default: 30000)
+ *   SIM_ORG_CREATE_MS    - Org creation interval in ms (default: 120000)
+ *   SIM_ORG_MAX_AGE_MS   - Max org age before decommission in ms (default: 240000)
  *
  * Prerequisites:
  *   1. Docker services running: `docker compose up -d`
@@ -113,6 +117,8 @@ CacheClient.init("development");
 const { DB } = await import("@/libs/db");
 await DB.getInstance();
 
+const { FGAClient } = await import("@/libs/openfga");
+
 const { seedE2EOrg, seedE2EUser, setupE2EUserPermissions } = await import(
 	"../tests/e2e/helpers/real-auth"
 );
@@ -129,6 +135,9 @@ const POOL_REFRESH_INTERVAL_MS = 30_000;
 const METRICS_INTERVAL_MS = 5_000;
 const MAX_LATENCY_SAMPLES = parseInt(process.env.SIM_MAX_SAMPLES ?? "100000", 10);
 const REQUEST_TIMEOUT_MS = parseInt(process.env.SIM_TIMEOUT_MS ?? "30000", 10);
+const ORG_CREATE_INTERVAL_MS = parseInt(process.env.SIM_ORG_CREATE_MS ?? "120000", 10);
+const ORG_MAX_AGE_MS = parseInt(process.env.SIM_ORG_MAX_AGE_MS ?? "240000", 10);
+const ORG_DRAIN_MS = 30_000;
 
 // ── Metrics Collector ────────────────────────────────────────────────
 const metrics = {
@@ -243,39 +252,7 @@ async function apiFormData(
 	}
 }
 
-// ── Bootstrap ────────────────────────────────────────────────────────
-console.log("[Sim] Bootstrapping org and users...");
-let seed: E2ESeed;
-const devUsers: E2EUser[] = [];
-
-try {
-	seed = await seedE2EOrg();
-	console.log(`[Sim] Org created: ${seed.org.slug} (${seed.org.id})`);
-	console.log(`[Sim] Master user: ${seed.masterUser.email}`);
-
-	// Seed 3 developer users for multi-user traffic
-	const devRoleId = seed.roles.developer.id;
-	for (let i = 0; i < 3; i++) {
-		const devUser = await seedE2EUser(seed.org.id, devRoleId);
-		await setupE2EUserPermissions(devUser.id, seed.org.id, {
-			can_view: true,
-			can_edit: true,
-		});
-		devUsers.push(devUser);
-		console.log(`[Sim] Dev user ${i + 1}: ${devUser.email}`);
-	}
-} catch (err) {
-	console.error("[Sim] Bootstrap failed:", (err as Error).message);
-	process.exit(1);
-}
-
-const allTokens = [seed.masterUser.token, ...devUsers.map((u) => u.token)];
-const allUserIds = [seed.masterUser.id, ...devUsers.map((u) => u.id)];
-
-function pickRandomToken(): string {
-	return allTokens[Math.floor(Math.random() * allTokens.length)];
-}
-
+// ── Helpers ──────────────────────────────────────────────────────────
 function random<T>(arr: T[]): T | undefined {
 	if (arr.length === 0) return undefined;
 	return arr[Math.floor(Math.random() * arr.length)];
@@ -306,28 +283,43 @@ interface ResourcePools {
 	secretPitIds: { id: string; env_type_id: string }[];
 }
 
-const pools: ResourcePools = {
-	appIds: [],
-	envTypeIds: [],
-	envTypesWithApp: [],
-	inviteTokens: [],
-	inviteIds: [],
-	apiKeyIds: [],
-	teamIds: [],
-	webhookIds: [],
-	gpgKeyIds: [],
-	certIds: [],
-	certSerials: [],
-	roleIds: [],
-	nonMasterRoleIds: [],
-	userIds: [],
-	envPitIds: [],
-	secretPitIds: [],
-};
+function emptyPools(): ResourcePools {
+	return {
+		appIds: [],
+		envTypeIds: [],
+		envTypesWithApp: [],
+		inviteTokens: [],
+		inviteIds: [],
+		apiKeyIds: [],
+		teamIds: [],
+		webhookIds: [],
+		gpgKeyIds: [],
+		certIds: [],
+		certSerials: [],
+		roleIds: [],
+		nonMasterRoleIds: [],
+		userIds: [],
+		envPitIds: [],
+		secretPitIds: [],
+	};
+}
 
-async function refreshPools(): Promise<void> {
+// ── OrgContext ────────────────────────────────────────────────────────
+interface OrgContext {
+	id: string;
+	seed: E2ESeed;
+	devUsers: E2EUser[];
+	allTokens: string[];
+	allUserIds: string[];
+	pools: ResourcePools;
+	createdAt: number;
+	status: "active" | "draining" | "decommissioned";
+}
+
+// ── Parameterized refresh & seed ─────────────────────────────────────
+async function refreshPoolsForCtx(ctx: OrgContext): Promise<void> {
 	const db = await DB.getInstance();
-	const orgId = seed.org.id;
+	const orgId = ctx.seed.org.id;
 	try {
 		const [
 			apps,
@@ -357,31 +349,30 @@ async function refreshPools(): Promise<void> {
 			db.selectFrom("secret_store_pit").select(["id", "env_type_id"]).where("org_id", "=", orgId).orderBy("created_at", "desc").limit(100).execute(),
 		]);
 
-		pools.appIds = apps.map((a) => a.id);
-		pools.envTypeIds = envTypes.map((e) => e.id);
-		pools.envTypesWithApp = envTypes.map((e) => ({ id: e.id, app_id: e.app_id }));
-		pools.inviteTokens = invites.map((i) => i.invite_token);
-		pools.inviteIds = invites.map((i) => i.id);
-		pools.apiKeyIds = apiKeys.map((a) => a.id);
-		pools.teamIds = teams.map((t) => t.id);
-		pools.webhookIds = webhooks.map((w) => w.id);
-		pools.gpgKeyIds = gpgKeys.map((g) => g.id);
-		pools.certIds = certs.filter((c) => c.status === "active").map((c) => c.id);
-		pools.certSerials = certs.filter((c) => c.status === "active").map((c) => c.serial_hex);
-		pools.roleIds = roles.map((r) => r.id);
-		pools.nonMasterRoleIds = roles.filter((r) => !r.is_master).map((r) => r.id);
-		pools.userIds = users.map((u) => u.id);
-		pools.envPitIds = envPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
-		pools.secretPitIds = secretPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
+		ctx.pools.appIds = apps.map((a) => a.id);
+		ctx.pools.envTypeIds = envTypes.map((e) => e.id);
+		ctx.pools.envTypesWithApp = envTypes.map((e) => ({ id: e.id, app_id: e.app_id }));
+		ctx.pools.inviteTokens = invites.map((i) => i.invite_token);
+		ctx.pools.inviteIds = invites.map((i) => i.id);
+		ctx.pools.apiKeyIds = apiKeys.map((a) => a.id);
+		ctx.pools.teamIds = teams.map((t) => t.id);
+		ctx.pools.webhookIds = webhooks.map((w) => w.id);
+		ctx.pools.gpgKeyIds = gpgKeys.map((g) => g.id);
+		ctx.pools.certIds = certs.filter((c) => c.status === "active").map((c) => c.id);
+		ctx.pools.certSerials = certs.filter((c) => c.status === "active").map((c) => c.serial_hex);
+		ctx.pools.roleIds = roles.map((r) => r.id);
+		ctx.pools.nonMasterRoleIds = roles.filter((r) => !r.is_master).map((r) => r.id);
+		ctx.pools.userIds = users.map((u) => u.id);
+		ctx.pools.envPitIds = envPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
+		ctx.pools.secretPitIds = secretPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
 	} catch {
 		// pool refresh failure is non-fatal
 	}
 }
 
-// ── Seed Initial Resources ───────────────────────────────────────────
-async function seedInitialResources(): Promise<void> {
-	const token = seed.masterUser.token;
-	console.log("[Sim] Seeding initial resources...");
+async function seedInitialResourcesForCtx(ctx: OrgContext): Promise<void> {
+	const token = ctx.seed.masterUser.token;
+	console.log(`[Sim] Seeding initial resources for org ${ctx.seed.org.slug}...`);
 
 	// Create 5 apps
 	const appIds: string[] = [];
@@ -478,19 +469,47 @@ async function seedInitialResources(): Promise<void> {
 
 	// Init CA + issue 1 certificate
 	await api("POST", "/api/certificate/ca/init", token, {
-		org_name: seed.org.name,
+		org_name: ctx.seed.org.name,
 		description: "Simulation CA",
 	});
 	await api("POST", "/api/certificate/issue", token, {
-		member_email: seed.masterUser.email,
+		member_email: ctx.seed.masterUser.email,
 		role: "admin",
 		description: "Simulation cert",
 	});
 	console.log("[Sim]   Initialized CA and issued 1 cert");
 
 	// Initial pool refresh
-	await refreshPools();
+	await refreshPoolsForCtx(ctx);
 	console.log("[Sim] Seeding complete.");
+}
+
+// ── Create Org Context ───────────────────────────────────────────────
+async function createOrgContext(): Promise<OrgContext> {
+	const seed = await seedE2EOrg();
+	const devUsers: E2EUser[] = [];
+	const devRoleId = seed.roles.developer.id;
+	for (let i = 0; i < 3; i++) {
+		const devUser = await seedE2EUser(seed.org.id, devRoleId);
+		await setupE2EUserPermissions(devUser.id, seed.org.id, {
+			can_view: true,
+			can_edit: true,
+		});
+		devUsers.push(devUser);
+	}
+	const ctx: OrgContext = {
+		id: seed.org.id,
+		seed,
+		devUsers,
+		allTokens: [seed.masterUser.token, ...devUsers.map((u) => u.token)],
+		allUserIds: [seed.masterUser.id, ...devUsers.map((u) => u.id)],
+		pools: emptyPools(),
+		createdAt: Date.now(),
+		status: "active",
+	};
+	await seedInitialResourcesForCtx(ctx);
+	await refreshPoolsForCtx(ctx);
+	return ctx;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -498,13 +517,13 @@ async function seedInitialResources(): Promise<void> {
 // ══════════════════════════════════════════════════════════════════════
 
 // 1. authWhoami (wt=15, ~2 calls)
-async function authWhoami(token: string): Promise<void> {
+async function authWhoami(token: string, _ctx: OrgContext): Promise<void> {
 	await api("GET", "/api/auth/me", token);
 	await api("GET", "/api/permission/me", token);
 }
 
 // 2. orgOperations (wt=5, ~3 calls)
-async function orgOperations(token: string): Promise<void> {
+async function orgOperations(token: string, _ctx: OrgContext): Promise<void> {
 	await api("GET", "/api/org", token);
 	await api("PATCH", "/api/org", token, {
 		name: `SimOrg-${uid()}`,
@@ -513,7 +532,7 @@ async function orgOperations(token: string): Promise<void> {
 }
 
 // 3. appCrudLifecycle (wt=8, ~6 calls)
-async function appCrudLifecycle(token: string): Promise<void> {
+async function appCrudLifecycle(token: string, ctx: OrgContext): Promise<void> {
 	const res = await api("POST", "/api/app", token, {
 		name: `sim-crud-${uid()}`,
 		description: "CRUD lifecycle app",
@@ -530,12 +549,12 @@ async function appCrudLifecycle(token: string): Promise<void> {
 		await api("DELETE", `/api/app/${id}`, token);
 	}
 	// Also read an existing app from pool
-	const existing = random(pools.appIds);
+	const existing = random(ctx.pools.appIds);
 	if (existing) await api("GET", `/api/app/${existing}`, token);
 }
 
 // 4. apiKeyCrudLifecycle (wt=5, ~6 calls)
-async function apiKeyCrudLifecycle(token: string): Promise<void> {
+async function apiKeyCrudLifecycle(token: string, _ctx: OrgContext): Promise<void> {
 	const res = await api("POST", "/api/api_key", token, {
 		name: `sim-key-${uid()}`,
 		description: "Sim API key",
@@ -554,8 +573,8 @@ async function apiKeyCrudLifecycle(token: string): Promise<void> {
 }
 
 // 5. envTypeCrudLifecycle (wt=5, ~5 calls)
-async function envTypeCrudLifecycle(token: string): Promise<void> {
-	const appId = random(pools.appIds);
+async function envTypeCrudLifecycle(token: string, ctx: OrgContext): Promise<void> {
+	const appId = random(ctx.pools.appIds);
 	if (!appId) return;
 	const res = await api("POST", "/api/env_type", token, {
 		name: `sim-et-${uid()}`,
@@ -578,9 +597,9 @@ async function envTypeCrudLifecycle(token: string): Promise<void> {
 }
 
 // 6. envVarsFullWorkflow (wt=12, ~14 calls)
-async function envVarsFullWorkflow(token: string): Promise<void> {
-	const appId = random(pools.appIds);
-	const et = random(pools.envTypesWithApp);
+async function envVarsFullWorkflow(token: string, ctx: OrgContext): Promise<void> {
+	const appId = random(ctx.pools.appIds);
+	const et = random(ctx.pools.envTypesWithApp);
 	if (!appId || !et) return;
 	const envTypeId = et.id;
 	const appForEt = et.app_id;
@@ -630,7 +649,7 @@ async function envVarsFullWorkflow(token: string): Promise<void> {
 	});
 
 	// Point-in-time (use pool)
-	const pit = random(pools.envPitIds.filter((p) => p.env_type_id === envTypeId));
+	const pit = random(ctx.pools.envPitIds.filter((p) => p.env_type_id === envTypeId));
 	if (pit) {
 		await api("POST", "/api/env/pit", token, {
 			app_id: appForEt,
@@ -648,7 +667,7 @@ async function envVarsFullWorkflow(token: string): Promise<void> {
 	});
 
 	// Diff (need 2 pit IDs)
-	const pits = pools.envPitIds.filter((p) => p.env_type_id === envTypeId);
+	const pits = ctx.pools.envPitIds.filter((p) => p.env_type_id === envTypeId);
 	if (pits.length >= 2) {
 		await api("POST", "/api/env/diff", token, {
 			app_id: appForEt,
@@ -691,8 +710,8 @@ async function envVarsFullWorkflow(token: string): Promise<void> {
 }
 
 // 7. secretsFullWorkflow (wt=10, ~14 calls)
-async function secretsFullWorkflow(token: string): Promise<void> {
-	const et = random(pools.envTypesWithApp);
+async function secretsFullWorkflow(token: string, ctx: OrgContext): Promise<void> {
+	const et = random(ctx.pools.envTypesWithApp);
 	if (!et) return;
 	const envTypeId = et.id;
 	const appId = et.app_id;
@@ -748,7 +767,7 @@ async function secretsFullWorkflow(token: string): Promise<void> {
 	});
 
 	// Point-in-time
-	const pit = random(pools.secretPitIds.filter((p) => p.env_type_id === envTypeId));
+	const pit = random(ctx.pools.secretPitIds.filter((p) => p.env_type_id === envTypeId));
 	if (pit) {
 		await api("POST", "/api/secret/pit", token, {
 			app_id: appId,
@@ -766,7 +785,7 @@ async function secretsFullWorkflow(token: string): Promise<void> {
 	});
 
 	// Diff
-	const pits = pools.secretPitIds.filter((p) => p.env_type_id === envTypeId);
+	const pits = ctx.pools.secretPitIds.filter((p) => p.env_type_id === envTypeId);
 	if (pits.length >= 2) {
 		await api("POST", "/api/secret/diff", token, {
 			app_id: appId,
@@ -799,8 +818,8 @@ async function secretsFullWorkflow(token: string): Promise<void> {
 }
 
 // 8. onboardingLifecycle (wt=4, ~5 calls)
-async function onboardingLifecycle(token: string): Promise<void> {
-	const roleId = random(pools.nonMasterRoleIds) ?? seed.roles.viewer.id;
+async function onboardingLifecycle(token: string, ctx: OrgContext): Promise<void> {
+	const roleId = random(ctx.pools.nonMasterRoleIds) ?? ctx.seed.roles.viewer.id;
 	await api("POST", "/api/onboarding/user", token, {
 		email: `sim-invite-${uid()}@test.local`,
 		role_id: roleId,
@@ -808,21 +827,21 @@ async function onboardingLifecycle(token: string): Promise<void> {
 	await api("GET", "/api/onboarding/user", token);
 
 	// Lookup invite_token from pool for get/patch/delete
-	const invToken = random(pools.inviteTokens);
+	const invToken = random(ctx.pools.inviteTokens);
 	if (invToken) {
 		await api("GET", `/api/onboarding/user/${invToken}`, token);
 		await api("PATCH", `/api/onboarding/user/${invToken}`, token, {
 			role_id: roleId,
 		});
 	}
-	const invId = random(pools.inviteIds);
+	const invId = random(ctx.pools.inviteIds);
 	if (invId) {
 		await api("DELETE", `/api/onboarding/user/${invId}`, token);
 	}
 }
 
 // 9. roleCrudLifecycle (wt=5, ~6 calls)
-async function roleCrudLifecycle(token: string): Promise<void> {
+async function roleCrudLifecycle(token: string, _ctx: OrgContext): Promise<void> {
 	const res = await api("POST", "/api/role", token, {
 		name: `sim-role-${uid()}`,
 		can_edit: true,
@@ -830,6 +849,9 @@ async function roleCrudLifecycle(token: string): Promise<void> {
 		have_api_access: false,
 		have_billing_options: false,
 		have_webhook_access: false,
+		have_gpg_access: false,
+		have_cert_access: false,
+		have_audit_access: false,
 		is_admin: false,
 		color: "#6366f1",
 	});
@@ -847,9 +869,9 @@ async function roleCrudLifecycle(token: string): Promise<void> {
 }
 
 // 10. userOperations (wt=5, ~4 calls)
-async function userOperations(token: string): Promise<void> {
+async function userOperations(token: string, ctx: OrgContext): Promise<void> {
 	await api("GET", "/api/user", token);
-	const userId = random(allUserIds);
+	const userId = random(ctx.allUserIds);
 	if (userId) {
 		await api("GET", `/api/user/${userId}`, token);
 		await api("PATCH", `/api/user/${userId}`, token, {
@@ -857,8 +879,8 @@ async function userOperations(token: string): Promise<void> {
 		});
 	}
 	// Update user role (using a non-master role)
-	const roleId = random(pools.nonMasterRoleIds);
-	const targetUser = random(devUsers.map((u) => u.id));
+	const roleId = random(ctx.pools.nonMasterRoleIds);
+	const targetUser = random(ctx.devUsers.map((u) => u.id));
 	if (roleId && targetUser) {
 		await api("PATCH", `/api/user/role/${targetUser}`, token, {
 			role_id: roleId,
@@ -867,7 +889,7 @@ async function userOperations(token: string): Promise<void> {
 }
 
 // 11. teamCrudLifecycle (wt=5, ~7 calls)
-async function teamCrudLifecycle(token: string): Promise<void> {
+async function teamCrudLifecycle(token: string, ctx: OrgContext): Promise<void> {
 	const res = await api("POST", "/api/team", token, {
 		name: `sim-team-${uid()}`,
 		description: "Sim team lifecycle",
@@ -881,7 +903,7 @@ async function teamCrudLifecycle(token: string): Promise<void> {
 			name: `sim-team-upd-${uid()}`,
 		});
 		// Add a dev user as member
-		const devId = random(devUsers.map((u) => u.id));
+		const devId = random(ctx.devUsers.map((u) => u.id));
 		if (devId) {
 			await api("POST", `/api/team/${id}/members`, token, { user_id: devId });
 			await api("DELETE", `/api/team/${id}/members/${devId}`, token);
@@ -891,10 +913,10 @@ async function teamCrudLifecycle(token: string): Promise<void> {
 }
 
 // 12. permissionOperations (wt=5, ~5 calls)
-async function permissionOperations(token: string): Promise<void> {
+async function permissionOperations(token: string, ctx: OrgContext): Promise<void> {
 	await api("GET", "/api/permission/me", token);
-	const appId = random(pools.appIds);
-	const userId = random(devUsers.map((u) => u.id));
+	const appId = random(ctx.pools.appIds);
+	const userId = random(ctx.devUsers.map((u) => u.id));
 	if (appId && userId) {
 		await api("POST", `/api/permission/app/${appId}/grant`, token, {
 			subject_id: userId,
@@ -907,7 +929,7 @@ async function permissionOperations(token: string): Promise<void> {
 			relation: "viewer",
 		});
 	}
-	const etId = random(pools.envTypeIds);
+	const etId = random(ctx.pools.envTypeIds);
 	if (etId && userId) {
 		await api("POST", `/api/permission/env_type/${etId}/grant`, token, {
 			subject_id: userId,
@@ -923,7 +945,7 @@ async function permissionOperations(token: string): Promise<void> {
 }
 
 // 13. webhookCrudLifecycle (wt=5, ~5 calls)
-async function webhookCrudLifecycle(token: string): Promise<void> {
+async function webhookCrudLifecycle(token: string, _ctx: OrgContext): Promise<void> {
 	const res = await api("POST", "/api/webhook", token, {
 		name: `sim-wh-${uid()}`,
 		url: `http://localhost:8181/post?sim=${uid()}`,
@@ -948,7 +970,7 @@ async function webhookCrudLifecycle(token: string): Promise<void> {
 }
 
 // 14. gpgKeyFullWorkflow (wt=5, ~9 calls)
-async function gpgKeyFullWorkflow(token: string): Promise<void> {
+async function gpgKeyFullWorkflow(token: string, _ctx: OrgContext): Promise<void> {
 	const res = await api("PUT", "/api/gpg_key/generate", token, {
 		name: `sim-gpg-${uid()}`,
 		email: `sim-gpg-${uid()}@test.local`,
@@ -996,7 +1018,7 @@ async function gpgKeyFullWorkflow(token: string): Promise<void> {
 }
 
 // 15. certificateFullWorkflow (wt=4, ~8 calls)
-async function certificateFullWorkflow(token: string): Promise<void> {
+async function certificateFullWorkflow(token: string, ctx: OrgContext): Promise<void> {
 	// Check CA status
 	await api("GET", "/api/certificate/ca", token);
 
@@ -1015,13 +1037,13 @@ async function certificateFullWorkflow(token: string): Promise<void> {
 	await api("GET", "/api/certificate", token);
 
 	// Get cert by pool
-	const certId = random(pools.certIds);
+	const certId = random(ctx.pools.certIds);
 	if (certId) {
 		await api("GET", `/api/certificate/${certId}`, token);
 	}
 
 	// OCSP check
-	const serial = serialHex ?? random(pools.certSerials);
+	const serial = serialHex ?? random(ctx.pools.certSerials);
 	if (serial) {
 		await api("GET", `/api/certificate/${serial}/ocsp`, token);
 	}
@@ -1038,13 +1060,13 @@ async function certificateFullWorkflow(token: string): Promise<void> {
 }
 
 // 16. auditLogRead (wt=2, ~2 calls)
-async function auditLogRead(token: string): Promise<void> {
+async function auditLogRead(token: string, _ctx: OrgContext): Promise<void> {
 	await api("GET", "/api/audit_log", token);
 	await api("GET", "/api/audit_log?page=2&per_page=10", token);
 }
 
 // 17. fileUpload (wt=2, ~2 calls)
-async function fileUpload(token: string): Promise<void> {
+async function fileUpload(token: string, _ctx: OrgContext): Promise<void> {
 	// Upload a small text file via multipart form data
 	const content = `sim-file-${uid()}-${Date.now()}\nThis is a simulated file upload.`;
 	const blob = new Blob([content], { type: "text/plain" });
@@ -1061,7 +1083,7 @@ async function fileUpload(token: string): Promise<void> {
 }
 
 // 18. healthAndDocs (wt=3, ~3 calls)
-async function healthAndDocs(token: string): Promise<void> {
+async function healthAndDocs(token: string, _ctx: OrgContext): Promise<void> {
 	await api("GET", "/health", token);
 	await api("GET", "/version", token);
 	await api("GET", "/openapi", token);
@@ -1071,7 +1093,7 @@ async function healthAndDocs(token: string): Promise<void> {
 interface Scenario {
 	name: string;
 	weight: number;
-	fn: (token: string) => Promise<void>;
+	fn: (token: string, ctx: OrgContext) => Promise<void>;
 }
 
 const scenarios: Scenario[] = [
@@ -1110,15 +1132,155 @@ function selectWeightedRandom(): Scenario {
 	return scenarios[scenarios.length - 1];
 }
 
+// ── OrgManager ───────────────────────────────────────────────────────
+class OrgManager {
+	contexts = new Map<string, OrgContext>();
+	private intervals: Timer[] = [];
+	private totalCreated = 0;
+
+	async bootstrap(): Promise<void> {
+		console.log("[Sim] Bootstrapping first org...");
+		try {
+			const ctx = await createOrgContext();
+			this.contexts.set(ctx.id, ctx);
+			this.totalCreated++;
+			console.log(`[Sim] Org created: ${ctx.seed.org.slug} (${ctx.id})`);
+			console.log(`[Sim] Master user: ${ctx.seed.masterUser.email}`);
+			for (let i = 0; i < ctx.devUsers.length; i++) {
+				console.log(`[Sim] Dev user ${i + 1}: ${ctx.devUsers[i].email}`);
+			}
+		} catch (err) {
+			console.error("[Sim] Bootstrap failed:", (err as Error).message);
+			process.exit(1);
+		}
+	}
+
+	startRotation(): void {
+		// Create new orgs periodically
+		this.intervals.push(
+			setInterval(async () => {
+				if (shuttingDown) return;
+				try {
+					console.log("[Sim] Creating new org for rotation...");
+					const ctx = await createOrgContext();
+					this.contexts.set(ctx.id, ctx);
+					this.totalCreated++;
+					console.log(`[Sim] New org created: ${ctx.seed.org.slug} (${ctx.id})`);
+				} catch (err) {
+					console.error("[Sim] Org creation failed:", (err as Error).message);
+				}
+			}, ORG_CREATE_INTERVAL_MS),
+		);
+
+		// Check for stale orgs every 30s
+		this.intervals.push(
+			setInterval(async () => {
+				if (shuttingDown) return;
+				const now = Date.now();
+				for (const [id, ctx] of this.contexts) {
+					if (ctx.status === "active" && now - ctx.createdAt > ORG_MAX_AGE_MS) {
+						ctx.status = "draining";
+						console.log(`[Sim] Org ${ctx.seed.org.slug} (${id}) marked as draining`);
+						// Schedule cleanup after drain period
+						setTimeout(async () => {
+							try {
+								await this.cleanupOrg(ctx);
+							} catch (err) {
+								console.error(`[Sim] Cleanup failed for org ${id}:`, (err as Error).message);
+								// Force remove from map even if cleanup fails
+								this.contexts.delete(id);
+							}
+						}, ORG_DRAIN_MS);
+					}
+				}
+			}, 30_000),
+		);
+
+		// Refresh pools for all active orgs
+		this.intervals.push(
+			setInterval(async () => {
+				for (const ctx of this.contexts.values()) {
+					if (ctx.status === "active") {
+						try {
+							await refreshPoolsForCtx(ctx);
+						} catch {}
+					}
+				}
+			}, POOL_REFRESH_INTERVAL_MS),
+		);
+	}
+
+	pickRandomContext(): OrgContext | undefined {
+		const active = [...this.contexts.values()].filter((c) => c.status === "active");
+		if (active.length === 0) return undefined;
+		return active[Math.floor(Math.random() * active.length)];
+	}
+
+	async cleanupOrg(ctx: OrgContext): Promise<void> {
+		ctx.status = "decommissioned";
+		const orgId = ctx.id;
+		console.log(`[Sim] Cleaning up org ${ctx.seed.org.slug} (${orgId})...`);
+
+		// DB: CASCADE delete from orgs
+		try {
+			const db = await DB.getInstance();
+			await db.deleteFrom("orgs").where("id", "=", orgId).execute();
+			console.log(`[Sim] DB cleanup done for org ${orgId}`);
+		} catch (err) {
+			console.error(`[Sim] DB cleanup error for org ${orgId}:`, (err as Error).message);
+		}
+
+		// FGA: read and delete all tuples for this org
+		try {
+			const fga = await FGAClient.getInstance();
+			const orgObject = `org:${orgId}`;
+			const tuples = await fga.readTuples({ object: orgObject });
+			if (tuples.length > 0) {
+				// Delete in batches of 10 (FGA limit)
+				for (let i = 0; i < tuples.length; i += 10) {
+					const batch = tuples.slice(i, i + 10);
+					await fga.deleteTuples(batch);
+				}
+			}
+			console.log(`[Sim] FGA cleanup done for org ${orgId} (${tuples.length} tuples removed)`);
+		} catch (err) {
+			console.error(`[Sim] FGA cleanup error for org ${orgId}:`, (err as Error).message);
+		}
+
+		this.contexts.delete(orgId);
+		console.log(`[Sim] Org ${orgId} decommissioned`);
+	}
+
+	get activeCount(): number {
+		return [...this.contexts.values()].filter((c) => c.status === "active").length;
+	}
+
+	async shutdown(): Promise<void> {
+		for (const interval of this.intervals) {
+			clearInterval(interval);
+		}
+		// Cleanup all remaining orgs
+		const cleanupPromises = [...this.contexts.values()].map((ctx) =>
+			this.cleanupOrg(ctx).catch(() => {}),
+		);
+		await Promise.allSettled(cleanupPromises);
+	}
+}
+
 // ── Worker Pool ──────────────────────────────────────────────────────
 let shuttingDown = false;
 
-async function worker(_workerId: number): Promise<void> {
+async function worker(_workerId: number, orgManager: OrgManager): Promise<void> {
 	while (!shuttingDown) {
+		const ctx = orgManager.pickRandomContext();
+		if (!ctx) {
+			await Bun.sleep(100);
+			continue;
+		}
 		const scenario = selectWeightedRandom();
-		const token = pickRandomToken();
+		const token = ctx.allTokens[Math.floor(Math.random() * ctx.allTokens.length)];
 		try {
-			await scenario.fn(token);
+			await scenario.fn(token, ctx);
 		} catch {
 			// scenario errors are non-fatal; metrics already recorded
 		}
@@ -1129,7 +1291,7 @@ async function worker(_workerId: number): Promise<void> {
 let lastReportTotal = 0;
 let lastReportTime = performance.now();
 
-function reportMetrics(): void {
+function reportMetrics(orgManager: OrgManager): void {
 	const now = performance.now();
 	const elapsed = (now - lastReportTime) / 1000;
 	const reqs = metrics.total - lastReportTotal;
@@ -1151,6 +1313,7 @@ function reportMetrics(): void {
 
 	console.log(
 		`\n[Metrics] ${new Date().toISOString()}\n` +
+		`  Orgs: ${orgManager.activeCount} active / ${orgManager.contexts.size} total\n` +
 		`  Total: ${metrics.total} | Success: ${metrics.success} | Failed: ${metrics.failed}\n` +
 		`  RPS: ${rps} | p50: ${p50}ms | p95: ${p95}ms | p99: ${p99}ms\n` +
 		`  Top endpoints:\n${topEndpoints}`,
@@ -1158,24 +1321,19 @@ function reportMetrics(): void {
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────────
-console.log(`[Sim] Starting high-throughput simulation`);
+console.log(`[Sim] Starting high-throughput simulation with rotating orgs`);
 console.log(`[Sim] Target: ${BASE_URL} | Workers: ${NUM_WORKER_POOLS} | Delay: ${INTER_REQUEST_DELAY_MS}ms | Timeout: ${REQUEST_TIMEOUT_MS}ms | Max samples: ${MAX_LATENCY_SAMPLES}`);
+console.log(`[Sim] Org rotation: create every ${ORG_CREATE_INTERVAL_MS / 1000}s, max age ${ORG_MAX_AGE_MS / 1000}s, drain ${ORG_DRAIN_MS / 1000}s`);
 
-// Seed resources before starting workers
-await seedInitialResources();
-
-// Start pool refresh interval
-const poolRefreshInterval = setInterval(async () => {
-	try {
-		await refreshPools();
-	} catch {}
-}, POOL_REFRESH_INTERVAL_MS);
+const orgManager = new OrgManager();
+await orgManager.bootstrap();
+orgManager.startRotation();
 
 // Start metrics reporter
-const metricsInterval = setInterval(reportMetrics, METRICS_INTERVAL_MS);
+const metricsInterval = setInterval(() => reportMetrics(orgManager), METRICS_INTERVAL_MS);
 
 // Launch workers
-const workerPromises = Array.from({ length: NUM_WORKER_POOLS }, (_, i) => worker(i));
+const workerPromises = Array.from({ length: NUM_WORKER_POOLS }, (_, i) => worker(i, orgManager));
 console.log(`[Sim] ${NUM_WORKER_POOLS} workers launched. Press Ctrl+C to stop.`);
 
 // Graceful shutdown
@@ -1183,16 +1341,17 @@ function shutdown(): void {
 	if (shuttingDown) return;
 	shuttingDown = true;
 	console.log("\n[Sim] Shutting down...");
-	clearInterval(poolRefreshInterval);
 	clearInterval(metricsInterval);
-	reportMetrics(); // final report
+	reportMetrics(orgManager); // final report
 	// Workers will exit their loops since shuttingDown = true
-	Promise.allSettled(workerPromises).then(() => {
-		console.log("[Sim] All workers stopped. Goodbye.");
+	Promise.allSettled(workerPromises).then(async () => {
+		console.log("[Sim] All workers stopped. Cleaning up orgs...");
+		await orgManager.shutdown();
+		console.log("[Sim] All orgs cleaned up. Goodbye.");
 		process.exit(0);
 	});
-	// Force exit after 2s if workers hang
-	setTimeout(() => process.exit(0), 2000);
+	// Force exit after 5s if cleanup hangs
+	setTimeout(() => process.exit(0), 5000);
 }
 
 process.on("SIGINT", shutdown);
