@@ -777,6 +777,18 @@
                         "type": "boolean",
                         "example": false
                     },
+                    "have_gpg_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "have_cert_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "have_audit_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
                     "color": {
                         "type": "string",
                         "example": "#FF5733"
@@ -807,6 +819,9 @@
                     "have_api_access",
                     "have_billing_options",
                     "have_webhook_access",
+                    "have_gpg_access",
+                    "have_cert_access",
+                    "have_audit_access",
                     "is_admin",
                     "is_master",
                     "created_at",
@@ -1079,7 +1094,8 @@
                                 "key",
                                 "value"
                             ]
-                        }
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -1148,7 +1164,8 @@
                         "items": {
                             "type": "string",
                             "example": "API_KEY"
-                        }
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -1744,6 +1761,18 @@
                         "type": "boolean",
                         "example": false
                     },
+                    "have_gpg_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "have_cert_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "have_audit_access": {
+                        "type": "boolean",
+                        "example": false
+                    },
                     "is_admin": {
                         "type": "boolean",
                         "example": false
@@ -1760,6 +1789,9 @@
                     "have_api_access",
                     "have_billing_options",
                     "have_webhook_access",
+                    "have_gpg_access",
+                    "have_cert_access",
+                    "have_audit_access",
                     "is_admin"
                 ]
             },
@@ -1782,6 +1814,18 @@
                         "type": "number",
                         "example": 3
                     },
+                    "gpg_access_count": {
+                        "type": "number",
+                        "example": 1
+                    },
+                    "cert_access_count": {
+                        "type": "number",
+                        "example": 1
+                    },
+                    "audit_access_count": {
+                        "type": "number",
+                        "example": 2
+                    },
                     "view_access_count": {
                         "type": "number",
                         "example": 10
@@ -1800,6 +1844,9 @@
                     "billing_access_count",
                     "api_access_count",
                     "webhook_access_count",
+                    "gpg_access_count",
+                    "cert_access_count",
+                    "audit_access_count",
                     "view_access_count",
                     "edit_access_count",
                     "total_roles"
@@ -2336,7 +2383,8 @@
                                 "key",
                                 "value"
                             ]
-                        }
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -2405,7 +2453,8 @@
                         "items": {
                             "type": "string",
                             "example": "API_SECRET_KEY"
-                        }
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -2480,7 +2529,8 @@
                         "items": {
                             "type": "string",
                             "example": "API_SECRET_KEY"
-                        }
+                        },
+                        "maxItems": 100
                     }
                 },
                 "required": [
@@ -2564,19 +2614,22 @@
                         "example": "env_type_123"
                     },
                     "page": {
-                        "type": "string",
-                        "example": "1"
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1,
+                        "example": 1
                     },
                     "per_page": {
-                        "type": "string",
-                        "example": "20"
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 20,
+                        "example": 20
                     }
                 },
                 "required": [
                     "app_id",
-                    "env_type_id",
-                    "page",
-                    "per_page"
+                    "env_type_id"
                 ]
             },
             "SecretPitStateResponse": {

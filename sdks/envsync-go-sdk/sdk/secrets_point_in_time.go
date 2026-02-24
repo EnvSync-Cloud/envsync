@@ -19,8 +19,8 @@ type SecretDiffRequest struct {
 type SecretHistoryRequest struct {
 	AppId     string `json:"app_id" url:"-"`
 	EnvTypeId string `json:"env_type_id" url:"-"`
-	Page      string `json:"page" url:"-"`
-	PerPage   string `json:"per_page" url:"-"`
+	Page      *int   `json:"page,omitempty" url:"-"`
+	PerPage   *int   `json:"per_page,omitempty" url:"-"`
 }
 
 type SecretVariableTimelineRequest struct {
