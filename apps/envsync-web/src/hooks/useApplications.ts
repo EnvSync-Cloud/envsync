@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ApiError } from "@envsync-cloud/envsync-ts-sdk";
 import {
+  API_KEYS,
   App,
   FilterOptions,
   Statistics,
@@ -98,7 +99,7 @@ export const useApplications = () => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_APPLICATIONS] });
       toast.success("Project updated successfully");
       setIsEditModalOpen(false);
       setSelectedApp(null);
@@ -115,7 +116,7 @@ export const useApplications = () => {
       return await api.applications.deleteApp(appId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_APPLICATIONS] });
       toast.success("Project deleted successfully");
       setIsDeleteModalOpen(false);
       setSelectedApp(null);
