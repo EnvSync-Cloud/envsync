@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
+import type { Context, Next } from "hono";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import { UserController } from "@/controllers/user.controller";
@@ -45,6 +46,7 @@ app.get(
 			},
 		},
 	}),
+	requirePermission("can_view", "org"),
 	UserController.getUsers,
 );
 
@@ -74,6 +76,7 @@ app.get(
 			},
 		},
 	}),
+	requirePermission("can_view", "org"),
 	UserController.getUserById,
 );
 
@@ -104,6 +107,14 @@ app.patch(
 		},
 	}),
 	zValidator("json", updateUserRequestSchema),
+	async (ctx: Context, next: Next) => {
+		const userId = ctx.get("user_id");
+		const targetId = ctx.req.param("id");
+		if (userId && targetId && userId === targetId) {
+			return next();
+		}
+		return requirePermission("can_manage_users", "org")(ctx, next);
+	},
 	UserController.updateUser,
 );
 
@@ -164,6 +175,7 @@ app.patch(
 			},
 		},
 	}),
+	requirePermission("can_manage_users", "org"),
 	UserController.updatePassword,
 );
 
