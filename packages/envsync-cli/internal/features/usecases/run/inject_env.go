@@ -19,7 +19,7 @@ func NewInjectEnv() InjectEnvUseCase {
 }
 
 func (uc *injectEnv) Execute(ctx context.Context) (map[string]string, error) {
-	env, err := uc.readRemoteEnv()
+	env, err := uc.readRemoteEnv(ctx)
 	if err != nil {
 		//TODO: handle error appropriately
 	}
@@ -33,8 +33,8 @@ func (uc *injectEnv) Execute(ctx context.Context) (map[string]string, error) {
 	return env, nil
 }
 
-func (uc *injectEnv) readRemoteEnv() (map[string]string, error) {
-	remoteEnv, err := uc.syncService.ReadRemoteEnv()
+func (uc *injectEnv) readRemoteEnv(ctx context.Context) (map[string]string, error) {
+	remoteEnv, err := uc.syncService.ReadRemoteEnv(ctx)
 	if err != nil {
 		return nil, err
 	}

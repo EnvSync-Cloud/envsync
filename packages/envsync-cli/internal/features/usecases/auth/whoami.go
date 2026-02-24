@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type whoamiUseCase struct {
@@ -18,6 +19,9 @@ func NewWhoamiUseCase() WhoamiUseCase {
 }
 
 func (uc *whoamiUseCase) Execute(ctx context.Context) (*WhoamiResponse, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "auth.whoami")
+	defer span.End()
+
 	// Initialize response with configuration info
 	response := &WhoamiResponse{
 		IsLoggedIn: false,
@@ -25,7 +29,7 @@ func (uc *whoamiUseCase) Execute(ctx context.Context) (*WhoamiResponse, error) {
 	}
 
 	// Try to get user information
-	userInfo, err := uc.authService.Whoami()
+	userInfo, err := uc.authService.Whoami(ctx)
 	if err != nil {
 		// Handle different types of errors
 		response.TokenValid = false

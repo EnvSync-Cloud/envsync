@@ -9,6 +9,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type initCaseUse struct {
@@ -26,13 +27,16 @@ func NewInitUseCase() InitUseCase {
 }
 
 func (uc *initCaseUse) Execute(ctx context.Context, config string) error {
+	ctx, span := telemetry.Tracer().Start(ctx, "project.init")
+	defer span.End()
+
 	// Check if the configuration file already exists
 	if err := uc.checkConfigExists(config); err == nil {
 		return err
 	}
 
 	// Fetch all the applications
-	apps, err := uc.appService.GetAllApps()
+	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {
 		return NewServiceError("failed to retrieve applications", err)
 	}

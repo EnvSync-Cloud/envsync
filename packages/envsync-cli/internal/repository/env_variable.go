@@ -11,10 +11,10 @@ import (
 )
 
 type EnvVariableRepository interface {
-	GetAllEnv() ([]responses.EnvironmentVariable, error)
-	BatchCreateEnv(env requests.BatchSyncEnvRequest) error
-	BatchUpdateEnv(env requests.BatchSyncEnvRequest) error
-	BatchDeleteEnv(env requests.BatchDeleteRequest) error
+	GetAllEnv(ctx context.Context) ([]responses.EnvironmentVariable, error)
+	BatchCreateEnv(ctx context.Context, env requests.BatchSyncEnvRequest) error
+	BatchUpdateEnv(ctx context.Context, env requests.BatchSyncEnvRequest) error
+	BatchDeleteEnv(ctx context.Context, env requests.BatchDeleteRequest) error
 }
 
 type syncRepo struct {
@@ -33,8 +33,8 @@ func NewEnvVariableRepository(appID, envTypeID string) EnvVariableRepository {
 	}
 }
 
-func (s *syncRepo) GetAllEnv() ([]responses.EnvironmentVariable, error) {
-	envs, err := s.client.EnvironmentVariables.GetEnvs(context.Background(), &sdk.GetEnvRequest{
+func (s *syncRepo) GetAllEnv(ctx context.Context) ([]responses.EnvironmentVariable, error) {
+	envs, err := s.client.EnvironmentVariables.GetEnvs(ctx, &sdk.GetEnvRequest{
 		AppId:     s.appID,
 		EnvTypeId: s.envTypeID,
 	})
@@ -59,7 +59,7 @@ func (s *syncRepo) GetAllEnv() ([]responses.EnvironmentVariable, error) {
 	return result, nil
 }
 
-func (s *syncRepo) BatchCreateEnv(env requests.BatchSyncEnvRequest) error {
+func (s *syncRepo) BatchCreateEnv(ctx context.Context, env requests.BatchSyncEnvRequest) error {
 	sdkEnvs := make([]*sdk.BatchCreateEnvsRequestEnvsItem, len(env.Envs))
 	for i, e := range env.Envs {
 		sdkEnvs[i] = &sdk.BatchCreateEnvsRequestEnvsItem{
@@ -68,7 +68,7 @@ func (s *syncRepo) BatchCreateEnv(env requests.BatchSyncEnvRequest) error {
 		}
 	}
 
-	_, err := s.client.EnvironmentVariables.BatchCreateEnvs(context.Background(), &sdk.BatchCreateEnvsRequest{
+	_, err := s.client.EnvironmentVariables.BatchCreateEnvs(ctx, &sdk.BatchCreateEnvsRequest{
 		AppId:     env.AppID,
 		EnvTypeId: env.EnvTypeID,
 		Envs:      sdkEnvs,
@@ -76,7 +76,7 @@ func (s *syncRepo) BatchCreateEnv(env requests.BatchSyncEnvRequest) error {
 	return err
 }
 
-func (s *syncRepo) BatchUpdateEnv(env requests.BatchSyncEnvRequest) error {
+func (s *syncRepo) BatchUpdateEnv(ctx context.Context, env requests.BatchSyncEnvRequest) error {
 	sdkEnvs := make([]*sdk.BatchCreateEnvsRequestEnvsItem, len(env.Envs))
 	for i, e := range env.Envs {
 		sdkEnvs[i] = &sdk.BatchCreateEnvsRequestEnvsItem{
@@ -85,7 +85,7 @@ func (s *syncRepo) BatchUpdateEnv(env requests.BatchSyncEnvRequest) error {
 		}
 	}
 
-	_, err := s.client.EnvironmentVariables.BatchUpdateEnvs(context.Background(), &sdk.BatchCreateEnvsRequest{
+	_, err := s.client.EnvironmentVariables.BatchUpdateEnvs(ctx, &sdk.BatchCreateEnvsRequest{
 		AppId:     env.AppID,
 		EnvTypeId: env.EnvTypeID,
 		Envs:      sdkEnvs,
@@ -93,8 +93,8 @@ func (s *syncRepo) BatchUpdateEnv(env requests.BatchSyncEnvRequest) error {
 	return err
 }
 
-func (s *syncRepo) BatchDeleteEnv(env requests.BatchDeleteRequest) error {
-	_, err := s.client.EnvironmentVariables.DeleteBatchEnv(context.Background(), &sdk.BatchDeleteEnvsRequest{
+func (s *syncRepo) BatchDeleteEnv(ctx context.Context, env requests.BatchDeleteRequest) error {
+	_, err := s.client.EnvironmentVariables.DeleteBatchEnv(ctx, &sdk.BatchDeleteEnvsRequest{
 		AppId:     env.AppID,
 		EnvTypeId: env.EnvTypeID,
 		Keys:      env.Keys,

@@ -9,7 +9,7 @@ import (
 )
 
 type UserRepository interface {
-	GetAll() ([]responses.UserResponse, error)
+	GetAll(ctx context.Context) ([]responses.UserResponse, error)
 }
 
 type userRepo struct {
@@ -24,8 +24,8 @@ func NewUserRepository() UserRepository {
 	}
 }
 
-func (a *userRepo) GetAll() ([]responses.UserResponse, error) {
-	users, err := a.client.Users.GetUsers(context.Background())
+func (a *userRepo) GetAll(ctx context.Context) ([]responses.UserResponse, error) {
+	users, err := a.client.Users.GetUsers(ctx)
 	if err != nil {
 		return nil, err
 	}

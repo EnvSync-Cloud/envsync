@@ -7,6 +7,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type pushUseCase struct {
@@ -21,13 +22,16 @@ func NewPushUseCase() PushUseCase {
 }
 
 func (uc *pushUseCase) Execute(ctx context.Context, configPath string) (SyncResponse, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "sync.push")
+	defer span.End()
+
 	// Check if the configuration file exists
 	if err := uc.checkConfigFileExists(configPath); err != nil {
 		return SyncResponse{}, NewFileSystemError("configuration file check failed", err)
 	}
 
 	// Read remote environment variables
-	remoteEnv, err := uc.syncService.ReadRemoteEnv()
+	remoteEnv, err := uc.syncService.ReadRemoteEnv(ctx)
 	if err != nil {
 		return SyncResponse{}, NewServiceError("failed to read remote environment variables", err)
 	}
@@ -59,7 +63,7 @@ func (uc *pushUseCase) Execute(ctx context.Context, configPath string) (SyncResp
 		for _, v := range diff.Deleted {
 			envSync.ToDelete = append(envSync.ToDelete, v.Key)
 		}
-		if err := uc.syncService.WriteRemoteEnv(envSync); err != nil {
+		if err := uc.syncService.WriteRemoteEnv(ctx, envSync); err != nil {
 			return SyncResponse{}, NewServiceError("failed to write remote environment variables", err)
 		}
 	}

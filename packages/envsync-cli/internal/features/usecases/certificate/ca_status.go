@@ -17,7 +17,7 @@ func NewCAStatusUseCase() CAStatusUseCase {
 }
 
 func (uc *caStatusUseCase) Execute(ctx context.Context) (*domain.Certificate, error) {
-	cert, err := uc.service.GetCA()
+	cert, err := uc.service.GetCA(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to get organization CA status", err)
 	}

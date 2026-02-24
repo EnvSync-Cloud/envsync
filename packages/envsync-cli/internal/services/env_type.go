@@ -1,16 +1,18 @@
 package services
 
 import (
+	"context"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type EnvTypeService interface {
-	CreateEnvType(envType *domain.EnvType) (domain.EnvType, error)
-	GetEnvTypeByID(id string) (domain.EnvType, error)
-	GetEnvTypesByAppID(appID string) ([]domain.EnvType, error)
-	DeleteEnvType(id string) error
+	CreateEnvType(ctx context.Context, envType *domain.EnvType) (domain.EnvType, error)
+	GetEnvTypeByID(ctx context.Context, id string) (domain.EnvType, error)
+	GetEnvTypesByAppID(ctx context.Context, appID string) ([]domain.EnvType, error)
+	DeleteEnvType(ctx context.Context, id string) error
 }
 
 type envTypeService struct {
@@ -25,10 +27,10 @@ func NewEnvTypeService() EnvTypeService {
 	}
 }
 
-func (e *envTypeService) CreateEnvType(envType *domain.EnvType) (domain.EnvType, error) {
+func (e *envTypeService) CreateEnvType(ctx context.Context, envType *domain.EnvType) (domain.EnvType, error) {
 	req := mappers.EnvTypeDomainToRequest(envType)
 
-	res, err := e.repo.Create(&req)
+	res, err := e.repo.Create(ctx, &req)
 	if err != nil {
 		return domain.EnvType{}, err
 	}
@@ -36,8 +38,8 @@ func (e *envTypeService) CreateEnvType(envType *domain.EnvType) (domain.EnvType,
 	return mappers.EnvTypeResponseToDomain(res), nil
 }
 
-func (e *envTypeService) GetEnvTypeByID(id string) (domain.EnvType, error) {
-	res, err := e.repo.GetByID(id)
+func (e *envTypeService) GetEnvTypeByID(ctx context.Context, id string) (domain.EnvType, error) {
+	res, err := e.repo.GetByID(ctx, id)
 	if err != nil {
 		return domain.EnvType{}, err
 	}
@@ -45,8 +47,8 @@ func (e *envTypeService) GetEnvTypeByID(id string) (domain.EnvType, error) {
 	return mappers.EnvTypeResponseToDomain(res), nil
 }
 
-func (e *envTypeService) GetEnvTypesByAppID(appID string) ([]domain.EnvType, error) {
-	res, err := e.repo.GetByAppID(appID)
+func (e *envTypeService) GetEnvTypesByAppID(ctx context.Context, appID string) ([]domain.EnvType, error) {
+	res, err := e.repo.GetByAppID(ctx, appID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +61,8 @@ func (e *envTypeService) GetEnvTypesByAppID(appID string) ([]domain.EnvType, err
 	return envTypes, nil
 }
 
-func (e *envTypeService) DeleteEnvType(id string) error {
-	if err := e.repo.Delete(id); err != nil {
+func (e *envTypeService) DeleteEnvType(ctx context.Context, id string) error {
+	if err := e.repo.Delete(ctx, id); err != nil {
 		return err
 	}
 	return nil

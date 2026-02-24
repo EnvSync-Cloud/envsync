@@ -1,14 +1,16 @@
 package services
 
 import (
+	"context"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type SecretService interface {
-	GetAllSecrets(string, string) ([]domain.Secret, error)
-	RevelSecrets(string, string, []string) ([]domain.Secret, error)
+	GetAllSecrets(ctx context.Context, appID string, envTypeID string) ([]domain.Secret, error)
+	RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) ([]domain.Secret, error)
 }
 
 type secretService struct {
@@ -22,8 +24,8 @@ func NewSecretService() SecretService {
 	}
 }
 
-func (s *secretService) GetAllSecrets(appID, envTypeID string) ([]domain.Secret, error) {
-	sec, err := s.repo.GetAll(appID, envTypeID)
+func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID string) ([]domain.Secret, error) {
+	sec, err := s.repo.GetAll(ctx, appID, envTypeID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +38,8 @@ func (s *secretService) GetAllSecrets(appID, envTypeID string) ([]domain.Secret,
 	return secrets, nil
 }
 
-func (s *secretService) RevelSecrets(appID string, envTypeID string, keys []string) ([]domain.Secret, error) {
-	sec, err := s.repo.Reveal(appID, envTypeID, keys)
+func (s *secretService) RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) ([]domain.Secret, error) {
+	sec, err := s.repo.Reveal(ctx, appID, envTypeID, keys)
 	if err != nil {
 		return nil, err
 	}

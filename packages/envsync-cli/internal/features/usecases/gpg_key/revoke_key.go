@@ -21,7 +21,7 @@ func (uc *revokeUseCase) Execute(ctx context.Context, keyID, reason string) (*do
 		return nil, NewValidationError("key ID is required", ErrKeyIDRequired)
 	}
 
-	key, err := uc.service.RevokeKey(keyID, reason)
+	key, err := uc.service.RevokeKey(ctx, keyID, reason)
 	if err != nil {
 		return nil, NewServiceError("failed to revoke GPG key", err)
 	}

@@ -20,7 +20,7 @@ func (uc *deleteKeyUseCase) Execute(ctx context.Context, keyID string) error {
 		return NewValidationError("key ID is required", ErrKeyIDRequired)
 	}
 
-	if err := uc.service.DeleteKey(keyID); err != nil {
+	if err := uc.service.DeleteKey(ctx, keyID); err != nil {
 		return NewServiceError("failed to delete GPG key", err)
 	}
 

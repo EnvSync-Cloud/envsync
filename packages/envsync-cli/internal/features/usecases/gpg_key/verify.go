@@ -52,7 +52,7 @@ func (uc *verifyUseCase) Execute(ctx context.Context, filePath, signaturePath, k
 		GpgKeyID:  keyIDPtr,
 	}
 
-	result, err := uc.service.Verify(req)
+	result, err := uc.service.Verify(ctx, req)
 	if err != nil {
 		return nil, NewServiceError("failed to verify signature", err)
 	}

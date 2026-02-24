@@ -17,7 +17,7 @@ func NewListKeysUseCase() ListKeysUseCase {
 }
 
 func (uc *listKeysUseCase) Execute(ctx context.Context) ([]domain.GpgKey, error) {
-	keys, err := uc.service.ListKeys()
+	keys, err := uc.service.ListKeys(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to list GPG keys", err)
 	}

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 )
 
 type AuthService interface {
-	InitiateLogin() (*domain.LoginCredentials, error)
-	CompleteLogin(credentials *domain.LoginCredentials) (*domain.AccessToken, error)
-	PollForToken(credentials *domain.LoginCredentials) (*domain.AccessToken, error)
+	InitiateLogin(ctx context.Context) (*domain.LoginCredentials, error)
+	CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
+	PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
 	SaveToken(token *domain.AccessToken) error
-	Whoami() (*domain.UserInfo, error)
+	Whoami(ctx context.Context) (*domain.UserInfo, error)
 	Logout() error
 }
 
@@ -35,8 +36,8 @@ func NewAuthService() AuthService {
 }
 
 // InitiateLogin starts the OAuth device flow and returns login credentials
-func (s *auth) InitiateLogin() (*domain.LoginCredentials, error) {
-	deviceCodeResp, err := s.repo.LoginDeviceCode()
+func (s *auth) InitiateLogin(ctx context.Context) (*domain.LoginCredentials, error) {
+	deviceCodeResp, err := s.repo.LoginDeviceCode(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initiate login: %w", err)
 	}
@@ -47,8 +48,8 @@ func (s *auth) InitiateLogin() (*domain.LoginCredentials, error) {
 }
 
 // CompleteLogin attempts to exchange device code for access token
-func (s *auth) CompleteLogin(credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
-	tokenResp, err := s.repo.LoginToken(credentials.DeviceCode, credentials.ClientId, credentials.TokenUrl)
+func (s *auth) CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
+	tokenResp, err := s.repo.LoginToken(ctx, credentials.DeviceCode, credentials.ClientId, credentials.TokenUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +59,12 @@ func (s *auth) CompleteLogin(credentials *domain.LoginCredentials) (*domain.Acce
 }
 
 // PollForToken polls the authorization server until user completes authentication
-func (s *auth) PollForToken(credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
+func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
 	timeout := time.Now().Add(time.Duration(credentials.ExpiresIn) * time.Second)
 	interval := time.Duration(credentials.Interval) * time.Second
 
 	for time.Now().Before(timeout) {
-		token, err := s.CompleteLogin(credentials)
+		token, err := s.CompleteLogin(ctx, credentials)
 		if err == nil {
 			return token, nil
 		}
@@ -89,8 +90,8 @@ func (s *auth) SaveToken(token *domain.AccessToken) error {
 }
 
 // Whoami retrieves the current user's information
-func (s *auth) Whoami() (*domain.UserInfo, error) {
-	userInfoResp, err := s.repo.Whoami()
+func (s *auth) Whoami(ctx context.Context) (*domain.UserInfo, error) {
+	userInfoResp, err := s.repo.Whoami(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user info: %w", err)
 	}

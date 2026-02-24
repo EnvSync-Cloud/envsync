@@ -18,7 +18,7 @@ func NewDeleteEnvUseCase() DeleteEnvUseCase {
 }
 
 func (uc *deleteEnvUseCase) Execute(ctx context.Context, id string) error {
-	if err := uc.envService.DeleteEnvType(id); err != nil {
+	if err := uc.envService.DeleteEnvType(ctx, id); err != nil {
 		return NewServiceError("failed to delete environment", err)
 	}
 	return nil

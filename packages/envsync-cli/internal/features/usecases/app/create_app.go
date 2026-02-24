@@ -10,6 +10,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type createAppUseCase struct {
@@ -30,9 +31,12 @@ func NewCreateAppUseCase() CreateAppUseCase {
 }
 
 func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application) (*domain.Application, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "app.create")
+	defer span.End()
+
 	if app.Name != "" {
 		// Check if application with same name already exists
-		if exists, err := uc.checkApplicationExists(app.Name); err != nil {
+		if exists, err := uc.checkApplicationExists(ctx, app.Name); err != nil {
 			return nil, NewServiceError("failed to check application existence", err)
 		} else if exists {
 			return nil, NewAlreadyExistsError(
@@ -57,7 +61,7 @@ func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application)
 	}
 
 	// Create application via service
-	createdApp, err := uc.appService.CreateApp(&app)
+	createdApp, err := uc.appService.CreateApp(ctx, &app)
 	if err != nil {
 		return nil, NewServiceError("failed to create application", err)
 	}
@@ -73,14 +77,14 @@ func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application)
 		go func() {
 			defer wg.Done()
 			prodEnvType := domain.NewEnvType(createdApp.ID, "PROD", false, false, "")
-			_, prodErr = uc.envService.CreateEnvType(prodEnvType)
+			_, prodErr = uc.envService.CreateEnvType(ctx, prodEnvType)
 		}()
 
 		// Create DEV environment type
 		go func() {
 			defer wg.Done()
 			devEnvType := domain.NewEnvType(createdApp.ID, "DEV", false, false, "")
-			_, devErr = uc.envService.CreateEnvType(devEnvType)
+			_, devErr = uc.envService.CreateEnvType(ctx, devEnvType)
 		}()
 
 		wg.Wait()
@@ -179,9 +183,9 @@ func (uc *createAppUseCase) validateMetadataValue(key string, value any) error {
 	return nil
 }
 
-func (uc *createAppUseCase) checkApplicationExists(name string) (bool, error) {
+func (uc *createAppUseCase) checkApplicationExists(ctx context.Context, name string) (bool, error) {
 	// Get all applications and check if name exists
-	apps, err := uc.appService.GetAllApps()
+	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {
 		return false, err
 	}

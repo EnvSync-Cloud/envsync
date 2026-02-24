@@ -9,6 +9,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type listAppsUseCase struct {
@@ -26,8 +27,11 @@ func NewListAppsUseCase() ListAppsUseCase {
 }
 
 func (uc *listAppsUseCase) Execute(ctx context.Context) ([]domain.Application, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "app.list")
+	defer span.End()
+
 	// Get applications from service
-	apps, err := uc.findAllApplications()
+	apps, err := uc.findAllApplications(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +49,9 @@ func (uc *listAppsUseCase) Execute(ctx context.Context) ([]domain.Application, e
 	return apps, nil
 }
 
-func (uc *listAppsUseCase) findAllApplications() ([]domain.Application, error) {
+func (uc *listAppsUseCase) findAllApplications(ctx context.Context) ([]domain.Application, error) {
 	// Retrieve all applications from the service
-	apps, err := uc.appService.GetAllApps()
+	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to retrieve applications", err)
 	}

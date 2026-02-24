@@ -1,16 +1,18 @@
 package services
 
 import (
+	"context"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )
 
 type ApplicationService interface {
-	CreateApp(app *domain.Application) (domain.Application, error)
-	GetAppByID(id string) (domain.Application, error)
-	GetAllApps() ([]domain.Application, error)
-	DeleteApp(app domain.Application) error
+	CreateApp(ctx context.Context, app *domain.Application) (domain.Application, error)
+	GetAppByID(ctx context.Context, id string) (domain.Application, error)
+	GetAllApps(ctx context.Context) ([]domain.Application, error)
+	DeleteApp(ctx context.Context, app domain.Application) error
 }
 
 type app struct {
@@ -28,11 +30,11 @@ func NewAppService() ApplicationService {
 	}
 }
 
-func (a *app) CreateApp(app *domain.Application) (domain.Application, error) {
+func (a *app) CreateApp(ctx context.Context, app *domain.Application) (domain.Application, error) {
 	req := mappers.DomainToAppRequest(app)
 
 	var appRes domain.Application
-	if res, err := a.appRepo.Create(req); err != nil {
+	if res, err := a.appRepo.Create(ctx, req); err != nil {
 		return domain.Application{}, err
 	} else {
 		appRes = mappers.AppResponseToDomain(res)
@@ -41,8 +43,8 @@ func (a *app) CreateApp(app *domain.Application) (domain.Application, error) {
 	return appRes, nil
 }
 
-func (a *app) GetAllApps() ([]domain.Application, error) {
-	res, err := a.appRepo.GetAll()
+func (a *app) GetAllApps(ctx context.Context) ([]domain.Application, error) {
+	res, err := a.appRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,16 +57,16 @@ func (a *app) GetAllApps() ([]domain.Application, error) {
 	return apps, nil
 }
 
-func (a *app) DeleteApp(app domain.Application) error {
-	if err := a.appRepo.Delete(app.ID); err != nil {
+func (a *app) DeleteApp(ctx context.Context, app domain.Application) error {
+	if err := a.appRepo.Delete(ctx, app.ID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (a *app) GetAppByID(id string) (domain.Application, error) {
-	res, err := a.appRepo.GetByID(id)
+func (a *app) GetAppByID(ctx context.Context, id string) (domain.Application, error) {
+	res, err := a.appRepo.GetByID(ctx, id)
 	if err != nil {
 		return domain.Application{}, err
 	}
