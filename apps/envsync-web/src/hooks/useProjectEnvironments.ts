@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { ApiError } from "@envsync-cloud/envsync-ts-sdk";
 import {
   EnvVarFormData,
   BulkEnvVarData,
@@ -8,6 +9,13 @@ import {
   EnvironmentType,
   Project,
 } from "@/constants";
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.body?.error) {
+    return error.body.error;
+  }
+  return fallback;
+}
 
 export const useProjectEnvironments = (projectNameId: string) => {
   const { api } = useAuth();
@@ -122,7 +130,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to create variable:", error);
-      toast.error("Failed to create variable");
+      toast.error(getApiErrorMessage(error, "Failed to create variable"));
     },
   });
 
@@ -150,7 +158,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to update variable:", error);
-      toast.error("Failed to update variable");
+      toast.error(getApiErrorMessage(error, "Failed to update variable"));
     },
   });
 
@@ -179,7 +187,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to delete variable:", error);
-      toast.error("Failed to delete variable");
+      toast.error(getApiErrorMessage(error, "Failed to delete variable"));
     },
   });
 
@@ -207,7 +215,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to import variables:", error);
-      toast.error("Failed to import variables");
+      toast.error(getApiErrorMessage(error, "Failed to import variables"));
     },
   });
 
@@ -229,7 +237,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to create secret:", error);
-      toast.error("Failed to create secret");
+      toast.error(getApiErrorMessage(error, "Failed to create secret"));
     },
   });
 
@@ -257,7 +265,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to update secret:", error);
-      toast.error("Failed to update secret");
+      toast.error(getApiErrorMessage(error, "Failed to update secret"));
     },
   });
 
@@ -286,7 +294,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to delete secret:", error);
-      toast.error("Failed to delete secret");
+      toast.error(getApiErrorMessage(error, "Failed to delete secret"));
     },
   });
 
@@ -314,7 +322,7 @@ export const useProjectEnvironments = (projectNameId: string) => {
     },
     onError: (error) => {
       console.error("Failed to import secrets:", error);
-      toast.error("Failed to import secrets");
+      toast.error(getApiErrorMessage(error, "Failed to import secrets"));
     },
   });
 

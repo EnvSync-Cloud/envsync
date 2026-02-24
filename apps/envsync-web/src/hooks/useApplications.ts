@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ApiError } from "@envsync-cloud/envsync-ts-sdk";
 import {
   App,
   FilterOptions,
@@ -11,6 +12,13 @@ import {
   DEBOUNCE_DELAY,
 } from "@/constants";
 import { api as Api } from "@/api";
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.body?.error) {
+    return error.body.error;
+  }
+  return fallback;
+}
 
 export const useApplications = () => {
   const { api, user } = useAuth();
@@ -97,7 +105,7 @@ export const useApplications = () => {
     },
     onError: (error) => {
       console.error("Failed to update project:", error);
-      toast.error("Failed to update project");
+      toast.error(getApiErrorMessage(error, "Failed to update project"));
     },
   });
 
@@ -115,7 +123,7 @@ export const useApplications = () => {
     },
     onError: (error) => {
       console.error("Failed to delete project:", error);
-      toast.error("Failed to delete project");
+      toast.error(getApiErrorMessage(error, "Failed to delete project"));
     },
   });
 
