@@ -89,6 +89,17 @@ export const RootLayout = () => {
               Sign In
             </button>
           </div>
+          <div className="pt-4">
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+            >
+              Clear Local Storage
+            </button>
+          </div>
         </div>
       </div>
     );

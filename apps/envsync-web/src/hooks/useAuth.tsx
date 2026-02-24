@@ -15,7 +15,7 @@ export const useAuth = () => {
     const isCallbackPage =
       typeof window !== "undefined" &&
       window.location.pathname === "/auth/callback" &&
-      new URLSearchParams(window.location.search).get("access_token");
+      new URLSearchParams(window.location.hash.slice(1)).get("access_token");
     if (isCallbackPage) {
       setIsLoading(false);
       return;
