@@ -15,6 +15,9 @@ type CreateRoleRequest struct {
 	HaveApiAccess      bool    `json:"have_api_access" url:"-"`
 	HaveBillingOptions bool    `json:"have_billing_options" url:"-"`
 	HaveWebhookAccess  bool    `json:"have_webhook_access" url:"-"`
+	HaveGpgAccess      bool    `json:"have_gpg_access" url:"-"`
+	HaveCertAccess     bool    `json:"have_cert_access" url:"-"`
+	HaveAuditAccess    bool    `json:"have_audit_access" url:"-"`
 	IsAdmin            bool    `json:"is_admin" url:"-"`
 	Color              *string `json:"color,omitempty" url:"-"`
 }
@@ -24,6 +27,9 @@ type RoleStatsResponse struct {
 	BillingAccessCount float64 `json:"billing_access_count" url:"billing_access_count"`
 	ApiAccessCount     float64 `json:"api_access_count" url:"api_access_count"`
 	WebhookAccessCount float64 `json:"webhook_access_count" url:"webhook_access_count"`
+	GpgAccessCount     float64 `json:"gpg_access_count" url:"gpg_access_count"`
+	CertAccessCount    float64 `json:"cert_access_count" url:"cert_access_count"`
+	AuditAccessCount   float64 `json:"audit_access_count" url:"audit_access_count"`
 	ViewAccessCount    float64 `json:"view_access_count" url:"view_access_count"`
 	EditAccessCount    float64 `json:"edit_access_count" url:"edit_access_count"`
 	TotalRoles         float64 `json:"total_roles" url:"total_roles"`
@@ -58,6 +64,27 @@ func (r *RoleStatsResponse) GetWebhookAccessCount() float64 {
 		return 0
 	}
 	return r.WebhookAccessCount
+}
+
+func (r *RoleStatsResponse) GetGpgAccessCount() float64 {
+	if r == nil {
+		return 0
+	}
+	return r.GpgAccessCount
+}
+
+func (r *RoleStatsResponse) GetCertAccessCount() float64 {
+	if r == nil {
+		return 0
+	}
+	return r.CertAccessCount
+}
+
+func (r *RoleStatsResponse) GetAuditAccessCount() float64 {
+	if r == nil {
+		return 0
+	}
+	return r.AuditAccessCount
 }
 
 func (r *RoleStatsResponse) GetViewAccessCount() float64 {

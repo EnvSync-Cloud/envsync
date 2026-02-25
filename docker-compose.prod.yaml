@@ -409,6 +409,24 @@ services:
     networks:
       - envsync_network
 
+  # --- HyperDX (Session Replay + Observability) ---
+  hdx:
+    image: clickhouse/clickstack-all-in-one:latest
+    restart: unless-stopped
+    volumes:
+      - hdx_data:/data/db
+      - hdx_ch_data:/var/lib/clickhouse
+      - hdx_ch_logs:/var/log/clickhouse-server
+    environment:
+      - OTEL_AGENT_FEATURE_GATE_ARG='--feature-gates=clickhouse.json'
+      - BETA_CH_OTEL_JSON_SCHEMA_ENABLED=true
+    ports:
+      - "${HDX_PORT:-8800}:8080"
+      - "${HDX_OTEL_GRPC_PORT:-4316}:4317"
+      - "${HDX_OTEL_PORT:-4319}:4318"
+    networks:
+      - envsync_network
+
 networks:
   envsync_network:
     driver: bridge
@@ -426,3 +444,6 @@ volumes:
   loki_data:
   prometheus_data:
   grafana_data:
+  hdx_data:
+  hdx_ch_data:
+  hdx_ch_logs:

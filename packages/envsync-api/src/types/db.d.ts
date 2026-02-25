@@ -29,6 +29,9 @@ interface OrgRole extends BaseTable {
 	have_billing_options: ColumnType<boolean>;
 	have_api_access: ColumnType<boolean>;
 	have_webhook_access: ColumnType<boolean>;
+	have_gpg_access: ColumnType<boolean>;
+	have_cert_access: ColumnType<boolean>;
+	have_audit_access: ColumnType<boolean>;
 	color: ColumnType<string>;
 	is_master?: ColumnType<boolean>;
 }

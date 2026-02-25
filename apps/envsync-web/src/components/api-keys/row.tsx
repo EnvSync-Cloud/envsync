@@ -38,7 +38,7 @@ export const ApiKeyRow = ({
       </td>
       <td className="py-4 px-4">
         <div className="flex items-center space-x-2">
-          <code className="text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded">
+          <code className="hdx-mask text-sm font-mono text-gray-300 bg-gray-900 px-2 py-1 rounded">
             {`${apiKey.key.substring(0, 8)}...${apiKey.key.substring(
               apiKey.key.length - 8
             )}`}

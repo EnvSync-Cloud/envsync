@@ -165,7 +165,7 @@ export const ApiKeys = () => {
                   <Textarea
                     readOnly
                     value={createdKey || ""}
-                    className="bg-gray-900 border-gray-700 text-white pr-12"
+                    className="hdx-block bg-gray-900 border-gray-700 text-white pr-12"
                     rows={3}
                   />
                   <Button

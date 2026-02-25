@@ -825,11 +825,11 @@ async function createDevUser() {
 
 	if (!adminRole) {
 		const roles = [
-			{ name: "Org Admin", can_edit: true, can_view: true, have_api_access: true, have_billing_options: true, have_webhook_access: true, is_admin: true, is_master: true, color: "#FF5733" },
-			{ name: "Billing Admin", can_edit: false, can_view: false, have_api_access: false, have_billing_options: true, have_webhook_access: false, is_admin: false, is_master: false, color: "#33FF57" },
-			{ name: "Manager", can_edit: true, can_view: true, have_api_access: true, have_billing_options: false, have_webhook_access: true, is_admin: false, is_master: false, color: "#3357FF" },
-			{ name: "Developer", can_edit: true, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, is_admin: false, is_master: false, color: "#572F13" },
-			{ name: "Viewer", can_edit: false, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, is_admin: false, is_master: false, color: "#FF33A1" },
+			{ name: "Org Admin", can_edit: true, can_view: true, have_api_access: true, have_billing_options: true, have_webhook_access: true, have_gpg_access: true, have_cert_access: true, have_audit_access: true, is_admin: true, is_master: true, color: "#FF5733" },
+			{ name: "Billing Admin", can_edit: false, can_view: false, have_api_access: false, have_billing_options: true, have_webhook_access: false, have_gpg_access: false, have_cert_access: false, have_audit_access: false, is_admin: false, is_master: false, color: "#33FF57" },
+			{ name: "Manager", can_edit: true, can_view: true, have_api_access: true, have_billing_options: false, have_webhook_access: true, have_gpg_access: false, have_cert_access: false, have_audit_access: true, is_admin: false, is_master: false, color: "#3357FF" },
+			{ name: "Developer", can_edit: true, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, have_gpg_access: false, have_cert_access: false, have_audit_access: false, is_admin: false, is_master: false, color: "#572F13" },
+			{ name: "Viewer", can_edit: false, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, have_gpg_access: false, have_cert_access: false, have_audit_access: false, is_admin: false, is_master: false, color: "#FF33A1" },
 		];
 
 		await db

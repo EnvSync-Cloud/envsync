@@ -45,9 +45,11 @@ function checkPermission(user: string, relation: string, object: string): boolea
 			case "can_manage_roles":
 			case "can_manage_users":
 			case "can_manage_apps":
-			case "can_view_audit_logs":
 			case "can_manage_invites":
 				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
+
+			case "can_view_audit_logs":
+				return checkPermission(user, "have_audit_access", object);
 
 			case "can_manage_api_keys":
 				// Intersection: have_api_access AND can_manage_users
@@ -68,19 +70,15 @@ function checkPermission(user: string, relation: string, object: string): boolea
 
 			// GPG key management
 			case "can_manage_gpg_keys":
-				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
+				return checkPermission(user, "have_gpg_access", object);
 
 			// Certificate management
 			case "can_view_certificates":
-				return (
-					hasTuple(user, "can_view_certificates", object) ||
-					hasTuple(user, "admin", object) ||
-					hasTuple(user, "master", object)
-				);
+				return checkPermission(user, "have_cert_access", object);
 			case "can_manage_certificates":
 			case "can_issue_certificates":
 			case "can_revoke_certificates":
-				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
+				return checkPermission(user, "have_cert_access", object);
 
 			// Capability relations inherit from admin/master
 			case "can_view":
@@ -88,6 +86,9 @@ function checkPermission(user: string, relation: string, object: string): boolea
 			case "have_api_access":
 			case "have_billing_options":
 			case "have_webhook_access":
+			case "have_gpg_access":
+			case "have_cert_access":
+			case "have_audit_access":
 				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
 		}
 	}
@@ -317,6 +318,9 @@ export function setupUserOrgTuples(
 		have_api_access?: boolean;
 		have_billing_options?: boolean;
 		have_webhook_access?: boolean;
+		have_gpg_access?: boolean;
+		have_cert_access?: boolean;
+		have_audit_access?: boolean;
 	},
 ): void {
 	const user = `user:${userId}`;
@@ -330,6 +334,9 @@ export function setupUserOrgTuples(
 	if (role.have_api_access) tuples.add(serialize({ user, relation: "have_api_access", object: org }));
 	if (role.have_billing_options) tuples.add(serialize({ user, relation: "have_billing_options", object: org }));
 	if (role.have_webhook_access) tuples.add(serialize({ user, relation: "have_webhook_access", object: org }));
+	if (role.have_gpg_access) tuples.add(serialize({ user, relation: "have_gpg_access", object: org }));
+	if (role.have_cert_access) tuples.add(serialize({ user, relation: "have_cert_access", object: org }));
+	if (role.have_audit_access) tuples.add(serialize({ user, relation: "have_audit_access", object: org }));
 }
 
 /** Register the FGA mock — call this from setup.ts */

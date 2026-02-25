@@ -17,6 +17,9 @@ function roleFlagsToTuples(
 		have_api_access: boolean;
 		have_billing_options: boolean;
 		have_webhook_access: boolean;
+		have_gpg_access: boolean;
+		have_cert_access: boolean;
+		have_audit_access: boolean;
 	},
 ): TupleKey[] {
 	const user = `user:${userId}`;
@@ -33,6 +36,9 @@ function roleFlagsToTuples(
 	if (role.have_api_access) tuples.push({ user, relation: "have_api_access", object: org });
 	if (role.have_billing_options) tuples.push({ user, relation: "have_billing_options", object: org });
 	if (role.have_webhook_access) tuples.push({ user, relation: "have_webhook_access", object: org });
+	if (role.have_gpg_access) tuples.push({ user, relation: "have_gpg_access", object: org });
+	if (role.have_cert_access) tuples.push({ user, relation: "have_cert_access", object: org });
+	if (role.have_audit_access) tuples.push({ user, relation: "have_audit_access", object: org });
 
 	return tuples;
 }
@@ -47,6 +53,9 @@ const ALL_ORG_RELATIONS = [
 	"have_api_access",
 	"have_billing_options",
 	"have_webhook_access",
+	"have_gpg_access",
+	"have_cert_access",
+	"have_audit_access",
 ] as const;
 
 export class AuthorizationService {
@@ -93,6 +102,9 @@ export class AuthorizationService {
 		const tuples = roleFlagsToTuples(userId, orgId, {
 			...role,
 			is_master: role.is_master ?? false,
+			have_gpg_access: role.have_gpg_access ?? false,
+			have_cert_access: role.have_cert_access ?? false,
+			have_audit_access: role.have_audit_access ?? false,
 		});
 		const fga = await FGAClient.getInstance();
 		await fga.writeTuples(tuples);

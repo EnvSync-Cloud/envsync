@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { API_KEYS } from "@/constants";
 
 interface Invitation {
   id: string;
@@ -109,7 +110,7 @@ export const useInvitations = () => {
     },
     onSuccess: (_, inviteId) => {
       queryClient.invalidateQueries({ queryKey: ["invitationsData"] });
-      queryClient.invalidateQueries({ queryKey: ["usersData"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_USERS] });
       setActionLoading(inviteId, false);
       console.log("Invitation deleted successfully");
     },

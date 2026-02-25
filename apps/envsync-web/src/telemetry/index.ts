@@ -3,6 +3,7 @@ import { initTracing, getTracerProvider } from "./tracing";
 import { initMetrics, getMeterProvider } from "./metrics";
 import { initLogs, getLoggerProvider } from "./logs";
 import { initErrorTracking } from "./error-tracking";
+import { initSessionReplay, isHyperDXActive } from "./session-replay";
 
 let initialized = false;
 
@@ -12,7 +13,17 @@ export function initTelemetry(): void {
   if (config.disabled || initialized) return;
   initialized = true;
 
-  initTracing(config);
+  // HyperDX must init before custom OTel — it bundles its own
+  // WebTracerProvider and rrweb recorder. If we register a provider
+  // first, HyperDX's OTel layer fails and the recorder errors with
+  // "RUM OTEL Web must be inited before recorder".
+  initSessionReplay();
+
+  // Skip custom OTel tracing when HyperDX is active (it already
+  // provides tracing, metrics export, and console capture).
+  if (!isHyperDXActive()) {
+    initTracing(config);
+  }
   initMetrics(config);
   initLogs(config);
   initErrorTracking();
@@ -42,3 +53,4 @@ export function initTelemetry(): void {
 }
 
 export { RouteChangeTracker } from "./route-instrumentation";
+export { identifyUser } from "./session-replay";

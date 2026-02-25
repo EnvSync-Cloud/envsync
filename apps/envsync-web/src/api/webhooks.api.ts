@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { MutationOptions, sdk } from "./base";
 import {
@@ -154,7 +155,7 @@ const useUpdateWebhook = ({
 
 const useRefreshWebhooks = () => {
   const { invalidateWebhooks } = useInvalidateQueries();
-  invalidateWebhooks();
+  return useCallback(() => { invalidateWebhooks(); }, [invalidateWebhooks]);
 };
 
 export const webhooks = {

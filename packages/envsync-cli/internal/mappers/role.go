@@ -28,6 +28,15 @@ func RoleResponseToDomain(
 	if roleRes.HaveWebhook {
 		privileges = append(privileges, "webhook_access")
 	}
+	if roleRes.HaveGpg {
+		privileges = append(privileges, "gpg_access")
+	}
+	if roleRes.HaveCert {
+		privileges = append(privileges, "cert_access")
+	}
+	if roleRes.HaveAudit {
+		privileges = append(privileges, "audit_access")
+	}
 
 	return domain.Role{
 		ID:         roleRes.ID,

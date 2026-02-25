@@ -172,9 +172,6 @@ export function AuditTable({
                       User
                     </th>
                     <th className="text-left py-2.5 px-4 text-xs text-gray-500 font-medium">
-                      Action
-                    </th>
-                    <th className="text-left py-2.5 px-4 text-xs text-gray-500 font-medium">
                       Resource
                     </th>
                     <th className="text-left py-2.5 px-4 text-xs text-gray-500 font-medium">

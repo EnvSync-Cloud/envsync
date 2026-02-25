@@ -629,6 +629,49 @@ async function main() {
 	await step("RustFS", ["S3_ENDPOINT", "S3_ACCESS_KEY", "S3_SECRET_KEY"], initRustfs);
 
 	await step(
+		"HyperDX",
+		[],
+		async () => {
+			const hdxPort = optionalEnv("HDX_PORT", "8800");
+			const hdxUrl = `http://hdx:8080`;
+
+			console.log(`\n=== HyperDX ===`);
+
+			// Wait for HyperDX to be reachable (internal Docker network)
+			await waitForHttp("HyperDX", `${hdxUrl}/api/health`, [200, 404, 302]);
+
+			// Wait a bit for full readiness
+			await new Promise(r => setTimeout(r, 3000));
+
+			// Register default user
+			try {
+				const res = await fetch(`${hdxUrl}/api/register/password`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						email: "dev@envsync.local",
+						password: "TestDev@1234",
+						confirmPassword: "TestDev@1234",
+					}),
+					signal: AbortSignal.timeout(10000),
+				});
+				if (res.ok) {
+					console.log("  Default user registered (dev@envsync.local / TestDev@1234).");
+				} else {
+					const body = await res.text();
+					if (body.includes("already") || res.status === 409) {
+						console.log("  Default user already exists.");
+					} else {
+						console.log(`  User registration returned ${res.status}: ${body}`);
+					}
+				}
+			} catch (err) {
+				console.log(`  HyperDX user registration skipped: ${err instanceof Error ? err.message : err}`);
+			}
+		},
+	);
+
+	await step(
 		"miniKMS",
 		["MINIKMS_GRPC_ADDR"],
 		async () => {

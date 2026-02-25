@@ -99,6 +99,9 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 			have_api_access: true,
 			have_billing_options: true,
 			have_webhook_access: true,
+			have_gpg_access: true,
+			have_cert_access: true,
+			have_audit_access: true,
 			color: "#FF5733",
 		},
 		{
@@ -111,6 +114,9 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 			have_api_access: false,
 			have_billing_options: true,
 			have_webhook_access: false,
+			have_gpg_access: false,
+			have_cert_access: false,
+			have_audit_access: false,
 			color: "#33FF57",
 		},
 		{
@@ -123,6 +129,9 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 			have_api_access: false,
 			have_billing_options: false,
 			have_webhook_access: false,
+			have_gpg_access: false,
+			have_cert_access: false,
+			have_audit_access: false,
 			color: "#572F13",
 		},
 		{
@@ -135,6 +144,9 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 			have_api_access: false,
 			have_billing_options: false,
 			have_webhook_access: false,
+			have_gpg_access: false,
+			have_cert_access: false,
+			have_audit_access: false,
 			color: "#FF33A1",
 		},
 	] as const;

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { API_KEYS } from "@/constants";
 
 interface User {
   id: string;
@@ -39,7 +40,7 @@ export const useUsers = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["usersData"],
+    queryKey: [API_KEYS.ALL_USERS],
     queryFn: async () => {
       const [usersData, rolesData] = await Promise.all([
         api.users.getUsers(),
@@ -122,7 +123,7 @@ export const useUsers = () => {
       return await api.onboarding.createUserInvite({ email, role_id });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["usersData"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_USERS] });
       resetInviteForm();
       console.log("User invited successfully");
     },
@@ -137,7 +138,7 @@ export const useUsers = () => {
       return await api.users.deleteUser(userId);
     },
     onSuccess: (_, userId) => {
-      queryClient.invalidateQueries({ queryKey: ["usersData"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_USERS] });
       setActionLoading(userId, false);
       console.log("User deleted successfully");
     },
@@ -159,7 +160,7 @@ export const useUsers = () => {
       return await api.users.updateRole(userId, { role_id: roleId });
     },
     onSuccess: (_, { userId }) => {
-      queryClient.invalidateQueries({ queryKey: ["usersData"] });
+      queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_USERS] });
       setActionLoading(userId, false);
       console.log("User role updated successfully");
     },

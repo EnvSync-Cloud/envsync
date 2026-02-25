@@ -63,6 +63,9 @@ type RoleResponse struct {
 	HaveApiAccess      bool    `json:"have_api_access" url:"have_api_access"`
 	HaveBillingOptions bool    `json:"have_billing_options" url:"have_billing_options"`
 	HaveWebhookAccess  bool    `json:"have_webhook_access" url:"have_webhook_access"`
+	HaveGpgAccess      bool    `json:"have_gpg_access" url:"have_gpg_access"`
+	HaveCertAccess     bool    `json:"have_cert_access" url:"have_cert_access"`
+	HaveAuditAccess    bool    `json:"have_audit_access" url:"have_audit_access"`
 	Color              *string `json:"color,omitempty" url:"color,omitempty"`
 	IsAdmin            bool    `json:"is_admin" url:"is_admin"`
 	IsMaster           bool    `json:"is_master" url:"is_master"`
@@ -127,6 +130,27 @@ func (r *RoleResponse) GetHaveWebhookAccess() bool {
 		return false
 	}
 	return r.HaveWebhookAccess
+}
+
+func (r *RoleResponse) GetHaveGpgAccess() bool {
+	if r == nil {
+		return false
+	}
+	return r.HaveGpgAccess
+}
+
+func (r *RoleResponse) GetHaveCertAccess() bool {
+	if r == nil {
+		return false
+	}
+	return r.HaveCertAccess
+}
+
+func (r *RoleResponse) GetHaveAuditAccess() bool {
+	if r == nil {
+		return false
+	}
+	return r.HaveAuditAccess
 }
 
 func (r *RoleResponse) GetColor() *string {

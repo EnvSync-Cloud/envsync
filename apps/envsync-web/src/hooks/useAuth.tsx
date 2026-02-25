@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { type WhoAmIResponse } from "@envsync-cloud/envsync-ts-sdk";
 import { getSDK } from "@/api";
+import { identifyUser } from "@/telemetry";
 
 export const useAuth = () => {
   const [user, setUser] = useState<WhoAmIResponse | undefined>(undefined);
@@ -44,6 +45,10 @@ export const useAuth = () => {
       try {
         const userData = await api.authentication.whoami();
         setUser(userData);
+        identifyUser(userData.user.id, {
+          email: userData.user.email,
+          org: userData.org.name || "",
+        });
       } catch (error) {
         console.error("Failed to fetch user:", error);
         setAuthError("Session may have expired. Sign in again.");

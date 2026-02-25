@@ -66,17 +66,6 @@ export const AuditLogRow = ({ log }: AuditLogRowProps) => {
         </div>
       </td>
       <td className="py-3 px-4">
-        <Badge
-          className={cn(
-            "border flex items-center gap-1.5 uppercase text-[10px]",
-            log.actionBadgeColor
-          )}
-        >
-          {log.actionIcon}
-          <span className="font-medium">{log.actionCategory}</span>
-        </Badge>
-      </td>
-      <td className="py-3 px-4">
         <div className="flex items-center space-x-2">
           <span className="text-gray-500">{log.resourceIcon}</span>
           <div>
