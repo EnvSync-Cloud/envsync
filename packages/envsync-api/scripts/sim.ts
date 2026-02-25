@@ -81,6 +81,7 @@ Object.assign(process.env, {
 	S3_BUCKET_URL: process.env.S3_BUCKET_URL ?? "http://localhost:19001/envsync",
 	S3_ENDPOINT: process.env.S3_ENDPOINT ?? "http://localhost:19001",
 	CACHE_ENV: "production",
+	REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
 	SMTP_HOST: process.env.SMTP_HOST ?? "localhost",
 	SMTP_PORT: process.env.SMTP_PORT ?? "1025",
 	SMTP_SECURE: "false",
@@ -112,7 +113,7 @@ Object.assign(process.env, {
 
 // ── 4. Initialize services ───────────────────────────────────────────
 const { CacheClient } = await import("@/libs/cache");
-CacheClient.init("development");
+CacheClient.init("production");
 
 const { DB } = await import("@/libs/db");
 await DB.getInstance();
