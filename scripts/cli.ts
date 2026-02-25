@@ -3,11 +3,8 @@
  * EnvSync CLI – full init from project root.
  * 1. Ensure .env exists (copy from .env.example)
  * 2. Start Docker Compose services (without envsync_api)
- * 3. Wait for postgres, Zitadel, RustFS, Vault, OpenFGA
- * 4. Initialize & configure Vault (KV v2, AppRole auth)
- * 5. Initialize OpenFGA (create store, write authorization model)
- * 6. Run DB migrations
- * 7. Run API init (RustFS bucket; Zitadel apps created in console, secrets in .env)
+ * 3. Wait for Keycloak, RustFS, SpacetimeDB
+ * 4. Run API init (RustFS bucket; Keycloak clients)
  *
  * Run from monorepo root: bun run scripts/cli.ts init
  */
@@ -19,18 +16,13 @@ import path from "node:path";
 import * as readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
-import { authorizationModelDef } from "../packages/envsync-api/src/libs/openfga/model";
 import {
 	loadEnvFile,
 	updateEnvFile,
 	waitFor,
-	waitForPostgres,
-	waitForVault,
-	waitForOpenFGA,
-	waitForZitadel,
+	waitForKeycloak,
+	waitForSpacetimeDB,
 	waitForGrafana,
-	readPatFromVolume,
-	initVault,
 } from "./lib/services";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -79,37 +71,31 @@ async function ensureEnv(): Promise<void> {
 	console.log("Created .env from .env.example.");
 }
 
-function dockerUp(): void {
-	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault, openfga, otel)...");
-	const result = spawnSync(
-		"docker",
-		[
-			"compose",
-			"up",
-			"-d",
-			"postgres",
-			"redis",
-			"rustfs",
-			"mailpit",
-			"zitadel",
-			"vault-init",
-			"vault",
-			"openfga_db",
-			"openfga_migrate",
-			"openfga",
-			"minikms_db",
-			"minikms_migrate",
-			"minikms",
-			"tempo",
-			"loki",
-			"prometheus",
-			"otel-collector",
-			"grafana",
-			"httpbin",
-			"hdx",
-		],
-		{ cwd: rootDir, stdio: "inherit", env: process.env },
-	);
+function dockerUp(dbLocal: boolean): void {
+	const services = [
+		"keycloak_db",
+		"keycloak",
+		"redis",
+		"rustfs",
+		"mailpit",
+		"tempo",
+		"loki",
+		"prometheus",
+		"otel-collector",
+		"grafana",
+		"httpbin",
+		"hdx",
+	];
+	const args = ["compose"];
+	if (dbLocal) {
+		args.push("--profile", "stdb");
+		services.push("spacetimedb", "stdb_publish");
+	}
+	args.push("up", "-d", ...services);
+
+	const label = dbLocal ? "keycloak, redis, rustfs, mailpit, spacetimedb, otel" : "keycloak, redis, rustfs, mailpit, otel (stdb: cloud)";
+	console.log(`\nStarting Docker Compose (${label})...`);
+	const result = spawnSync("docker", args, { cwd: rootDir, stdio: "inherit", env: process.env });
 	if (result.status !== 0) throw new Error("Docker Compose up failed.");
 }
 
@@ -148,103 +134,8 @@ async function waitForRustfs(): Promise<void> {
 }
 
 
-/** Initialize Vault and save credentials to root .env. */
-async function initVaultAndSave(): Promise<void> {
-	const vaultPort = process.env.VAULT_PORT ?? "8200";
-	const vaultAddr = process.env.VAULT_ADDR ?? `http://localhost:${vaultPort}`;
-	const mountPath = process.env.VAULT_MOUNT_PATH || "envsync";
-
-	const result = await initVault(vaultAddr, mountPath);
-	updateRootEnvAndReload({
-		VAULT_ADDR: result.vaultAddr,
-		VAULT_TOKEN: result.rootToken,
-		VAULT_UNSEAL_KEY: result.unsealKey,
-		VAULT_ROLE_ID: result.roleId,
-		VAULT_SECRET_ID: result.secretId,
-		VAULT_MOUNT_PATH: result.mountPath,
-	});
-	console.log("  Vault credentials saved to .env (VAULT_ADDR, VAULT_TOKEN, VAULT_ROLE_ID, VAULT_SECRET_ID, VAULT_MOUNT_PATH).");
-}
-
-/**
- * Initialize OpenFGA for EnvSync:
- * 1. Create a store (if OPENFGA_STORE_ID is not already set)
- * 2. Write the authorization model
- * 3. Save OPENFGA_STORE_ID and OPENFGA_MODEL_ID to .env
- */
-async function initOpenFGA(): Promise<void> {
-	const openfgaUrl = (
-		process.env.OPENFGA_API_URL ?? `http://localhost:${process.env.OPENFGA_HTTP_PORT ?? "8090"}`
-	).replace(/\/$/, "");
-
-	console.log(`\nInitializing OpenFGA at ${openfgaUrl}...`);
-
-	// If already configured, skip
-	if (process.env.OPENFGA_STORE_ID && process.env.OPENFGA_MODEL_ID) {
-		console.log(
-			`  OpenFGA already configured (store=${process.env.OPENFGA_STORE_ID}, model=${process.env.OPENFGA_MODEL_ID}). Skipping.`,
-		);
-		return;
-	}
-
-	// ── Step 1: Create store ─────────────────────────────────────────
-	let storeId = process.env.OPENFGA_STORE_ID || "";
-	if (!storeId) {
-		console.log("  Creating OpenFGA store 'envsync'...");
-		const storeRes = await fetch(`${openfgaUrl}/stores`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name: "envsync" }),
-			signal: AbortSignal.timeout(10000),
-		});
-		if (!storeRes.ok) {
-			throw new Error(`Failed to create OpenFGA store (${storeRes.status}): ${await storeRes.text()}`);
-		}
-		const storeData = (await storeRes.json()) as { id: string; name: string };
-		storeId = storeData.id;
-		console.log(`  Store created: ${storeId}`);
-	} else {
-		console.log(`  Using existing store: ${storeId}`);
-	}
-
-	// ── Step 2: Write authorization model ────────────────────────────
-	console.log("  Writing authorization model...");
-	const modelRes = await fetch(`${openfgaUrl}/stores/${storeId}/authorization-models`, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(authorizationModelDef),
-		signal: AbortSignal.timeout(10000),
-	});
-	if (!modelRes.ok) {
-		throw new Error(
-			`Failed to write OpenFGA authorization model (${modelRes.status}): ${await modelRes.text()}`,
-		);
-	}
-	const modelData = (await modelRes.json()) as { authorization_model_id: string };
-	const modelId = modelData.authorization_model_id;
-	console.log(`  Authorization model written: ${modelId}`);
-
-	// ── Step 3: Save to .env ─────────────────────────────────────────
-	updateRootEnvAndReload({
-		OPENFGA_API_URL: openfgaUrl,
-		OPENFGA_STORE_ID: storeId,
-		OPENFGA_MODEL_ID: modelId,
-	});
-	console.log("  OpenFGA credentials saved to .env (OPENFGA_API_URL, OPENFGA_STORE_ID, OPENFGA_MODEL_ID).");
-}
-
-function runMigrations(): void {
-	console.log("\nRunning DB migrations...");
-	const result = spawnSync(process.execPath, ["run", "scripts/migrate.ts", "latest"], {
-		cwd: path.join(rootDir, "packages/envsync-api"),
-		stdio: "inherit",
-		env: process.env,
-	});
-	if (result.status !== 0) throw new Error("DB migrations failed.");
-}
-
 function runApiInit(): void {
-	console.log("\nRunning RustFS init (and optional Zitadel app setup)...");
+	console.log("\nRunning RustFS init (and Keycloak client setup)...");
 	const result = spawnSync(process.execPath, ["run", "scripts/cli.ts", "init"], {
 		cwd: path.join(rootDir, "packages/envsync-api"),
 		stdio: "inherit",
@@ -253,35 +144,23 @@ function runApiInit(): void {
 	if (result.status !== 0) throw new Error("API init failed.");
 }
 
-async function init(): Promise<void> {
-	console.log("EnvSync full init (env, Docker, migrations, Zitadel, RustFS, Vault, OpenFGA)\n");
+async function init(dbLocal: boolean): Promise<void> {
+	console.log(`EnvSync full init (env, Docker, Keycloak, RustFS${dbLocal ? ", SpacetimeDB" : " — stdb: cloud"})\n`);
 
 	await ensureEnv();
 	loadEnvFile(path.join(rootDir, ".env"));
 
-	dockerUp();
+	dockerUp(dbLocal);
 
-	console.log("\nWaiting for services (Zitadel can take 1–2 min on first start)...");
+	console.log("\nWaiting for services (Keycloak can take 1–2 min on first start)...");
 	await new Promise(r => setTimeout(r, 10000));
-	await waitForPostgres();
-	await waitForZitadel();
+	await waitForKeycloak();
 	await waitForRustfs();
-	await waitForVault();
-	await waitForOpenFGA();
-
-	const patFromVolume = await readPatFromVolume(rootDir);
-	if (patFromVolume) {
-		updateRootEnvAndReload({ ZITADEL_PAT: patFromVolume });
-		console.log("Zitadel: PAT read from docker volume and saved to .env (continuing with updated env).");
-	}
-
-	await initVaultAndSave();
-	await initOpenFGA();
+	// if (dbLocal) await waitForSpacetimeDB();
 
 	// Wait for Grafana (dashboards are auto-provisioned)
 	await waitForGrafana();
 
-	runMigrations();
 	runApiInit();
 
 	console.log("\nStopping Docker services...");
@@ -298,47 +177,30 @@ function dockerDown(): void {
 	if (result.status !== 0) throw new Error("Docker Compose down failed.");
 }
 
-function runDb(args: string[]): void {
-	const result = spawnSync(process.execPath, ["run", "scripts/migrate.ts", ...args], {
-		cwd: path.join(rootDir, "packages/envsync-api"),
-		stdio: "inherit",
-		env: process.env,
-	});
-	if (result.status !== 0) throw new Error("DB command failed.");
-}
+function servicesUp(dbLocal: boolean): void {
+	const services = [
+		"keycloak_db",
+		"keycloak",
+		"redis",
+		"rustfs",
+		"mailpit",
+		"tempo",
+		"loki",
+		"prometheus",
+		"otel-collector",
+		"grafana",
+		"httpbin",
+		"hdx",
+	];
+	const args = ["compose"];
+	if (dbLocal) {
+		args.push("--profile", "stdb");
+		services.push("spacetimedb", "stdb_publish");
+	}
+	args.push("up", "-d", ...services);
 
-function servicesUp(): void {
-	console.log("Starting Docker Compose services...");
-	const result = spawnSync(
-		"docker",
-		[
-			"compose",
-			"up",
-			"-d",
-			"postgres",
-			"redis",
-			"rustfs",
-			"mailpit",
-			"zitadel",
-			"vault-init",
-			"vault",
-			"zitadel_login",
-			"openfga_db",
-			"openfga_migrate",
-			"openfga",
-			"minikms_db",
-			"minikms_migrate",
-			"minikms",
-			"tempo",
-			"loki",
-			"prometheus",
-			"otel-collector",
-			"grafana",
-			"httpbin",
-			"hdx",
-		],
-		{ cwd: rootDir, stdio: "inherit", env: process.env },
-	);
+	console.log(`Starting Docker Compose services${dbLocal ? " (with local SpacetimeDB)" : " (stdb: cloud)"}...`);
+	const result = spawnSync("docker", args, { cwd: rootDir, stdio: "inherit", env: process.env });
 	if (result.status !== 0) throw new Error("Docker Compose up failed.");
 }
 
@@ -446,32 +308,23 @@ function printUsage(): void {
 	console.log("Usage: bun run cli <command> [options]");
 	console.log("");
 	console.log("Commands:");
-	console.log("  init              Full init: .env, Docker up, wait, Vault setup, OpenFGA setup, migrations, API init, then Docker down");
-	console.log("  db <migrate-cmd>  Run DB migrations (packages/envsync-api/scripts/migrate.ts)");
-	console.log("                    e.g. db latest | db list | db rollback | db backup | db restore | db migrate_to <name> | db step | db drop | db init");
-	console.log("  services <sub>    Docker Compose: up | down | status");
-	console.log("  hyperdx <sub>     HyperDX session replay: init | up | down");
+	console.log("  init [--db-local]       Full init: .env, Docker up, wait, Keycloak setup, API init, then Docker down");
+	console.log("                          --db-local  Spin up self-hosted SpacetimeDB (default: use cloud)");
+	console.log("  services <sub>          Docker Compose: up [--db-local] | down | status");
+	console.log("  hyperdx <sub>           HyperDX session replay: init | up | down");
 	console.log("");
 }
 
 const cmd = process.argv[2];
+const dbLocal = process.argv.includes("--db-local");
 if (cmd === "init") {
-	init().catch(err => {
+	init(dbLocal).catch(err => {
 		console.error(err);
 		process.exit(1);
 	});
-} else if (cmd === "db") {
-	loadEnvFile(path.join(rootDir, ".env"));
-	const dbArgs = process.argv.slice(3);
-	if (dbArgs.length === 0) {
-		console.log("Usage: bun run cli db <migrate-cmd>");
-		console.log("  e.g. latest | list | rollback | backup | restore | migrate_to <name> | step | drop | init");
-		process.exit(1);
-	}
-	runDb(dbArgs);
 } else if (cmd === "services") {
 	const sub = process.argv[3];
-	if (sub === "up") servicesUp();
+	if (sub === "up") servicesUp(dbLocal);
 	else if (sub === "down") servicesDown();
 	else if (sub === "status") servicesStatus();
 	else {
