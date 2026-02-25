@@ -5,7 +5,6 @@ import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { orNotFound, BusinessRuleError, ValidationError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
-import infoLogs, { LogTypes } from "@/libs/logger";
 
 export class RoleService {
 	public static createRole = async ({
