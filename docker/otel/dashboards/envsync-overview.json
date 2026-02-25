@@ -319,14 +319,14 @@
       "options": { "legend": { "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
     },
     {
-      "title": "MiniKMS RPC Methods",
+      "title": "STDB Reducer Calls",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 49 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "sum(rate(external_service_calls_total{service_name=~\"$service_name\", peer_service=\"minikms\"}[$__rate_interval])) by (rpc_method)",
-          "legendFormat": "{{rpc_method}}",
+          "expr": "sum(rate(external_service_calls_total{service_name=~\"$service_name\", peer_service=\"spacetimedb\"}[$__rate_interval])) by (stdb_reducer)",
+          "legendFormat": "{{stdb_reducer}}",
           "refId": "A"
         }
       ],

@@ -37,7 +37,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 			]);
 
 			ctx.set("user_id", user.id);
-			ctx.set("keycloak_user_id", access_info.user_id); // IdP user id (Zitadel); key name kept for compatibility
+			ctx.set("keycloak_user_id", access_info.user_id);
 			ctx.set("org_id", user.org_id);
 			ctx.set("role_id", user.role_id);
 			ctx.set("org_name", org.name);

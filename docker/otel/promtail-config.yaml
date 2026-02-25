@@ -34,12 +34,12 @@ scrape_configs:
 
       # Drop short-lived migration/init containers
       - source_labels: ["compose_service"]
-        regex: ".*_(migrate|init)|vault-init|minikms_migrate|openfga_migrate|envsync_init"
+        regex: ".*_(migrate|init)|envsync_init|stdb_publish"
         action: drop
 
       # Categorize services: databases
       - source_labels: ["compose_service"]
-        regex: "postgres|zitadel_db|openfga_db|minikms_db"
+        regex: "keycloak_db"
         target_label: service_category
         replacement: databases
 
@@ -51,7 +51,7 @@ scrape_configs:
 
       # Categorize services: auth & security
       - source_labels: ["compose_service"]
-        regex: "zitadel|zitadel_login|openfga|vault|minikms"
+        regex: "keycloak|spacetimedb"
         target_label: service_category
         replacement: auth_security
 

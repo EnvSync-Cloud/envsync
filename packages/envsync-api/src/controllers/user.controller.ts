@@ -1,10 +1,10 @@
 import type { Context } from "hono";
 
 import {
-	updateZitadelUser,
-	deleteZitadelUser,
-	sendZitadelPasswordReset,
-} from "@/helpers/zitadel";
+	updateKeycloakUser,
+	deleteKeycloakUser,
+	sendKeycloakPasswordReset,
+} from "@/helpers/keycloak";
 import { UserService } from "@/services/user.service";
 import { AuditLogService } from "@/services/audit_log.service";
 
@@ -84,7 +84,7 @@ export class UserController {
 
 		if (user.auth_service_id) {
 			const parts = (updateData.full_name ?? "").trim().split(/\s+/);
-			await updateZitadelUser(user.auth_service_id, {
+			await updateKeycloakUser(user.auth_service_id, {
 				firstName: parts[0],
 				lastName: parts.slice(1).join(" ") || "",
 				email: updateData.email,
@@ -122,7 +122,7 @@ export class UserController {
 		}
 
 		if (user.auth_service_id) {
-			await deleteZitadelUser(user.auth_service_id);
+			await deleteKeycloakUser(user.auth_service_id);
 		}
 		await UserService.deleteUser(id);
 
@@ -186,7 +186,7 @@ export class UserController {
 		}
 
 		if (user.auth_service_id) {
-			await sendZitadelPasswordReset(user.auth_service_id);
+			await sendKeycloakPasswordReset(user.auth_service_id);
 		}
 
 		await AuditLogService.notifyAuditSystem({

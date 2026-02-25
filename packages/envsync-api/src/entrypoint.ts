@@ -1,13 +1,11 @@
 import "./instrumentation";
 import { app } from "@/app";
 import { CacheClient } from "@/libs/cache";
-import { FGAClient } from "@/libs/openfga";
+import { STDBClient } from "@/libs/stdb";
 import { config } from "@/utils/env";
-import { DB } from "@/libs/db";
 
 CacheClient.init();
-await DB.healthCheck();
-await FGAClient.getInstance();
+await STDBClient.getInstance().healthCheck();
 
 export default {
 	fetch: app.fetch.bind(app),

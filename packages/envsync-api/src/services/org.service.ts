@@ -1,8 +1,6 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB } from "@/libs/db";
+import { STDBClient } from "@/libs/stdb";
 
 export class OrgService {
 	public static createOrg = async (data: {
@@ -12,34 +10,57 @@ export class OrgService {
 		size?: string;
 		website?: string;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
+		const uuid = crypto.randomUUID();
 
-		const { id } = await db
-			.insertInto("orgs")
-			.values({
-				id: uuidv4(),
-				...data,
-				metadata: {},
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.returning("id")
-			.executeTakeFirstOrThrow();
+		await stdb.callReducer(
+			"create_org",
+			[
+				uuid,
+				data.name,
+				data.slug,
+				data.logo_url || "",
+				data.size || "",
+				data.website || "",
+				JSON.stringify({}),
+			],
+			{ injectRootKey: false },
+		);
 
-		return id;
+		return uuid;
 	};
 
 	public static getOrg = async (id: string) => {
 		return cacheAside(CacheKeys.org(id), CacheTTL.LONG, async () => {
-			const db = await DB.getInstance();
+			const stdb = STDBClient.getInstance();
 
-			const org = await db
-				.selectFrom("orgs")
-				.selectAll()
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow();
+			const row = await stdb.queryOne<{
+				uuid: string;
+				name: string;
+				slug: string;
+				logo_url: string;
+				size: string;
+				website: string;
+				metadata: string;
+				created_at: number;
+				updated_at: number;
+			}>(`SELECT * FROM org WHERE uuid = '${id}'`);
 
-			return org;
+			if (!row) {
+				throw new Error("no result");
+			}
+
+			return {
+				id: row.uuid,
+				name: row.name,
+				slug: row.slug,
+				logo_url: row.logo_url,
+				size: row.size,
+				website: row.website,
+				metadata: row.metadata ? JSON.parse(row.metadata) : {},
+				created_at: new Date(Number(row.created_at) / 1000),
+				updated_at: new Date(Number(row.updated_at) / 1000),
+			};
 		});
 	};
 
@@ -52,25 +73,45 @@ export class OrgService {
 			slug?: string;
 		},
 	) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		await db
-			.updateTable("orgs")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		// Fetch current org to merge with partial update
+		const current = await stdb.queryOne<{
+			uuid: string;
+			name: string;
+			logo_url: string;
+			size: string;
+			website: string;
+			metadata: string;
+		}>(`SELECT * FROM org WHERE uuid = '${id}'`);
+
+		if (!current) {
+			throw new Error("no result");
+		}
+
+		await stdb.callReducer(
+			"update_org",
+			[
+				id,
+				data.name ?? current.name,
+				data.logo_url ?? current.logo_url,
+				current.size,
+				data.website ?? current.website,
+				current.metadata,
+			],
+			{ injectRootKey: false },
+		);
 
 		await invalidateCache(CacheKeys.org(id));
 	};
 
 	public static checkIfSlugExists = async (slug: string) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		const org = await db.selectFrom("orgs").selectAll().where("slug", "=", slug).executeTakeFirst();
+		const row = await stdb.queryOne<{ uuid: string }>(
+			`SELECT * FROM org WHERE slug = '${slug}'`,
+		);
 
-		return !!org;
+		return !!row;
 	};
 }

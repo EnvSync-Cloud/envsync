@@ -1,7 +1,7 @@
 /**
  * E2E: Env Point-in-Time — create vars → update → get history → PIT → diff → timeline
  *
- * Uses real PostgreSQL and OpenFGA. Vault is mocked with in-memory KV v2.
+ * Uses real SpacetimeDB and Keycloak.
  * Creates env vars, updates them to generate history, then queries PIT endpoints.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

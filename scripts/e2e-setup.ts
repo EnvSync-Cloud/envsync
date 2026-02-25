@@ -3,9 +3,9 @@
  * E2E Test Environment Manager.
  *
  * Subcommands:
- *   init    — Start docker services, wait for health, create e2e database,
- *             initialize Vault (KV v2 + AppRole), write .env.e2e.test
- *   cleanup — Drop e2e database, remove .env.e2e.test
+ *   init    — Start docker services, wait for health, retrieve Keycloak
+ *             client secrets, write .env.e2e.test
+ *   cleanup — Remove .env.e2e.test
  *
  * Usage:
  *   bun run scripts/e2e-setup.ts init
@@ -20,25 +20,16 @@ import { fileURLToPath } from "node:url";
 import {
 	loadEnvFile,
 	updateEnvFile,
-	waitForPostgres,
-	waitForVault,
-	waitForOpenFGA,
+	waitForKeycloak,
+	waitForSpacetimeDB,
 	waitForMailpit,
-	waitForZitadel,
-	waitForMiniKMS,
 	waitForGrafana,
-	readPatFromVolume,
-	readLoginPatFromVolume,
-	initVault,
 } from "./lib/services";
-import { bootstrapZitadelProject } from "../packages/envsync-api/tests/e2e/helpers/zitadel-bootstrap";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
 const apiDir = path.join(rootDir, "packages/envsync-api");
 const envE2EPath = path.join(apiDir, ".env.e2e.test");
-
-const E2E_DB_NAME = "envsync_e2e_test";
 
 // ── Docker Compose helpers ──────────────────────────────────────────
 
@@ -50,19 +41,13 @@ function dockerComposeUp(): void {
 			"compose",
 			"up",
 			"-d",
-			"postgres",
+			"spacetimedb",
+			"stdb_publish",
 			"redis",
-			"vault-init",
-			"vault",
-			"openfga_db",
-			"openfga_migrate",
-			"openfga",
+			"keycloak_db",
+			"keycloak",
+			"rustfs",
 			"mailpit",
-			"zitadel_db",
-			"zitadel",
-			"minikms_db",
-			"minikms_migrate",
-			"minikms",
 			"tempo",
 			"loki",
 			"prometheus",
@@ -74,55 +59,93 @@ function dockerComposeUp(): void {
 	if (result.status !== 0) throw new Error("Docker Compose up failed.");
 }
 
-// ── Database helpers ────────────────────────────────────────────────
+// ── Keycloak helpers ────────────────────────────────────────────────
 
-function createE2EDatabase(): void {
-	const host = process.env.DATABASE_HOST ?? "localhost";
-	const port = process.env.DATABASE_PORT ?? "5432";
-	const user = process.env.DATABASE_USER ?? "postgres";
-
-	console.log(`\nCreating E2E database '${E2E_DB_NAME}'...`);
-
-	// Check if database already exists
-	const checkResult = spawnSync(
-		"psql",
-		["-h", host, "-p", port, "-U", user, "-tAc", `SELECT 1 FROM pg_database WHERE datname='${E2E_DB_NAME}'`],
-		{ encoding: "utf8", env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD ?? "postgres" } },
-	);
-
-	if (checkResult.stdout?.trim() === "1") {
-		console.log(`  Database '${E2E_DB_NAME}' already exists.`);
-		return;
-	}
-
-	const result = spawnSync(
-		"createdb",
-		["-h", host, "-p", port, "-U", user, E2E_DB_NAME],
-		{ stdio: "inherit", env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD ?? "postgres" } },
-	);
-	if (result.status !== 0) {
-		throw new Error(`Failed to create database '${E2E_DB_NAME}'.`);
-	}
-	console.log(`  Database '${E2E_DB_NAME}' created.`);
+interface KeycloakE2EResult {
+	webClientId: string;
+	webClientSecret: string;
+	cliClientId: string;
+	apiClientId: string;
+	apiClientSecret: string;
 }
 
-function dropE2EDatabase(): void {
-	const host = process.env.DATABASE_HOST ?? "localhost";
-	const port = process.env.DATABASE_PORT ?? "5432";
-	const user = process.env.DATABASE_USER ?? "postgres";
+async function retrieveKeycloakClients(keycloakUrl: string): Promise<KeycloakE2EResult> {
+	const realm = process.env.KEYCLOAK_REALM ?? "envsync";
+	const adminUser = process.env.KEYCLOAK_ADMIN_USER ?? "admin";
+	const adminPass = process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin";
 
-	console.log(`\nDropping E2E database '${E2E_DB_NAME}'...`);
+	console.log("\nRetrieving Keycloak client secrets...");
 
-	const result = spawnSync(
-		"dropdb",
-		["-h", host, "-p", port, "-U", user, "--if-exists", E2E_DB_NAME],
-		{ stdio: "inherit", env: { ...process.env, PGPASSWORD: process.env.DATABASE_PASSWORD ?? "postgres" } },
+	// Get admin token
+	const tokenRes = await fetch(
+		`${keycloakUrl}/realms/master/protocol/openid-connect/token`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({
+				grant_type: "password",
+				client_id: "admin-cli",
+				username: adminUser,
+				password: adminPass,
+			}),
+			signal: AbortSignal.timeout(10_000),
+		},
 	);
-	if (result.status !== 0) {
-		console.log(`  Warning: Failed to drop database '${E2E_DB_NAME}' (may not exist).`);
-	} else {
-		console.log(`  Database '${E2E_DB_NAME}' dropped.`);
+	if (!tokenRes.ok) {
+		throw new Error(`Keycloak admin token failed: ${tokenRes.status} ${await tokenRes.text()}`);
 	}
+	const { access_token: token } = (await tokenRes.json()) as { access_token: string };
+	console.log("  Admin token acquired.");
+
+	async function adminFetch(apiPath: string, opts: RequestInit = {}): Promise<Response> {
+		return fetch(`${keycloakUrl}/admin/realms/${realm}${apiPath}`, {
+			...opts,
+			headers: {
+				Authorization: `Bearer ${token}`,
+				"Content-Type": "application/json",
+				...(opts.headers as Record<string, string>),
+			},
+			signal: opts.signal ?? AbortSignal.timeout(10_000),
+		});
+	}
+
+	async function getClientSecret(clientId: string): Promise<{ id: string; secret: string }> {
+		const listRes = await adminFetch(`/clients?clientId=${encodeURIComponent(clientId)}`);
+		if (!listRes.ok) throw new Error(`Keycloak list clients failed: ${listRes.status}`);
+		const clients = (await listRes.json()) as Array<{ id: string; clientId: string; publicClient?: boolean }>;
+		const client = clients.find(c => c.clientId === clientId);
+		if (!client) throw new Error(`Keycloak client '${clientId}' not found. Ensure realm-export.json was imported.`);
+
+		if (client.publicClient) {
+			return { id: client.id, secret: "" };
+		}
+
+		const secretRes = await adminFetch(`/clients/${client.id}/client-secret`);
+		if (!secretRes.ok) throw new Error(`Keycloak get secret failed: ${secretRes.status}`);
+		const data = (await secretRes.json()) as { value: string };
+		return { id: client.id, secret: data.value };
+	}
+
+	const webClientId = process.env.KEYCLOAK_WEB_CLIENT_ID ?? "envsync-web";
+	const cliClientId = process.env.KEYCLOAK_CLI_CLIENT_ID ?? "envsync-cli";
+	const apiClientId = process.env.KEYCLOAK_API_CLIENT_ID ?? "envsync-api";
+
+	const web = await getClientSecret(webClientId);
+	console.log(`  Web client: ${webClientId} (secret: ${web.secret ? web.secret.slice(0, 8) + "..." : "public"})`);
+
+	const cli = await getClientSecret(cliClientId);
+	console.log(`  CLI client: ${cliClientId} (${cli.secret ? "confidential" : "public"})`);
+
+	const api = await getClientSecret(apiClientId);
+	console.log(`  API client: ${apiClientId} (secret: ${api.secret ? api.secret.slice(0, 8) + "..." : "public"})`);
+
+	return {
+		webClientId,
+		webClientSecret: web.secret,
+		cliClientId,
+		apiClientId,
+		apiClientSecret: api.secret,
+	};
 }
 
 // ── Init ────────────────────────────────────────────────────────────
@@ -142,61 +165,38 @@ async function init(): Promise<void> {
 	// Wait for services
 	console.log("\nWaiting for services...");
 	await new Promise(r => setTimeout(r, 3000));
-	await waitForPostgres();
-	await waitForVault();
-	await waitForOpenFGA();
+	await waitForKeycloak();
+	await waitForSpacetimeDB();
 	await waitForMailpit();
-	await waitForZitadel();
-	await waitForMiniKMS();
 	await waitForGrafana();
 
-	// Read Zitadel PATs
-	const zitadelUrl = "http://localhost:8080";
-	const adminPatFromVolume = await readPatFromVolume(rootDir);
-	if (!adminPatFromVolume) {
-		throw new Error("Failed to read Zitadel admin PAT from Docker volume. Is Zitadel running?");
-	}
-	const loginPatFromVolume = await readLoginPatFromVolume(rootDir);
-	const effectiveLoginPat = loginPatFromVolume || adminPatFromVolume;
-	if (!loginPatFromVolume) {
-		console.log("Zitadel: login-client.pat not found; falling back to admin PAT for login flow.");
-	}
-	console.log("Zitadel: PAT(s) read from docker volume.");
+	// Retrieve Keycloak client secrets (clients are auto-imported via realm-export.json)
+	const keycloakPort = process.env.KEYCLOAK_PORT ?? "8080";
+	const keycloakUrl = process.env.KEYCLOAK_URL ?? `http://localhost:${keycloakPort}`;
+	// Normalize: if the URL uses the Docker-internal hostname, use localhost for host access
+	const keycloakHostUrl = keycloakUrl.includes("keycloak:") ? `http://localhost:${keycloakPort}` : keycloakUrl;
+	const keycloakResult = await retrieveKeycloakClients(keycloakHostUrl.replace(/\/$/, ""));
 
-	// Bootstrap Zitadel project + OIDC app for E2E
-	console.log("\nBootstrapping Zitadel project + OIDC app for E2E...");
-	const zitadelApp = await bootstrapZitadelProject(zitadelUrl, adminPatFromVolume);
-	console.log(`  Project: ${zitadelApp.projectId}, Client: ${zitadelApp.appClientId}`);
-
-	// Create E2E database
-	createE2EDatabase();
-
-	// Initialize Vault with E2E-specific policy/role
-	const vaultPort = process.env.VAULT_PORT ?? "8200";
-	const vaultAddr = process.env.VAULT_ADDR ?? `http://localhost:${vaultPort}`;
-	const mountPath = "envsync";
-
-	const vaultResult = await initVault(vaultAddr, mountPath, "envsync-e2e", "envsync-e2e");
-
-	// Resolve OpenFGA URL
-	const openfgaUrl = (
-		process.env.OPENFGA_API_URL ?? `http://localhost:${process.env.OPENFGA_HTTP_PORT ?? "8090"}`
-	).replace(/\/$/, "");
+	// Resolve service URLs for env output
+	const keycloakRealm = process.env.KEYCLOAK_REALM ?? "envsync";
+	const keycloakAdminUser = process.env.KEYCLOAK_ADMIN_USER ?? "admin";
+	const keycloakAdminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin";
+	const redisUrl = process.env.REDIS_URL ?? `redis://localhost:${process.env.REDIS_PORT ?? "6379"}`;
+	const stdbUrl = process.env.STDB_URL ?? `http://localhost:${process.env.STDB_PORT ?? "1234"}`;
 
 	// Write .env.e2e.test
 	const e2eEnv: Record<string, string> = {
-		VAULT_ADDR: vaultResult.vaultAddr,
-		VAULT_ROLE_ID: vaultResult.roleId,
-		VAULT_SECRET_ID: vaultResult.secretId,
-		VAULT_MOUNT_PATH: vaultResult.mountPath,
-		VAULT_TOKEN: vaultResult.rootToken,
-		VAULT_UNSEAL_KEY: vaultResult.unsealKey,
-		OPENFGA_API_URL: openfgaUrl,
-		ZITADEL_URL: zitadelUrl,
-		ZITADEL_PAT: adminPatFromVolume,
-		ZITADEL_LOGIN_PAT: effectiveLoginPat,
-		ZITADEL_E2E_CLIENT_ID: zitadelApp.appClientId,
-		ZITADEL_E2E_CLIENT_SECRET: zitadelApp.appClientSecret,
+		KEYCLOAK_URL: keycloakHostUrl.replace(/\/$/, ""),
+		KEYCLOAK_REALM: keycloakRealm,
+		KEYCLOAK_ADMIN_USER: keycloakAdminUser,
+		KEYCLOAK_ADMIN_PASSWORD: keycloakAdminPassword,
+		KEYCLOAK_WEB_CLIENT_ID: keycloakResult.webClientId,
+		KEYCLOAK_WEB_CLIENT_SECRET: keycloakResult.webClientSecret,
+		KEYCLOAK_CLI_CLIENT_ID: keycloakResult.cliClientId,
+		KEYCLOAK_API_CLIENT_ID: keycloakResult.apiClientId,
+		KEYCLOAK_API_CLIENT_SECRET: keycloakResult.apiClientSecret,
+		REDIS_URL: redisUrl,
+		STDB_URL: stdbUrl.replace(/\/$/, ""),
 		OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
 		OTEL_SERVICE_NAME: "envsync-api",
 	};
@@ -212,15 +212,6 @@ async function init(): Promise<void> {
 
 async function cleanup(): Promise<void> {
 	console.log("E2E Environment Cleanup\n");
-
-	// Load root .env for database connection info
-	const rootEnvPath = path.join(rootDir, ".env");
-	if (fs.existsSync(rootEnvPath)) {
-		loadEnvFile(rootEnvPath);
-	}
-
-	// Drop E2E database
-	dropE2EDatabase();
 
 	// Remove .env.e2e.test
 	if (fs.existsSync(envE2EPath)) {

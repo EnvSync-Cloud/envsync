@@ -25,9 +25,9 @@ Bun workspaces with Turbo for orchestration. All workspace packages defined in r
 
 ```sh
 bun install                          # install all dependencies
-docker compose up -d                 # PostgreSQL, Redis, Vault, RustFS, Zitadel, Mailpit, OpenFGA
+docker compose up -d                 # Keycloak, SpacetimeDB, Redis, RustFS, Mailpit
 cp .env.example .env                 # configure env vars
-bun run cli init                     # initialize RustFS bucket + Zitadel OIDC apps
+bun run cli init                     # initialize RustFS bucket + Keycloak client secrets
 bun run cli create-dev-user --seed   # create dev user + sample data
 bun run dev                          # start all services via Turbo
 ```
@@ -39,7 +39,7 @@ bun run dev                          # start all services via Turbo
 | `bun install` | Install all workspace dependencies |
 | `bun run dev` | Start all services (Turbo) |
 | `bun run build` | Build all packages (Turbo) |
-| `bun run cli init` | Initialize RustFS + Zitadel |
+| `bun run cli init` | Initialize RustFS + Keycloak |
 | `bun run cli create-dev-user --seed` | Seed dev user + sample data |
 | `bun run test:mock` | Run unit tests (mocked dependencies) |
 | `bun run test:e2e` | Run e2e tests (requires running services) |

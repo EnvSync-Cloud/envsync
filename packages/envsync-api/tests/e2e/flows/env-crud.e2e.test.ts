@@ -1,7 +1,7 @@
 /**
  * E2E: Environment variable CRUD — create → read → update → delete
  *
- * Uses real PostgreSQL and OpenFGA. Vault stores KMS-encrypted env vars.
+ * Uses real SpacetimeDB and Keycloak.
  * Tests single and batch operations. Values are transparently encrypted/decrypted
  * by EnvService — the API always returns plaintext.
  */

@@ -22,9 +22,8 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 - **Bun** - JavaScript runtime and package manager
 - **TypeScript** - Type-safe development
 - **ESBuild** - Ultra-fast bundler
-- **PostgreSQL** - Reliable relational database
-- **Kysely** - Type-safe SQL query builder
-- **Zitadel** - Authentication and authorization (OIDC)
+- **SpacetimeDB** - Integrated database and server logic
+- **Keycloak 26.x** - Authentication and authorization (OIDC)
 - **Redis** - Caching and session storage
 - **S3-compatible storage (RustFS)** - File storage
 - **SMTP** - Email services
@@ -39,9 +38,7 @@ Interactive API documentation is available at: **[https://api.envsync.cloud/docs
 ### Prerequisites
 
 - [Bun](https://bun.sh/) - JavaScript runtime and package manager
-- [Docker](https://docker.com/) - For running services locally
-- [PostgreSQL](https://postgresql.org/) - Database
-- [Redis](https://redis.io/) - Cache (optional)
+- [Docker](https://docker.com/) - For running services locally (SpacetimeDB, Keycloak, Redis, RustFS, Mailpit)
 
 ### Installation
 
@@ -68,50 +65,46 @@ Configure your environment variables:
 ```env
 # Application
 NODE_ENV=development
-PORT=3000
-DB_LOGGING=false
-DB_AUTO_MIGRATE=false
-DATABASE_SSL=false
+PORT=4000
 
-# Database configuration
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_USER=postgres
-DATABASE_PASSWORD=password
-DATABASE_NAME=envsync
+# SpacetimeDB
+STDB_URL=http://localhost:1234
+STDB_DB_NAME=envsync-kms
+STDB_ROOT_KEY=your-root-key
 
 # S3 configuration
 S3_BUCKET=envsync-bucket
 S3_REGION=us-east-1
-S3_ACCESS_KEY=your-access-key
-S3_SECRET_KEY=your-secret-key
-S3_BUCKET_URL=https://your-bucket.s3.amazonaws.com
-S3_ENDPOINT=https://s3.us-east-1.amazonaws.com
+S3_ACCESS_KEY=rustfsadmin
+S3_SECRET_KEY=rustfsadmin
+S3_BUCKET_URL=http://localhost:19000
+S3_ENDPOINT=http://localhost:19000
 
 # Redis configuration
 CACHE_ENV=development
 REDIS_URL=redis://localhost:6379
 
 # SMTP configuration
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
+SMTP_HOST=localhost
+SMTP_PORT=1025
 SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=noreply@envsync.cloud
 
-# Zitadel configuration (create OIDC apps in Zitadel console)
-ZITADEL_URL=http://localhost:8080
-ZITADEL_PAT=
-ZITADEL_WEB_CLIENT_ID=
-ZITADEL_WEB_CLIENT_SECRET=
-ZITADEL_CLI_CLIENT_ID=
-ZITADEL_CLI_CLIENT_SECRET=
-ZITADEL_API_CLIENT_ID=
-ZITADEL_API_CLIENT_SECRET=
-ZITADEL_WEB_REDIRECT_URI=http://localhost:8081/callback
-ZITADEL_WEB_CALLBACK_URL=http://localhost:8081/callback
-ZITADEL_API_REDIRECT_URI=http://localhost:3001/callback
+# Keycloak configuration (auto-configured via init)
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=envsync
+KEYCLOAK_ADMIN_USER=admin
+KEYCLOAK_ADMIN_PASSWORD=admin
+KEYCLOAK_WEB_CLIENT_ID=envsync-web
+KEYCLOAK_WEB_CLIENT_SECRET=  # auto-filled by init
+KEYCLOAK_CLI_CLIENT_ID=envsync-cli
+KEYCLOAK_API_CLIENT_ID=envsync-api
+KEYCLOAK_API_CLIENT_SECRET=  # auto-filled by init
+KEYCLOAK_WEB_REDIRECT_URI=http://localhost:8001/api/access/web/callback
+KEYCLOAK_WEB_CALLBACK_URL=http://localhost:8001/api/access/web/callback
+KEYCLOAK_API_REDIRECT_URI=http://localhost:8001/api/access/api/callback
 ```
 
 ### Development with Docker Compose
@@ -124,9 +117,11 @@ docker-compose up -d
 
 This will start:
 
-- 🐘 PostgreSQL database
+- 🗄️ SpacetimeDB
+- 🔑 Keycloak
 - 🔴 Redis cache
-- 📧 Local email service (optional)
+- 📦 RustFS (S3-compatible storage)
+- 📧 Mailpit (local email testing)
 
 ### Run the API
 
@@ -134,7 +129,7 @@ This will start:
 bun run dev
 ```
 
-The API will be available at `http://localhost:3000` 🎉
+The API will be available at `http://localhost:4000` 🎉
 
 ## 📝 Available Scripts
 
@@ -148,10 +143,9 @@ bun run build
 # Start production server
 bun start
 
-# Run database migrations
-bun db
+# Database migrations are handled automatically by SpacetimeDB
 
-# Init RustFS bucket (from monorepo root or packages/envsync-api; create Zitadel apps in console)
+# Init RustFS bucket + retrieve Keycloak client secrets
 bun run scripts/cli.ts init
 ```
 
@@ -179,17 +173,15 @@ envsync-api/
 | ------------ | ------------------- | -------------------- |
 | **App**      | `NODE_ENV`          | Environment mode     |
 | **App**      | `PORT`              | Server port          |
-| **Database** | `DATABASE_HOST`     | PostgreSQL host      |
-| **Database** | `DATABASE_PORT`     | PostgreSQL port      |
-| **Database** | `DATABASE_USER`     | Database username    |
-| **Database** | `DATABASE_PASSWORD` | Database password    |
-| **Database** | `DATABASE_NAME`     | Database name        |
-| **S3**       | `S3_BUCKET`         | AWS S3 bucket name   |
-| **S3**       | `S3_ACCESS_KEY`     | AWS access key       |
-| **S3**       | `S3_SECRET_KEY`     | AWS secret key       |
+| **STDB**     | `STDB_URL`          | SpacetimeDB URL      |
+| **STDB**     | `STDB_DB_NAME`      | SpacetimeDB database name |
+| **STDB**     | `STDB_ROOT_KEY`     | SpacetimeDB root encryption key |
+| **S3**       | `S3_BUCKET`         | S3 bucket name       |
+| **S3**       | `S3_ACCESS_KEY`     | S3 access key        |
+| **S3**       | `S3_SECRET_KEY`     | S3 secret key        |
 | **Redis**    | `REDIS_URL`         | Redis connection URL |
-| **Zitadel**   | `ZITADEL_URL`       | Zitadel server URL   |
-| **Zitadel**   | `ZITADEL_PAT`       | Personal access token (Management API, optional) |
+| **Keycloak** | `KEYCLOAK_URL`      | Keycloak server URL  |
+| **Keycloak** | `KEYCLOAK_REALM`    | Keycloak realm name  |
 | **SMTP**     | `SMTP_HOST`         | SMTP server host     |
 | **SMTP**     | `SMTP_FROM`         | Email sender address |
 
@@ -203,7 +195,7 @@ docker-compose -f docker-compose.yml up -d
 
 ## 🔒 Authentication
 
-This API uses **Zitadel** for authentication and authorization:
+This API uses **Keycloak** for authentication and authorization:
 
 - 🔑 **JWT tokens** for API access
 - 👥 **Role-based access control** (RBAC)

@@ -1,10 +1,7 @@
-import { v4 as uuidv4 } from "uuid";
-
-import { DB, JsonValue } from "@/libs/db";
-import { KMSClient } from "@/libs/kms/client";
-import { cacheAside, invalidateCache } from "@/helpers/cache";
-import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { orNotFound, ConflictError, BusinessRuleError } from "@/libs/errors";
+import { STDBClient } from "@/libs/stdb";
+import { invalidateCache } from "@/helpers/cache";
+import { CacheKeys } from "@/helpers/cache-keys";
+import { ConflictError, BusinessRuleError, NotFoundError } from "@/libs/errors";
 import { runSaga } from "@/helpers/saga";
 import { AuthorizationService } from "@/services/authorization.service";
 
@@ -14,13 +11,40 @@ const OCSP_STATUS_MAP: Record<number, string> = {
 	2: "unknown",
 };
 
-function derToPem(der: Buffer, label: string): string {
-	const b64 = der.toString("base64");
-	const lines: string[] = [];
-	for (let i = 0; i < b64.length; i += 64) {
-		lines.push(b64.slice(i, i + 64));
-	}
-	return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----`;
+interface CertMetaRow {
+	uuid: string;
+	org_id: string;
+	user_id: string;
+	serial_hex: string;
+	cert_type: string;
+	subject_cn: string;
+	subject_email: string | null;
+	status: string;
+	description: string | null;
+	metadata: string;
+	revoked_at: string | null;
+	revocation_reason: number | null;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapCertRow(row: CertMetaRow) {
+	return {
+		id: row.uuid,
+		org_id: row.org_id,
+		user_id: row.user_id,
+		serial_hex: row.serial_hex,
+		cert_type: row.cert_type,
+		subject_cn: row.subject_cn,
+		subject_email: row.subject_email,
+		status: row.status,
+		description: row.description,
+		metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
+		revoked_at: row.revoked_at ? new Date(row.revoked_at) : null,
+		revocation_reason: row.revocation_reason,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
 }
 
 export class CertificateService {
@@ -31,73 +55,75 @@ export class CertificateService {
 		description?: string,
 		metadata?: Record<string, string>,
 	) => {
-		const db = await DB.getInstance();
-		const existing = await db
-			.selectFrom("org_certificates")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.where("cert_type", "=", "org_ca")
-			.where("status", "=", "active")
-			.executeTakeFirst();
+		const stdb = STDBClient.getInstance();
+
+		const existing = await stdb.queryOne<CertMetaRow>(
+			`SELECT * FROM org_certificate_meta WHERE org_id = '${org_id}' AND cert_type = 'org_ca' AND status = 'active'`,
+		);
 
 		if (existing) {
 			throw new ConflictError("Organization CA already initialized");
 		}
 
-		let certRow: (Record<string, unknown> & { id: string; serial_hex: string }) | undefined;
-		let certId: string | undefined;
+		const id = crypto.randomUUID();
+		let certRow: Record<string, unknown> | undefined;
 		let certPem = "";
 		let serialHex = "";
 
 		await runSaga("initOrgCA", {}, [
 			{
-				name: "kms-create-ca",
+				name: "stdb-create-ca",
 				execute: async () => {
-					const kms = await KMSClient.getInstance();
-					const result = await kms.createOrgCA(org_id, org_name);
-					certPem = result.certPem;
-					serialHex = result.serialHex;
+					const resultJson = await stdb.callReducer<string>("create_org_ca", [org_id, org_name]);
+					const result = JSON.parse(resultJson);
+					certPem = result.cert_pem;
+					serialHex = result.serial_hex;
 				},
 			},
 			{
-				name: "db-insert",
+				name: "stdb-insert-meta",
 				execute: async () => {
-					const now = new Date();
-					const result = await db
-						.insertInto("org_certificates")
-						.values({
-							id: uuidv4(),
-							org_id,
-							user_id,
-							serial_hex: serialHex,
-							cert_type: "org_ca",
-							subject_cn: `${org_name} CA`,
-							status: "active",
-							description: description || null,
-							metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
-							created_at: now,
-							updated_at: now,
-						})
-						.returningAll()
-						.executeTakeFirstOrThrow();
-					certRow = result;
-					certId = result.id;
+					await stdb.callReducer("create_org_certificate_meta", [
+						id,
+						org_id,
+						user_id,
+						serialHex,
+						"org_ca",
+						`${org_name} CA`,
+						null,
+						"active",
+						description || null,
+						JSON.stringify(metadata || {}),
+					]);
+
+					certRow = {
+						id,
+						org_id,
+						user_id,
+						serial_hex: serialHex,
+						cert_type: "org_ca",
+						subject_cn: `${org_name} CA`,
+						subject_email: null,
+						status: "active",
+						description: description || null,
+						metadata: metadata || {},
+						revoked_at: null,
+						revocation_reason: null,
+						created_at: new Date(),
+						updated_at: new Date(),
+					};
 				},
 				compensate: async () => {
-					if (certId) {
-						await db.deleteFrom("org_certificates").where("id", "=", certId).execute();
-					}
+					await stdb.callReducer("delete_org_certificate_meta", [id]);
 				},
 			},
 			{
-				name: "fga-write",
+				name: "auth-write",
 				execute: async () => {
-					await AuthorizationService.writeCertificateRelations(certId!, org_id, user_id);
+					await AuthorizationService.writeCertificateRelations(id, org_id, user_id);
 				},
 				compensate: async () => {
-					if (certId) {
-						await AuthorizationService.deleteResourceTuples("certificate", certId);
-					}
+					await AuthorizationService.deleteResourceTuples("certificate", id);
 				},
 			},
 			{
@@ -122,76 +148,80 @@ export class CertificateService {
 		description?: string,
 		metadata?: Record<string, string>,
 	) => {
-		const db = await DB.getInstance();
-		const orgCA = await db
-			.selectFrom("org_certificates")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.where("cert_type", "=", "org_ca")
-			.where("status", "=", "active")
-			.executeTakeFirst();
+		const stdb = STDBClient.getInstance();
+
+		const orgCA = await stdb.queryOne<CertMetaRow>(
+			`SELECT * FROM org_certificate_meta WHERE org_id = '${org_id}' AND cert_type = 'org_ca' AND status = 'active'`,
+		);
 
 		if (!orgCA) {
 			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.");
 		}
 
-		let memberCertRow: (Record<string, unknown> & { id: string; serial_hex: string }) | undefined;
-		let memberCertId: string | undefined;
+		const id = crypto.randomUUID();
+		let memberCertRow: Record<string, unknown> | undefined;
 		let memberCertPem = "";
 		let memberKeyPem = "";
 		let memberSerialHex = "";
 
 		await runSaga("issueMemberCert", {}, [
 			{
-				name: "kms-issue-cert",
+				name: "stdb-issue-cert",
 				execute: async () => {
-					const kms = await KMSClient.getInstance();
-					const result = await kms.issueMemberCert(user_id, member_email, org_id, role);
-					memberCertPem = result.certPem;
-					memberKeyPem = result.keyPem;
-					memberSerialHex = result.serialHex;
+					const resultJson = await stdb.callReducer<string>(
+						"issue_member_cert",
+						[user_id, member_email, org_id, role],
+					);
+					const result = JSON.parse(resultJson);
+					memberCertPem = result.cert_pem;
+					memberKeyPem = result.key_pem;
+					memberSerialHex = result.serial_hex;
 				},
 			},
 			{
-				name: "db-insert",
+				name: "stdb-insert-meta",
 				execute: async () => {
-					const now = new Date();
-					const result = await db
-						.insertInto("org_certificates")
-						.values({
-							id: uuidv4(),
-							org_id,
-							user_id,
-							serial_hex: memberSerialHex,
-							cert_type: "member",
-							subject_cn: member_email,
-							subject_email: member_email,
-							status: "active",
-							description: description || null,
-							metadata: metadata ? new JsonValue(metadata) : new JsonValue({}),
-							created_at: now,
-							updated_at: now,
-						})
-						.returningAll()
-						.executeTakeFirstOrThrow();
-					memberCertRow = result;
-					memberCertId = result.id;
+					await stdb.callReducer("create_org_certificate_meta", [
+						id,
+						org_id,
+						user_id,
+						memberSerialHex,
+						"member",
+						member_email,
+						member_email,
+						"active",
+						description || null,
+						JSON.stringify(metadata || {}),
+					]);
+
+					memberCertRow = {
+						id,
+						org_id,
+						user_id,
+						serial_hex: memberSerialHex,
+						cert_type: "member",
+						subject_cn: member_email,
+						subject_email: member_email,
+						status: "active",
+						description: description || null,
+						metadata: metadata || {},
+						revoked_at: null,
+						revocation_reason: null,
+						created_at: new Date(),
+						updated_at: new Date(),
+					};
 				},
 				compensate: async () => {
-					if (memberCertId) {
-						await db.deleteFrom("org_certificates").where("id", "=", memberCertId).execute();
-					}
+					await stdb.callReducer("delete_org_certificate_meta", [id]);
 				},
 			},
 			{
-				name: "fga-write",
+				name: "auth-write",
 				execute: async () => {
-					await AuthorizationService.writeCertificateRelations(memberCertId!, org_id, user_id);
+					await AuthorizationService.writeCertificateRelations(id, org_id, user_id);
 				},
 				compensate: async () => {
-					if (memberCertId) {
-						await AuthorizationService.deleteResourceTuples("certificate", memberCertId);
-					}
+					await AuthorizationService.deleteResourceTuples("certificate", id);
 				},
 			},
 			{
@@ -210,59 +240,47 @@ export class CertificateService {
 	};
 
 	public static listCertificates = async (org_id: string, page = 1, per_page = 50) => {
-		const db = await DB.getInstance();
-		return db
-			.selectFrom("org_certificates")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.orderBy("created_at", "desc")
-			.limit(per_page)
-			.offset((page - 1) * per_page)
-			.execute();
+		const stdb = STDBClient.getInstance();
+		const offset = (page - 1) * per_page;
+
+		const rows = await stdb.query<CertMetaRow>(
+			`SELECT * FROM org_certificate_meta WHERE org_id = '${org_id}' ORDER BY created_at DESC LIMIT ${per_page} OFFSET ${offset}`,
+		);
+
+		return rows.map(mapCertRow);
 	};
 
 	public static getCertificate = async (id: string) => {
-		const db = await DB.getInstance();
-		return orNotFound(
-			db
-				.selectFrom("org_certificates")
-				.selectAll()
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow(),
-			"Certificate",
-			id,
+		const stdb = STDBClient.getInstance();
+		const row = await stdb.queryOne<CertMetaRow>(
+			`SELECT * FROM org_certificate_meta WHERE uuid = '${id}'`,
 		);
+
+		if (!row) throw new NotFoundError("Certificate", id);
+
+		return mapCertRow(row);
 	};
 
 	public static getOrgCA = async (org_id: string) => {
-		const db = await DB.getInstance();
-		return db
-			.selectFrom("org_certificates")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.where("cert_type", "=", "org_ca")
-			.where("status", "=", "active")
-			.executeTakeFirst();
+		const stdb = STDBClient.getInstance();
+		const row = await stdb.queryOne<CertMetaRow>(
+			`SELECT * FROM org_certificate_meta WHERE org_id = '${org_id}' AND cert_type = 'org_ca' AND status = 'active'`,
+		);
+
+		if (!row) return undefined;
+
+		return mapCertRow(row);
 	};
 
 	public static revokeCert = async (serial_hex: string, org_id: string, reason: number) => {
-		const kms = await KMSClient.getInstance();
-		await kms.revokeCert(serial_hex, org_id, reason);
+		const stdb = STDBClient.getInstance();
+		await stdb.callReducer("revoke_cert", [serial_hex, org_id, reason], { injectRootKey: false });
 
-		const db = await DB.getInstance();
-		const now = new Date();
-
-		await db
-			.updateTable("org_certificates")
-			.set({
-				status: "revoked",
-				revoked_at: now,
-				revocation_reason: reason,
-				updated_at: now,
-			})
-			.where("serial_hex", "=", serial_hex)
-			.where("org_id", "=", org_id)
-			.execute();
+		await stdb.callReducer("revoke_org_certificate_meta", [
+			serial_hex,
+			org_id,
+			reason,
+		]);
 
 		await invalidateCache(CacheKeys.certsByOrg(org_id));
 
@@ -273,29 +291,32 @@ export class CertificateService {
 	};
 
 	public static getCRL = async (org_id: string, deltaOnly: boolean) => {
-		const kms = await KMSClient.getInstance();
-		const result = await kms.getCRL(org_id, deltaOnly);
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>("get_crl", [org_id, deltaOnly], { injectRootKey: false });
+		const result = JSON.parse(resultJson);
 
 		return {
-			crl_pem: derToPem(result.crlDer, "X509 CRL"),
-			crl_number: result.crlNumber,
-			is_delta: result.isDelta,
+			crl_pem: resultJson, // CRL is returned as JSON with revoked serials
+			crl_number: result.crl_number,
+			is_delta: result.is_delta,
 		};
 	};
 
 	public static checkOCSP = async (serialHex: string, org_id: string) => {
-		const kms = await KMSClient.getInstance();
-		const result = await kms.checkOCSP(serialHex, org_id);
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>("check_ocsp", [serialHex, org_id], { injectRootKey: false });
+		const result = JSON.parse(resultJson);
 
 		return {
 			status: OCSP_STATUS_MAP[result.status] || "unknown",
-			revoked_at: result.revokedAt || null,
+			revoked_at: result.revoked_at || null,
 		};
 	};
 
 	public static getRootCA = async () => {
-		const kms = await KMSClient.getInstance();
-		const result = await kms.getRootCA();
-		return { cert_pem: result.certPem };
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>("get_root_ca", [], { injectRootKey: false });
+		const result = JSON.parse(resultJson);
+		return { cert_pem: result.cert_pem };
 	};
 }

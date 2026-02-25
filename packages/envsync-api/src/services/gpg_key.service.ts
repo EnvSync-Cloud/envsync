@@ -1,14 +1,10 @@
-import { v4 as uuidv4 } from "uuid";
 import * as openpgp from "openpgp";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB, JsonValue } from "@/libs/db";
-import { orNotFound, BusinessRuleError, NotFoundError } from "@/libs/errors";
-import { VaultClient } from "@/libs/vault";
-import { KMSClient } from "@/libs/kms/client";
+import { NotFoundError, BusinessRuleError } from "@/libs/errors";
+import { STDBClient } from "@/libs/stdb";
 import { runSaga } from "@/helpers/saga";
-import { gpgKeyPath } from "@/libs/vault/paths";
 import { randomBytes } from "node:crypto";
 
 type GpgAlgorithm = "rsa" | "ecc-curve25519" | "ecc-p256" | "ecc-p384";
@@ -24,6 +20,52 @@ function algorithmToOpenPGP(algorithm: GpgAlgorithm, keySize?: number) {
 		case "ecc-p384":
 			return { type: "ecc" as const, curve: "p384" as const };
 	}
+}
+
+interface GpgKeyMetaRow {
+	uuid: string;
+	org_id: string;
+	user_id: string;
+	name: string;
+	email: string;
+	fingerprint: string;
+	key_id: string;
+	algorithm: string;
+	key_size: number | null;
+	public_key: string;
+	private_key_ref: string;
+	usage_flags: string;
+	trust_level: string;
+	expires_at: string | null;
+	revoked_at: string | null;
+	revocation_reason: string | null;
+	is_default: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapGpgKeyRow(row: GpgKeyMetaRow) {
+	return {
+		id: row.uuid,
+		org_id: row.org_id,
+		user_id: row.user_id,
+		name: row.name,
+		email: row.email,
+		fingerprint: row.fingerprint,
+		key_id: row.key_id,
+		algorithm: row.algorithm,
+		key_size: row.key_size,
+		public_key: row.public_key,
+		private_key_ref: row.private_key_ref,
+		usage_flags: typeof row.usage_flags === "string" ? JSON.parse(row.usage_flags) : row.usage_flags,
+		trust_level: row.trust_level,
+		expires_at: row.expires_at ? new Date(row.expires_at) : null,
+		revoked_at: row.revoked_at ? new Date(row.revoked_at) : null,
+		revocation_reason: row.revocation_reason,
+		is_default: row.is_default,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
 }
 
 export class GpgKeyService {
@@ -62,87 +104,80 @@ export class GpgKeyService {
 		const fingerprint = parsedPublic.getFingerprint().toUpperCase();
 		const keyId = fingerprint.slice(-16);
 
-		const vaultPath = gpgKeyPath(org_id, fingerprint);
 		const now = new Date();
 		const expiresAt = expires_in_days
 			? new Date(now.getTime() + expires_in_days * 24 * 60 * 60 * 1000)
 			: null;
 
+		const id = crypto.randomUUID();
 		let gpgKeyRow: Record<string, unknown> | undefined;
-		let gpgKeyId: string | undefined;
-		let kmsResult: { ciphertext: string; keyVersionId: string } | undefined;
 
 		await runSaga("generateGpgKey", {}, [
 			{
-				name: "kms-encrypt",
+				name: "stdb-encrypt",
 				execute: async () => {
-					const kms = await KMSClient.getInstance();
-					kmsResult = await kms.encrypt(org_id, "gpg", passphrase, `gpg:${fingerprint}`);
+					const stdb = STDBClient.getInstance();
+					await stdb.callReducer("store_gpg_material", [
+						org_id,
+						fingerprint,
+						privateKey,
+						passphrase,
+					]);
 				},
 			},
 			{
-				name: "vault-write",
+				name: "stdb-insert-meta",
 				execute: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvWrite(vaultPath, {
-						armored_private_key: privateKey,
-						kms_wrapped_passphrase: kmsResult!.ciphertext,
-						kms_key_version_id: kmsResult!.keyVersionId,
-					});
-				},
-				compensate: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvMetadataDelete(vaultPath);
-				},
-			},
-			{
-				name: "db-insert",
-				execute: async () => {
-					const db = await DB.getInstance();
+					const stdb = STDBClient.getInstance();
 
-					// Use a transaction to atomically unset defaults + insert the new key
-					const result = await db.transaction().execute(async (trx) => {
-						if (is_default) {
-							await trx
-								.updateTable("gpg_keys")
-								.set({ is_default: false, updated_at: now })
-								.where("org_id", "=", org_id)
-								.where("is_default", "=", true)
-								.execute();
-						}
-
-						return trx
-							.insertInto("gpg_keys")
-							.values({
-								id: uuidv4(),
-								org_id,
-								user_id,
-								name,
-								email,
-								fingerprint,
-								key_id: keyId,
-								algorithm,
-								key_size: algorithm === "rsa" ? (key_size || 4096) : null,
-								public_key: publicKey,
-								private_key_ref: vaultPath,
-								usage_flags: new JsonValue(usage_flags),
-								trust_level: "ultimate",
-								expires_at: expiresAt,
-								is_default: is_default || false,
-								created_at: now,
-								updated_at: now,
-							})
-							.returningAll()
-							.executeTakeFirstOrThrow();
-					});
-					gpgKeyRow = result;
-					gpgKeyId = result.id;
-				},
-				compensate: async () => {
-					if (gpgKeyId) {
-						const db = await DB.getInstance();
-						await db.deleteFrom("gpg_keys").where("id", "=", gpgKeyId).execute();
+					// If is_default, unset other defaults first
+					if (is_default) {
+						await stdb.callReducer("unset_default_gpg_keys", [org_id]);
 					}
+
+					await stdb.callReducer("create_gpg_key_meta", [
+						id,
+						org_id,
+						user_id,
+						name,
+						email,
+						fingerprint,
+						keyId,
+						algorithm,
+						algorithm === "rsa" ? (key_size || 4096) : null,
+						publicKey,
+						`stdb:gpg:${org_id}:${fingerprint}`,
+						JSON.stringify(usage_flags),
+						"ultimate",
+						expiresAt ? expiresAt.toISOString() : null,
+						is_default || false,
+					]);
+
+					gpgKeyRow = {
+						id,
+						org_id,
+						user_id,
+						name,
+						email,
+						fingerprint,
+						key_id: keyId,
+						algorithm,
+						key_size: algorithm === "rsa" ? (key_size || 4096) : null,
+						public_key: publicKey,
+						private_key_ref: `stdb:gpg:${org_id}:${fingerprint}`,
+						usage_flags,
+						trust_level: "ultimate",
+						expires_at: expiresAt,
+						revoked_at: null,
+						revocation_reason: null,
+						is_default: is_default || false,
+						created_at: now,
+						updated_at: now,
+					};
+				},
+				compensate: async () => {
+					const stdb = STDBClient.getInstance();
+					await stdb.callReducer("delete_gpg_key_meta", [id]);
 				},
 			},
 		]);
@@ -185,12 +220,10 @@ export class GpgKeyService {
 			algorithm = `ecc-${curve}`;
 		}
 
-		const vaultPath = armored_private_key ? gpgKeyPath(org_id, fingerprint) : "";
+		const privateKeyRef = armored_private_key ? `stdb:gpg:${org_id}:${fingerprint}` : "";
 		const now = new Date();
+		const id = crypto.randomUUID();
 		let importedGpgKey: Record<string, unknown> | undefined;
-		let importedGpgKeyId: string | undefined;
-		let reEncryptedArmor: string | undefined;
-		let importKmsResult: { ciphertext: string; keyVersionId: string } | undefined;
 
 		const sagaSteps: Parameters<typeof runSaga<Record<string, never>>>[2] = [];
 
@@ -198,7 +231,7 @@ export class GpgKeyService {
 			const newPassphrase = randomBytes(32).toString("hex");
 
 			sagaSteps.push({
-				name: "kms-encrypt",
+				name: "stdb-encrypt",
 				execute: async () => {
 					// Decrypt the original private key
 					let decryptedKey: openpgp.PrivateKey;
@@ -216,65 +249,67 @@ export class GpgKeyService {
 						privateKey: decryptedKey,
 						passphrase: newPassphrase,
 					});
-					reEncryptedArmor = reEncrypted.armor();
+					const reEncryptedArmor = reEncrypted.armor();
 
-					// KMS-encrypt the new passphrase
-					const kms = await KMSClient.getInstance();
-					importKmsResult = await kms.encrypt(org_id, "gpg", newPassphrase, `gpg:${fingerprint}`);
-				},
-			});
-
-			sagaSteps.push({
-				name: "vault-write",
-				execute: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvWrite(vaultPath, {
-						armored_private_key: reEncryptedArmor!,
-						kms_wrapped_passphrase: importKmsResult!.ciphertext,
-						kms_key_version_id: importKmsResult!.keyVersionId,
-					});
-				},
-				compensate: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvMetadataDelete(vaultPath);
+					// Store in SpaceTimeDB
+					const stdb = STDBClient.getInstance();
+					await stdb.callReducer("store_gpg_material", [
+						org_id,
+						fingerprint,
+						reEncryptedArmor,
+						newPassphrase,
+					]);
 				},
 			});
 		}
 
 		sagaSteps.push({
-			name: "db-insert",
+			name: "stdb-insert-meta",
 			execute: async () => {
-				const db = await DB.getInstance();
-				const result = await db
-					.insertInto("gpg_keys")
-					.values({
-						id: uuidv4(),
-						org_id,
-						user_id,
-						name,
-						email,
-						fingerprint,
-						key_id: keyId,
-						algorithm,
-						key_size: keySize,
-						public_key: armored_public_key,
-						private_key_ref: vaultPath,
-						usage_flags: new JsonValue(["sign", "encrypt"]),
-						trust_level: "unknown",
-						is_default: false,
-						created_at: now,
-						updated_at: now,
-					})
-					.returningAll()
-					.executeTakeFirstOrThrow();
-				importedGpgKey = result;
-				importedGpgKeyId = result.id;
+				const stdb = STDBClient.getInstance();
+				await stdb.callReducer("create_gpg_key_meta", [
+					id,
+					org_id,
+					user_id,
+					name,
+					email,
+					fingerprint,
+					keyId,
+					algorithm,
+					keySize,
+					armored_public_key,
+					privateKeyRef,
+					JSON.stringify(["sign", "encrypt"]),
+					"unknown",
+					null,
+					false,
+				]);
+
+				importedGpgKey = {
+					id,
+					org_id,
+					user_id,
+					name,
+					email,
+					fingerprint,
+					key_id: keyId,
+					algorithm,
+					key_size: keySize,
+					public_key: armored_public_key,
+					private_key_ref: privateKeyRef,
+					usage_flags: ["sign", "encrypt"],
+					trust_level: "unknown",
+					expires_at: null,
+					revoked_at: null,
+					revocation_reason: null,
+					is_default: false,
+					created_at: now,
+					updated_at: now,
+				};
 			},
 			compensate: async () => {
-				if (importedGpgKeyId) {
-					const db = await DB.getInstance();
-					await db.deleteFrom("gpg_keys").where("id", "=", importedGpgKeyId).execute();
-				}
+				const stdb = STDBClient.getInstance();
+				await stdb.callReducer("delete_gpg_key_meta", [id]);
 			},
 		});
 
@@ -285,37 +320,44 @@ export class GpgKeyService {
 		return importedGpgKey!;
 	};
 
-	// Perf note (#59): cacheAside is not used for listKeys because the endpoint
-	// is paginated. Single-key reads (getKey) are cached instead.
 	public static listKeys = async (org_id: string, page = 1, per_page = 50) => {
-		const db = await DB.getInstance();
-		return db
-			.selectFrom("gpg_keys")
-			.select([
-				"id", "org_id", "user_id", "name", "email", "fingerprint",
-				"key_id", "algorithm", "key_size", "usage_flags", "trust_level",
-				"expires_at", "revoked_at", "is_default", "created_at", "updated_at",
-			])
-			.where("org_id", "=", org_id)
-			.orderBy("created_at", "desc")
-			.limit(per_page)
-			.offset((page - 1) * per_page)
-			.execute();
+		const stdb = STDBClient.getInstance();
+		const offset = (page - 1) * per_page;
+
+		const rows = await stdb.query<GpgKeyMetaRow>(
+			`SELECT * FROM gpg_key_meta WHERE org_id = '${org_id}' ORDER BY created_at DESC LIMIT ${per_page} OFFSET ${offset}`,
+		);
+
+		return rows.map((row) => ({
+			id: row.uuid,
+			org_id: row.org_id,
+			user_id: row.user_id,
+			name: row.name,
+			email: row.email,
+			fingerprint: row.fingerprint,
+			key_id: row.key_id,
+			algorithm: row.algorithm,
+			key_size: row.key_size,
+			usage_flags: typeof row.usage_flags === "string" ? JSON.parse(row.usage_flags) : row.usage_flags,
+			trust_level: row.trust_level,
+			expires_at: row.expires_at ? new Date(row.expires_at) : null,
+			revoked_at: row.revoked_at ? new Date(row.revoked_at) : null,
+			is_default: row.is_default,
+			created_at: new Date(row.created_at),
+			updated_at: new Date(row.updated_at),
+		}));
 	};
 
 	public static getKey = async (id: string, org_id: string) => {
 		return cacheAside(CacheKeys.gpgKey(id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
-			return orNotFound(
-				db
-					.selectFrom("gpg_keys")
-					.selectAll()
-					.where("id", "=", id)
-					.where("org_id", "=", org_id)
-					.executeTakeFirstOrThrow(),
-				"GPG Key",
-				id,
+			const stdb = STDBClient.getInstance();
+			const row = await stdb.queryOne<GpgKeyMetaRow>(
+				`SELECT * FROM gpg_key_meta WHERE uuid = '${id}' AND org_id = '${org_id}'`,
 			);
+
+			if (!row) throw new NotFoundError("GPG Key", id);
+
+			return mapGpgKeyRow(row);
 		});
 	};
 
@@ -332,66 +374,49 @@ export class GpgKeyService {
 
 		await runSaga("deleteGpgKey", {}, [
 			{
-				name: "vault-delete",
+				name: "stdb-delete-material",
 				execute: async () => {
-					if (key.private_key_ref) {
-						const vault = await VaultClient.getInstance();
-						await vault.kvMetadataDelete(key.private_key_ref);
+					if (key.private_key_ref && key.private_key_ref.startsWith("stdb:")) {
+						const stdb = STDBClient.getInstance();
+						await stdb.callReducer("delete_gpg_material", [org_id, key.fingerprint], { injectRootKey: false });
 					}
 				},
 			},
 			{
-				name: "db-delete",
+				name: "stdb-delete-meta",
 				execute: async () => {
-					const db = await DB.getInstance();
-					await db
-						.deleteFrom("gpg_keys")
-						.where("id", "=", id)
-						.where("org_id", "=", org_id)
-						.executeTakeFirstOrThrow();
+					const stdb = STDBClient.getInstance();
+					await stdb.callReducer("delete_gpg_key_meta", [id]);
 				},
 			},
 		]);
 
-		// Note: gpgKeysByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
 		await invalidateCache(CacheKeys.gpgKey(id));
 	};
 
 	public static revokeKey = async (id: string, org_id: string, reason?: string) => {
-		const db = await DB.getInstance();
-		const now = new Date();
+		const stdb = STDBClient.getInstance();
 
-		await db
-			.updateTable("gpg_keys")
-			.set({
-				revoked_at: now,
-				revocation_reason: reason || null,
-				updated_at: now,
-			})
-			.where("id", "=", id)
-			.where("org_id", "=", org_id)
-			.execute();
+		await stdb.callReducer("revoke_gpg_key_meta", [
+			id,
+			org_id,
+			reason || null,
+		]);
 
-		// Note: gpgKeysByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
 		await invalidateCache(CacheKeys.gpgKey(id));
 
 		return this.getKey(id, org_id);
 	};
 
 	public static updateTrustLevel = async (id: string, org_id: string, trust_level: string) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		await db
-			.updateTable("gpg_keys")
-			.set({
-				trust_level,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.where("org_id", "=", org_id)
-			.execute();
+		await stdb.callReducer("update_gpg_key_trust", [
+			id,
+			org_id,
+			trust_level,
+		]);
 
-		// Note: gpgKeysByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
 		await invalidateCache(CacheKeys.gpgKey(id));
 
 		return this.getKey(id, org_id);
@@ -413,28 +438,14 @@ export class GpgKeyService {
 			throw new BusinessRuleError("No private key available for signing");
 		}
 
-		// Retrieve private key from Vault
-		const vault = await VaultClient.getInstance();
-		const vaultData = await vault.kvRead(key.private_key_ref);
-		if (!vaultData) {
-			throw new NotFoundError("Private key in Vault", key.private_key_ref);
-		}
-
-		const { armored_private_key, kms_wrapped_passphrase, kms_key_version_id } = vaultData.data;
-
-		// KMS-decrypt the passphrase
-		const kms = await KMSClient.getInstance();
-		const { plaintext: passphrase } = await kms.decrypt(
-			org_id,
-			"gpg",
-			kms_wrapped_passphrase,
-			`gpg:${key.fingerprint}`,
-			kms_key_version_id,
-		);
+		// Retrieve private key and passphrase from SpaceTimeDB
+		const stdb = STDBClient.getInstance();
+		const armoredPrivateKey = await stdb.callReducer<string>("get_gpg_private_key", [org_id, key.fingerprint]);
+		const passphrase = await stdb.callReducer<string>("get_gpg_passphrase", [org_id, key.fingerprint]);
 
 		// Decrypt the private key
 		const privateKey = await openpgp.decryptKey({
-			privateKey: await openpgp.readPrivateKey({ armoredKey: armored_private_key }),
+			privateKey: await openpgp.readPrivateKey({ armoredKey: armoredPrivateKey }),
 			passphrase,
 		});
 
@@ -483,15 +494,13 @@ export class GpgKeyService {
 		gpg_key_id: string | undefined,
 		org_id: string,
 	) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		// Load public key(s) to verify against
 		let publicKeys: openpgp.Key[];
 		if (gpg_key_id) {
 			const key = await this.getKey(gpg_key_id, org_id);
 			publicKeys = [await openpgp.readKey({ armoredKey: key.public_key })];
 		} else {
-			// Try all org keys
 			const keys = await this.listKeys(org_id);
 			publicKeys = await Promise.all(
 				keys.map(async (k) => {
@@ -508,7 +517,6 @@ export class GpgKeyService {
 		try {
 			const messageData = Buffer.from(data, "base64");
 
-			// Try clearsign verification first
 			let verification;
 			try {
 				const cleartextMessage = await openpgp.readCleartextMessage({ cleartextMessage: signatureArmored });
@@ -517,7 +525,6 @@ export class GpgKeyService {
 					verificationKeys: publicKeys,
 				});
 			} catch {
-				// Try detached signature verification
 				const message = await openpgp.createMessage({ binary: messageData });
 				const signature = await openpgp.readSignature({ armoredSignature: signatureArmored });
 				verification = await openpgp.verify({
@@ -532,7 +539,6 @@ export class GpgKeyService {
 
 			const signerKeyId = keyID.toHex().toUpperCase();
 
-			// Find matching key
 			let signerFingerprint: string | null = null;
 			let signerDbKeyId: string | null = null;
 			if (gpg_key_id) {
@@ -540,15 +546,15 @@ export class GpgKeyService {
 				signerFingerprint = key.fingerprint;
 				signerDbKeyId = key.id;
 			} else {
-				const keys = await db
-					.selectFrom("gpg_keys")
-					.select(["id", "fingerprint", "key_id"])
-					.where("org_id", "=", org_id)
-					.execute();
+				const keys = await stdb.query<{
+					uuid: string;
+					fingerprint: string;
+					key_id: string;
+				}>(`SELECT uuid, fingerprint, key_id FROM gpg_key_meta WHERE org_id = '${org_id}'`);
 				const match = keys.find((k) => k.key_id === signerKeyId || k.fingerprint.endsWith(signerKeyId));
 				if (match) {
 					signerFingerprint = match.fingerprint;
-					signerDbKeyId = match.id;
+					signerDbKeyId = match.uuid;
 				}
 			}
 

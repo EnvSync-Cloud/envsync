@@ -31,7 +31,7 @@ func NewClient(opts ...option.RequestOption) *Client {
 	}
 }
 
-// Create an intermediate CA for the organization via miniKMS
+// Create an intermediate CA for the organization via SpacetimeDB
 func (c *Client) InitOrgCa(
 	ctx context.Context,
 	request *sdk.InitOrgCaRequest,

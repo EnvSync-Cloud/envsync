@@ -1,5 +1,5 @@
 /**
- * E2E: Permission flow — tests RBAC enforcement with real OpenFGA.
+ * E2E: Permission flow — tests RBAC enforcement with real SpacetimeDB.
  *
  * Flow: master creates app → member gets 403 → admin grants access →
  *       member succeeds → admin revokes → member gets 403 again.

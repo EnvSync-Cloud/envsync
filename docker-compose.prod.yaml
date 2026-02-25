@@ -12,29 +12,17 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_HOST: postgres
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://rustfs:9001
       S3_BUCKET_URL: http://rustfs:9001
-      VAULT_ADDR: http://vault:8200
-      OPENFGA_API_URL: http://openfga:8090
-      ZITADEL_URL: http://zitadel:8080
-      MINIKMS_GRPC_ADDR: minikms:50051
+      KEYCLOAK_URL: http://keycloak:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       rustfs:
         condition: service_started
-      vault:
-        condition: service_started
-      openfga:
-        condition: service_healthy
-      zitadel:
-        condition: service_healthy
-      minikms:
+      keycloak:
         condition: service_healthy
     networks:
       - envsync_network
@@ -45,49 +33,16 @@ services:
     env_file:
       - .env
     environment:
-      ZITADEL_PAT_FILE: /zitadel-data/admin.pat
-      VAULT_ADDR: http://vault:8200
-      OPENFGA_API_URL: http://openfga:8090
-      DATABASE_HOST: postgres
       S3_ENDPOINT: http://rustfs:9001
-      ZITADEL_URL: http://zitadel:8080
-      MINIKMS_GRPC_ADDR: minikms:50051
-    volumes:
-      - zitadel_data:/zitadel-data:ro
+      KEYCLOAK_URL: http://keycloak:8080
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
-      vault:
-        condition: service_started
-      openfga:
-        condition: service_healthy
-      zitadel:
+      keycloak:
         condition: service_healthy
       rustfs:
         condition: service_started
-      minikms:
-        condition: service_healthy
     restart: "no"
-    networks:
-      - envsync_network
-
-  postgres:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-envsync}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     networks:
       - envsync_network
 
@@ -117,187 +72,83 @@ services:
     networks:
       - envsync_network
 
-  zitadel_db:
+  # Keycloak DB: PostgreSQL for Keycloak's own storage only
+  keycloak_db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      PGUSER: ${ZITADEL_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${ZITADEL_DB_PASSWORD:-postgres}
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      POSTGRES_DB: keycloak
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ZITADEL_DB_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 10s
     volumes:
-      - zitadel_db_data:/var/lib/postgresql/data
+      - keycloak_db_data:/var/lib/postgresql/data
     networks:
       - envsync_network
 
-  zitadel:
-    image: ghcr.io/zitadel/zitadel:latest
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
     restart: unless-stopped
-    command: start-from-init --masterkey "${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}"
-    user: "0"
+    command: ["start", "--import-realm", "--optimized"]
     environment:
-      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
-      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-false}
-      ZITADEL_TLS_ENABLED: ${ZITADEL_TLS_ENABLED:-false}
-      ZITADEL_DATABASE_POSTGRES_HOST: zitadel_db
-      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
-      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${ZITADEL_DB_USER:-postgres}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${ZITADEL_DB_PASSWORD:-postgres}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
-      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-zitadel-admin}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-Password1!}
-      ZITADEL_FIRSTINSTANCE_ORG_NAME: EnvSync
-      ZITADEL_FIRSTINSTANCE_PATPATH: /current-dir/admin.pat
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: EnvSync IAM Owner
-      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: ${ZITADEL_MACHINE_PAT_EXPIRATIONDATE:-2029-01-01T00:00:00Z}
-      # Keep login-v2 optional for API-first bootstrap; avoids startup loops
-      # when no dedicated login UI is configured yet.
-      ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED: "false"
-      # Also emit a login-client PAT for flows that require IAM_LOGIN_CLIENT.
-      ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH: /current-dir/login-client.pat
-      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME: login-client
-      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME: Automatically Initialized IAM_LOGIN_CLIENT
-      ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE: ${ZITADEL_LOGINCLIENT_PAT_EXPIRATIONDATE:-2029-01-01T00:00:00Z}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+      KC_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED:-false}
+      KC_PROXY_HEADERS: ${KEYCLOAK_PROXY_HEADERS:-xforwarded}
+      KC_FEATURES: device-flow
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     ports:
-      - "${ZITADEL_PORT:-8080}:8080"
+      - "${KEYCLOAK_PORT:-8080}:8080"
     healthcheck:
-      test: ["CMD", "/app/zitadel", "ready"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    volumes:
+      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak_db:
+        condition: service_healthy
+    networks:
+      - envsync_network
+
+  spacetimedb:
+    image: clockworklabs/spacetimedb:latest
+    profiles: ["stdb"]
+    restart: unless-stopped
+    volumes:
+      - stdb_data:/stdb
+    environment:
+      SPACETIMEDB_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/v1/ping"]
       interval: 10s
-      timeout: 60s
-      retries: 30
-      # First boot (DB init, migrations, first-instance setup) can take a few minutes.
-      start_period: 120s
-    volumes:
-      - zitadel_data:/current-dir
-    depends_on:
-      zitadel_db:
-        condition: service_healthy
-    networks:
-      - envsync_network
-
-  vault:
-    image: hashicorp/vault:latest
-    restart: unless-stopped
-    command: vault server -config=/vault/config/vault.hcl
-    environment:
-      VAULT_ADDR: http://localhost:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-}
-      SKIP_SETCAP: "true"
-      SKIP_CHOWN: "true"
-    volumes:
-      - vault_data:/vault/data
-      - ./docker/vault/vault.hcl:/vault/config/vault.hcl:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - envsync_network
-
-  openfga_db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: openfga
-      POSTGRES_PASSWORD: ${OPENFGA_DB_PASSWORD:-openfga}
-      POSTGRES_DB: openfga
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openfga"]
-      interval: 5s
       timeout: 5s
       retries: 5
-    volumes:
-      - openfga_db_data:/var/lib/postgresql/data
     networks:
       - envsync_network
 
-  openfga_migrate:
-    image: openfga/openfga:latest
-    command: migrate
-    environment:
-      OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: "postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable"
+  stdb_publish:
+    build:
+      context: packages/envsync-stdb
+      dockerfile: Dockerfile
+    profiles: ["stdb"]
     depends_on:
-      openfga_db:
+      spacetimedb:
         condition: service_healthy
     networks:
       - envsync_network
     restart: "no"
-
-  openfga:
-    image: openfga/openfga:latest
-    restart: unless-stopped
-    command: run
-    environment:
-      OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: "postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable"
-      OPENFGA_PLAYGROUND_ENABLED: "false"
-      OPENFGA_HTTP_ADDR: 0.0.0.0:8090
-      OPENFGA_GRPC_ADDR: 0.0.0.0:8091
-    depends_on:
-      openfga_migrate:
-        condition: service_completed_successfully
-    healthcheck:
-      # OpenFGA gRPC listener is configured on 8091 above.
-      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=:8091"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - envsync_network
-
-  minikms_db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${MINIKMS_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
-      POSTGRES_DB: minikms
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${MINIKMS_DB_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    volumes:
-      - minikms_db_data:/var/lib/postgresql/data
-    networks:
-      - envsync_network
-
-  minikms:
-    image: ghcr.io/envsync-cloud/minikms:latest
-    restart: unless-stopped
-    environment:
-      MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
-      MINIKMS_DB_HOST: minikms_db
-      MINIKMS_DB_PORT: "5432"
-      MINIKMS_DB_USER: ${MINIKMS_DB_USER:-postgres}
-      MINIKMS_DB_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
-      MINIKMS_DB_NAME: minikms
-      MINIKMS_REDIS_URL: redis://redis:6379
-      MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
-    healthcheck:
-      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    depends_on:
-      minikms_db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - envsync_network
 
   # --- Observability Stack (Grafana LGTM) ---
   tempo:
@@ -432,14 +283,10 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
   redis_data:
   rustfs_data:
-  vault_data:
-  zitadel_db_data:
-  zitadel_data:
-  openfga_db_data:
-  minikms_db_data:
+  stdb_data:
+  keycloak_db_data:
   tempo_data:
   loki_data:
   prometheus_data:

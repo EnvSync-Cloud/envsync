@@ -1,10 +1,15 @@
-import type { TupleKey } from "@openfga/sdk";
-
-import { FGAClient } from "@/libs/openfga";
+import { STDBClient } from "@/libs/stdb";
 import { RoleService } from "@/services/role.service";
 
+interface AuthTuple {
+	subject: string;
+	relation: string;
+	object_type: string;
+	object_id: string;
+}
+
 /**
- * Maps an org_role record's boolean flags to FGA tuples for a user in an org.
+ * Maps an org_role record's boolean flags to auth tuples for a user in an org.
  */
 function roleFlagsToTuples(
 	userId: string,
@@ -21,82 +26,68 @@ function roleFlagsToTuples(
 		have_cert_access: boolean;
 		have_audit_access: boolean;
 	},
-): TupleKey[] {
-	const user = `user:${userId}`;
-	const org = `org:${orgId}`;
-	const tuples: TupleKey[] = [];
+): AuthTuple[] {
+	const subject = `user:${userId}`;
+	const tuples: AuthTuple[] = [];
 
 	// Always add member
-	tuples.push({ user, relation: "member", object: org });
+	tuples.push({ subject, relation: "member", object_type: "org", object_id: orgId });
 
-	if (role.is_master) tuples.push({ user, relation: "master", object: org });
-	if (role.is_admin) tuples.push({ user, relation: "admin", object: org });
-	if (role.can_view) tuples.push({ user, relation: "can_view", object: org });
-	if (role.can_edit) tuples.push({ user, relation: "can_edit", object: org });
-	if (role.have_api_access) tuples.push({ user, relation: "have_api_access", object: org });
-	if (role.have_billing_options) tuples.push({ user, relation: "have_billing_options", object: org });
-	if (role.have_webhook_access) tuples.push({ user, relation: "have_webhook_access", object: org });
-	if (role.have_gpg_access) tuples.push({ user, relation: "have_gpg_access", object: org });
-	if (role.have_cert_access) tuples.push({ user, relation: "have_cert_access", object: org });
-	if (role.have_audit_access) tuples.push({ user, relation: "have_audit_access", object: org });
+	if (role.is_master) tuples.push({ subject, relation: "master", object_type: "org", object_id: orgId });
+	if (role.is_admin) tuples.push({ subject, relation: "admin", object_type: "org", object_id: orgId });
+	if (role.can_view) tuples.push({ subject, relation: "can_view", object_type: "org", object_id: orgId });
+	if (role.can_edit) tuples.push({ subject, relation: "can_edit", object_type: "org", object_id: orgId });
+	if (role.have_api_access) tuples.push({ subject, relation: "have_api_access", object_type: "org", object_id: orgId });
+	if (role.have_billing_options) tuples.push({ subject, relation: "have_billing_options", object_type: "org", object_id: orgId });
+	if (role.have_webhook_access) tuples.push({ subject, relation: "have_webhook_access", object_type: "org", object_id: orgId });
+	if (role.have_gpg_access) tuples.push({ subject, relation: "have_gpg_access", object_type: "org", object_id: orgId });
+	if (role.have_cert_access) tuples.push({ subject, relation: "have_cert_access", object_type: "org", object_id: orgId });
+	if (role.have_audit_access) tuples.push({ subject, relation: "have_audit_access", object_type: "org", object_id: orgId });
 
 	return tuples;
 }
 
-/** All org-level relations a user can be directly assigned to */
-const ALL_ORG_RELATIONS = [
-	"member",
-	"master",
-	"admin",
-	"can_view",
-	"can_edit",
-	"have_api_access",
-	"have_billing_options",
-	"have_webhook_access",
-	"have_gpg_access",
-	"have_cert_access",
-	"have_audit_access",
-] as const;
-
 export class AuthorizationService {
-	// ─── Core checks ───────────────────────────────────────────────────
-
-	/**
-	 * Check if a user has a specific relation/permission on an object.
-	 *
-	 * @param userId - EnvSync user ID (without `user:` prefix)
-	 * @param relation - The FGA relation to check (e.g. "can_edit", "can_manage_apps")
-	 * @param objectType - The FGA object type (e.g. "org", "app", "env_type")
-	 * @param objectId - The EnvSync resource ID (without type prefix)
-	 */
-	static async check(userId: string, relation: string, objectType: string, objectId: string): Promise<boolean> {
-		const fga = await FGAClient.getInstance();
-		return fga.check(`user:${userId}`, relation, `${objectType}:${objectId}`);
+	private static stdb() {
+		return STDBClient.getInstance();
 	}
 
-	/**
-	 * Batch-check multiple permissions for a user.
-	 * Returns a map of "relation:objectType:objectId" → boolean.
-	 */
+	// ─── Core checks ───────────────────────────────────────────────────
+
+	static async check(userId: string, relation: string, objectType: string, objectId: string): Promise<boolean> {
+		const result = await this.stdb().callReducerWithResponse<{ allowed: boolean }>(
+			"check_permission",
+			[userId, relation, objectType, objectId],
+			{ injectRootKey: false },
+		);
+		return result.allowed;
+	}
+
 	static async batchCheck(
 		userId: string,
 		checks: { relation: string; objectType: string; objectId: string }[],
 	): Promise<Map<string, boolean>> {
-		const fga = await FGAClient.getInstance();
-		const fgaChecks = checks.map(c => ({
-			user: `user:${userId}`,
-			relation: c.relation,
-			object: `${c.objectType}:${c.objectId}`,
-		}));
-		return fga.batchCheck(fgaChecks);
+		const checksJson = JSON.stringify(
+			checks.map(c => ({
+				relation: c.relation,
+				object_type: c.objectType,
+				object_id: c.objectId,
+			})),
+		);
+
+		const results = await this.stdb().callReducerWithResponse<
+			{ key: string; allowed: boolean }[]
+		>("batch_check", [userId, checksJson], { injectRootKey: false });
+
+		const map = new Map<string, boolean>();
+		for (const r of results) {
+			map.set(r.key, r.allowed);
+		}
+		return map;
 	}
 
-	// ─── Role template → FGA tuples ────────────────────────────────────
+	// ─── Role template → auth tuples ──────────────────────────────────
 
-	/**
-	 * Assign a role template to a user. Reads the org_role's boolean flags
-	 * and writes the corresponding FGA tuples.
-	 */
 	static async assignRoleToUser(userId: string, orgId: string, roleId: string): Promise<void> {
 		const role = await RoleService.getRole(roleId);
 		const tuples = roleFlagsToTuples(userId, orgId, {
@@ -106,269 +97,248 @@ export class AuthorizationService {
 			have_cert_access: role.have_cert_access ?? false,
 			have_audit_access: role.have_audit_access ?? false,
 		});
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples(tuples);
+		await this.stdb().callReducer("write_auth_tuples", [JSON.stringify(tuples)], { injectRootKey: false });
 	}
 
-	/**
-	 * Remove all org-level FGA tuples for a user.
-	 * Used before re-assigning a new role or on user deletion.
-	 */
 	static async removeUserOrgPermissions(userId: string, orgId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = `user:${userId}`;
-		const org = `org:${orgId}`;
+		const subject = `user:${userId}`;
 
-		// Read all existing tuples for this user on this org and delete them
-		const existing = await fga.readTuples({ user, object: org });
+		// Read all existing tuples for this user on this org
+		const existing = await this.stdb().callReducerWithResponse<AuthTuple[]>(
+			"read_tuples",
+			[subject, "", "org", orgId],
+			{ injectRootKey: false },
+		);
+
 		if (existing.length > 0) {
-			await fga.deleteTuples(existing);
+			await this.stdb().callReducer(
+				"delete_auth_tuples",
+				[JSON.stringify(existing)],
+				{ injectRootKey: false },
+			);
 		}
 	}
 
-	/**
-	 * Re-sync a user's FGA tuples when their role changes.
-	 * Removes old tuples and writes new ones based on the new role.
-	 */
 	static async resyncUserRole(userId: string, orgId: string, newRoleId: string): Promise<void> {
 		await this.removeUserOrgPermissions(userId, orgId);
 		await this.assignRoleToUser(userId, orgId, newRoleId);
 	}
 
-	/**
-	 * Re-sync all users who have a given role.
-	 * Called when a role's boolean flags are updated.
-	 */
 	static async resyncAllUsersWithRole(roleId: string, orgId: string): Promise<void> {
-		// Import lazily to avoid circular dependency
-		const { DB } = await import("@/libs/db");
-		const db = await DB.getInstance();
-
-		const users = await db
-			.selectFrom("users")
-			.select("id")
-			.where("role_id", "=", roleId)
-			.where("org_id", "=", orgId)
-			.execute();
+		const users = await this.stdb().query<{ uuid: string }>(
+			`SELECT uuid FROM user WHERE role_id = '${roleId}' AND org_id = '${orgId}'`,
+		);
 
 		for (const user of users) {
-			await this.resyncUserRole(user.id, orgId, roleId);
+			await this.resyncUserRole(user.uuid, orgId, roleId);
 		}
 	}
 
 	// ─── Structural tuples (resource hierarchy) ────────────────────────
 
-	/**
-	 * Write the structural tuple linking an app to its org.
-	 * Called when an app is created.
-	 */
 	static async writeAppOrgRelation(appId: string, orgId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([{ user: `org:${orgId}`, relation: "org", object: `app:${appId}` }]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject: `org:${orgId}`, relation: "org", object_type: "app", object_id: appId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Write the structural tuples linking an env_type to its app and org.
-	 * Called when an env_type is created.
-	 */
 	static async writeEnvTypeRelations(envTypeId: string, appId: string, orgId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([
-			{ user: `app:${appId}`, relation: "app", object: `env_type:${envTypeId}` },
-			{ user: `org:${orgId}`, relation: "org", object: `env_type:${envTypeId}` },
-		]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([
+				{ subject: `app:${appId}`, relation: "app", object_type: "env_type", object_id: envTypeId },
+				{ subject: `org:${orgId}`, relation: "org", object_type: "env_type", object_id: envTypeId },
+			])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Remove all FGA tuples where the given object is the target.
-	 * Called when a resource (app, env_type) is deleted.
-	 */
 	static async deleteResourceTuples(objectType: string, objectId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const object = `${objectType}:${objectId}`;
+		const existing = await this.stdb().callReducerWithResponse<AuthTuple[]>(
+			"read_tuples",
+			["", "", objectType, objectId],
+			{ injectRootKey: false },
+		);
 
-		// Read all tuples pointing to this object and delete them
-		const existing = await fga.readTuples({ object });
 		if (existing.length > 0) {
-			await fga.deleteTuples(existing);
+			await this.stdb().callReducer(
+				"delete_auth_tuples",
+				[JSON.stringify(existing)],
+				{ injectRootKey: false },
+			);
 		}
 	}
 
 	// ─── Per-resource grants (fine-grained) ────────────────────────────
 
-	/**
-	 * Grant a user or team a relation on an app.
-	 */
 	static async grantAppAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		appId: string,
 		relation: "admin" | "editor" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.writeTuples([{ user, relation, object: `app:${appId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "app", object_id: appId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Revoke a user or team's relation on an app.
-	 */
 	static async revokeAppAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		appId: string,
 		relation: "admin" | "editor" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.deleteTuples([{ user, relation, object: `app:${appId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"delete_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "app", object_id: appId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Grant a user or team a relation on an env_type.
-	 */
 	static async grantEnvTypeAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		envTypeId: string,
 		relation: "admin" | "editor" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.writeTuples([{ user, relation, object: `env_type:${envTypeId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "env_type", object_id: envTypeId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Revoke a user or team's relation on an env_type.
-	 */
 	static async revokeEnvTypeAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		envTypeId: string,
 		relation: "admin" | "editor" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.deleteTuples([{ user, relation, object: `env_type:${envTypeId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"delete_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "env_type", object_id: envTypeId }])],
+			{ injectRootKey: false },
+		);
 	}
 
 	// ─── Team membership ───────────────────────────────────────────────
 
-	/**
-	 * Add a user as a member of a team in FGA.
-	 */
 	static async addTeamMember(teamId: string, userId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([{ user: `user:${userId}`, relation: "member", object: `team:${teamId}` }]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject: `user:${userId}`, relation: "member", object_type: "team", object_id: teamId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Remove a user from a team in FGA.
-	 */
 	static async removeTeamMember(teamId: string, userId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.deleteTuples([{ user: `user:${userId}`, relation: "member", object: `team:${teamId}` }]);
+		await this.stdb().callReducer(
+			"delete_auth_tuples",
+			[JSON.stringify([{ subject: `user:${userId}`, relation: "member", object_type: "team", object_id: teamId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Write the structural tuple linking a team to its org.
-	 */
 	static async writeTeamOrgRelation(teamId: string, orgId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([{ user: `org:${orgId}`, relation: "org", object: `team:${teamId}` }]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject: `org:${orgId}`, relation: "org", object_type: "team", object_id: teamId }])],
+			{ injectRootKey: false },
+		);
 	}
 
 	// ─── GPG key relations ────────────────────────────────────────────
 
-	/**
-	 * Write the structural tuples linking a GPG key to its org and owner.
-	 * Called when a GPG key is created.
-	 */
 	static async writeGpgKeyRelations(gpgKeyId: string, orgId: string, ownerId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([
-			{ user: `org:${orgId}`, relation: "org", object: `gpg_key:${gpgKeyId}` },
-			{ user: `user:${ownerId}`, relation: "owner", object: `gpg_key:${gpgKeyId}` },
-		]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([
+				{ subject: `org:${orgId}`, relation: "org", object_type: "gpg_key", object_id: gpgKeyId },
+				{ subject: `user:${ownerId}`, relation: "owner", object_type: "gpg_key", object_id: gpgKeyId },
+			])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Grant a user or team a role on a GPG key (manager or signer).
-	 */
 	static async grantGpgKeyAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		gpgKeyId: string,
 		relation: "manager" | "signer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.writeTuples([{ user, relation, object: `gpg_key:${gpgKeyId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "gpg_key", object_id: gpgKeyId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Revoke a user or team's role on a GPG key.
-	 */
 	static async revokeGpgKeyAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		gpgKeyId: string,
 		relation: "manager" | "signer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.deleteTuples([{ user, relation, object: `gpg_key:${gpgKeyId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"delete_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "gpg_key", object_id: gpgKeyId }])],
+			{ injectRootKey: false },
+		);
 	}
 
 	// ─── Certificate relations ──────────────────────────────────────
 
-	/**
-	 * Write the structural tuples linking a certificate to its org and owner.
-	 * Called when a certificate is created (initOrgCA or issueMemberCert).
-	 */
 	static async writeCertificateRelations(certId: string, orgId: string, ownerId: string): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		await fga.writeTuples([
-			{ user: `org:${orgId}`, relation: "org", object: `certificate:${certId}` },
-			{ user: `user:${ownerId}`, relation: "owner", object: `certificate:${certId}` },
-		]);
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([
+				{ subject: `org:${orgId}`, relation: "org", object_type: "certificate", object_id: certId },
+				{ subject: `user:${ownerId}`, relation: "owner", object_type: "certificate", object_id: certId },
+			])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Grant a user or team a role on a certificate (manager or viewer).
-	 */
 	static async grantCertificateAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		certId: string,
 		relation: "manager" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.writeTuples([{ user, relation, object: `certificate:${certId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"write_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "certificate", object_id: certId }])],
+			{ injectRootKey: false },
+		);
 	}
 
-	/**
-	 * Revoke a user or team's role on a certificate.
-	 */
 	static async revokeCertificateAccess(
 		subjectId: string,
 		subjectType: "user" | "team",
 		certId: string,
 		relation: "manager" | "viewer",
 	): Promise<void> {
-		const fga = await FGAClient.getInstance();
-		const user = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
-		await fga.deleteTuples([{ user, relation, object: `certificate:${certId}` }]);
+		const subject = subjectType === "user" ? `user:${subjectId}` : `team:${subjectId}#member`;
+		await this.stdb().callReducer(
+			"delete_auth_tuples",
+			[JSON.stringify([{ subject, relation, object_type: "certificate", object_id: certId }])],
+			{ injectRootKey: false },
+		);
 	}
 
 	// ─── Introspection ─────────────────────────────────────────────────
 
-	/**
-	 * Get the effective org-level permissions for a user.
-	 * Returns a flat object compatible with the legacy `permissions` shape
-	 * for easier frontend consumption.
-	 */
 	static async getUserOrgPermissions(
 		userId: string,
 		orgId: string,

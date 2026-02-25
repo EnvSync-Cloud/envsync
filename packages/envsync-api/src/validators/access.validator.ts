@@ -7,7 +7,7 @@ export const loginUrlResponseSchema = z
 		loginUrl: z
 			.string()
 			.url()
-			.openapi({ example: "https://zitadel.example.com/oauth/v2/authorize?response_type=code" }),
+			.openapi({ example: "https://keycloak.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code" }),
 	})
 	.openapi({ ref: "LoginUrlResponse" });
 
@@ -17,12 +17,12 @@ export const cliLoginResponseSchema = z
 		verification_uri_complete: z
 			.string()
 			.url()
-			.openapi({ example: "https://zitadel.example.com/oauth/v2/device" }),
+			.openapi({ example: "https://keycloak.example.com/realms/envsync/protocol/openid-connect/auth/device" }),
 		user_code: z.string().openapi({ example: "abc123" }),
 		device_code: z.string().openapi({ example: "def456" }),
 		expires_in: z.number().openapi({ example: 300 }),
 		client_id: z.string().openapi({ example: "envsync-web" }),
-		token_url: z.string().url().openapi({ example: "https://zitadel.example.com/oauth/token" }),
+		token_url: z.string().url().openapi({ example: "https://keycloak.example.com/realms/envsync/protocol/openid-connect/token" }),
 		interval: z.number().openapi({ example: 5 }),
 	})
 	.openapi({ ref: "CliLoginResponse" });

@@ -1,12 +1,9 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB } from "@/libs/db";
-import { orNotFound } from "@/libs/errors";
+import { STDBClient } from "@/libs/stdb";
+import { NotFoundError } from "@/libs/errors";
 import { WebhookHandler } from "@/libs/webhooks";
 import { config } from "@/utils/env";
-import { JsonValue } from "@/libs/db";
 import infoLogs, { LogTypes } from "@/libs/logger";
 
 const urlSetMap = {
@@ -21,6 +18,40 @@ const urlSetMap = {
     api_keys: config.DASHBOARD_URL + "/apikeys",
     base: config.DASHBOARD_URL,
 };
+
+interface WebhookRow {
+    uuid: string;
+    name: string;
+    org_id: string;
+    user_id: string;
+    url: string;
+    event_types: string;
+    is_active: boolean;
+    webhook_type: "DISCORD" | "SLACK" | "CUSTOM";
+    app_id: string | null;
+    linked_to: "org" | "app";
+    last_triggered_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+function mapWebhookRow(row: WebhookRow) {
+    return {
+        id: row.uuid,
+        name: row.name,
+        org_id: row.org_id,
+        user_id: row.user_id,
+        url: row.url,
+        event_types: typeof row.event_types === "string" ? JSON.parse(row.event_types) : row.event_types,
+        is_active: row.is_active,
+        webhook_type: row.webhook_type,
+        app_id: row.app_id,
+        linked_to: row.linked_to,
+        last_triggered_at: row.last_triggered_at ? new Date(row.last_triggered_at) : null,
+        created_at: new Date(row.created_at),
+        updated_at: new Date(row.updated_at),
+    };
+}
 
 export class WebhookService {
     public static createWebhook = async ({
@@ -42,28 +73,20 @@ export class WebhookService {
         app_id?: string,
         linked_to: "org" | "app"
     }): Promise<string> => {
-        const id = uuidv4();
-        const db = await DB.getInstance();
+        const id = crypto.randomUUID();
+        const stdb = STDBClient.getInstance();
 
-        await db
-            .insertInto("webhook_store")
-            .values({
-                id,
-                name,
-                org_id,
-                user_id,
-                url,
-                event_types: new JsonValue(event_types),
-                is_active: true,
-                webhook_type,
-                app_id,
-                linked_to,
-                created_at: new Date(),
-                updated_at: new Date(),
-            })
-            .execute();
-
-        // Note: webhooksByOrg list is not cached (paginated endpoint), so no list invalidation needed.
+        await stdb.callReducer("create_webhook", [
+            id,
+            name,
+            org_id,
+            user_id,
+            url,
+            JSON.stringify(event_types),
+            webhook_type,
+            app_id ?? null,
+            linked_to,
+        ]);
 
         return id;
     }
@@ -75,58 +98,47 @@ export class WebhookService {
     // which adds complexity without clear benefit for a low-traffic list.
     // The single-webhook read (getWebhookById) is already cached.
     public static getWebhookByOrgId = async (org_id: string, page = 1, per_page = 50) => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
+        const offset = (page - 1) * per_page;
 
-        const webhooks = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("org_id", "=", org_id)
-            .limit(per_page)
-            .offset((page - 1) * per_page)
-            .execute();
+        const rows = await stdb.query<WebhookRow>(
+            `SELECT * FROM webhook WHERE org_id = '${org_id}' LIMIT ${per_page} OFFSET ${offset}`,
+        );
 
-        return webhooks;
+        return rows.map(mapWebhookRow);
     };
 
     public static getWebhookByAppId = async (app_id: string) => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
 
-        const webhooks = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("app_id", "=", app_id)
-            .execute();
+        const rows = await stdb.query<WebhookRow>(
+            `SELECT * FROM webhook WHERE app_id = '${app_id}'`,
+        );
 
-        return webhooks;
+        return rows.map(mapWebhookRow);
     };
 
     public static getWebhooksByUserId = async (user_id: string) => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
 
-        const webhooks = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("user_id", "=", user_id)
-            .execute();
+        const rows = await stdb.query<WebhookRow>(
+            `SELECT * FROM webhook WHERE user_id = '${user_id}'`,
+        );
 
-        return webhooks;
+        return rows.map(mapWebhookRow);
     }
 
     public static getWebhookById = async (id: string) => {
         return cacheAside(CacheKeys.webhook(id), CacheTTL.SHORT, async () => {
-            const db = await DB.getInstance();
+            const stdb = STDBClient.getInstance();
 
-            const webhook = await orNotFound(
-                db
-                    .selectFrom("webhook_store")
-                    .selectAll()
-                    .where("id", "=", id)
-                    .executeTakeFirstOrThrow(),
-                "Webhook",
-                id,
+            const row = await stdb.queryOne<WebhookRow>(
+                `SELECT * FROM webhook WHERE uuid = '${id}'`,
             );
 
-            return webhook;
+            if (!row) throw new NotFoundError("Webhook", id);
+
+            return mapWebhookRow(row);
         });
     };
 
@@ -141,27 +153,26 @@ export class WebhookService {
             linked_to?: "org" | "app";
         }
     ): Promise<void> => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
 
-        await db
-            .updateTable("webhook_store")
-            .set({
-                ...data,
-                updated_at: new Date(),
-            })
-            .where("id", "=", id)
-            .execute();
+        await stdb.callReducer("update_webhook", [
+            id,
+            data.url ?? null,
+            data.event_types ? JSON.stringify(data.event_types) : null,
+            data.is_active ?? null,
+            data.webhook_type ?? null,
+            data.app_id !== undefined ? data.app_id : null,
+            data.linked_to ?? null,
+        ]);
 
         // Note: webhooksByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
         await invalidateCache(CacheKeys.webhook(id));
     };
 
     public static deleteWebhook = async (id: string): Promise<void> => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
 
-        await db.deleteFrom("webhook_store")
-            .where("id", "=", id)
-            .execute();
+        await stdb.callReducer("delete_webhook", [id]);
 
         // Note: webhooksByOrg list is not cached (paginated endpoint), so only invalidate the single-item cache.
         await invalidateCache(CacheKeys.webhook(id));
@@ -176,15 +187,20 @@ export class WebhookService {
             message: string;
         }
     ): Promise<void> => {
-        const db = await DB.getInstance();
+        const stdb = STDBClient.getInstance();
 
-        const webhooks = await db
-            .selectFrom("webhook_store")
-            .selectAll()
-            .where("org_id", "=", payload.org_id)
-            .where("is_active", "=", true)
-            .where("event_types", "@>", new JsonValue([payload.event_type]))
-            .execute();
+        // Fetch all active webhooks for the org, then filter by event_type in TypeScript
+        // (STDB doesn't support JSON @> containment operator)
+        const allWebhooks = await stdb.query<WebhookRow>(
+            `SELECT * FROM webhook WHERE org_id = '${payload.org_id}' AND is_active = true`,
+        );
+
+        const webhooks = allWebhooks
+            .map(mapWebhookRow)
+            .filter((w) => {
+                const eventTypes: string[] = Array.isArray(w.event_types) ? w.event_types : [];
+                return eventTypes.includes(payload.event_type);
+            });
 
         if (webhooks.length === 0) {
             return;
@@ -197,25 +213,21 @@ export class WebhookService {
             )
 
             // Hoist org/app/user lookups outside the per-webhook loop to avoid N+1 queries
-            const org = await db
-                .selectFrom("orgs")
-                .select(["name"])
-                .where("id", "=", payload.org_id)
-                .executeTakeFirstOrThrow();
+            const orgRow = await stdb.queryOne<{ name: string }>(
+                `SELECT name FROM org WHERE uuid = '${payload.org_id}'`,
+            );
+            const org = orgRow ?? { name: "" };
 
             const app = payload.app_id
-                ? await db
-                    .selectFrom("app")
-                    .select(["name", "id"])
-                    .where("id", "=", payload.app_id)
-                    .executeTakeFirst()
+                ? await stdb.queryOne<{ name: string; uuid: string }>(
+                    `SELECT name, uuid FROM app WHERE uuid = '${payload.app_id}'`,
+                )
                 : null;
 
-            const user = await db
-                .selectFrom("users")
-                .select(["full_name", "email"])
-                .where("id", "=", payload.user_id)
-                .executeTakeFirstOrThrow();
+            const userRow = await stdb.queryOne<{ full_name: string; email: string }>(
+                `SELECT full_name, email FROM user WHERE uuid = '${payload.user_id}'`,
+            );
+            const user = userRow ?? { full_name: "", email: "" };
 
             await Promise.all(webhooks.map(async (webhook) => {
                 let url_for_entity_in_question = "";
@@ -302,7 +314,7 @@ export class WebhookService {
                         break;
                 }
 
-                if(webhook.linked_to === "app" && app?.id === webhook.app_id) {
+                if(webhook.linked_to === "app" && app?.uuid === webhook.app_id) {
                     await WebhookHandler.triggerWebhook(
                         webhook.url,
                         {
@@ -337,13 +349,7 @@ export class WebhookService {
                     )
                 }
 
-                await db
-                    .updateTable("webhook_store")
-                    .set({
-                        last_triggered_at: new Date(),
-                    })
-                    .where("id", "=", webhook.id)
-                    .execute();
+                await stdb.callReducer("update_webhook_last_triggered", [webhook.id]);
             }));
         }
     };

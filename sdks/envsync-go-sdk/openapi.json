@@ -29,7 +29,7 @@
                     "loginUrl": {
                         "type": "string",
                         "format": "uri",
-                        "example": "https://zitadel.example.com/oauth/v2/authorize?response_type=code"
+                        "example": "https://keycloak.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code"
                     }
                 },
                 "required": [
@@ -4632,7 +4632,7 @@
                     }
                 ],
                 "summary": "Web Login Callback",
-                "description": "Handle web login callback from Zitadel"
+                "description": "Handle web login callback from Keycloak"
             }
         },
         "/api/access/api": {
@@ -4707,7 +4707,7 @@
                     }
                 ],
                 "summary": "API Login Callback",
-                "description": "Handle API login callback from Zitadel"
+                "description": "Handle API login callback from Keycloak"
             }
         },
         "/api/app": {
@@ -9298,7 +9298,7 @@
                 ],
                 "parameters": [],
                 "summary": "Initialize Organization CA",
-                "description": "Create an intermediate CA for the organization via miniKMS",
+                "description": "Create an intermediate CA for the organization via SpacetimeDB",
                 "requestBody": {
                     "content": {
                         "application/json": {

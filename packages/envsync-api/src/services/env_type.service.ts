@@ -1,13 +1,40 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB } from "@/libs/db";
-import { orNotFound, ValidationError } from "@/libs/errors";
-import { runSaga } from "@/helpers/saga";
+import { STDBClient } from "@/libs/stdb";
+import { NotFoundError, ValidationError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
 
+interface EnvTypeRow {
+	uuid: string;
+	name: string;
+	org_id: string;
+	app_id: string;
+	color: string;
+	is_default: boolean;
+	is_protected: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapRow(row: EnvTypeRow) {
+	return {
+		id: row.uuid,
+		name: row.name,
+		org_id: row.org_id,
+		app_id: row.app_id,
+		color: row.color,
+		is_default: row.is_default,
+		is_protected: row.is_protected,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
+}
+
 export class EnvTypeService {
+	private static stdb() {
+		return STDBClient.getInstance();
+	}
+
 	public static createEnvType = async ({
 		name,
 		org_id,
@@ -23,109 +50,72 @@ export class EnvTypeService {
 		is_default: boolean;
 		is_protected: boolean;
 	}) => {
-		const db = await DB.getInstance();
-		const appExists = await db
-			.selectFrom("app")
-			.select("id")
-			.where("id", "=", app_id)
-			.executeTakeFirst();
-		if (!appExists) {
+		const stdb = this.stdb();
+
+		// Verify app exists
+		const appRow = await stdb.queryOne<{ uuid: string }>(
+			`SELECT uuid FROM app WHERE uuid = '${app_id}'`,
+		);
+		if (!appRow) {
 			throw new ValidationError(`App not found: ${app_id}`);
 		}
 
-		const ctx: {
-			envType?: {
-				id: string; name: string; org_id: string; app_id: string;
-				color: string; is_default: boolean; is_protected: boolean;
-				created_at: Date; updated_at: Date;
-			};
-		} = {};
-		await runSaga("createEnvType", ctx, [
-			{
-				name: "db-insert",
-				execute: async (c) => {
-					const db = await DB.getInstance();
-					const result = await db
-						.insertInto("env_type")
-						.values({
-							id: uuidv4(),
-							name,
-							org_id,
-							app_id,
-							color,
-							is_default,
-							is_protected,
-							created_at: new Date(),
-							updated_at: new Date(),
-						})
-						.returning(["id", "name", "org_id", "app_id", "color", "is_default", "is_protected", "created_at", "updated_at"])
-						.executeTakeFirstOrThrow();
-					c.envType = result;
-				},
-				compensate: async (c) => {
-					const db = await DB.getInstance();
-					await db.deleteFrom("env_type").where("id", "=", c.envType?.id ?? "").execute();
-				},
-			},
-			{
-				name: "fga-write",
-				execute: async (c) => {
-					await AuthorizationService.writeEnvTypeRelations(c.envType!.id, app_id, org_id);
-				},
-				compensate: async (c) => {
-					await AuthorizationService.deleteResourceTuples("env_type", c.envType!.id);
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(CacheKeys.envTypesByOrg(org_id));
-				},
-			},
+		const id = crypto.randomUUID();
+		const now = new Date().toISOString();
+
+		// Atomic STDB reducer: creates env_type row + auth tuples in one call
+		await stdb.callReducer("create_env_type_with_auth", [
+			id,
+			name,
+			org_id,
+			app_id,
+			color,
+			is_default,
+			is_protected,
+			now,
+			now,
 		]);
 
-		return ctx.envType!;
+		await invalidateCache(CacheKeys.envTypesByOrg(org_id));
+
+		return {
+			id,
+			name,
+			org_id,
+			app_id,
+			color,
+			is_default,
+			is_protected,
+			created_at: new Date(now),
+			updated_at: new Date(now),
+		};
 	};
 
 	public static getEnvTypes = async (org_id: string) => {
 		return cacheAside(CacheKeys.envTypesByOrg(org_id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+			const stdb = EnvTypeService.stdb();
 
-			const env_types = await db
-				.selectFrom("env_type")
-				.select([
-					"id",
-					"name",
-					"org_id",
-					"app_id",
-					"is_default",
-					"is_protected",
-					"color",
-					"created_at",
-					"updated_at",
-				])
-				.where("org_id", "=", org_id)
-				.execute();
+			const rows = await stdb.query<EnvTypeRow>(
+				`SELECT * FROM env_type WHERE org_id = '${org_id}'`,
+			);
 
-			return env_types;
+			return rows.map(mapRow);
 		});
 	};
 
 	public static getEnvType = async (id: string) => {
 		return cacheAside(CacheKeys.envType(id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+			const stdb = EnvTypeService.stdb();
 
-			const env_type = await orNotFound(
-				db
-					.selectFrom("env_type")
-					.selectAll()
-					.where("id", "=", id)
-					.executeTakeFirstOrThrow(),
-				"EnvType",
-				id,
+			const row = await stdb.queryOne<EnvTypeRow>(
+				`SELECT * FROM env_type WHERE uuid = '${id}'`,
 			);
 
-			return env_type;
+			if (!row) {
+				throw new NotFoundError("EnvType", id);
+			}
+
+			return mapRow(row);
 		});
 	};
 
@@ -138,63 +128,45 @@ export class EnvTypeService {
 			is_protected?: boolean;
 		},
 	) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
 		// Fetch env_type to get org_id for invalidation
-		const envType = await orNotFound(
-			db
-				.selectFrom("env_type")
-				.select("org_id")
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow(),
-			"EnvType",
-			id,
+		const existing = await stdb.queryOne<EnvTypeRow>(
+			`SELECT * FROM env_type WHERE uuid = '${id}'`,
 		);
 
-		await db
-			.updateTable("env_type")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.execute();
+		if (!existing) {
+			throw new NotFoundError("EnvType", id);
+		}
 
-		await invalidateCache(CacheKeys.envType(id), CacheKeys.envTypesByOrg(envType.org_id));
+		const now = new Date().toISOString();
+
+		await stdb.callReducer("update_env_type", [
+			id,
+			JSON.stringify(data),
+			now,
+		]);
+
+		await invalidateCache(CacheKeys.envType(id), CacheKeys.envTypesByOrg(existing.org_id));
 	};
 
 	public static deleteEnvType = async (id: string) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
-		const envType = await orNotFound(
-			db
-				.selectFrom("env_type")
-				.select("org_id")
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow(),
-			"EnvType",
-			id,
+		const existing = await stdb.queryOne<EnvTypeRow>(
+			`SELECT * FROM env_type WHERE uuid = '${id}'`,
 		);
 
-		await runSaga("deleteEnvType", {}, [
-			{
-				name: "db-delete",
-				execute: async () => {
-					await db.deleteFrom("env_type").where("id", "=", id).execute();
-				},
-			},
-			{
-				name: "fga-cleanup",
-				execute: async () => {
-					await AuthorizationService.deleteResourceTuples("env_type", id);
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(CacheKeys.envType(id), CacheKeys.envTypesByOrg(envType.org_id));
-				},
-			},
-		]);
+		if (!existing) {
+			throw new NotFoundError("EnvType", id);
+		}
+
+		// Delete the env_type row
+		await stdb.callReducer("delete_env_type", [id]);
+
+		// Clean up auth tuples
+		await AuthorizationService.deleteResourceTuples("env_type", id);
+
+		await invalidateCache(CacheKeys.envType(id), CacheKeys.envTypesByOrg(existing.org_id));
 	};
 }

@@ -1,7 +1,7 @@
 /**
  * E2E: Role management — list → get → stats → create → update → delete
  *
- * Uses real PostgreSQL and OpenFGA.
+ * Uses real SpacetimeDB and Keycloak.
  * seedE2EOrg() creates 4 default roles (master, admin, developer, viewer).
  */
 import { beforeAll, describe, expect, test } from "bun:test";

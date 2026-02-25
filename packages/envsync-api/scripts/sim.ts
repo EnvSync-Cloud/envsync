@@ -8,9 +8,9 @@
  *
  * Architecture:
  *   - Rotating orgs: new org every 2 minutes, decommissioned after 4 minutes
- *   - At steady state: ~2-3 concurrent active orgs with fresh FGA state
+ *   - At steady state: ~2-3 concurrent active orgs with fresh auth state
  *   - Configurable concurrent workers running weighted-random scenarios in tight loops
- *   - ResourcePoolManager refreshes DB lookups every 30s for realistic IDs
+ *   - ResourcePoolManager refreshes STDB lookups every 30s for realistic IDs
  *   - MetricsCollector reports RPS, p50/p95/p99 latency every 5s
  *   - Graceful shutdown on SIGINT/SIGTERM
  *
@@ -43,14 +43,14 @@ process.env.SKIP_ROOT_ENV = "1";
 const projectRoot = findProjectRoot();
 const monorepoRoot = path.resolve(projectRoot, "../..");
 
-// Load monorepo root .env first (DATABASE_NAME, PORT, etc.)
+// Load monorepo root .env first (PORT, etc.)
 const rootEnvPath = path.join(monorepoRoot, ".env");
 if (fs.existsSync(rootEnvPath)) {
 	loadEnvFileSimple(rootEnvPath);
 	console.log(`[Sim] Loaded root env from ${rootEnvPath}`);
 }
 
-// Layer E2E-specific credentials (Vault, Zitadel, FGA)
+// Layer E2E-specific credentials (Keycloak, STDB)
 const envE2EPath = path.join(projectRoot, ".env.e2e.test");
 if (fs.existsSync(envE2EPath)) {
 	loadEnvFileSimple(envE2EPath);
@@ -61,19 +61,11 @@ if (fs.existsSync(envE2EPath)) {
 }
 
 // ── 3. Set required environment variables ────────────────────────────
-const zitadelUrl = process.env.ZITADEL_URL ?? "http://localhost:8080";
+const keycloakUrl = process.env.KEYCLOAK_URL ?? "http://localhost:8080";
 
 Object.assign(process.env, {
 	NODE_ENV: "development",
 	PORT: process.env.PORT ?? "4000",
-	DB_LOGGING: "false",
-	DB_AUTO_MIGRATE: "true",
-	DATABASE_SSL: "false",
-	DATABASE_HOST: process.env.DATABASE_HOST ?? "localhost",
-	DATABASE_PORT: process.env.DATABASE_PORT ?? "5432",
-	DATABASE_USER: process.env.DATABASE_USER ?? "postgres",
-	DATABASE_PASSWORD: process.env.DATABASE_PASSWORD ?? "postgres",
-	DATABASE_NAME: process.env.DATABASE_NAME ?? "envsync",
 	S3_BUCKET: process.env.S3_BUCKET ?? "envsync",
 	S3_REGION: process.env.S3_REGION ?? "us-east-1",
 	S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? "rustfsadmin",
@@ -86,27 +78,21 @@ Object.assign(process.env, {
 	SMTP_PORT: process.env.SMTP_PORT ?? "1025",
 	SMTP_SECURE: "false",
 	SMTP_FROM: "sim@envsync.local",
-	ZITADEL_URL: zitadelUrl,
-	ZITADEL_PAT: process.env.ZITADEL_PAT,
-	ZITADEL_LOGIN_PAT: process.env.ZITADEL_LOGIN_PAT ?? process.env.ZITADEL_PAT,
-	ZITADEL_WEB_CLIENT_ID: process.env.ZITADEL_WEB_CLIENT_ID ?? "test-web-client-id",
-	ZITADEL_WEB_CLIENT_SECRET: process.env.ZITADEL_WEB_CLIENT_SECRET ?? "test-web-client-secret",
-	ZITADEL_CLI_CLIENT_ID: process.env.ZITADEL_CLI_CLIENT_ID ?? "test-cli-client-id",
-	ZITADEL_CLI_CLIENT_SECRET: process.env.ZITADEL_CLI_CLIENT_SECRET ?? "test-cli-client-secret",
-	ZITADEL_API_CLIENT_ID: process.env.ZITADEL_API_CLIENT_ID ?? "test-api-client-id",
-	ZITADEL_API_CLIENT_SECRET: process.env.ZITADEL_API_CLIENT_SECRET ?? "test-api-client-secret",
-	ZITADEL_WEB_REDIRECT_URI: process.env.ZITADEL_WEB_REDIRECT_URI ?? "http://localhost:3000/callback",
-	ZITADEL_WEB_CALLBACK_URL: process.env.ZITADEL_WEB_CALLBACK_URL ?? "http://localhost:3000",
-	ZITADEL_API_REDIRECT_URI: process.env.ZITADEL_API_REDIRECT_URI ?? "http://localhost:4000/callback",
-	VAULT_ADDR: process.env.VAULT_ADDR ?? "http://localhost:8200",
-	VAULT_ROLE_ID: process.env.VAULT_ROLE_ID,
-	VAULT_SECRET_ID: process.env.VAULT_SECRET_ID,
-	VAULT_MOUNT_PATH: process.env.VAULT_MOUNT_PATH ?? "envsync",
-	OPENFGA_API_URL: process.env.OPENFGA_API_URL ?? "http://localhost:8090",
-	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",
-	OPENFGA_MODEL_ID: process.env.OPENFGA_MODEL_ID ?? "",
-	MINIKMS_GRPC_ADDR: process.env.MINIKMS_GRPC_ADDR ?? "localhost:50051",
-	MINIKMS_TLS_ENABLED: "false",
+	KEYCLOAK_URL: keycloakUrl,
+	KEYCLOAK_REALM: process.env.KEYCLOAK_REALM ?? "envsync",
+	KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER ?? "admin",
+	KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin",
+	KEYCLOAK_WEB_CLIENT_ID: process.env.KEYCLOAK_WEB_CLIENT_ID ?? "test-web-client-id",
+	KEYCLOAK_WEB_CLIENT_SECRET: process.env.KEYCLOAK_WEB_CLIENT_SECRET ?? "test-web-client-secret",
+	KEYCLOAK_CLI_CLIENT_ID: process.env.KEYCLOAK_CLI_CLIENT_ID ?? "test-cli-client-id",
+	KEYCLOAK_API_CLIENT_ID: process.env.KEYCLOAK_API_CLIENT_ID ?? "test-api-client-id",
+	KEYCLOAK_API_CLIENT_SECRET: process.env.KEYCLOAK_API_CLIENT_SECRET ?? "test-api-client-secret",
+	KEYCLOAK_WEB_REDIRECT_URI: process.env.KEYCLOAK_WEB_REDIRECT_URI ?? "http://localhost:3000/callback",
+	KEYCLOAK_WEB_CALLBACK_URL: process.env.KEYCLOAK_WEB_CALLBACK_URL ?? "http://localhost:3000",
+	KEYCLOAK_API_REDIRECT_URI: process.env.KEYCLOAK_API_REDIRECT_URI ?? "http://localhost:4000/callback",
+	STDB_URL: process.env.STDB_URL ?? "http://localhost:3000",
+	STDB_DB_NAME: process.env.STDB_DB_NAME ?? "envsync-kms",
+	STDB_ROOT_KEY: process.env.STDB_ROOT_KEY ?? "test-root-key",
 	LANDING_PAGE_URL: "http://localhost:3000",
 	DASHBOARD_URL: "http://localhost:9090",
 });
@@ -115,10 +101,8 @@ Object.assign(process.env, {
 const { CacheClient } = await import("@/libs/cache");
 CacheClient.init("production");
 
-const { DB } = await import("@/libs/db");
-await DB.getInstance();
-
-const { FGAClient } = await import("@/libs/openfga");
+const { STDBClient } = await import("@/libs/stdb");
+STDBClient.getInstance();
 
 const { seedE2EOrg, seedE2EUser, setupE2EUserPermissions } = await import(
 	"../tests/e2e/helpers/real-auth"
@@ -319,7 +303,7 @@ interface OrgContext {
 
 // ── Parameterized refresh & seed ─────────────────────────────────────
 async function refreshPoolsForCtx(ctx: OrgContext): Promise<void> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	const orgId = ctx.seed.org.id;
 	try {
 		const [
@@ -336,36 +320,36 @@ async function refreshPoolsForCtx(ctx: OrgContext): Promise<void> {
 			envPits,
 			secretPits,
 		] = await Promise.all([
-			db.selectFrom("app").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("env_type").select(["id", "app_id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("invite_user").select(["id", "invite_token"]).where("org_id", "=", orgId).where("is_accepted", "=", false).execute(),
-			db.selectFrom("api_keys").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("teams").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("webhook_store").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("gpg_keys").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("org_certificates").select(["id", "serial_hex", "status"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("org_role").select(["id", "is_master"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("users").select(["id"]).where("org_id", "=", orgId).execute(),
-			db.selectFrom("env_store_pit").select(["id", "env_type_id"]).where("org_id", "=", orgId).orderBy("created_at", "desc").limit(100).execute(),
-			db.selectFrom("secret_store_pit").select(["id", "env_type_id"]).where("org_id", "=", orgId).orderBy("created_at", "desc").limit(100).execute(),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM app WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string; app_id: string }>(`SELECT uuid, app_id FROM env_type WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string; invite_token: string }>(`SELECT uuid, invite_token FROM invite_user WHERE org_id = '${orgId}' AND is_accepted = false`),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM api_key WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM team WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM webhook WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM gpg_key_meta WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string; serial_hex: string; status: string }>(`SELECT uuid, serial_hex, status FROM org_certificate_meta WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string; is_master: boolean }>(`SELECT uuid, is_master FROM org_role WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string }>(`SELECT uuid FROM user WHERE org_id = '${orgId}'`),
+			stdb.query<{ uuid: string; env_type_id: string }>(`SELECT uuid, env_type_id FROM env_store_pit WHERE org_id = '${orgId}' ORDER BY created_at DESC LIMIT 100`),
+			stdb.query<{ uuid: string; env_type_id: string }>(`SELECT uuid, env_type_id FROM secret_store_pit WHERE org_id = '${orgId}' ORDER BY created_at DESC LIMIT 100`),
 		]);
 
-		ctx.pools.appIds = apps.map((a) => a.id);
-		ctx.pools.envTypeIds = envTypes.map((e) => e.id);
-		ctx.pools.envTypesWithApp = envTypes.map((e) => ({ id: e.id, app_id: e.app_id }));
+		ctx.pools.appIds = apps.map((a) => a.uuid);
+		ctx.pools.envTypeIds = envTypes.map((e) => e.uuid);
+		ctx.pools.envTypesWithApp = envTypes.map((e) => ({ id: e.uuid, app_id: e.app_id }));
 		ctx.pools.inviteTokens = invites.map((i) => i.invite_token);
-		ctx.pools.inviteIds = invites.map((i) => i.id);
-		ctx.pools.apiKeyIds = apiKeys.map((a) => a.id);
-		ctx.pools.teamIds = teams.map((t) => t.id);
-		ctx.pools.webhookIds = webhooks.map((w) => w.id);
-		ctx.pools.gpgKeyIds = gpgKeys.map((g) => g.id);
-		ctx.pools.certIds = certs.filter((c) => c.status === "active").map((c) => c.id);
+		ctx.pools.inviteIds = invites.map((i) => i.uuid);
+		ctx.pools.apiKeyIds = apiKeys.map((a) => a.uuid);
+		ctx.pools.teamIds = teams.map((t) => t.uuid);
+		ctx.pools.webhookIds = webhooks.map((w) => w.uuid);
+		ctx.pools.gpgKeyIds = gpgKeys.map((g) => g.uuid);
+		ctx.pools.certIds = certs.filter((c) => c.status === "active").map((c) => c.uuid);
 		ctx.pools.certSerials = certs.filter((c) => c.status === "active").map((c) => c.serial_hex);
-		ctx.pools.roleIds = roles.map((r) => r.id);
-		ctx.pools.nonMasterRoleIds = roles.filter((r) => !r.is_master).map((r) => r.id);
-		ctx.pools.userIds = users.map((u) => u.id);
-		ctx.pools.envPitIds = envPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
-		ctx.pools.secretPitIds = secretPits.map((p) => ({ id: p.id, env_type_id: p.env_type_id }));
+		ctx.pools.roleIds = roles.map((r) => r.uuid);
+		ctx.pools.nonMasterRoleIds = roles.filter((r) => !r.is_master).map((r) => r.uuid);
+		ctx.pools.userIds = users.map((u) => u.uuid);
+		ctx.pools.envPitIds = envPits.map((p) => ({ id: p.uuid, env_type_id: p.env_type_id }));
+		ctx.pools.secretPitIds = secretPits.map((p) => ({ id: p.uuid, env_type_id: p.env_type_id }));
 	} catch {
 		// pool refresh failure is non-fatal
 	}
@@ -1222,30 +1206,22 @@ class OrgManager {
 		const orgId = ctx.id;
 		console.log(`[Sim] Cleaning up org ${ctx.seed.org.slug} (${orgId})...`);
 
-		// DB: CASCADE delete from orgs
+		// STDB: delete org and cascade
 		try {
-			const db = await DB.getInstance();
-			await db.deleteFrom("orgs").where("id", "=", orgId).execute();
-			console.log(`[Sim] DB cleanup done for org ${orgId}`);
+			const stdb = STDBClient.getInstance();
+			await stdb.callReducer("delete_org", [orgId]);
+			console.log(`[Sim] STDB cleanup done for org ${orgId}`);
 		} catch (err) {
-			console.error(`[Sim] DB cleanup error for org ${orgId}:`, (err as Error).message);
+			console.error(`[Sim] STDB cleanup error for org ${orgId}:`, (err as Error).message);
 		}
 
-		// FGA: read and delete all tuples for this org
+		// STDB: clean up auth tuples for this org
 		try {
-			const fga = await FGAClient.getInstance();
-			const orgObject = `org:${orgId}`;
-			const tuples = await fga.readTuples({ object: orgObject });
-			if (tuples.length > 0) {
-				// Delete in batches of 10 (FGA limit)
-				for (let i = 0; i < tuples.length; i += 10) {
-					const batch = tuples.slice(i, i + 10);
-					await fga.deleteTuples(batch);
-				}
-			}
-			console.log(`[Sim] FGA cleanup done for org ${orgId} (${tuples.length} tuples removed)`);
+			const stdb = STDBClient.getInstance();
+			await stdb.callReducer("delete_auth_tuples", [JSON.stringify([{ subject: "", relation: "", object_type: "org", object_id: orgId }])]);
+			console.log(`[Sim] Auth tuple cleanup done for org ${orgId}`);
 		} catch (err) {
-			console.error(`[Sim] FGA cleanup error for org ${orgId}:`, (err as Error).message);
+			console.error(`[Sim] Auth tuple cleanup error for org ${orgId}:`, (err as Error).message);
 		}
 
 		this.contexts.delete(orgId);

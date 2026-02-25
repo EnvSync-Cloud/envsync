@@ -2,7 +2,7 @@
  * E2E: CLI push/pull — build CLI binary → start real HTTP server →
  * create project fixture → push local .env → verify remote → pull remote → verify local
  *
- * Uses real PostgreSQL, OpenFGA, and a real Bun.serve HTTP server.
+ * Uses real SpacetimeDB, Keycloak, and a real Bun.serve HTTP server.
  * The Go CLI binary is built with backendURL baked in via ldflags.
  */
 import { beforeAll, afterAll, describe, expect, test } from "bun:test";

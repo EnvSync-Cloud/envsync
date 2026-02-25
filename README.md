@@ -53,10 +53,9 @@ When you run from the root (e.g. `bun run dev`, `bun run cli init`), or when Tur
 bun run dev
 
 # Full init: creates .env from .env.example, starts Docker services
-# (postgres, redis, rustfs, mailpit, zitadel, vault), waits for
-# postgres/zitadel/rustfs, runs DB migrations, creates RustFS bucket.
-# With ZITADEL_PAT or ZITADEL_PAT_FILE set, init creates Zitadel OIDC apps
-# and writes client IDs/secrets to .env.
+# (keycloak, spacetimedb, redis, rustfs, mailpit), waits for
+# Keycloak/SpacetimeDB/RustFS, creates RustFS bucket, retrieves
+# Keycloak client secrets and writes them to .env.
 bun run cli init
 ```
 
@@ -66,13 +65,12 @@ After `bun run cli init`, start the API with `bun run dev` or `docker compose up
 
 ## Root scripts (`scripts/`)
 
-The **`scripts/`** folder at the repo root provides a single entrypoint for environment setup, Docker, and migrations.
+The **`scripts/`** folder at the repo root provides a single entrypoint for environment setup and Docker.
 
 | Command | Description |
 |--------|-------------|
-| `bun run cli init` | Full init: ensure `.env`, Docker up, wait for services, run DB migrations, API init (RustFS bucket + Zitadel OIDC apps), then Docker down |
-| `bun run cli db <cmd>` | Run DB migrations (delegates to `packages/envsync-api/scripts/migrate.ts`). Examples: `db latest`, `db list`, `db rollback`, `db backup`, `db restore`, `db migrate_to <name>`, `db step`, `db drop`, `db init` |
-| `bun run cli services up` | Start Docker Compose services (postgres, redis, rustfs, mailpit, zitadel, vault) |
+| `bun run cli init` | Full init: ensure `.env`, Docker up, wait for services, API init (RustFS bucket + Keycloak client secrets), then Docker down |
+| `bun run cli services up` | Start Docker Compose services (keycloak, spacetimedb, redis, rustfs, mailpit) |
 | `bun run cli services down` | Stop Docker Compose services |
 | `bun run cli services status` | Show Docker Compose service status |
 
@@ -82,7 +80,7 @@ Usage:
 bun run cli <command> [options]
 ```
 
-The API package also exposes its own CLI for init/bucket/Zitadel from the API context:
+The API package also exposes its own CLI for init/bucket/Keycloak from the API context:
 
 ```bash
 # From monorepo root or packages/envsync-api
@@ -98,7 +96,7 @@ bun run packages/envsync-api/scripts/cli.ts init
 | **`packages/`** | Core libraries and services (API, CLI) |
 | **`apps/`** | Web applications (dashboard, landing) |
 | **`sdks/`** | Generated API clients (TypeScript, Go) |
-| **`scripts/`** | Root-level CLI for init, DB, and Docker |
+| **`scripts/`** | Root-level CLI for init and Docker |
 
 ---
 
@@ -108,9 +106,9 @@ bun run packages/envsync-api/scripts/cli.ts init
 
 REST API backend for EnvSync Cloud.
 
-- **Stack:** Hono, Bun, TypeScript, PostgreSQL (Kysely), Redis, Zitadel (OIDC), S3-compatible (RustFS), Docker  
-- **Docs:** [api.envsync.cloud/docs](https://api.envsync.cloud/docs)  
-- **From root:** `bun run dev` (Turbo) or run from `packages/envsync-api`: `bun run dev`, `bun db` (migrations), `bun run scripts/cli.ts init`  
+- **Stack:** Hono, Bun, TypeScript, SpacetimeDB, Redis, Keycloak (OIDC), S3-compatible (RustFS), Docker
+- **Docs:** [api.envsync.cloud/docs](https://api.envsync.cloud/docs)
+- **From root:** `bun run dev` (Turbo) or run from `packages/envsync-api`: `bun run dev`, `bun run scripts/cli.ts init`  
 
 See **[packages/envsync-api/README.md](packages/envsync-api/README.md)** for API-specific setup, env vars, and structure.
 
@@ -167,20 +165,14 @@ Generated Go SDK for the EnvSync API.
 
 ---
 
-## Zitadel: initial data via API
+## Keycloak
 
-Zitadel needs a **first user** (human or machine) before you can create data via the API. The recommended approach is [Creating initial data using the API](https://github.com/zitadel/zitadel/discussions/8296).
+Keycloak provides OIDC authentication for EnvSync. Setup is fully automated:
 
-1. The **first instance** creates an initial machine user and writes a **PAT** to a path you configure (`ZITADEL_FIRSTINSTANCE_PATPATH` in docker-compose, e.g. `/current-dir/admin.pat`).  
-2. Use that PAT to call the Management/Application API (e.g. create project and OIDC apps in the init script).
-
-In this repo, the Zitadel container is configured to create the machine user and write the PAT to the `zitadel_data` volume. The **root init script** (`bun run cli init`) can read the PAT from that Docker volume (via a one-off container), write it to the root `.env` as `ZITADEL_PAT`, and continue with migrations and API init so OIDC apps are created and client IDs/secrets are written to `.env`.
-
-- **Option A (default):** Run `bun run cli init`; the script reads the PAT from the volume, saves it to `.env`, and continues.  
-- **Option B:** If you bind-mount Zitadel data (e.g. `./zitadel-data:/current-dir`), set `ZITADEL_PAT_FILE=./zitadel-data/admin.pat` and the API init step will read the PAT from that file.  
-- **Option C:** Set `ZITADEL_PAT` in `.env` manually (e.g. from the Zitadel console) and skip the volume read.
-
-**URLs:** Console `http://localhost:8080/ui/console`, login UI `http://localhost:3000`. Set `ZITADEL_URL=http://localhost:8080` in `.env` when using from the host.
+- The **"envsync" realm** is auto-imported on first start via `--import-realm` in Docker Compose.
+- Three OIDC clients are pre-configured: `envsync-web`, `envsync-api`, `envsync-cli`.
+- The init script (`bun run cli init`) automatically retrieves client secrets from the Keycloak Admin API and writes them to `.env`.
+- No PAT or manual configuration needed.
 
 ---
 

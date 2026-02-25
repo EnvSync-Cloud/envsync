@@ -1,0 +1,124 @@
+{
+  "realm": "envsync",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "defaultSignatureAlgorithm": "RS256",
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "oauth2DeviceCodeLifespan": 600,
+  "oauth2DevicePollingInterval": 5,
+  "roles": {
+    "realm": [
+      {
+        "name": "default-roles-envsync",
+        "description": "Default realm roles",
+        "composite": false
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "envsync-web",
+      "name": "EnvSync Web Dashboard",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": ["http://localhost:8001/api/access/web/callback", "http://localhost:8080/*"],
+      "webOrigins": ["http://localhost:8001", "http://localhost:8080"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8080/*",
+        "oauth2.device.authorization.grant.enabled": "false"
+      },
+      "defaultClientScopes": ["openid", "email", "profile"]
+    },
+    {
+      "clientId": "envsync-api",
+      "name": "EnvSync API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": ["http://localhost:8001/api/access/api/callback"],
+      "webOrigins": ["http://localhost:8001"],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false"
+      },
+      "defaultClientScopes": ["openid", "email", "profile"]
+    },
+    {
+      "clientId": "envsync-cli",
+      "name": "EnvSync CLI",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      },
+      "defaultClientScopes": ["openid", "email", "profile"]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "openid",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true"
+      }
+    }
+  ],
+  "smtpServer": {},
+  "internationalizationEnabled": false,
+  "supportedLocales": ["en"],
+  "defaultLocale": "en"
+}

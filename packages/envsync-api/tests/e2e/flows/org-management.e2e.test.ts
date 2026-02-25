@@ -1,7 +1,7 @@
 /**
  * E2E: Org management — get → check slug → update → verify
  *
- * Uses real PostgreSQL and OpenFGA.
+ * Uses real SpacetimeDB and Keycloak.
  * Master has can_manage_org_settings via FGA model's master → computed relation.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

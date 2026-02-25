@@ -1,24 +1,7 @@
-import { DB } from "@/libs/db";
 import { ConflictError, NotFoundError } from "@/libs/errors";
-import { VaultClient } from "@/libs/vault";
-import { secretPath, secretScopePath } from "@/libs/vault/paths";
+import { STDBClient } from "@/libs/stdb";
 
 import { KeyValidationService } from "./key_validation.service";
-
-/** Simple concurrency limiter for parallel operations. */
-function pLimit(concurrency: number) {
-	let active = 0;
-	const queue: (() => void)[] = [];
-	const next = () => { if (queue.length > 0 && active < concurrency) { active++; queue.shift()!(); } };
-	return <T>(fn: () => Promise<T>): Promise<T> =>
-		new Promise<T>((resolve, reject) => {
-			const run = () => fn().then(resolve, reject).finally(() => { active--; next(); });
-			queue.push(run);
-			next();
-		});
-}
-
-const limit = pLimit(10);
 
 /**
  * Synthesize a response object matching the previous PG row shape.
@@ -29,7 +12,7 @@ function toSecretRecord(
 	env_type_id: string,
 	key: string,
 	value: string,
-	created_time: string,
+	created_at: string,
 ) {
 	return {
 		id: `${org_id}:${app_id}:${env_type_id}:${key}`,
@@ -38,8 +21,8 @@ function toSecretRecord(
 		env_type_id,
 		key,
 		value,
-		created_at: new Date(created_time),
-		updated_at: new Date(created_time),
+		created_at: new Date(Number(created_at) / 1000),
+		updated_at: new Date(Number(created_at) / 1000),
 	};
 }
 
@@ -69,11 +52,10 @@ export class SecretService {
 			throw new ConflictError(keyCheck.message!);
 		}
 
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-		const result = await vault.kvWrite(path, { value });
+		const stdb = STDBClient.getInstance();
+		await stdb.callReducer("create_secret", [org_id, app_id, env_type_id, key, value]);
 
-		return { id: `${org_id}:${app_id}:${env_type_id}:${key}`, vault_version: result.version };
+		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
 	};
 
 	public static getSecret = async ({
@@ -87,22 +69,25 @@ export class SecretService {
 		app_id: string;
 		org_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-		const result = await vault.kvRead(path);
+		const stdb = STDBClient.getInstance();
+		try {
+			const resultJson = await stdb.callReducer<string>("get_secret", [org_id, app_id, env_type_id, key]);
+			const result = JSON.parse(resultJson);
 
-		if (!result) {
-			return undefined;
+			return toSecretRecord(
+				org_id,
+				app_id,
+				env_type_id,
+				result.key,
+				result.value,
+				result.created_at,
+			);
+		} catch (err: any) {
+			if (err?.stdbMessage?.includes("not found")) {
+				return undefined;
+			}
+			throw err;
 		}
-
-		return toSecretRecord(
-			org_id,
-			app_id,
-			env_type_id,
-			key,
-			result.data.value,
-			result.metadata.created_time,
-		);
 	};
 
 	public static updateSecret = async ({
@@ -118,16 +103,15 @@ export class SecretService {
 		org_id: string;
 		env_type_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Secret", key);
+		const stdb = STDBClient.getInstance();
+		try {
+			await stdb.callReducer("update_secret", [org_id, app_id, env_type_id, key, value]);
+		} catch (err: any) {
+			if (err?.stdbMessage?.includes("not found")) {
+				throw new NotFoundError("Secret", key);
+			}
+			throw err;
 		}
-
-		const result = await vault.kvWrite(path, { value });
-		return { vault_version: result.version };
 	};
 
 	public static deleteSecret = async ({
@@ -141,15 +125,15 @@ export class SecretService {
 		env_type_id: string;
 		org_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Secret", key);
+		const stdb = STDBClient.getInstance();
+		try {
+			await stdb.callReducer("delete_secret", [org_id, app_id, env_type_id, key], { injectRootKey: false });
+		} catch (err: any) {
+			if (err?.stdbMessage?.includes("not found")) {
+				throw new NotFoundError("Secret", key);
+			}
+			throw err;
 		}
-
-		await vault.kvMetadataDelete(path);
 	};
 
 	public static getAllSecret = async ({
@@ -161,41 +145,20 @@ export class SecretService {
 		org_id: string;
 		env_type_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const scopePath = secretScopePath(org_id, app_id, env_type_id);
-		const keys = await vault.kvList(scopePath);
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>("list_secrets", [org_id, app_id, env_type_id]);
+		const results: { key: string; value: string; created_at: string }[] = JSON.parse(resultJson);
 
-		if (keys.length === 0) {
-			return [];
-		}
-
-		const results = await Promise.all(
-			keys.map(key => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, key);
-				const result = await vault.kvRead(path);
-				if (!result) return null;
-				return toSecretRecord(
-					org_id,
-					app_id,
-					env_type_id,
-					key,
-					result.data.value,
-					result.metadata.created_time,
-				);
-			})),
+		return results.map(r =>
+			toSecretRecord(org_id, app_id, env_type_id, r.key, r.value, r.created_at),
 		);
-
-		return results.filter(r => r !== null);
 	};
 
 	public static batchCreateSecrets = async (
 		org_id: string,
 		app_id: string,
 		env_type_id: string,
-		envs: {
-			key: string;
-			value: string;
-		}[],
+		envs: { key: string; value: string }[],
 	) => {
 		const keys = envs.map(env => env.key);
 		const conflicts = await KeyValidationService.validateKeys({
@@ -211,39 +174,20 @@ export class SecretService {
 			throw new ConflictError(`Key conflicts found: ${conflictMessages}`);
 		}
 
-		const vault = await VaultClient.getInstance();
-
-		const results = await Promise.all(
-			envs.map(env => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, env.key);
-				const result = await vault.kvWrite(path, { value: env.value });
-				return { key: env.key, vault_version: result.version };
-			})),
-		);
-
-		return results;
+		const stdb = STDBClient.getInstance();
+		const itemsJson = JSON.stringify(envs);
+		await stdb.callReducer("batch_create_secrets", [org_id, app_id, env_type_id, itemsJson]);
 	};
 
 	public static batchUpdateSecrets = async (
 		org_id: string,
 		app_id: string,
 		env_type_id: string,
-		envs: {
-			key: string;
-			value: string;
-		}[],
+		envs: { key: string; value: string }[],
 	) => {
-		const vault = await VaultClient.getInstance();
-
-		const results = await Promise.all(
-			envs.map(env => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, env.key);
-				const result = await vault.kvWrite(path, { value: env.value });
-				return { key: env.key, vault_version: result.version };
-			})),
-		);
-
-		return results;
+		const stdb = STDBClient.getInstance();
+		const itemsJson = JSON.stringify(envs);
+		await stdb.callReducer("batch_update_secrets", [org_id, app_id, env_type_id, itemsJson]);
 	};
 
 	public static batchDeleteSecrets = async (
@@ -252,14 +196,9 @@ export class SecretService {
 		env_type_id: string,
 		keys: string[],
 	) => {
-		const vault = await VaultClient.getInstance();
-
-		await Promise.all(
-			keys.map(key => limit(() => {
-				const path = secretPath(org_id, app_id, env_type_id, key);
-				return vault.kvMetadataDelete(path);
-			})),
-		);
+		const stdb = STDBClient.getInstance();
+		const keysJson = JSON.stringify(keys);
+		await stdb.callReducer("batch_delete_secrets", [org_id, app_id, env_type_id, keysJson], { injectRootKey: false });
 	};
 
 	public static getAppSecretSummary = async ({
@@ -269,21 +208,20 @@ export class SecretService {
 		app_id: string;
 		org_id: string;
 	}) => {
-		const db = await DB.getInstance();
-		const envTypes = await db
-			.selectFrom("env_type")
-			.select("id")
-			.where("app_id", "=", app_id)
-			.where("org_id", "=", org_id)
-			.execute();
-
-		const vault = await VaultClient.getInstance();
+		const stdb = STDBClient.getInstance();
+		const envTypes = await stdb.query<{ uuid: string }>(
+			`SELECT uuid FROM env_type WHERE app_id = '${app_id}' AND org_id = '${org_id}'`,
+		);
 
 		const summary = await Promise.all(
 			envTypes.map(async et => {
-				const scopePath = secretScopePath(org_id, app_id, et.id);
-				const keys = await vault.kvList(scopePath);
-				return { env_type_id: et.id, count: keys.length };
+				const resultJson = await stdb.callReducer<string>(
+					"list_keys_in_scope",
+					[org_id, app_id, et.uuid],
+					{ injectRootKey: false },
+				);
+				const result = JSON.parse(resultJson);
+				return { env_type_id: et.uuid, count: result.secret_keys.length };
 			}),
 		);
 

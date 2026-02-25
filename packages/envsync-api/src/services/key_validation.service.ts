@@ -1,9 +1,8 @@
-import { VaultClient } from "@/libs/vault";
-import { envPath, envScopePath, secretPath, secretScopePath } from "@/libs/vault/paths";
+import { STDBClient } from "@/libs/stdb";
 
 export class KeyValidationService {
 	/**
-	 * Check if a key already exists in either env or secret Vault paths.
+	 * Check if a key already exists in either env or secret STDB tables.
 	 */
 	public static async checkKeyExists({
 		key,
@@ -18,47 +17,21 @@ export class KeyValidationService {
 		org_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const vault = await VaultClient.getInstance();
-
-		// Check env path unless excluded
-		if (excludeTable !== "env_store") {
-			const path = envPath(org_id, app_id, env_type_id, key);
-			const result = await vault.kvRead(path);
-
-			if (result) {
-				return {
-					exists: true,
-					type: "environment_variable" as const,
-					message: `Key "${key}" already exists as an environment variable`,
-				};
-			}
-		}
-
-		// Check secret path unless excluded
-		if (excludeTable !== "secret_store") {
-			const path = secretPath(org_id, app_id, env_type_id, key);
-			const result = await vault.kvRead(path);
-
-			if (result) {
-				return {
-					exists: true,
-					type: "secret" as const,
-					message: `Key "${key}" already exists as a secret`,
-				};
-			}
-		}
-
-		return {
-			exists: false,
-			type: null,
-			message: null,
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>(
+			"check_key_exists",
+			[org_id, app_id, env_type_id, key, excludeTable || ""],
+			{ injectRootKey: false },
+		);
+		return JSON.parse(resultJson) as {
+			exists: boolean;
+			type: "environment_variable" | "secret" | null;
+			message: string | null;
 		};
 	}
 
 	/**
-	 * Validate multiple keys at once using optimized LIST calls.
-	 * Instead of N individual reads, uses 2 LIST calls to get all existing keys,
-	 * then checks membership in a Set.
+	 * Validate multiple keys at once using a single STDB call.
 	 */
 	public static async validateKeys({
 		keys,
@@ -73,21 +46,20 @@ export class KeyValidationService {
 		org_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const vault = await VaultClient.getInstance();
+		const stdb = STDBClient.getInstance();
+		const resultJson = await stdb.callReducer<string>(
+			"list_keys_in_scope",
+			[org_id, app_id, env_type_id],
+			{ injectRootKey: false },
+		);
+		const result = JSON.parse(resultJson) as {
+			env_keys: string[];
+			secret_keys: string[];
+		};
+
+		const envKeySet = new Set(excludeTable === "env_store" ? [] : result.env_keys);
+		const secretKeySet = new Set(excludeTable === "secret_store" ? [] : result.secret_keys);
 		const conflicts: { key: string; type: string | null; message: string | null }[] = [];
-
-		// Fetch existing keys via LIST (much more efficient than N individual reads)
-		const [envKeys, secretKeys] = await Promise.all([
-			excludeTable === "env_store"
-				? Promise.resolve([])
-				: vault.kvList(envScopePath(org_id, app_id, env_type_id)),
-			excludeTable === "secret_store"
-				? Promise.resolve([])
-				: vault.kvList(secretScopePath(org_id, app_id, env_type_id)),
-		]);
-
-		const envKeySet = new Set(envKeys);
-		const secretKeySet = new Set(secretKeys);
 
 		for (const key of keys) {
 			if (excludeTable !== "env_store" && envKeySet.has(key)) {
@@ -110,7 +82,6 @@ export class KeyValidationService {
 
 	/**
 	 * Filter out conflicting keys from a batch, returning only safe-to-write keys.
-	 * Use this for idempotent batch operations where partial success is acceptable.
 	 */
 	public static async filterConflicts({
 		keys,

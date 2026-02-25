@@ -1,13 +1,50 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB } from "@/libs/db";
-import { orNotFound } from "@/libs/errors";
-import { runSaga } from "@/helpers/saga";
+import { STDBClient } from "@/libs/stdb";
+import { NotFoundError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
 
+interface TeamRow {
+	uuid: string;
+	name: string;
+	org_id: string;
+	description: string | null;
+	color: string;
+	created_at: string;
+	updated_at: string;
+}
+
+interface TeamMemberRow {
+	uuid: string;
+	team_id: string;
+	user_id: string;
+	created_at: string;
+}
+
+interface UserRow {
+	uuid: string;
+	full_name: string;
+	email: string;
+	profile_picture_url: string | null;
+}
+
+function mapTeamRow(row: TeamRow) {
+	return {
+		id: row.uuid,
+		name: row.name,
+		org_id: row.org_id,
+		description: row.description,
+		color: row.color,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
+}
+
 export class TeamService {
+	private static stdb() {
+		return STDBClient.getInstance();
+	}
+
 	public static createTeam = async ({
 		name,
 		org_id,
@@ -19,88 +56,62 @@ export class TeamService {
 		description?: string;
 		color?: string;
 	}) => {
-		let teamId: string | undefined;
-		let teamRow: Record<string, unknown> | undefined;
-		await runSaga("createTeam", {}, [
-			{
-				name: "db-insert",
-				execute: async () => {
-					const db = await DB.getInstance();
-					const result = await db
-						.insertInto("teams")
-						.values({
-							id: uuidv4(),
-							name,
-							org_id,
-							description: description || null,
-							color: color || "#000000",
-							created_at: new Date(),
-							updated_at: new Date(),
-						})
-						.returningAll()
-						.executeTakeFirstOrThrow();
-					teamRow = result;
-					teamId = result.id;
-				},
-				compensate: async () => {
-					if (teamId) {
-						const db = await DB.getInstance();
-						await db.deleteFrom("teams").where("id", "=", teamId).execute();
-					}
-				},
-			},
-			{
-				name: "fga-write",
-				execute: async () => {
-					await AuthorizationService.writeTeamOrgRelation(teamId!, org_id);
-				},
-				compensate: async () => {
-					if (teamId) {
-						await AuthorizationService.deleteResourceTuples("team", teamId);
-					}
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(CacheKeys.teamsByOrg(org_id));
-				},
-			},
+		const stdb = this.stdb();
+		const id = crypto.randomUUID();
+		const now = new Date().toISOString();
+
+		await stdb.callReducer("create_team", [
+			id,
+			name,
+			org_id,
+			description || null,
+			color || "#000000",
+			now,
+			now,
 		]);
 
-		return teamRow!;
+		// Write team -> org auth relation
+		await AuthorizationService.writeTeamOrgRelation(id, org_id);
+
+		await invalidateCache(CacheKeys.teamsByOrg(org_id));
+
+		return mapTeamRow({
+			uuid: id,
+			name,
+			org_id,
+			description: description || null,
+			color: color || "#000000",
+			created_at: now,
+			updated_at: now,
+		});
 	};
 
 	public static getTeam = async (id: string) => {
 		return cacheAside(CacheKeys.team(id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+			const stdb = TeamService.stdb();
 
-			const team = await orNotFound(
-				db
-					.selectFrom("teams")
-					.selectAll()
-					.where("id", "=", id)
-					.executeTakeFirstOrThrow(),
-				"Team",
-				id,
+			const row = await stdb.queryOne<TeamRow>(
+				`SELECT * FROM team WHERE uuid = '${id}'`,
 			);
 
-			return team;
+			if (!row) {
+				throw new NotFoundError("Team", id);
+			}
+
+			return mapTeamRow(row);
 		});
 	};
 
 	public static getTeamsByOrg = async (org_id: string, page = 1, per_page = 50) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
-		const teams = await db
-			.selectFrom("teams")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.limit(per_page)
-			.offset((page - 1) * per_page)
-			.execute();
+		const rows = await stdb.queryPaginated<TeamRow>(
+			`SELECT * FROM team WHERE org_id = '${org_id}'`,
+			per_page,
+			(page - 1) * per_page,
+		);
 
-		return teams;
+		return rows.map(mapTeamRow);
 	};
 
 	public static updateTeam = async (
@@ -111,178 +122,135 @@ export class TeamService {
 			color?: string;
 		},
 	) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
 		// Fetch team to get org_id for invalidation
-		const team = await orNotFound(
-			db
-				.selectFrom("teams")
-				.select("org_id")
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow(),
-			"Team",
-			id,
+		const existing = await stdb.queryOne<TeamRow>(
+			`SELECT * FROM team WHERE uuid = '${id}'`,
 		);
 
-		await db
-			.updateTable("teams")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.execute();
+		if (!existing) {
+			throw new NotFoundError("Team", id);
+		}
 
-		await invalidateCache(CacheKeys.team(id), CacheKeys.teamsByOrg(team.org_id));
+		const now = new Date().toISOString();
+
+		await stdb.callReducer("update_team", [
+			id,
+			JSON.stringify(data),
+			now,
+		]);
+
+		await invalidateCache(CacheKeys.team(id), CacheKeys.teamsByOrg(existing.org_id));
 	};
 
 	public static deleteTeam = async (id: string) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
-		const team = await orNotFound(
-			db
-				.selectFrom("teams")
-				.select("org_id")
-				.where("id", "=", id)
-				.executeTakeFirstOrThrow(),
-			"Team",
-			id,
+		const existing = await stdb.queryOne<TeamRow>(
+			`SELECT * FROM team WHERE uuid = '${id}'`,
 		);
 
-		const members = await db
-			.selectFrom("team_members")
-			.select("user_id")
-			.where("team_id", "=", id)
-			.execute();
+		if (!existing) {
+			throw new NotFoundError("Team", id);
+		}
 
-		await runSaga("deleteTeam", {}, [
-			{
-				name: "fga-remove-members",
-				execute: async () => {
-					// Batch remove all member FGA tuples in parallel
-					await Promise.all(
-						members.map(m => AuthorizationService.removeTeamMember(id, m.user_id)),
-					);
-				},
-			},
-			{
-				name: "db-delete",
-				execute: async () => {
-					await db.deleteFrom("teams").where("id", "=", id).executeTakeFirstOrThrow();
-				},
-			},
-			{
-				name: "fga-cleanup",
-				execute: async () => {
-					await AuthorizationService.deleteResourceTuples("team", id);
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(
-						CacheKeys.team(id),
-						CacheKeys.teamsByOrg(team.org_id),
-						CacheKeys.teamMembers(id),
-					);
-				},
-			},
-		]);
+		// Get all team members for FGA cleanup
+		const memberRows = await stdb.query<TeamMemberRow>(
+			`SELECT * FROM team_member WHERE team_id = '${id}'`,
+		);
+
+		// Remove all member FGA tuples in parallel
+		await Promise.all(
+			memberRows.map(m => AuthorizationService.removeTeamMember(id, m.user_id)),
+		);
+
+		// Delete the team (will cascade-delete team_members in STDB)
+		await stdb.callReducer("delete_team", [id]);
+
+		// Clean up team auth tuples
+		await AuthorizationService.deleteResourceTuples("team", id);
+
+		await invalidateCache(
+			CacheKeys.team(id),
+			CacheKeys.teamsByOrg(existing.org_id),
+			CacheKeys.teamMembers(id),
+		);
 	};
 
 	public static getTeamMembers = async (team_id: string) => {
 		return cacheAside(CacheKeys.teamMembers(team_id), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+			const stdb = TeamService.stdb();
 
-			const members = await db
-				.selectFrom("team_members")
-				.innerJoin("users", "users.id", "team_members.user_id")
-				.select([
-					"team_members.id",
-					"team_members.user_id",
-					"team_members.created_at",
-					"users.full_name",
-					"users.email",
-					"users.profile_picture_url",
-				])
-				.where("team_members.team_id", "=", team_id)
-				.execute();
+			// Step 1: Query team_member rows
+			const memberRows = await stdb.query<TeamMemberRow>(
+				`SELECT * FROM team_member WHERE team_id = '${team_id}'`,
+			);
 
-			return members;
+			if (memberRows.length === 0) {
+				return [];
+			}
+
+			// Step 2: Query user details for each member
+			const userIds = memberRows.map(m => `'${m.user_id}'`).join(", ");
+			const userRows = await stdb.query<UserRow>(
+				`SELECT uuid, full_name, email, profile_picture_url FROM user WHERE uuid IN (${userIds})`,
+			);
+
+			// Build a map for quick lookup
+			const userMap = new Map<string, UserRow>();
+			for (const u of userRows) {
+				userMap.set(u.uuid, u);
+			}
+
+			// Step 3: Join the data in application layer
+			return memberRows.map(m => {
+				const u = userMap.get(m.user_id);
+				return {
+					id: m.uuid,
+					user_id: m.user_id,
+					created_at: new Date(m.created_at),
+					full_name: u?.full_name ?? null,
+					email: u?.email ?? null,
+					profile_picture_url: u?.profile_picture_url ?? null,
+				};
+			});
 		});
 	};
 
 	public static addTeamMember = async (team_id: string, user_id: string) => {
-		let memberRow: Record<string, unknown> | undefined;
-		await runSaga("addTeamMember", {}, [
-			{
-				name: "db-insert",
-				execute: async () => {
-					const db = await DB.getInstance();
-					memberRow = await db
-						.insertInto("team_members")
-						.values({
-							id: uuidv4(),
-							team_id,
-							user_id,
-							created_at: new Date(),
-						})
-						.returningAll()
-						.executeTakeFirstOrThrow();
-				},
-				compensate: async () => {
-					const db = await DB.getInstance();
-					await db.deleteFrom("team_members")
-						.where("team_id", "=", team_id)
-						.where("user_id", "=", user_id)
-						.execute();
-				},
-			},
-			{
-				name: "fga-write",
-				execute: async () => {
-					await AuthorizationService.addTeamMember(team_id, user_id);
-				},
-				compensate: async () => {
-					await AuthorizationService.removeTeamMember(team_id, user_id);
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(CacheKeys.teamMembers(team_id));
-				},
-			},
+		const stdb = this.stdb();
+		const id = crypto.randomUUID();
+		const now = new Date().toISOString();
+
+		await stdb.callReducer("create_team_member", [
+			id,
+			team_id,
+			user_id,
+			now,
 		]);
 
-		return memberRow!;
+		// Write FGA tuple for team membership
+		await AuthorizationService.addTeamMember(team_id, user_id);
+
+		await invalidateCache(CacheKeys.teamMembers(team_id));
+
+		return {
+			id,
+			team_id,
+			user_id,
+			created_at: new Date(now),
+		};
 	};
 
 	public static removeTeamMember = async (team_id: string, user_id: string) => {
-		await runSaga("removeTeamMember", {}, [
-			{
-				name: "db-delete",
-				execute: async () => {
-					const db = await DB.getInstance();
-					await db
-						.deleteFrom("team_members")
-						.where("team_id", "=", team_id)
-						.where("user_id", "=", user_id)
-						.executeTakeFirstOrThrow();
-				},
-			},
-			{
-				name: "fga-remove",
-				execute: async () => {
-					await AuthorizationService.removeTeamMember(team_id, user_id);
-				},
-			},
-			{
-				name: "cache-invalidate",
-				execute: async () => {
-					await invalidateCache(CacheKeys.teamMembers(team_id));
-				},
-			},
-		]);
+		const stdb = this.stdb();
+
+		await stdb.callReducer("delete_team_member", [team_id, user_id]);
+
+		// Remove FGA tuple for team membership
+		await AuthorizationService.removeTeamMember(team_id, user_id);
+
+		await invalidateCache(CacheKeys.teamMembers(team_id));
 	};
 }

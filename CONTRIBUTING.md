@@ -6,8 +6,8 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 - **Bun 1.3+**, **Go 1.21+**, **Docker**
 - `bun install` — install all JS/TS dependencies
-- `docker compose up -d` — start Postgres, Vault, OpenFGA, Zitadel, Mailpit
-- `bun run cli init` — bootstrap Vault and OpenFGA
+- `docker compose up -d` — start Keycloak, SpacetimeDB, Redis, RustFS, Mailpit
+- `bun run cli init` — initialize RustFS bucket + retrieve Keycloak client secrets
 - `bun run cli create-dev-user --seed` — seed a development user
 
 ## Development Workflow
@@ -23,7 +23,7 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 Every API change must include:
 
-- **Mock test** in `tests/mock/{feature}.test.ts` (unit-level, mocked Vault/DB/FGA)
+- **Mock test** in `tests/mock/{feature}.test.ts` (unit-level, mocked STDB/Keycloak)
 - **E2E test** in `tests/e2e/flows/{feature}.e2e.test.ts` (real services via Docker)
 
 Run both suites locally before pushing:
@@ -36,7 +36,7 @@ bun run test:e2e
 ### Adding a new endpoint — checklist
 
 1. Zod validator in `src/validators/{resource}.validator.ts` (include `.openapi()` annotations)
-2. Service method in `src/services/{resource}.service.ts` (static methods, Kysely queries)
+2. Service method in `src/services/{resource}.service.ts` (static methods, STDB queries)
 3. Controller in `src/controllers/{resource}.controller.ts` (delegates to service, handles errors, logs audit)
 4. Route in `src/routes/{resource}.route.ts` (use `describeRoute`, `zValidator`, permission middleware)
 5. Register the route in `src/routes/index.ts`
@@ -46,7 +46,7 @@ bun run test:e2e
 
 - **File naming:** `{resource}.controller.ts`, `{resource}.service.ts`, `{resource}.route.ts`, `{resource}.validator.ts`
 - **New env vars:** add to the Zod schema in `src/utils/env.ts`
-- **Database changes:** add a Kysely migration in `src/scripts/migrations/`, run with `bun run db migrate`
+- **Schema changes:** add or modify STDB table definitions in `packages/envsync-stdb/src/tables/` and reducers in `packages/envsync-stdb/src/reducers/`
 - **Formatting:** `prettier --write .` (uses `@bravo68web/prettier-config`)
 
 ## Frontend Changes (`apps/envsync-web/`)
@@ -102,8 +102,8 @@ All PRs must pass these GitHub Actions jobs (`.github/workflows/ci.yaml`):
 | Job | What it runs |
 |-----|-------------|
 | **build** | `bun run build` (all packages) |
-| **test-mock** | Mock/unit tests against a Postgres service container |
-| **test-e2e** | Full integration tests with Postgres, Vault, OpenFGA, Zitadel, Mailpit |
+| **test-mock** | Mock/unit tests (mocked STDB/Keycloak) |
+| **test-e2e** | Full integration tests with SpacetimeDB, Keycloak, Redis, RustFS, Mailpit |
 
 ## Commit Messages
 

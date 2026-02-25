@@ -1,7 +1,7 @@
 /**
  * E2E: User management — list → get → update → role change → delete
  *
- * Uses real PostgreSQL and OpenFGA.
+ * Uses real SpacetimeDB and Keycloak.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

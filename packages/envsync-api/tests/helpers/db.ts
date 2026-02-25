@@ -1,34 +1,34 @@
 /**
  * Database seeding and cleanup helpers for tests.
+ *
+ * Uses SpacetimeDB (STDBClient) instead of PostgreSQL/Kysely.
+ * Tables use singular names (e.g. "org", "user") and "uuid" for external IDs.
  */
 import { randomUUID } from "node:crypto";
 
-import { sql, type Kysely } from "kysely";
+import { STDBClient } from "@/libs/stdb";
 
-import { DB } from "@/libs/db";
-import type { Database } from "@/types/db";
-
-// Tables in FK-safe truncation order (children first)
+// STDB tables in cleanup order (children first)
 const TABLES_IN_ORDER = [
-	"team_members",
-	"teams",
+	"team_member",
+	"team",
 	"env_store_pit_change_request",
 	"env_store_pit",
 	"secret_store_pit_change_request",
 	"secret_store_pit",
-	"webhook_store",
+	"webhook",
 	"audit_log",
-	"api_keys",
-	"org_certificates",
-	"gpg_keys",
+	"api_key",
+	"org_certificate_meta",
+	"gpg_key_meta",
 	"settings",
 	"env_type",
 	"app",
-	"users",
+	"user",
 	"invite_user",
 	"invite_org",
 	"org_role",
-	"orgs",
+	"org",
 ] as const;
 
 /** Default role definitions matching RoleService.createDefaultRoles */
@@ -126,37 +126,33 @@ export async function seedOrg(overrides?: {
 	orgSlug?: string;
 	masterEmail?: string;
 }): Promise<SeedOrgResult> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	const orgId = randomUUID();
 	const orgName = overrides?.orgName ?? "Test Org";
 	const orgSlug = overrides?.orgSlug ?? `test-org-${orgId.slice(0, 8)}`;
 
-	await db
-		.insertInto("orgs")
-		.values({
-			id: orgId,
-			name: orgName,
-			slug: orgSlug,
-			metadata: {},
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_org", [orgId, orgName, orgSlug, {}]);
 
 	// Create roles
 	const roleRecords: { id: string; name: string }[] = [];
 	for (const roleDef of DEFAULT_ROLES) {
 		const roleId = randomUUID();
-		await db
-			.insertInto("org_role")
-			.values({
-				id: roleId,
-				...roleDef,
-				org_id: orgId,
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.execute();
+		await stdb.callReducer("create_org_role", [
+			roleId,
+			orgId,
+			roleDef.name,
+			roleDef.can_edit,
+			roleDef.can_view,
+			roleDef.have_api_access,
+			roleDef.have_billing_options,
+			roleDef.have_webhook_access,
+			roleDef.have_gpg_access,
+			roleDef.have_cert_access,
+			roleDef.have_audit_access,
+			roleDef.is_admin,
+			roleDef.is_master,
+			roleDef.color,
+		]);
 		roleRecords.push({ id: roleId, name: roleDef.name });
 	}
 
@@ -164,23 +160,18 @@ export async function seedOrg(overrides?: {
 
 	// Create master user
 	const userId = randomUUID();
-	const authServiceId = `zitadel-test-${userId.slice(0, 8)}`;
+	const authServiceId = `kc-test-${userId.slice(0, 8)}`;
 	const email = overrides?.masterEmail ?? `master-${userId.slice(0, 8)}@test.local`;
 
-	await db
-		.insertInto("users")
-		.values({
-			id: userId,
-			email,
-			org_id: orgId,
-			role_id: masterRole.id,
-			auth_service_id: authServiceId,
-			full_name: "Test Master",
-			is_active: true,
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_user", [
+		userId,
+		email,
+		orgId,
+		masterRole.id,
+		authServiceId,
+		"Test Master",
+		true,
+	]);
 
 	return {
 		org: { id: orgId, name: orgName, slug: orgSlug },
@@ -208,25 +199,20 @@ export async function seedUser(
 	roleId: string,
 	overrides?: { email?: string; fullName?: string },
 ): Promise<{ id: string; email: string; token: string; authServiceId: string }> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	const userId = randomUUID();
-	const authServiceId = `zitadel-test-${userId.slice(0, 8)}`;
+	const authServiceId = `kc-test-${userId.slice(0, 8)}`;
 	const email = overrides?.email ?? `user-${userId.slice(0, 8)}@test.local`;
 
-	await db
-		.insertInto("users")
-		.values({
-			id: userId,
-			email,
-			org_id: orgId,
-			role_id: roleId,
-			auth_service_id: authServiceId,
-			full_name: overrides?.fullName ?? "Test User",
-			is_active: true,
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_user", [
+		userId,
+		email,
+		orgId,
+		roleId,
+		authServiceId,
+		overrides?.fullName ?? "Test User",
+		true,
+	]);
 
 	return { id: userId, email, token: `test-token-${authServiceId}`, authServiceId };
 }
@@ -245,26 +231,21 @@ export async function seedApp(
 		privateKey?: string;
 	},
 ): Promise<{ id: string; name: string }> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	const appId = randomUUID();
 	const name = overrides?.name ?? `Test App ${appId.slice(0, 8)}`;
 
-	await db
-		.insertInto("app")
-		.values({
-			id: appId,
-			org_id: orgId,
-			name,
-			description: overrides?.description ?? "A test application",
-			enable_secrets: overrides?.enableSecrets ?? false,
-			is_managed_secret: overrides?.isManagedSecret ?? false,
-			public_key: overrides?.publicKey ?? null,
-			private_key: overrides?.privateKey ?? null,
-			metadata: {},
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_app", [
+		appId,
+		orgId,
+		name,
+		overrides?.description ?? "A test application",
+		overrides?.enableSecrets ?? false,
+		overrides?.isManagedSecret ?? false,
+		overrides?.publicKey ?? null,
+		overrides?.privateKey ?? null,
+		{},
+	]);
 
 	return { id: appId, name };
 }
@@ -277,24 +258,19 @@ export async function seedEnvType(
 	appId: string,
 	overrides?: { name?: string; isDefault?: boolean; isProtected?: boolean; color?: string },
 ): Promise<{ id: string; name: string }> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	const envTypeId = randomUUID();
 	const name = overrides?.name ?? "development";
 
-	await db
-		.insertInto("env_type")
-		.values({
-			id: envTypeId,
-			org_id: orgId,
-			app_id: appId,
-			name,
-			is_default: overrides?.isDefault ?? true,
-			is_protected: overrides?.isProtected ?? false,
-			color: overrides?.color ?? "#4CAF50",
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_env_type", [
+		envTypeId,
+		orgId,
+		appId,
+		name,
+		overrides?.isDefault ?? true,
+		overrides?.isProtected ?? false,
+		overrides?.color ?? "#4CAF50",
+	]);
 
 	return { id: envTypeId, name };
 }
@@ -303,15 +279,15 @@ export async function seedEnvType(
  * Truncate all tables — use between tests for clean state.
  */
 export async function cleanupDB(): Promise<void> {
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 	for (const table of TABLES_IN_ORDER) {
-		await sql`TRUNCATE TABLE ${sql.raw(table)} CASCADE`.execute(db);
+		await stdb.callReducer("delete_all_from_table", [table], { injectRootKey: false });
 	}
 }
 
 /**
- * Get the Kysely DB instance for direct queries in tests.
+ * Get the STDBClient instance for direct queries in tests.
  */
-export async function getDB(): Promise<Kysely<Database>> {
-	return DB.getInstance();
+export function getSTDB(): STDBClient {
+	return STDBClient.getInstance();
 }

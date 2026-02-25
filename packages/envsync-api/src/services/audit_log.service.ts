@@ -1,7 +1,6 @@
-import { v4 as uuidv4 } from "uuid";
 import { createHash } from "node:crypto";
 
-import { DB } from "@/libs/db";
+import { STDBClient } from "@/libs/stdb";
 import { WebhookService } from "./webhook.service";
 import { z } from "zod";
 
@@ -56,6 +55,34 @@ function computeEntryHash(
 	return createHash("sha256").update(data).digest("hex");
 }
 
+interface AuditLogRow {
+	uuid: string;
+	action: string;
+	org_id: string;
+	user_id: string;
+	details: string;
+	message: string;
+	previous_hash: string | null;
+	entry_hash: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapAuditLogRow(row: AuditLogRow) {
+	return {
+		id: row.uuid,
+		action: row.action,
+		org_id: row.org_id,
+		user_id: row.user_id,
+		details: row.details,
+		message: row.message,
+		previous_hash: row.previous_hash,
+		entry_hash: row.entry_hash,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
+}
+
 export class AuditLogService {
 	public static notifyAuditSystem = async ({
 		action,
@@ -70,58 +97,44 @@ export class AuditLogService {
 		user_id: string;
 		message: string;
 	}) => {
-		const db = await DB.getInstance();
-
+		const stdb = STDBClient.getInstance();
 		const now = new Date();
 		const timestamp = now.toISOString();
 		const detailsStr = JSON.stringify(details);
 
-		await db.transaction().execute(async (trx) => {
-			// Lock the latest audit entry for this org to prevent concurrent hash chain forks
-			let previousHash = GENESIS_HASH;
-			try {
-				const latestEntry = await trx
-					.selectFrom("audit_log")
-					.select("entry_hash")
-					.where("org_id", "=", org_id)
-					.where("entry_hash", "is not", null)
-					.orderBy("created_at", "desc")
-					.limit(1)
-					.forUpdate()
-					.executeTakeFirst();
-
-				if (latestEntry?.entry_hash) {
-					previousHash = latestEntry.entry_hash;
-				}
-			} catch {
-				// If entry_hash column doesn't exist yet (pre-migration), use genesis hash
-			}
-
-			const entryHash = computeEntryHash(
-				previousHash,
-				timestamp,
-				action,
-				org_id,
-				user_id,
-				detailsStr,
+		// Get the latest hash for the org to maintain the hash chain
+		let previousHash = GENESIS_HASH;
+		try {
+			const latestEntry = await stdb.queryOne<{ entry_hash: string }>(
+				`SELECT entry_hash FROM app_audit_log WHERE org_id = '${org_id}' AND entry_hash IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
 			);
+			if (latestEntry?.entry_hash) {
+				previousHash = latestEntry.entry_hash;
+			}
+		} catch {
+			// If entry_hash column doesn't exist yet, use genesis hash
+		}
 
-			await trx
-				.insertInto("audit_log")
-				.values({
-					id: uuidv4(),
-					action,
-					org_id,
-					user_id,
-					details: detailsStr,
-					message,
-					previous_hash: previousHash,
-					entry_hash: entryHash,
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-		});
+		const entryHash = computeEntryHash(
+			previousHash,
+			timestamp,
+			action,
+			org_id,
+			user_id,
+			detailsStr,
+		);
+
+		const id = crypto.randomUUID();
+		await stdb.callReducer("create_audit_entry", [
+			id,
+			action,
+			org_id,
+			user_id,
+			detailsStr,
+			message,
+			previousHash,
+			entryHash,
+		]);
 
 		WebhookService.triggerWebhook({
 			event_type: action,
@@ -147,29 +160,20 @@ export class AuditLogService {
 				filter_by_past_time?: ActionPastTimes;
 			},
 	) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
+		const offset = (page - 1) * per_page;
 
-		let auditLogsQuery = db
-			.selectFrom("audit_log")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.orderBy("created_at", "desc")
-			.limit(per_page)
-			.offset((page - 1) * per_page)
-
-		let totalCountQuery = db
-			.selectFrom("audit_log")
-			.select(db.fn.count<number>("id").as("count"))
-			.where("org_id", "=", org_id)
+		// Build WHERE clauses
+		const conditions: string[] = [`org_id = '${org_id}'`];
 
 		if (filter_by_user) {
-			auditLogsQuery = auditLogsQuery.where("user_id", "=", filter_by_user);
-			totalCountQuery = totalCountQuery.where("user_id", "=", filter_by_user);
+			conditions.push(`user_id = '${filter_by_user}'`);
 		}
 
 		if (filter_by_category) {
-			auditLogsQuery = auditLogsQuery.where("action", "like", filter_by_category.replace("*", "%"));
-			totalCountQuery = totalCountQuery.where("action", "like", filter_by_category.replace("*", "%"));
+			// Convert wildcard pattern like 'app*' to SQL LIKE pattern 'app%'
+			const likePattern = filter_by_category.replace("*", "%");
+			conditions.push(`action LIKE '${likePattern}'`);
 		}
 
 		if (filter_by_past_time) {
@@ -200,14 +204,22 @@ export class AuditLogService {
 					pastTime.setFullYear(0);
 					break;
 			}
-			auditLogsQuery = auditLogsQuery.where("created_at", ">=", pastTime);
-			totalCountQuery = totalCountQuery.where("created_at", ">=", pastTime);
+			conditions.push(`created_at >= '${pastTime.toISOString()}'`);
 		}
 
-		const auditLogs = await auditLogsQuery.execute();
-		const totalCount = await totalCountQuery.executeTakeFirstOrThrow();
+		const whereClause = conditions.join(" AND ");
 
-		const totalPages = Math.ceil(totalCount.count / per_page);
+		const [auditLogRows, countResult] = await Promise.all([
+			stdb.query<AuditLogRow>(
+				`SELECT * FROM app_audit_log WHERE ${whereClause} ORDER BY created_at DESC LIMIT ${per_page} OFFSET ${offset}`,
+			),
+			stdb.queryCount(
+				`SELECT uuid FROM app_audit_log WHERE ${whereClause}`,
+			),
+		]);
+
+		const auditLogs = auditLogRows.map(mapAuditLogRow);
+		const totalPages = Math.ceil(countResult / per_page);
 
 		return {
 			auditLogs,

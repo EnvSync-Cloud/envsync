@@ -2,15 +2,14 @@
  * E2E test preload — zero mock.module() calls.
  *
  * All services are real:
- * - JWT verification → real Zitadel JWKS endpoint
- * - Vault → real Vault with AppRole auth
- * - OpenFGA → real OpenFGA (auto-bootstraps store+model)
+ * - JWT verification → real Keycloak JWKS endpoint
+ * - SpacetimeDB → real STDB for data + authorization
  * - Mail → real Mailpit SMTP
- * - Zitadel → real Zitadel for user management + token issuance
+ * - Keycloak → real Keycloak for user management + token issuance
  *
  * Prerequisites:
  *   1. Run `bun run e2e:init` (or `bun run scripts/e2e-setup.ts init`) to set up services
- *   2. Docker services must be running (postgres, redis, vault, openfga, mailpit, zitadel)
+ *   2. Docker services must be running (spacetimedb, redis, keycloak, mailpit)
  *
  * Usage: TEST_MODE=e2e bun test tests/e2e --preload tests/e2e/helpers/real-setup.ts
  */
@@ -21,7 +20,7 @@ import path from "node:path";
 // ── 1. Prevent loadRootEnv from overwriting test env vars ────────────
 process.env.SKIP_ROOT_ENV = "1";
 
-// ── 2. Load .env.e2e.test for Vault/service/Zitadel credentials ─────
+// ── 2. Load .env.e2e.test for service credentials ────────────────────
 const projectRoot = findProjectRoot();
 const envE2EPath = path.join(projectRoot, ".env.e2e.test");
 if (fs.existsSync(envE2EPath)) {
@@ -32,21 +31,16 @@ if (fs.existsSync(envE2EPath)) {
 }
 
 // ── 3. Set all required environment variables ────────────────────────
-// Vault creds come from .env.e2e.test (loaded above)
-// ZITADEL_URL points to real Zitadel instance
-const zitadelUrl = process.env.ZITADEL_URL ?? "http://localhost:8080";
+const keycloakUrl = process.env.KEYCLOAK_URL ?? "http://localhost:8080";
 
 Object.assign(process.env, {
 	NODE_ENV: "development",
 	PORT: "0",
-	DB_LOGGING: "false",
-	DB_AUTO_MIGRATE: "true",
-	DATABASE_SSL: "false",
-	DATABASE_HOST: process.env.DATABASE_HOST ?? "localhost",
-	DATABASE_PORT: process.env.DATABASE_PORT ?? "5432",
-	DATABASE_USER: process.env.DATABASE_USER ?? "postgres",
-	DATABASE_PASSWORD: process.env.DATABASE_PASSWORD ?? "postgres",
-	DATABASE_NAME: "envsync_e2e_test",
+	// SpacetimeDB
+	STDB_URL: process.env.STDB_URL ?? "http://localhost:3000",
+	STDB_DB_NAME: process.env.STDB_DB_NAME ?? "envsync-e2e-test",
+	STDB_AUTH_TOKEN: process.env.STDB_AUTH_TOKEN ?? "",
+	STDB_ROOT_KEY: process.env.STDB_ROOT_KEY ?? "e2e-test-root-key",
 	// S3 — real RustFS from docker-compose
 	S3_BUCKET: process.env.S3_BUCKET ?? "envsync",
 	S3_REGION: process.env.S3_REGION ?? "us-east-1",
@@ -61,31 +55,19 @@ Object.assign(process.env, {
 	SMTP_PORT: process.env.SMTP_PORT ?? "1025",
 	SMTP_SECURE: "false",
 	SMTP_FROM: "test@envsync.local",
-	// Zitadel — real instance
-	ZITADEL_URL: zitadelUrl,
-	ZITADEL_PAT: process.env.ZITADEL_PAT,
-	ZITADEL_LOGIN_PAT: process.env.ZITADEL_LOGIN_PAT ?? process.env.ZITADEL_PAT,
-	ZITADEL_WEB_CLIENT_ID: process.env.ZITADEL_WEB_CLIENT_ID ?? "test-web-client-id",
-	ZITADEL_WEB_CLIENT_SECRET: process.env.ZITADEL_WEB_CLIENT_SECRET ?? "test-web-client-secret",
-	ZITADEL_CLI_CLIENT_ID: process.env.ZITADEL_CLI_CLIENT_ID ?? "test-cli-client-id",
-	ZITADEL_CLI_CLIENT_SECRET: process.env.ZITADEL_CLI_CLIENT_SECRET ?? "test-cli-client-secret",
-	ZITADEL_API_CLIENT_ID: process.env.ZITADEL_API_CLIENT_ID ?? "test-api-client-id",
-	ZITADEL_API_CLIENT_SECRET: process.env.ZITADEL_API_CLIENT_SECRET ?? "test-api-client-secret",
-	ZITADEL_WEB_REDIRECT_URI: process.env.ZITADEL_WEB_REDIRECT_URI ?? "http://localhost:3000/callback",
-	ZITADEL_WEB_CALLBACK_URL: process.env.ZITADEL_WEB_CALLBACK_URL ?? "http://localhost:3000",
-	ZITADEL_API_REDIRECT_URI: process.env.ZITADEL_API_REDIRECT_URI ?? "http://localhost:4000/callback",
-	// Vault — real credentials from .env.e2e.test (already loaded)
-	VAULT_ADDR: process.env.VAULT_ADDR ?? "http://localhost:8200",
-	VAULT_ROLE_ID: process.env.VAULT_ROLE_ID,
-	VAULT_SECRET_ID: process.env.VAULT_SECRET_ID,
-	VAULT_MOUNT_PATH: process.env.VAULT_MOUNT_PATH ?? "envsync",
-	// OpenFGA — real OpenFGA (auto-bootstraps store+model)
-	OPENFGA_API_URL: process.env.OPENFGA_API_URL ?? "http://localhost:8090",
-	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",
-	OPENFGA_MODEL_ID: process.env.OPENFGA_MODEL_ID ?? "",
-	// miniKMS
-	MINIKMS_GRPC_ADDR: process.env.MINIKMS_GRPC_ADDR ?? "localhost:50051",
-	MINIKMS_TLS_ENABLED: "false",
+	// Keycloak — real instance
+	KEYCLOAK_URL: keycloakUrl,
+	KEYCLOAK_REALM: process.env.KEYCLOAK_REALM ?? "envsync",
+	KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER ?? "admin",
+	KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin",
+	KEYCLOAK_WEB_CLIENT_ID: process.env.KEYCLOAK_WEB_CLIENT_ID ?? "envsync-web",
+	KEYCLOAK_WEB_CLIENT_SECRET: process.env.KEYCLOAK_WEB_CLIENT_SECRET ?? "test-web-secret",
+	KEYCLOAK_CLI_CLIENT_ID: process.env.KEYCLOAK_CLI_CLIENT_ID ?? "envsync-cli",
+	KEYCLOAK_API_CLIENT_ID: process.env.KEYCLOAK_API_CLIENT_ID ?? "envsync-api",
+	KEYCLOAK_API_CLIENT_SECRET: process.env.KEYCLOAK_API_CLIENT_SECRET ?? "test-api-secret",
+	KEYCLOAK_WEB_REDIRECT_URI: process.env.KEYCLOAK_WEB_REDIRECT_URI ?? "http://localhost:3000/callback",
+	KEYCLOAK_WEB_CALLBACK_URL: process.env.KEYCLOAK_WEB_CALLBACK_URL ?? "http://localhost:3000",
+	KEYCLOAK_API_REDIRECT_URI: process.env.KEYCLOAK_API_REDIRECT_URI ?? "http://localhost:4000/callback",
 	// App URLs
 	LANDING_PAGE_URL: "http://localhost:3000",
 	DASHBOARD_URL: "http://localhost:9090",
@@ -95,10 +77,15 @@ Object.assign(process.env, {
 const { CacheClient } = await import("@/libs/cache");
 CacheClient.init("development");
 
-// ── 5. Initialize DB and run migrations ─────────────────────────────
-const { DB } = await import("@/libs/db");
-await DB.getInstance();
-console.log("[E2E Setup] Database initialized and migrations applied.");
+// ── 5. Verify STDB connectivity ─────────────────────────────────────
+const { STDBClient } = await import("@/libs/stdb");
+const stdb = STDBClient.getInstance();
+const healthy = await stdb.healthCheck();
+if (healthy) {
+	console.log("[E2E Setup] SpacetimeDB connected and healthy.");
+} else {
+	console.log("[E2E Setup] WARNING: SpacetimeDB health check failed.");
+}
 console.log("[E2E Setup] All services are REAL — zero mock.module() calls.");
 
 // ── Helpers ─────────────────────────────────────────────────────────

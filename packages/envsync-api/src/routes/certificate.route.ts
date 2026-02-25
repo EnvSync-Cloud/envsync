@@ -34,7 +34,7 @@ app.post(
 	describeRoute({
 		operationId: "initOrgCA",
 		summary: "Initialize Organization CA",
-		description: "Create an intermediate CA for the organization via miniKMS",
+		description: "Create an intermediate CA for the organization via SpaceTimeDB",
 		tags: ["Certificates"],
 		responses: {
 			201: {

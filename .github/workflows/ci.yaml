@@ -45,26 +45,7 @@ jobs:
   test-mock:
     name: Mock Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: envsync_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
-      DATABASE_HOST: localhost
-      DATABASE_PORT: 5432
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: envsync_test
       CACHE_ENV: development
     steps:
       - uses: actions/checkout@v4
@@ -79,55 +60,17 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     services:
-      postgres:
+      keycloak-db:
         image: postgres:17
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: envsync_e2e_test
+          POSTGRES_USER: keycloak
+          POSTGRES_PASSWORD: keycloak
+          POSTGRES_DB: keycloak
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U keycloak"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      openfga-db:
-        image: postgres:17
-        env:
-          POSTGRES_USER: openfga
-          POSTGRES_PASSWORD: openfga
-          POSTGRES_DB: openfga
-        ports:
-          - 5433:5432
-        options: >-
-          --health-cmd "pg_isready -U openfga"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-      zitadel-db:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5434:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      minikms-db:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: minikms
-        ports:
-          - 5435:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
           --health-timeout 5s
           --health-retries 5
       redis:
@@ -140,18 +83,15 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_HOST: localhost
-      DATABASE_PORT: 5432
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      DATABASE_NAME: envsync_e2e_test
-      CACHE_ENV: development
-      OPENFGA_API_URL: http://localhost:8090
-      VAULT_ADDR: http://localhost:8200
-      VAULT_MOUNT_PATH: envsync
-      ZITADEL_URL: http://localhost:8080
-      MINIKMS_GRPC_ADDR: localhost:50051
-      MINIKMS_TLS_ENABLED: "false"
+      CACHE_ENV: production
+      REDIS_URL: redis://localhost:6379
+      STDB_URL: http://localhost:1234
+      STDB_DB_NAME: envsync-e2e
+      STDB_ROOT_KEY: ci-e2e-root-key
+      KEYCLOAK_URL: http://localhost:8080
+      KEYCLOAK_REALM: envsync
+      KEYCLOAK_ADMIN_USER: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
       SKIP_ROOT_ENV: "1"
     steps:
       - uses: actions/checkout@v4
@@ -164,207 +104,67 @@ jobs:
           cache-dependency-path: packages/envsync-cli/go.sum
       - run: bun i
 
-      - name: Run miniKMS database migrations
-        run: |
-          PGPASSWORD=postgres psql -h localhost -p 5435 -U postgres -d minikms \
-            -f docker/minikms/migrations/001_initial_schema.sql
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Start miniKMS
+      - name: Install SpacetimeDB CLI
         run: |
-          docker run -d --name minikms --network host \
-            -e MINIKMS_DB_URL="postgres://postgres:postgres@localhost:5435/minikms?sslmode=disable" \
-            -e MINIKMS_REDIS_URL="redis://localhost:6379/1" \
-            -e MINIKMS_ROOT_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2" \
-            -e MINIKMS_GRPC_ADDR="0.0.0.0:50051" \
-            ghcr.io/envsync-cloud/minikms:latest
+          curl -fsSL https://install.spacetimedb.com | bash
+          echo "$HOME/.spacetimedb/bin" >> $GITHUB_PATH
 
-      - name: Wait for miniKMS to be ready
+      - name: Start SpacetimeDB
         run: |
+          spacetimedb start --listen-addr 0.0.0.0:1234 &
           for i in $(seq 1 30); do
-            if docker exec minikms /bin/sh -c "echo > /dev/tcp/localhost/50051" 2>/dev/null; then
-              echo "miniKMS is ready"
-              exit 0
+            if curl -sf http://localhost:1234/database/ping > /dev/null 2>&1; then
+              echo "SpacetimeDB is ready"
+              break
             fi
-            # Fallback: check if port is open from host
-            if nc -z localhost 50051 2>/dev/null; then
-              echo "miniKMS is ready (port check)"
-              exit 0
-            fi
-            echo "Waiting for miniKMS... ($i/30)"
+            echo "Waiting for SpacetimeDB... ($i/30)"
             sleep 2
           done
-          echo "miniKMS failed to start"
-          docker logs minikms
-          exit 1
 
-      - name: Run OpenFGA migrations
+      - name: Build and publish STDB module
         run: |
-          docker run --rm --network host \
-            -e OPENFGA_DATASTORE_ENGINE=postgres \
-            -e OPENFGA_DATASTORE_URI="postgres://openfga:openfga@localhost:5433/openfga?sslmode=disable" \
-            openfga/openfga:latest migrate
+          cd packages/envsync-stdb
+          spacetimedb publish envsync-e2e --server http://localhost:1234
 
-      - name: Start OpenFGA server
+      - name: Start Keycloak
         run: |
-          docker run -d --name openfga --network host \
-            -e OPENFGA_DATASTORE_ENGINE=postgres \
-            -e OPENFGA_DATASTORE_URI="postgres://openfga:openfga@localhost:5433/openfga?sslmode=disable" \
-            -e OPENFGA_HTTP_ADDR=0.0.0.0:8090 \
-            -e OPENFGA_GRPC_ADDR=0.0.0.0:8091 \
-            openfga/openfga:latest run
+          docker run -d --name keycloak --network host \
+            -e KC_DB=postgres \
+            -e KC_DB_URL=jdbc:postgresql://localhost:5432/keycloak \
+            -e KC_DB_USERNAME=keycloak \
+            -e KC_DB_PASSWORD=keycloak \
+            -e KC_HOSTNAME=localhost \
+            -e KC_HTTP_ENABLED=true \
+            -e KC_FEATURES=device-flow \
+            -e KEYCLOAK_ADMIN=admin \
+            -e KEYCLOAK_ADMIN_PASSWORD=admin \
+            -v ${{ github.workspace }}/docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro \
+            quay.io/keycloak/keycloak:26.1 start-dev --import-realm
 
-      - name: Wait for OpenFGA to be ready
+      - name: Wait for Keycloak to be ready
         run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8090/healthz > /dev/null 2>&1; then
-              echo "OpenFGA is ready"
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/realms/envsync/.well-known/openid-configuration > /dev/null 2>&1; then
+              echo "Keycloak is ready"
               exit 0
             fi
-            echo "Waiting for OpenFGA... ($i/30)"
-            sleep 2
+            echo "Waiting for Keycloak... ($i/60)"
+            sleep 5
           done
-          echo "OpenFGA failed to start"
-          docker logs openfga
+          echo "Keycloak failed to start"
+          docker logs keycloak
           exit 1
 
-      - name: Start Vault
+      - name: Bootstrap Keycloak for E2E
         run: |
-          docker run -d --name vault --network host \
-            -e VAULT_DEV_ROOT_TOKEN_ID="ci-root-token" \
-            -e VAULT_ADDR=http://localhost:8200 \
-            --cap-add IPC_LOCK \
-            hashicorp/vault:latest server -dev -dev-listen-address=0.0.0.0:8200
-
-      - name: Wait for Vault to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8200/v1/sys/health > /dev/null 2>&1; then
-              echo "Vault is ready"
-              exit 0
-            fi
-            echo "Waiting for Vault... ($i/30)"
-            sleep 2
-          done
-          echo "Vault failed to start"
-          docker logs vault
-          exit 1
-
-      - name: Initialize Vault for E2E
-        run: |
-          set -euo pipefail
-
-          echo "== Vault startup logs (tail) =="
-          docker logs vault 2>&1 | tail -n 80 || true
-
-          # In dev mode, Vault is already initialized and unsealed.
-          # Prefer deterministic token; fallback to logs for compatibility.
-          VAULT_TOKEN="${VAULT_TOKEN:-ci-root-token}"
-          if [ -z "$VAULT_TOKEN" ]; then
-            VAULT_TOKEN=$(docker logs vault 2>&1 | grep 'Root Token:' | awk '{print $NF}' | tail -n1)
-          fi
-          if [ -z "$VAULT_TOKEN" ]; then
-            echo "Vault token is empty; dumping vault logs for debugging"
-            docker logs vault
-            exit 1
-          fi
-          echo "VAULT_TOKEN=${VAULT_TOKEN}" >> $GITHUB_ENV
-
-          vault_call() {
-            local label="$1"
-            local method="$2"
-            local url="$3"
-            local data="${4:-}"
-            local tmp
-            tmp="$(mktemp)"
-
-            echo ""
-            echo "== ${label} =="
-            echo "${method} ${url}"
-            if [ -n "${data}" ]; then
-              echo "payload: ${data}"
-            fi
-
-            local status
-            if [ -n "${data}" ]; then
-              status=$(curl -sS -o "${tmp}" -w "%{http_code}" -X "${method}" "${url}" \
-                -H "X-Vault-Token: ${VAULT_TOKEN}" \
-                -H "Content-Type: application/json" \
-                -d "${data}" || echo "000")
-            else
-              status=$(curl -sS -o "${tmp}" -w "%{http_code}" -X "${method}" "${url}" \
-                -H "X-Vault-Token: ${VAULT_TOKEN}" \
-                -H "Content-Type: application/json" || echo "000")
-            fi
-
-            echo "http_status: ${status}"
-            echo "response:"
-            cat "${tmp}" || true
-            echo ""
-
-            if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
-              echo "Vault API call failed at step: ${label}"
-              return 1
-            fi
-          }
-
-          # Enable KV v2 at envsync/
-          vault_call "Enable KV v2 (envsync)" "POST" \
-            "http://localhost:8200/v1/sys/mounts/envsync" \
-            '{"type":"kv","options":{"version":"2"}}' || true
-
-          # Enable AppRole
-          vault_call "Enable AppRole auth" "POST" \
-            "http://localhost:8200/v1/sys/auth/approle" \
-            '{"type":"approle"}' || true
-
-          # Create policy
-          POLICY=$(cat <<'EOF'
-          path "envsync/data/*" { capabilities = ["create","read","update","delete","list"] }
-          path "envsync/metadata/*" { capabilities = ["read","delete","list"] }
-          path "envsync/delete/*" { capabilities = ["update"] }
-          path "envsync/undelete/*" { capabilities = ["update"] }
-          path "envsync/destroy/*" { capabilities = ["update"] }
-          path "auth/token/renew-self" { capabilities = ["update"] }
-          path "sys/health" { capabilities = ["read"] }
-          EOF
-          )
-          POLICY_JSON=$(jq -n --arg policy "$POLICY" '{policy: $policy}')
-          vault_call "Create policy envsync-e2e" "PUT" \
-            "http://localhost:8200/v1/sys/policy/envsync-e2e" \
-            "${POLICY_JSON}"
-
-          # Create role
-          vault_call "Create AppRole envsync-e2e" "POST" \
-            "http://localhost:8200/v1/auth/approle/role/envsync-e2e" \
-            '{"token_policies":["envsync-e2e"],"token_ttl":"1h","token_max_ttl":"4h","secret_id_ttl":"0","secret_id_num_uses":0}'
-
-          # Get role_id
-          ROLE_JSON=$(curl -sS http://localhost:8200/v1/auth/approle/role/envsync-e2e/role-id \
-            -H "X-Vault-Token: ${VAULT_TOKEN}")
-          echo "== Get role_id response =="
-          echo "${ROLE_JSON}"
-          ROLE_ID=$(echo "${ROLE_JSON}" | jq -r '.data.role_id')
-          if [ -z "${ROLE_ID}" ] || [ "${ROLE_ID}" = "null" ]; then
-            echo "Failed to parse ROLE_ID from response"
-            exit 1
-          fi
-          echo "VAULT_ROLE_ID=${ROLE_ID}" >> $GITHUB_ENV
-
-          # Generate secret_id
-          SECRET_JSON=$(curl -sS -X POST http://localhost:8200/v1/auth/approle/role/envsync-e2e/secret-id \
-            -H "X-Vault-Token: ${VAULT_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
-          echo "== Generate secret_id response =="
-          echo "${SECRET_JSON}"
-          SECRET_ID=$(echo "${SECRET_JSON}" | jq -r '.data.secret_id')
-          if [ -z "${SECRET_ID}" ] || [ "${SECRET_ID}" = "null" ]; then
-            echo "Failed to parse SECRET_ID from response"
-            exit 1
-          fi
-          echo "VAULT_SECRET_ID=${SECRET_ID}" >> $GITHUB_ENV
-
-          echo "Vault configured for E2E (role_id=${ROLE_ID:0:8}...)"
+          bun -e "
+            import { createKeycloakTestUser } from './packages/envsync-api/tests/e2e/helpers/keycloak-bootstrap';
+            const user = await createKeycloakTestUser();
+            console.log('Keycloak E2E user created: ' + user.id);
+          "
 
       - name: Start Mailpit
         run: |
@@ -387,101 +187,13 @@ jobs:
           docker logs mailpit
           exit 1
 
-      - name: Start Zitadel
-        run: |
-          mkdir -p /tmp/zitadel
-          docker run -d --name zitadel --network host --user 0 \
-            -v /tmp/zitadel:/current-dir \
-            -e ZITADEL_EXTERNALDOMAIN=localhost \
-            -e ZITADEL_EXTERNALSECURE=false \
-            -e ZITADEL_TLS_ENABLED=false \
-            -e ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED=false \
-            -e ZITADEL_DATABASE_POSTGRES_HOST=localhost \
-            -e ZITADEL_DATABASE_POSTGRES_PORT=5434 \
-            -e ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel \
-            -e ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=postgres \
-            -e ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=postgres \
-            -e ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE=disable \
-            -e ZITADEL_DATABASE_POSTGRES_USER_USERNAME=zitadel \
-            -e ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=zitadel \
-            -e ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=disable \
-            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED=false \
-            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=zitadel-admin \
-            -e ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1! \
-            -e ZITADEL_FIRSTINSTANCE_ORG_NAME=EnvSync \
-            -e ZITADEL_FIRSTINSTANCE_PATPATH=/current-dir/admin.pat \
-            -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME=admin \
-            -e ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME="EnvSync IAM Owner" \
-            -e "ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
-            -e ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH=/current-dir/login-client.pat \
-            -e ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME=login-client \
-            -e ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME="Automatically Initialized IAM_LOGIN_CLIENT" \
-            -e "ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE=2029-01-01T00:00:00Z" \
-            -e ZITADEL_MASTERKEY=MasterkeyNeedsToHave32Characters \
-            ghcr.io/zitadel/zitadel:latest start-from-init --masterkey MasterkeyNeedsToHave32Characters
-
-      - name: Wait for Zitadel to be ready
-        run: |
-          for i in $(seq 1 120); do
-            if [ "$(docker inspect -f '{{.State.Status}}' zitadel 2>/dev/null || echo missing)" = "exited" ]; then
-              echo "Zitadel container exited early"
-              docker inspect zitadel
-              docker logs zitadel
-              exit 1
-            fi
-            if docker exec zitadel /app/zitadel ready > /dev/null 2>&1; then
-              echo "Zitadel is ready"
-              exit 0
-            fi
-            echo "Waiting for Zitadel... ($i/120)"
-            sleep 5
-          done
-          echo "Zitadel failed to start"
-          docker ps -a
-          docker logs zitadel
-          exit 1
-
-      - name: Read Zitadel admin PAT
-        run: |
-          for i in $(seq 1 10); do
-            ADMIN_PAT=$(cat /tmp/zitadel/admin.pat 2>/dev/null || true)
-            LOGIN_PAT=$(cat /tmp/zitadel/login-client.pat 2>/dev/null || true)
-            if [ -n "$ADMIN_PAT" ] && [ -n "$LOGIN_PAT" ]; then
-              echo "ZITADEL_PAT=${ADMIN_PAT}" >> $GITHUB_ENV
-              echo "ZITADEL_LOGIN_PAT=${LOGIN_PAT}" >> $GITHUB_ENV
-              echo "Zitadel admin and login-client PATs read successfully"
-              exit 0
-            fi
-            echo "Waiting for Zitadel PAT files... ($i/10)"
-            sleep 3
-          done
-          echo "Failed to read Zitadel PAT files"
-          exit 1
-
-      - name: Bootstrap Zitadel for E2E
-        run: |
-          bun -e "
-            import { bootstrapZitadelProject } from './packages/envsync-api/tests/e2e/helpers/zitadel-bootstrap';
-            import fs from 'fs';
-            const result = await bootstrapZitadelProject('http://localhost:8080', process.env.ZITADEL_PAT);
-            fs.appendFileSync(process.env.GITHUB_ENV, 'ZITADEL_E2E_CLIENT_ID=' + result.appClientId + '\n');
-            fs.appendFileSync(process.env.GITHUB_ENV, 'ZITADEL_E2E_CLIENT_SECRET=' + result.appClientSecret + '\n');
-            console.log('Zitadel bootstrapped: project=' + result.projectId + ', clientId=' + result.appClientId);
-          "
-        env:
-          ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
-
       - name: Run E2E tests
         run: bun run test:e2e
         working-directory: packages/envsync-api
         env:
-          VAULT_ROLE_ID: ${{ env.VAULT_ROLE_ID }}
-          VAULT_SECRET_ID: ${{ env.VAULT_SECRET_ID }}
-          ZITADEL_URL: http://localhost:8080
-          ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
-          ZITADEL_LOGIN_PAT: ${{ env.ZITADEL_LOGIN_PAT }}
-          ZITADEL_E2E_CLIENT_ID: ${{ env.ZITADEL_E2E_CLIENT_ID }}
-          ZITADEL_E2E_CLIENT_SECRET: ${{ env.ZITADEL_E2E_CLIENT_SECRET }}
+          KEYCLOAK_WEB_CLIENT_ID: envsync-web
+          KEYCLOAK_CLI_CLIENT_ID: envsync-cli
+          KEYCLOAK_API_CLIENT_ID: envsync-api
 
   build-api-image:
     name: Build & Push API Image

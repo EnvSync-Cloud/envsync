@@ -1,6 +1,51 @@
-import { v4 as uuidv4 } from "uuid";
+import { STDBClient } from "@/libs/stdb";
 
-import { DB } from "@/libs/db";
+interface EnvStorePitRow {
+	uuid: string;
+	org_id: string;
+	app_id: string;
+	env_type_id: string;
+	change_request_message: string;
+	user_id: string;
+	changes: string;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapPitRow(row: EnvStorePitRow) {
+	return {
+		id: row.uuid,
+		org_id: row.org_id,
+		app_id: row.app_id,
+		env_type_id: row.env_type_id,
+		change_request_message: row.change_request_message,
+		user_id: row.user_id,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
+}
+
+function parseChanges(row: EnvStorePitRow): Array<{
+	id: string;
+	key: string;
+	value: string;
+	operation: string;
+	env_store_pit_id: string;
+	created_at: Date;
+	updated_at: Date;
+}> {
+	const changes: Array<{ key: string; value: string; operation: string }> =
+		typeof row.changes === "string" ? JSON.parse(row.changes) : row.changes;
+	return changes.map((c) => ({
+		id: crypto.randomUUID(),
+		key: c.key,
+		value: c.value,
+		operation: c.operation || "UPDATE",
+		env_store_pit_id: row.uuid,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	}));
+}
 
 export class EnvStorePiTService {
 	public static createEnvStorePiT = async ({
@@ -22,54 +67,35 @@ export class EnvStorePiTService {
 			operation: "CREATE" | "UPDATE" | "DELETE";
 		}>;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
+		const id = crypto.randomUUID();
 
-		return await db.transaction().execute(async (trx) => {
-			const { id } = await trx
-				.insertInto("env_store_pit")
-				.values({
-					id: uuidv4(),
-					org_id,
-					app_id,
-					env_type_id,
-					change_request_message,
-					user_id,
-					created_at: new Date(),
-					updated_at: new Date(),
-				})
-				.returning("id")
-				.executeTakeFirstOrThrow();
+		await stdb.callReducer("create_env_pit", [
+			id,
+			org_id,
+			app_id,
+			env_type_id,
+			change_request_message,
+			user_id,
+			JSON.stringify(envs),
+		]);
 
-			const env_list = envs.map(env => ({
-				id: uuidv4(),
-				key: env.key,
-				value: env.value,
-				operation: env.operation || "UPDATE",
-				env_store_pit_id: id,
-				created_at: new Date(),
-				updated_at: new Date(),
-			}));
-
-			await trx.insertInto("env_store_pit_change_request").values(env_list).execute();
-
-			return { id };
-		});
+		return { id };
 	};
 
 	public static getEnvStorePiTById = async ({ id }: { id: string }) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		const pit = await db
-			.selectFrom("env_store_pit")
-			.selectAll()
-			.where("id", "=", id)
-			.executeTakeFirstOrThrow();
+		const row = await stdb.queryOne<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE uuid = '${id}'`,
+		);
 
-		const envs = await db
-			.selectFrom("env_store_pit_change_request")
-			.selectAll()
-			.where("env_store_pit_id", "=", id)
-			.execute();
+		if (!row) {
+			throw new Error(`EnvStorePiT not found: ${id}`);
+		}
+
+		const pit = mapPitRow(row);
+		const envs = parseChanges(row);
 
 		return { pit, envs };
 	};
@@ -87,29 +113,22 @@ export class EnvStorePiTService {
 		page: number;
 		per_page: number;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
+		const offset = (page - 1) * per_page;
 
-		const [pits, totalCount] = await Promise.all([
-			db
-				.selectFrom("env_store_pit")
-				.selectAll()
-				.where("org_id", "=", org_id)
-				.where("app_id", "=", app_id)
-				.where("env_type_id", "=", env_type_id)
-				.orderBy("created_at", "desc")
-				.limit(per_page)
-				.offset((page - 1) * per_page)
-				.execute(),
-			db
-				.selectFrom("env_store_pit")
-				.select(db.fn.count<number>("id").as("count"))
-				.where("org_id", "=", org_id)
-				.where("app_id", "=", app_id)
-				.where("env_type_id", "=", env_type_id)
-				.executeTakeFirstOrThrow(),
+		const whereClause = `org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}'`;
+
+		const [rows, totalCount] = await Promise.all([
+			stdb.query<EnvStorePitRow>(
+				`SELECT * FROM env_store_pit WHERE ${whereClause} ORDER BY created_at DESC LIMIT ${per_page} OFFSET ${offset}`,
+			),
+			stdb.queryCount(
+				`SELECT uuid FROM env_store_pit WHERE ${whereClause}`,
+			),
 		]);
 
-		const totalPages = Math.ceil(totalCount.count / per_page);
+		const pits = rows.map(mapPitRow);
+		const totalPages = Math.ceil(totalCount / per_page);
 
 		return { pits, totalPages };
 	};
@@ -125,36 +144,25 @@ export class EnvStorePiTService {
 		env_type_id: string;
 		key: string;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		const pits = await db
-			.selectFrom("env_store_pit")
-			.selectAll()
-			.innerJoin(
-				"env_store_pit_change_request",
-				"env_store_pit.id",
-				"env_store_pit_change_request.env_store_pit_id",
-			)
-			.where("env_store_pit.org_id", "=", org_id)
-			.where("env_store_pit.app_id", "=", app_id)
-			.where("env_store_pit.env_type_id", "=", env_type_id)
-			.where("env_store_pit_change_request.key", "=", key)
-			.orderBy("env_store_pit.created_at", "desc")
-			.execute();
+		// Query all PiTs for the scope, then filter by key in the changes JSON in TypeScript
+		const rows = await stdb.query<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}' ORDER BY created_at DESC`,
+		);
+
+		const pits = rows
+			.filter((row) => {
+				const changes: Array<{ key: string }> =
+					typeof row.changes === "string" ? JSON.parse(row.changes) : row.changes;
+				return changes.some((c) => c.key === key);
+			})
+			.map(mapPitRow);
 
 		return pits;
 	};
 
 	// Enhanced function to get environment state at a specific point in time
-	//
-	// TODO(perf #56): This method replays ALL change-request rows from epoch up to
-	// the target PiT. For long-lived apps this becomes a full-scan of
-	// env_store_pit x env_store_pit_change_request. Two mitigations:
-	//   1. Add a composite index on env_store_pit(org_id, app_id, env_type_id, created_at)
-	//      so the DB can range-scan efficiently.
-	//   2. Implement materialized snapshots: periodically persist the full env state
-	//      at a known PiT, then only replay changes *after* the snapshot. This
-	//      reduces replay from O(total_changes) to O(changes_since_snapshot).
 	public static getEnvsTillPiTId = async ({
 		org_id,
 		app_id,
@@ -166,56 +174,46 @@ export class EnvStorePiTService {
 		env_type_id: string;
 		env_store_pit_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
 		// Get the timestamp of the target PiT
-		const targetPiT = await db
-			.selectFrom("env_store_pit")
-			.select("created_at")
-			.where("id", "=", env_store_pit_id)
-			.executeTakeFirstOrThrow();
+		const targetPiT = await stdb.queryOne<{ created_at: string }>(
+			`SELECT created_at FROM env_store_pit WHERE uuid = '${env_store_pit_id}'`,
+		);
 
-		// Get all PiT changes up to the target timestamp, ordered chronologically
-		const allChanges = await db
-			.selectFrom("env_store_pit")
-			.innerJoin(
-				"env_store_pit_change_request",
-				"env_store_pit.id",
-				"env_store_pit_change_request.env_store_pit_id",
-			)
-			.select([
-				"env_store_pit_change_request.key",
-				"env_store_pit_change_request.value",
-				"env_store_pit_change_request.operation",
-				"env_store_pit.created_at",
-			])
-			.where("env_store_pit.org_id", "=", org_id)
-			.where("env_store_pit.app_id", "=", app_id)
-			.where("env_store_pit.env_type_id", "=", env_type_id)
-			.where("env_store_pit.created_at", "<=", targetPiT.created_at)
-			.orderBy("env_store_pit.created_at", "asc")
-			.orderBy("env_store_pit_change_request.created_at", "asc")
-			.execute();
+		if (!targetPiT) {
+			throw new Error(`EnvStorePiT not found: ${env_store_pit_id}`);
+		}
+
+		// Get all PiT entries up to the target timestamp, ordered chronologically
+		const allPits = await stdb.query<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}' AND created_at <= '${targetPiT.created_at}' ORDER BY created_at ASC`,
+		);
 
 		// Replay the changes to build the state at the target point in time
-		const envState = new Map<string, { key: string; value: string; last_updated: Date, operation: string }>();
+		const envState = new Map<string, { key: string; value: string; last_updated: Date; operation: string }>();
 
-		for (const change of allChanges) {
-			const operation = change.operation || "UPDATE";
+		for (const pit of allPits) {
+			const changes: Array<{ key: string; value: string; operation: string }> =
+				typeof pit.changes === "string" ? JSON.parse(pit.changes) : pit.changes;
 
-			switch (operation) {
-				case "CREATE":
-				case "UPDATE":
-					envState.set(change.key, {
-						key: change.key,
-						value: change.value,
-						last_updated: change.created_at,
-						operation: change.operation
-					});
-					break;
-				case "DELETE":
-					envState.delete(change.key);
-					break;
+			for (const change of changes) {
+				const operation = change.operation || "UPDATE";
+
+				switch (operation) {
+					case "CREATE":
+					case "UPDATE":
+						envState.set(change.key, {
+							key: change.key,
+							value: change.value,
+							last_updated: new Date(pit.created_at),
+							operation: change.operation,
+						});
+						break;
+					case "DELETE":
+						envState.delete(change.key);
+						break;
+				}
 			}
 		}
 
@@ -235,48 +233,37 @@ export class EnvStorePiTService {
 		env_type_id: string;
 		timestamp: Date;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		// Get all PiT changes up to the target timestamp
-		const allChanges = await db
-			.selectFrom("env_store_pit")
-			.innerJoin(
-				"env_store_pit_change_request",
-				"env_store_pit.id",
-				"env_store_pit_change_request.env_store_pit_id",
-			)
-			.select([
-				"env_store_pit_change_request.key",
-				"env_store_pit_change_request.value",
-				"env_store_pit_change_request.operation",
-				"env_store_pit.created_at",
-			])
-			.where("env_store_pit.org_id", "=", org_id)
-			.where("env_store_pit.app_id", "=", app_id)
-			.where("env_store_pit.env_type_id", "=", env_type_id)
-			.where("env_store_pit.created_at", "<=", timestamp)
-			.orderBy("env_store_pit.created_at", "asc")
-			.execute();
+		// Get all PiT entries up to the target timestamp
+		const allPits = await stdb.query<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}' AND created_at <= '${timestamp.toISOString()}' ORDER BY created_at ASC`,
+		);
 
 		// Replay changes to build state
-		const envState = new Map<string, { key: string; value: string; last_updated: Date, operation: string }>();
+		const envState = new Map<string, { key: string; value: string; last_updated: Date; operation: string }>();
 
-		for (const change of allChanges) {
-			const operation = change.operation || "UPDATE";
+		for (const pit of allPits) {
+			const changes: Array<{ key: string; value: string; operation: string }> =
+				typeof pit.changes === "string" ? JSON.parse(pit.changes) : pit.changes;
 
-			switch (operation) {
-				case "CREATE":
-				case "UPDATE":
-					envState.set(change.key, {
-						key: change.key,
-						value: change.value,
-						last_updated: change.created_at,
-						operation: change.operation
-					});
-					break;
-				case "DELETE":
-					envState.delete(change.key);
-					break;
+			for (const change of changes) {
+				const operation = change.operation || "UPDATE";
+
+				switch (operation) {
+					case "CREATE":
+					case "UPDATE":
+						envState.set(change.key, {
+							key: change.key,
+							value: change.value,
+							last_updated: new Date(pit.created_at),
+							operation: change.operation,
+						});
+						break;
+					case "DELETE":
+						envState.delete(change.key);
+						break;
+				}
 			}
 		}
 
@@ -302,66 +289,58 @@ export class EnvStorePiTService {
 		from_pit_id: string;
 		to_pit_id: string;
 	}) => {
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
 		// Fetch timestamps for both PiTs in parallel
 		const [fromPiT, toPiT] = await Promise.all([
-			db.selectFrom("env_store_pit").select("created_at").where("id", "=", from_pit_id).executeTakeFirstOrThrow(),
-			db.selectFrom("env_store_pit").select("created_at").where("id", "=", to_pit_id).executeTakeFirstOrThrow(),
+			stdb.queryOne<{ created_at: string }>(`SELECT created_at FROM env_store_pit WHERE uuid = '${from_pit_id}'`),
+			stdb.queryOne<{ created_at: string }>(`SELECT created_at FROM env_store_pit WHERE uuid = '${to_pit_id}'`),
 		]);
 
-		// Single query: fetch all changes up to the later PiT (to)
-		const allChanges = await db
-			.selectFrom("env_store_pit")
-			.innerJoin(
-				"env_store_pit_change_request",
-				"env_store_pit.id",
-				"env_store_pit_change_request.env_store_pit_id",
-			)
-			.select([
-				"env_store_pit_change_request.key",
-				"env_store_pit_change_request.value",
-				"env_store_pit_change_request.operation",
-				"env_store_pit.created_at",
-			])
-			.where("env_store_pit.org_id", "=", org_id)
-			.where("env_store_pit.app_id", "=", app_id)
-			.where("env_store_pit.env_type_id", "=", env_type_id)
-			.where("env_store_pit.created_at", "<=", toPiT.created_at)
-			.orderBy("env_store_pit.created_at", "asc")
-			.orderBy("env_store_pit_change_request.created_at", "asc")
-			.execute();
+		if (!fromPiT || !toPiT) {
+			throw new Error("One or both PiT IDs not found");
+		}
+
+		// Single query: fetch all PiTs up to the later PiT (to)
+		const allPits = await stdb.query<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}' AND created_at <= '${toPiT.created_at}' ORDER BY created_at ASC`,
+		);
 
 		// Replay changes once, building both snapshots in a single pass
 		const fromState = new Map<string, string>();
 		const toState = new Map<string, string>();
 
-		for (const change of allChanges) {
-			const operation = change.operation || "UPDATE";
-			const isBeforeOrAtFrom = change.created_at <= fromPiT.created_at;
+		for (const pit of allPits) {
+			const changes: Array<{ key: string; value: string; operation: string }> =
+				typeof pit.changes === "string" ? JSON.parse(pit.changes) : pit.changes;
+			const isBeforeOrAtFrom = pit.created_at <= fromPiT.created_at;
 
-			// Apply to the `from` snapshot while we haven't passed the from timestamp
-			if (isBeforeOrAtFrom) {
+			for (const change of changes) {
+				const operation = change.operation || "UPDATE";
+
+				// Apply to the `from` snapshot while we haven't passed the from timestamp
+				if (isBeforeOrAtFrom) {
+					switch (operation) {
+						case "CREATE":
+						case "UPDATE":
+							fromState.set(change.key, change.value);
+							break;
+						case "DELETE":
+							fromState.delete(change.key);
+							break;
+					}
+				}
+
+				// Always apply to the `to` snapshot
 				switch (operation) {
 					case "CREATE":
 					case "UPDATE":
-						fromState.set(change.key, change.value);
+						toState.set(change.key, change.value);
 						break;
 					case "DELETE":
-						fromState.delete(change.key);
+						toState.delete(change.key);
 						break;
 				}
-			}
-
-			// Always apply to the `to` snapshot
-			switch (operation) {
-				case "CREATE":
-				case "UPDATE":
-					toState.set(change.key, change.value);
-					break;
-				case "DELETE":
-					toState.delete(change.key);
-					break;
 			}
 		}
 
@@ -411,30 +390,40 @@ export class EnvStorePiTService {
 		// Clamp limit to [1, 100] to protect against direct service calls bypassing validation
 		limit = Math.min(100, Math.max(1, limit));
 
-		const db = await DB.getInstance();
+		const stdb = STDBClient.getInstance();
 
-		const timeline = await db
-			.selectFrom("env_store_pit")
-			.innerJoin(
-				"env_store_pit_change_request",
-				"env_store_pit.id",
-				"env_store_pit_change_request.env_store_pit_id",
-			)
-			.select([
-				"env_store_pit.id as pit_id",
-				"env_store_pit.change_request_message",
-				"env_store_pit.user_id",
-				"env_store_pit.created_at",
-				"env_store_pit_change_request.value",
-				"env_store_pit_change_request.operation",
-			])
-			.where("env_store_pit.org_id", "=", org_id)
-			.where("env_store_pit.app_id", "=", app_id)
-			.where("env_store_pit.env_type_id", "=", env_type_id)
-			.where("env_store_pit_change_request.key", "=", key)
-			.orderBy("env_store_pit.created_at", "desc")
-			.limit(limit)
-			.execute();
+		// Fetch PiTs for this scope, then filter by key in TypeScript
+		const rows = await stdb.query<EnvStorePitRow>(
+			`SELECT * FROM env_store_pit WHERE org_id = '${org_id}' AND app_id = '${app_id}' AND env_type_id = '${env_type_id}' ORDER BY created_at DESC`,
+		);
+
+		const timeline: Array<{
+			pit_id: string;
+			change_request_message: string;
+			user_id: string;
+			created_at: Date;
+			value: string;
+			operation: string;
+		}> = [];
+
+		for (const row of rows) {
+			if (timeline.length >= limit) break;
+
+			const changes: Array<{ key: string; value: string; operation: string }> =
+				typeof row.changes === "string" ? JSON.parse(row.changes) : row.changes;
+
+			const matchingChange = changes.find((c) => c.key === key);
+			if (matchingChange) {
+				timeline.push({
+					pit_id: row.uuid,
+					change_request_message: row.change_request_message,
+					user_id: row.user_id,
+					created_at: new Date(row.created_at),
+					value: matchingChange.value,
+					operation: matchingChange.operation || "UPDATE",
+				});
+			}
+		}
 
 		return timeline;
 	};

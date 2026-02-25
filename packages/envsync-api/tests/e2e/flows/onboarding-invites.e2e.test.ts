@@ -1,9 +1,9 @@
 /**
  * E2E: Onboarding invites — org invite + user invite CRUD
  *
- * Uses real PostgreSQL and OpenFGA.
+ * Uses real SpacetimeDB and Keycloak.
  * Note: We skip the acceptance flow because acceptOrgInvite calls
- * createZitadelUser() which is not mocked in E2E.
+ * createKeycloakUser() which is not mocked in E2E.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

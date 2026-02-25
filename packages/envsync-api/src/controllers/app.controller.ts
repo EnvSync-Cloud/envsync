@@ -2,7 +2,7 @@ import { type Context } from "hono";
 
 import { AppService } from "@/services/app.service";
 import { AuditLogService } from "@/services/audit_log.service";
-import { generateKeyPair } from "@/helpers/key-store";
+import { generateKeyPair } from "@/utils/crypto";
 
 export class AppController {
 	public static readonly createApp = async (c: Context) => {
@@ -107,10 +107,7 @@ export class AppController {
 			},
 		});
 
-		// P4 perf fix (#55): env/secret counts require N Vault round-trips per app
-		// (getEnvCountByApp + getSecretCountByApp each call kvList per env_type).
-		// For 20 apps x 3 env_types = 120 Vault calls. Counts are now only
-		// computed on the single-app detail endpoint (getApp).
+		// Env/secret counts are computed on the single-app detail endpoint (getApp).
 		return c.json(apps);
 	};
 

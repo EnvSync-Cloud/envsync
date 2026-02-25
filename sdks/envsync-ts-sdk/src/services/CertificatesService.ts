@@ -18,7 +18,7 @@ export class CertificatesService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Initialize Organization CA
-     * Create an intermediate CA for the organization via miniKMS
+     * Create an intermediate CA for the organization via SpacetimeDB
      * @param requestBody
      * @returns OrgCAResponse Organization CA initialized successfully
      * @throws ApiError

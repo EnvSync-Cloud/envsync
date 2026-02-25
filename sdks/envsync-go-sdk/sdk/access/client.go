@@ -119,7 +119,7 @@ func (c *Client) CreateWebLogin(
 	return response, nil
 }
 
-// Handle web login callback from Zitadel
+// Handle web login callback from Keycloak
 func (c *Client) CallbackWebLogin(
 	ctx context.Context,
 	request *sdk.CallbackWebLoginRequest,
@@ -213,7 +213,7 @@ func (c *Client) CreateApiLogin(
 	return response, nil
 }
 
-// Handle API login callback from Zitadel
+// Handle API login callback from Keycloak
 func (c *Client) CallbackApiLogin(
 	ctx context.Context,
 	request *sdk.CallbackApiLoginRequest,

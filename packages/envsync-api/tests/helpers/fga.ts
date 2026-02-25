@@ -1,11 +1,9 @@
 /**
- * In-memory OpenFGA mock for tests.
+ * In-memory authorization mock for tests.
  *
  * Stores tuples as strings and implements simplified hierarchy resolution
- * matching the authorization model in src/libs/openfga/model.ts.
+ * matching the authorization model now in SpacetimeDB's auth reducer.
  */
-import { mock } from "bun:test";
-
 type TupleKey = { user: string; relation: string; object: string };
 
 /** Serialized tuple set */
@@ -30,7 +28,7 @@ function hasTuple(user: string, relation: string, object: string): boolean {
 }
 
 /**
- * Simplified permission check that resolves the OpenFGA model hierarchy.
+ * Simplified permission check that resolves the authorization model hierarchy.
  * Handles direct tuples + computed relations for org, app, env_type types.
  */
 function checkPermission(user: string, relation: string, object: string): boolean {
@@ -339,11 +337,3 @@ export function setupUserOrgTuples(
 	if (role.have_audit_access) tuples.add(serialize({ user, relation: "have_audit_access", object: org }));
 }
 
-/** Register the FGA mock — call this from setup.ts */
-export function registerFGAMock(): void {
-	mock.module("@/libs/openfga/index", () => ({
-		FGAClient: {
-			getInstance: async () => MockFGAClient,
-		},
-	}));
-}

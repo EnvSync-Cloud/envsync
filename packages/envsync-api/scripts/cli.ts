@@ -1,16 +1,13 @@
 #!/usr/bin/env bun
 /**
- * EnvSync API CLI – init RustFS (S3) bucket and Zitadel OIDC apps (when ZITADEL_PAT is set).
+ * EnvSync API CLI – init RustFS (S3) bucket and retrieve Keycloak client secrets.
  * Run from monorepo root: bun run scripts/cli.ts init (from packages/envsync-api)
  * Or: cd packages/envsync-api && bun run scripts/cli.ts init
  *
- * Zitadel: With ZITADEL_PAT set, creates a project "EnvSync" and OIDC apps (Web, CLI, API) via
- * the Application Service v2 API and writes client IDs/secrets to the root .env.
+ * Keycloak: The realm-export.json auto-imports the "envsync" realm with 3 OIDC clients.
+ * This script retrieves their client secrets and writes them to the root .env.
  */
 
-
-import fs from "node:fs";
-import path from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
 
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
@@ -18,225 +15,121 @@ import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import * as openpgp from "openpgp";
 
 import { config } from "../src/utils/env";
-import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
-import { DB, JsonValue } from "../src/libs/db";
-import { VaultClient } from "../src/libs/vault";
-import { envPath, gpgKeyPath } from "../src/libs/vault/paths";
-import { KMSClient } from "../src/libs/kms/client";
+import { updateRootEnv } from "../src/utils/load-root-env";
+import { STDBClient } from "../src/libs/stdb";
 import { SecretKeyGenerator } from "sk-keygen";
-import type { EllipticCurveName } from "openpgp";
 
-const ZITADEL_PROJECT_NAME = "EnvSync";
+// ── Keycloak Admin helpers (standalone, no app config dependency) ──────
+
+function keycloakBase(): string {
+	return config.KEYCLOAK_URL.replace(/\/$/, "");
+}
+
+async function getKeycloakAdminToken(): Promise<string> {
+	const res = await fetch(
+		`${keycloakBase()}/realms/master/protocol/openid-connect/token`,
+		{
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({
+				grant_type: "password",
+				client_id: "admin-cli",
+				username: config.KEYCLOAK_ADMIN_USER,
+				password: config.KEYCLOAK_ADMIN_PASSWORD,
+			}),
+			signal: AbortSignal.timeout(10_000),
+		},
+	);
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(`Keycloak admin token failed: ${res.status} ${text}`);
+	}
+	const data = (await res.json()) as { access_token: string };
+	return data.access_token;
+}
+
+async function adminFetch(token: string, path: string, options: RequestInit = {}) {
+	const realm = config.KEYCLOAK_REALM;
+	const url = `${keycloakBase()}/admin/realms/${realm}${path}`;
+	return fetch(url, {
+		...options,
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+			...(options.headers as Record<string, string>),
+		},
+		signal: options.signal ?? AbortSignal.timeout(10_000),
+	});
+}
 
 /**
- * Resolve ZITADEL PAT from env or from file (bootstrap admin.pat when using bind-mount).
- * Use ZITADEL_PAT_FILE=e.g. ./zitadel-data/admin.pat to read the PAT created by
- * ZITADEL_FIRSTINSTANCE_PATPATH on first Zitadel start.
+ * Retrieve Keycloak client secret for a confidential client.
+ * Returns null for public clients (like CLI).
  */
-function resolveZitadelPat(): { pat: string; fromFile: boolean } {
-	const fromEnv = config.ZITADEL_PAT?.trim();
-	if (fromEnv) return { pat: fromEnv, fromFile: false };
-	const filePath = process.env.ZITADEL_PAT_FILE;
-	if (!filePath?.trim()) return { pat: "", fromFile: false };
-	const resolved = path.isAbsolute(filePath)
-		? filePath
-		: path.resolve(findMonorepoRoot(), filePath.trim());
+async function getClientSecret(
+	token: string,
+	clientId: string,
+): Promise<{ internalId: string; secret: string | null }> {
+	// Find client by clientId
+	const listRes = await adminFetch(token, `/clients?clientId=${encodeURIComponent(clientId)}`);
+	if (!listRes.ok) {
+		throw new Error(`Keycloak list clients failed: ${listRes.status} ${await listRes.text()}`);
+	}
+	const clients = (await listRes.json()) as Array<{ id: string; clientId: string; publicClient?: boolean }>;
+	const client = clients.find(c => c.clientId === clientId);
+	if (!client) {
+		throw new Error(`Keycloak client '${clientId}' not found. Ensure realm-export.json was imported.`);
+	}
+
+	// Public clients don't have secrets
+	if (client.publicClient) {
+		return { internalId: client.id, secret: null };
+	}
+
+	// Get secret for confidential clients
+	const secretRes = await adminFetch(token, `/clients/${client.id}/client-secret`);
+	if (!secretRes.ok) {
+		throw new Error(`Keycloak get client secret failed: ${secretRes.status} ${await secretRes.text()}`);
+	}
+	const data = (await secretRes.json()) as { value: string };
+	return { internalId: client.id, secret: data.value };
+}
+
+async function initKeycloakClients(): Promise<Record<string, string>> {
+	const updates: Record<string, string> = {};
+
+	let token: string;
 	try {
-		if (fs.existsSync(resolved)) {
-			const pat = fs.readFileSync(resolved, "utf8").trim();
-			if (pat) return { pat, fromFile: true };
-		}
-	} catch {
-		// ignore
-	}
-	return { pat: "", fromFile: false };
-}
-
-function zitadelBase(): string {
-	return config.ZITADEL_URL.replace(/\/$/, "");
-}
-
-async function getOrCreateZitadelProject(pat: string): Promise<string> {
-	const base = zitadelBase();
-	const listRes = await fetch(`${base}/management/v1/projects/_search`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${pat}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({}),
-	});
-	if (listRes.ok) {
-		const data = (await listRes.json()) as { result?: Array<{ id: string; name: string }> };
-		const projects = data.result ?? [];
-		const existing = projects.find((p: { name: string }) => p.name === ZITADEL_PROJECT_NAME);
-		if (existing) {
-			return existing.id;
-		}
-	}
-	const createRes = await fetch(`${base}/management/v1/projects`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${pat}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ name: ZITADEL_PROJECT_NAME }),
-	});
-	if (!createRes.ok) {
-		const text = await createRes.text();
-		throw new Error(`Zitadel create project failed: ${createRes.status} ${text}`);
-	}
-	const data = (await createRes.json()) as { id: string };
-	return data.id;
-}
-
-type OIDCAppType = "OIDC_APP_TYPE_WEB" | "OIDC_APP_TYPE_NATIVE";
-type OIDCAuthMethod = "OIDC_AUTH_METHOD_TYPE_POST" | "OIDC_AUTH_METHOD_TYPE_NONE";
-
-async function createZitadelOIDCApp(
-	pat: string,
-	projectId: string,
-	appName: string,
-	opts: {
-		redirectUris: string[];
-		postLogoutRedirectUris?: string[];
-		appType: OIDCAppType;
-		authMethodType: OIDCAuthMethod;
-	},
-): Promise<{ clientId: string; clientSecret?: string }> {
-	const base = zitadelBase();
-	const url = `${base}/zitadel.application.v2.ApplicationService/CreateApplication`;
-	const payload = {
-		projectId,
-		name: appName,
-		applicationType: "APPLICATION_TYPE_OIDC",
-		oidcConfiguration: {
-			version: "OIDC_VERSION_1_0",
-			redirectUris: opts.redirectUris,
-			responseTypes: ["OIDC_RESPONSE_TYPE_CODE"],
-			grantTypes: ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"],
-			appType: opts.appType,
-			authMethodType: opts.authMethodType,
-			postLogoutRedirectUris: opts.postLogoutRedirectUris ?? opts.redirectUris,
-		},
-	};
-	const res = await fetch(url, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${pat}`,
-			"Content-Type": "application/json",
-			"Connect-Protocol-Version": "1",
-			Accept: "application/json",
-		},
-		body: JSON.stringify(payload),
-	});
-	if (!res.ok) {
-		const text = await res.text();
-		throw new Error(`Zitadel CreateApplication ${appName} failed: ${res.status} ${text}`);
-	}
-	const data = (await res.json()) as {
-		oidcConfiguration?: { clientId?: string; clientSecret?: string };
-		apiConfiguration?: { clientId?: string; clientSecret?: string };
-		clientId?: string;
-		clientSecret?: string;
-	};
-	const oidc = data.oidcConfiguration ?? data.apiConfiguration ?? data;
-	const clientId = oidc.clientId ?? data.clientId;
-	if (!clientId) {
-		throw new Error(`Zitadel CreateApplication ${appName}: no clientId in response`);
-	}
-	return { clientId, clientSecret: oidc.clientSecret ?? data.clientSecret };
-}
-
-async function createZitadelNativeApp(
-	pat: string,
-	projectId: string,
-	appName: string,
-): Promise<{ clientId: string }> {
-	const base = zitadelBase();
-	const url = `${base}/zitadel.application.v2.ApplicationService/CreateApplication`;
-	const payload = {
-		projectId,
-		name: appName,
-		applicationType: "APPLICATION_TYPE_OIDC",
-		oidcConfiguration: {
-			applicationType: "OIDC_APP_TYPE_NATIVE",
-			redirectUris: [],
-			responseTypes: ["OIDC_RESPONSE_TYPE_CODE"],
-			grantTypes: ["OIDC_GRANT_TYPE_DEVICE_CODE"],
-			appType: "OIDC_APP_TYPE_NATIVE",
-			authMethodType: "OIDC_AUTH_METHOD_TYPE_NONE",
-			accessTokenType: "OIDC_TOKEN_TYPE_JWT",
-		},
-	};
-
-	const res = await fetch(url, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${pat}`,
-			"Content-Type": "application/json",
-			"Connect-Protocol-Version": "1",
-			Accept: "application/json",
-		},
-		body: JSON.stringify(payload),
-	});
-	if (!res.ok) {
-		const text = await res.text();
-		throw new Error(`Zitadel CreateApplication ${appName} failed: ${res.status} ${text}`);
-	}
-	const data = (await res.json()) as { 
-		oidcConfiguration: { clientId: string };
-	};
-	return { clientId: data.oidcConfiguration.clientId };
-}
-
-async function initZitadelApps(): Promise<Record<string, string>> {
-	const { pat, fromFile } = resolveZitadelPat();
-	if (!pat) {
-		console.log(
-			"Zitadel: ZITADEL_PAT (or ZITADEL_PAT_FILE for bootstrap admin.pat) not set, skipping OIDC app creation.",
-		);
+		token = await getKeycloakAdminToken();
+	} catch (err) {
+		console.log(`Keycloak: Could not get admin token (${(err as Error).message}). Skipping client setup.`);
 		return {};
 	}
-	if (fromFile) console.log("Zitadel: using PAT from ZITADEL_PAT_FILE.");
-	const updates: Record<string, string> = {};
-	if (fromFile) updates.ZITADEL_PAT = pat;
-	const projectId = await getOrCreateZitadelProject(pat);
-	console.log("Zitadel: project", ZITADEL_PROJECT_NAME, "ready.");
 
-	const webRedirect = config.ZITADEL_WEB_REDIRECT_URI;
-	const webLogout = config.ZITADEL_WEB_CALLBACK_URL || webRedirect;
-	const apiRedirect = config.ZITADEL_API_REDIRECT_URI;
+	console.log("Keycloak: Admin token acquired.");
 
-	// Web app (confidential)
-	const web = await createZitadelOIDCApp(pat, projectId, "EnvSync Web", {
-		redirectUris: [webRedirect],
-		postLogoutRedirectUris: [webLogout],
-		appType: "OIDC_APP_TYPE_WEB",
-		authMethodType: "OIDC_AUTH_METHOD_TYPE_POST",
-	});
-	updates.ZITADEL_WEB_CLIENT_ID = web.clientId;
-	if (web.clientSecret) updates.ZITADEL_WEB_CLIENT_SECRET = web.clientSecret;
-	console.log("Zitadel: Web app created.", web.clientId);
+	// Web client (confidential)
+	const web = await getClientSecret(token, config.KEYCLOAK_WEB_CLIENT_ID || "envsync-web");
+	if (web.secret) {
+		updates.KEYCLOAK_WEB_CLIENT_SECRET = web.secret;
+		console.log(`Keycloak: Web client secret retrieved (${config.KEYCLOAK_WEB_CLIENT_ID || "envsync-web"}).`);
+	}
 
-	// CLI app (native / public)
-	const cli = await createZitadelNativeApp(pat, projectId, "EnvSync CLI");
-	updates.ZITADEL_CLI_CLIENT_ID = cli.clientId;
-	console.log("Zitadel: CLI app created.", cli.clientId);
+	// CLI client (public – no secret)
+	await getClientSecret(token, config.KEYCLOAK_CLI_CLIENT_ID || "envsync-cli");
+	console.log(`Keycloak: CLI client verified (${config.KEYCLOAK_CLI_CLIENT_ID || "envsync-cli"}, public).`);
 
-	// API app (confidential)
-	const api = await createZitadelOIDCApp(pat, projectId, "EnvSync API", {
-		redirectUris: [apiRedirect],
-		postLogoutRedirectUris: [apiRedirect],
-		appType: "OIDC_APP_TYPE_WEB",
-		authMethodType: "OIDC_AUTH_METHOD_TYPE_POST",
-	});
-	updates.ZITADEL_API_CLIENT_ID = api.clientId;
-	if (api.clientSecret) updates.ZITADEL_API_CLIENT_SECRET = api.clientSecret;
-	console.log("Zitadel: API app created.", api.clientId);
+	// API client (confidential)
+	const api = await getClientSecret(token, config.KEYCLOAK_API_CLIENT_ID || "envsync-api");
+	if (api.secret) {
+		updates.KEYCLOAK_API_CLIENT_SECRET = api.secret;
+		console.log(`Keycloak: API client secret retrieved (${config.KEYCLOAK_API_CLIENT_ID || "envsync-api"}).`);
+	}
 
 	return updates;
 }
+
+// ── RustFS init ─────────────────────────────────────────────────────
 
 const RUSTFS_RETRIES = 5;
 const RUSTFS_RETRY_DELAY_MS = 3000;
@@ -288,43 +181,53 @@ async function initRustfsBucket() {
 	throw lastError;
 }
 
-async function initMiniKMS() {
-	// a 32 byte hex string
+// ── STDB Root Key init ─────────────────────────────────────────────
+
+async function initSTDBRootKey() {
+	if (config.STDB_ROOT_KEY) {
+		console.log("SpacetimeDB: STDB_ROOT_KEY already set, skipping generation.");
+		return;
+	}
 	const rootKey = randomBytes(32).toString("hex");
-	console.log("miniKMS: root key", rootKey);
+	console.log("SpacetimeDB: root key generated");
 
 	updateRootEnv({
-		MINIKMS_ROOT_KEY: rootKey,
+		STDB_ROOT_KEY: rootKey,
 	});
-	console.log("miniKMS: root key written to root .env");
+	console.log("SpacetimeDB: root key written to root .env");
 }
 
+// ── Init command ────────────────────────────────────────────────────
+
 async function init() {
-	console.log("EnvSync API init: RustFS bucket + Zitadel OIDC apps\n");
+	console.log("EnvSync API init: RustFS bucket + Keycloak client secrets\n");
 
 	await initRustfsBucket();
 
-	const envUpdates = await initZitadelApps();
+	const envUpdates = await initKeycloakClients();
 	if (Object.keys(envUpdates).length > 0) {
 		updateRootEnv(envUpdates);
-		console.log("Zitadel: wrote client IDs/secrets to root .env");
-	} else if (!resolveZitadelPat().pat) {
-		console.log(
-			"\nZitadel: Set ZITADEL_PAT in .env (or ZITADEL_PAT_FILE to bootstrap admin.pat) and re-run init to create OIDC apps.",
-		);
+		console.log("Keycloak: wrote client secrets to root .env");
 	}
 
-	// Initialize miniKMS
-	await initMiniKMS();
+	await initSTDBRootKey();
 
 	console.log("\nInit done.");
 }
 
-/**
- * Write OpenFGA relationship tuples for a user based on their org role flags.
- * Uses the REST API directly to avoid pulling in the full FGAClient init chain.
- */
-async function assignFGARoles(
+// ── Auth tuple helpers (standalone, uses STDB directly) ─────────────
+
+async function writeAuthTuples(
+	stdb: ReturnType<typeof STDBClient.getInstance>,
+	tuples: { subject: string; relation: string; object_type: string; object_id: string }[],
+): Promise<void> {
+	if (tuples.length === 0) return;
+	await stdb.callReducer("write_auth_tuples", [JSON.stringify(tuples)], { injectRootKey: false });
+	console.log(`  Auth: ${tuples.length} tuples written.`);
+}
+
+async function assignRoleTuples(
+	stdb: ReturnType<typeof STDBClient.getInstance>,
 	userId: string,
 	orgId: string,
 	role: {
@@ -335,107 +238,34 @@ async function assignFGARoles(
 		have_api_access: boolean;
 		have_billing_options: boolean;
 		have_webhook_access: boolean;
+		have_gpg_access?: boolean;
+		have_cert_access?: boolean;
+		have_audit_access?: boolean;
 	},
 ): Promise<void> {
-	const openfgaUrl = config.OPENFGA_API_URL?.replace(/\/$/, "");
-	const storeId = config.OPENFGA_STORE_ID;
-	const modelId = config.OPENFGA_MODEL_ID;
+	const subject = `user:${userId}`;
+	const tuples: { subject: string; relation: string; object_type: string; object_id: string }[] = [];
 
-	if (!openfgaUrl || !storeId) {
-		console.log(
-			"  FGA: OPENFGA_API_URL or OPENFGA_STORE_ID not set. Run monorepo `bun run cli init` first to bootstrap OpenFGA.",
-		);
-		return;
-	}
+	tuples.push({ subject, relation: "member", object_type: "org", object_id: orgId });
+	if (role.is_master) tuples.push({ subject, relation: "master", object_type: "org", object_id: orgId });
+	if (role.is_admin) tuples.push({ subject, relation: "admin", object_type: "org", object_id: orgId });
+	if (role.can_view) tuples.push({ subject, relation: "can_view", object_type: "org", object_id: orgId });
+	if (role.can_edit) tuples.push({ subject, relation: "can_edit", object_type: "org", object_id: orgId });
+	if (role.have_api_access) tuples.push({ subject, relation: "have_api_access", object_type: "org", object_id: orgId });
+	if (role.have_billing_options) tuples.push({ subject, relation: "have_billing_options", object_type: "org", object_id: orgId });
+	if (role.have_webhook_access) tuples.push({ subject, relation: "have_webhook_access", object_type: "org", object_id: orgId });
+	if (role.have_gpg_access) tuples.push({ subject, relation: "have_gpg_access", object_type: "org", object_id: orgId });
+	if (role.have_cert_access) tuples.push({ subject, relation: "have_cert_access", object_type: "org", object_id: orgId });
+	if (role.have_audit_access) tuples.push({ subject, relation: "have_audit_access", object_type: "org", object_id: orgId });
 
-	const user = `user:${userId}`;
-	const org = `org:${orgId}`;
-	const tuples: { user: string; relation: string; object: string }[] = [];
-
-	tuples.push({ user, relation: "member", object: org });
-	if (role.is_master) tuples.push({ user, relation: "master", object: org });
-	if (role.is_admin) tuples.push({ user, relation: "admin", object: org });
-	if (role.can_view) tuples.push({ user, relation: "can_view", object: org });
-	if (role.can_edit) tuples.push({ user, relation: "can_edit", object: org });
-	if (role.have_api_access) tuples.push({ user, relation: "have_api_access", object: org });
-	if (role.have_billing_options) tuples.push({ user, relation: "have_billing_options", object: org });
-	if (role.have_webhook_access) tuples.push({ user, relation: "have_webhook_access", object: org });
-
-	console.log(`  FGA: Writing ${tuples.length} tuples for user ${userId} in org ${orgId}...`);
-
-	// Write tuples one by one so we can skip "already exists" errors
-	let written = 0;
-	let skipped = 0;
-	for (const tuple of tuples) {
-		const res = await fetch(`${openfgaUrl}/stores/${storeId}/write`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				writes: { tuple_keys: [tuple] },
-				...(modelId ? { authorization_model_id: modelId } : {}),
-			}),
-			signal: AbortSignal.timeout(10000),
-		});
-		if (res.ok) {
-			written++;
-		} else {
-			const body = await res.text();
-			if (body.includes("already exists")) {
-				skipped++;
-			} else {
-				console.warn(`  FGA: Failed to write tuple (${tuple.relation}): ${res.status} ${body}`);
-			}
-		}
-	}
-	console.log(`  FGA: ${written} tuples written, ${skipped} already existed.`);
+	await writeAuthTuples(stdb, tuples);
 }
 
-/**
- * Write arbitrary FGA tuples, skipping "already exists" errors.
- * Reuses the same OpenFGA REST pattern as assignFGARoles.
- */
-async function writeFGATuples(
-	tuples: { user: string; relation: string; object: string }[],
-): Promise<void> {
-	const openfgaUrl = config.OPENFGA_API_URL?.replace(/\/$/, "");
-	const storeId = config.OPENFGA_STORE_ID;
-	const modelId = config.OPENFGA_MODEL_ID;
+// ── Seed data ───────────────────────────────────────────────────────
 
-	if (!openfgaUrl || !storeId) {
-		console.log("  Seed FGA: OPENFGA_API_URL or OPENFGA_STORE_ID not set, skipping tuples.");
-		return;
-	}
-
-	let written = 0;
-	let skipped = 0;
-	for (const tuple of tuples) {
-		const res = await fetch(`${openfgaUrl}/stores/${storeId}/write`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				writes: { tuple_keys: [tuple] },
-				...(modelId ? { authorization_model_id: modelId } : {}),
-			}),
-			signal: AbortSignal.timeout(10000),
-		});
-		if (res.ok) {
-			written++;
-		} else {
-			const body = await res.text();
-			if (body.includes("already exists")) {
-				skipped++;
-			} else {
-				console.warn(`  Seed FGA: Failed to write tuple (${tuple.relation}): ${res.status} ${body}`);
-			}
-		}
-	}
-	console.log(`  Seed FGA: ${written} tuples written, ${skipped} already existed.`);
-}
-
-async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: string, userId: string): Promise<void> {
+async function seedData(stdb: ReturnType<typeof STDBClient.getInstance>, orgId: string, userId: string): Promise<void> {
 	console.log("\nSeed: Populating sample data...");
 
-	// -- a) Create 2 apps (or load existing) --
 	const apps = [
 		{ name: "Acme Backend", description: "Core backend API service" },
 		{ name: "Acme Frontend", description: "Next.js web application" },
@@ -447,90 +277,59 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 		{ name: "production", color: "#ef4444", is_default: false, is_protected: true },
 	];
 
-	const existingApp = await db
-		.selectFrom("app")
-		.selectAll()
-		.where("org_id", "=", orgId)
-		.where("name", "=", "Acme Backend")
-		.executeTakeFirst();
-
-	const dbAlreadySeeded = !!existingApp;
+	// Check if already seeded
+	const existingApps = await stdb.query<{ uuid: string; name: string }>(
+		`SELECT uuid, name FROM app WHERE org_id = '${orgId}'`,
+	);
+	const dbAlreadySeeded = existingApps.some(a => a.name === "Acme Backend");
 
 	const appIds: Record<string, string> = {};
-	// envTypeIds[appName][envTypeName] = id
 	const envTypeIds: Record<string, Record<string, string>> = {};
 
 	if (dbAlreadySeeded) {
-		console.log("Seed: Sample apps already exist in DB, skipping DB inserts.");
-		// Load existing app and env type IDs for Vault writes
+		console.log("Seed: Sample apps already exist, skipping STDB inserts.");
 		for (const app of apps) {
-			const row = await db
-				.selectFrom("app")
-				.select("id")
-				.where("org_id", "=", orgId)
-				.where("name", "=", app.name)
-				.executeTakeFirstOrThrow();
-			appIds[app.name] = row.id;
+			const row = existingApps.find(a => a.name === app.name);
+			if (row) appIds[app.name] = row.uuid;
 		}
 		for (const [appName, appId] of Object.entries(appIds)) {
 			envTypeIds[appName] = {};
+			const ets = await stdb.query<{ uuid: string; name: string }>(
+				`SELECT uuid, name FROM env_type WHERE app_id = '${appId}'`,
+			);
 			for (const et of envTypeDefs) {
-				const row = await db
-					.selectFrom("env_type")
-					.select("id")
-					.where("app_id", "=", appId)
-					.where("name", "=", et.name)
-					.executeTakeFirstOrThrow();
-				envTypeIds[appName][et.name] = row.id;
+				const row = ets.find(e => e.name === et.name);
+				if (row) envTypeIds[appName][et.name] = row.uuid;
 			}
 		}
 	} else {
 		for (const app of apps) {
 			const appId = randomUUID();
-			await db
-				.insertInto("app")
-				.values({
-					id: appId,
-					name: app.name,
-					org_id: orgId,
-					description: app.description,
-					enable_secrets: false,
-					is_managed_secret: false,
-					metadata: {},
-					created_at: new Date(),
-					updated_at: new Date(),
-				})
-				.execute();
+			const now = new Date().toISOString();
+			await stdb.callReducer("create_app", [
+				appId, app.name, orgId, app.description,
+				JSON.stringify({}), false, false, null, null,
+			]);
 			appIds[app.name] = appId;
 			console.log(`Seed: Created app "${app.name}" (${appId})`);
 		}
 
-		// -- b) Create 3 env types per app --
 		for (const [appName, appId] of Object.entries(appIds)) {
 			envTypeIds[appName] = {};
 			for (const et of envTypeDefs) {
 				const etId = randomUUID();
-				await db
-					.insertInto("env_type")
-					.values({
-						id: etId,
-						org_id: orgId,
-						app_id: appId,
-						name: et.name,
-						color: et.color,
-						is_default: et.is_default,
-						is_protected: et.is_protected,
-						created_at: new Date(),
-						updated_at: new Date(),
-					})
-					.execute();
+				const now = new Date().toISOString();
+				await stdb.callReducer("create_env_type", [
+					etId, et.name, orgId, appId, et.color,
+					et.is_default, et.is_protected, now, now,
+				]);
 				envTypeIds[appName][et.name] = etId;
 			}
 			console.log(`Seed: Created env types for "${appName}"`);
 		}
 	}
 
-	// -- c) Write sample env vars to Vault (always attempted) --
+	// Write sample env vars to SpacetimeDB (always attempted)
 	const envVars: Record<string, Record<string, Record<string, string>>> = {
 		"Acme Backend": {
 			development: {
@@ -575,11 +374,9 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 	};
 
 	let envVarCount = 0;
-	const vault = await VaultClient.getInstance();
-	const kms = await KMSClient.getInstance();
-	const kmsHealthy = await kms.healthCheck();
-	if (!kmsHealthy) {
-		throw new Error("Seed: miniKMS is not healthy. Cannot seed without encryption.");
+	const stdbHealthy = await stdb.healthCheck();
+	if (!stdbHealthy) {
+		throw new Error("Seed: SpacetimeDB is not healthy. Cannot seed without encryption.");
 	}
 
 	for (const [appName, envsByType] of Object.entries(envVars)) {
@@ -587,194 +384,123 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 		for (const [envTypeName, vars] of Object.entries(envsByType)) {
 			const etId = envTypeIds[appName][envTypeName];
 			for (const [key, value] of Object.entries(vars)) {
-				const aad = `env:${orgId}:${appId}:${etId}:${key}`;
-				const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
-				const writeValue = `KMS:v1:${keyVersionId}:${ciphertext}`;
-				await vault.kvWrite(envPath(orgId, appId, etId, key), { value: writeValue });
+				await stdb.callReducer("create_env", [orgId, appId, etId, key, value]);
 				envVarCount++;
 			}
 		}
 	}
-	console.log(`Seed: Wrote ${envVarCount} env vars to Vault (KMS-encrypted)`);
+	console.log(`Seed: Wrote ${envVarCount} env vars to SpacetimeDB`);
 
 	if (!dbAlreadySeeded) {
-		// -- d) Create 1 team + add dev user as member --
+		// Create team + member
 		const teamId = randomUUID();
-		await db
-			.insertInto("teams")
-			.values({
-				id: teamId,
-				org_id: orgId,
-				name: "Backend Team",
-				description: "Backend developers",
-				color: "#3b82f6",
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.execute();
-
-		await db
-			.insertInto("team_members")
-			.values({
-				id: randomUUID(),
-				team_id: teamId,
-				user_id: userId,
-				created_at: new Date(),
-			})
-			.execute();
-
+		const now = new Date().toISOString();
+		await stdb.callReducer("create_team", [
+			teamId, "Backend Team", orgId, "Backend developers", "#3b82f6", now, now,
+		]);
+		const teamMemberId = randomUUID();
+		await stdb.callReducer("create_team_member", [teamMemberId, teamId, userId, now]);
 		console.log(`Seed: Created team "Backend Team" (${teamId})`);
 
-		// -- e) Create 1 API key --
+		// Create API key
 		const apiKey = SecretKeyGenerator.generateKey({ prefix: "eVs" });
 		const apiKeyId = randomUUID();
-		await db
-			.insertInto("api_keys")
-			.values({
-				id: apiKeyId,
-				user_id: userId,
-				org_id: orgId,
-				description: "Dev CLI Key",
-				is_active: true,
-				key: apiKey,
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.execute();
-
+		await stdb.callReducer("create_api_key", [
+			apiKeyId, userId, orgId, "Dev CLI Key", apiKey, now, now,
+		]);
 		console.log(`Seed: Created API key for dev user (${apiKey})`);
 
-		// -- f) Look up dev user for GPG + cert seeding --
-		const devUser = await db
-			.selectFrom("users")
-			.select(["email", "full_name"])
-			.where("id", "=", userId)
-			.executeTakeFirstOrThrow();
+		// Fetch user details for GPG + cert
+		const devUser = await stdb.queryOne<{ email: string; full_name: string }>(
+			`SELECT email, full_name FROM user WHERE uuid = '${userId}'`,
+		);
 
-		// -- g) Create a sample GPG key --
-		let gpgKeyId: string | null = null;
-		try {
-			const passphrase = randomBytes(32).toString("hex");
-			const { privateKey, publicKey } = await openpgp.generateKey({
-				type: "ecc",
-				curve: "ed25519Legacy",
-				userIDs: [{ name: devUser.full_name || "Dev User", email: devUser.email }],
-				passphrase,
-				format: "armored",
-			});
+		if (devUser) {
+			// Create a sample GPG key
+			let gpgKeyId: string | null = null;
+			try {
+				const passphrase = randomBytes(32).toString("hex");
+				const { privateKey, publicKey } = await openpgp.generateKey({
+					type: "ecc",
+					curve: "ed25519Legacy",
+					userIDs: [{ name: devUser.full_name || "Dev User", email: devUser.email }],
+					passphrase,
+					format: "armored",
+				});
 
-			const parsedPublic = await openpgp.readKey({ armoredKey: publicKey });
-			const fingerprint = parsedPublic.getFingerprint().toUpperCase();
-			const keyIdStr = fingerprint.slice(-16);
+				const parsedPublic = await openpgp.readKey({ armoredKey: publicKey });
+				const fingerprint = parsedPublic.getFingerprint().toUpperCase();
+				const keyIdStr = fingerprint.slice(-16);
 
-			const kmsResult = await kms.encrypt(orgId, "gpg", passphrase, `gpg:${fingerprint}`);
+				// Store GPG material in SpacetimeDB
+				await stdb.callReducer("store_gpg_material", [orgId, fingerprint, privateKey, passphrase]);
 
-			const vaultKeyPath = gpgKeyPath(orgId, fingerprint);
-			await vault.kvWrite(vaultKeyPath, {
-				armored_private_key: privateKey,
-				kms_wrapped_passphrase: kmsResult.ciphertext,
-				kms_key_version_id: kmsResult.keyVersionId,
-			});
+				gpgKeyId = randomUUID();
+				await stdb.callReducer("create_gpg_key_record", [
+					gpgKeyId, orgId, userId, "Dev Signing Key", devUser.email,
+					fingerprint, keyIdStr, "ecc-curve25519", 0, publicKey,
+					`stdb:gpg:${orgId}:${fingerprint}`,
+					JSON.stringify(["sign", "certify"]), "ultimate",
+					"", true,
+				]);
 
-			gpgKeyId = randomUUID();
-			await db
-				.insertInto("gpg_keys")
-				.values({
-					id: gpgKeyId,
-					org_id: orgId,
-					user_id: userId,
-					name: "Dev Signing Key",
-					email: devUser.email,
-					fingerprint,
-					key_id: keyIdStr,
-					algorithm: "ecc-curve25519",
-					key_size: null,
-					public_key: publicKey,
-					private_key_ref: vaultKeyPath,
-					usage_flags: new JsonValue(["sign", "certify"]),
-					trust_level: "ultimate",
-					expires_at: null,
-					is_default: true,
-					created_at: new Date(),
-					updated_at: new Date(),
-				})
-				.execute();
-
-			console.log(`Seed: Created GPG key (${fingerprint.slice(0, 16)}...)`);
-		} catch (err) {
-			console.warn("Seed: Failed to create sample GPG key:", (err as Error).message);
-		}
-
-		// -- h) Initialize org CA + issue member cert --
-		try {
-			const caResult = await kms.createOrgCA(orgId, "EnvSync Dev");
-
-			const now = new Date();
-			await db
-				.insertInto("org_certificates")
-				.values({
-					id: randomUUID(),
-					org_id: orgId,
-					user_id: userId,
-					serial_hex: caResult.serialHex,
-					cert_type: "org_ca",
-					subject_cn: "EnvSync Dev CA",
-					status: "active",
-					description: "Dev organization CA",
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-
-			console.log(`Seed: Initialized org CA (serial: ${caResult.serialHex})`);
-
-			const memberResult = await kms.issueMemberCert(userId, devUser.email, orgId, "admin");
-			await db
-				.insertInto("org_certificates")
-				.values({
-					id: randomUUID(),
-					org_id: orgId,
-					user_id: userId,
-					serial_hex: memberResult.serialHex,
-					cert_type: "member",
-					subject_cn: devUser.email,
-					subject_email: devUser.email,
-					status: "active",
-					description: "Dev user member certificate",
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-
-			console.log(`Seed: Issued member certificate for ${devUser.email}`);
-		} catch (err) {
-			console.warn("Seed: Failed to create certificates (miniKMS PKI may not be available):", (err as Error).message);
-		}
-
-		// -- FGA tuples for seeded resources --
-		const fgaTuples: { user: string; relation: string; object: string }[] = [];
-
-		for (const [appName, appId] of Object.entries(appIds)) {
-			fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `app:${appId}` });
-			for (const etId of Object.values(envTypeIds[appName])) {
-				fgaTuples.push({ user: `app:${appId}`, relation: "app", object: `env_type:${etId}` });
-				fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `env_type:${etId}` });
+				console.log(`Seed: Created GPG key (${fingerprint.slice(0, 16)}...)`);
+			} catch (err) {
+				console.warn("Seed: Failed to create sample GPG key:", (err as Error).message);
 			}
+
+			// Initialize org CA + issue member cert
+			try {
+				const caResultJson = await stdb.callReducer<string>("create_org_ca", [orgId, "EnvSync Dev"]);
+				const caResult = JSON.parse(caResultJson);
+
+				await stdb.callReducer("create_cert_record", [
+					randomUUID(), orgId, userId, caResult.serial_hex, "org_ca",
+					"EnvSync Dev CA", "", "active", "Dev organization CA",
+				]);
+
+				console.log(`Seed: Initialized org CA (serial: ${caResult.serial_hex})`);
+
+				const memberResultJson = await stdb.callReducer<string>("issue_member_cert", [userId, devUser.email, orgId, "admin"]);
+				const memberResult = JSON.parse(memberResultJson);
+
+				await stdb.callReducer("create_cert_record", [
+					randomUUID(), orgId, userId, memberResult.serial_hex, "member",
+					devUser.email, devUser.email, "active", "Dev user member certificate",
+				]);
+
+				console.log(`Seed: Issued member certificate for ${devUser.email}`);
+			} catch (err) {
+				console.warn("Seed: Failed to create certificates (SpacetimeDB PKI may not be available):", (err as Error).message);
+			}
+
+			// Auth tuples for seeded resources
+			const authTuples: { subject: string; relation: string; object_type: string; object_id: string }[] = [];
+
+			for (const [appName, appId] of Object.entries(appIds)) {
+				authTuples.push({ subject: `org:${orgId}`, relation: "org", object_type: "app", object_id: appId });
+				for (const etId of Object.values(envTypeIds[appName])) {
+					authTuples.push({ subject: `app:${appId}`, relation: "app", object_type: "env_type", object_id: etId });
+					authTuples.push({ subject: `org:${orgId}`, relation: "org", object_type: "env_type", object_id: etId });
+				}
+			}
+
+			authTuples.push({ subject: `org:${orgId}`, relation: "org", object_type: "team", object_id: teamId });
+			authTuples.push({ subject: `user:${userId}`, relation: "member", object_type: "team", object_id: teamId });
+
+			if (gpgKeyId) {
+				authTuples.push({ subject: `org:${orgId}`, relation: "org", object_type: "gpg_key", object_id: gpgKeyId });
+				authTuples.push({ subject: `user:${userId}`, relation: "owner", object_type: "gpg_key", object_id: gpgKeyId });
+			}
+
+			await writeAuthTuples(stdb, authTuples);
 		}
-
-		fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `team:${teamId}` });
-		fgaTuples.push({ user: `user:${userId}`, relation: "member", object: `team:${teamId}` });
-
-		if (gpgKeyId) {
-			fgaTuples.push({ user: `org:${orgId}`, relation: "org", object: `gpg_key:${gpgKeyId}` });
-			fgaTuples.push({ user: `user:${userId}`, relation: "owner", object: `gpg_key:${gpgKeyId}` });
-		}
-
-		await writeFGATuples(fgaTuples);
 	}
 
 	console.log("Seed: Done.");
 }
+
+// ── Create dev user ─────────────────────────────────────────────────
 
 async function createDevUser() {
 	const seedFlag = process.argv.includes("--seed");
@@ -786,42 +512,39 @@ async function createDevUser() {
 
 	console.log("EnvSync API: Creating local dev user\n");
 
-	const db = await DB.getInstance();
+	const stdb = STDBClient.getInstance();
 
 	// 1. Create or reuse org
-	const existingOrg = await db
-		.selectFrom("orgs")
-		.selectAll()
-		.where("slug", "=", slug)
-		.executeTakeFirst();
+	const existingOrg = await stdb.queryOne<{ uuid: string }>(
+		`SELECT uuid FROM org WHERE slug = '${slug}'`,
+	);
 
 	let orgId: string;
 	if (existingOrg) {
-		orgId = existingOrg.id;
+		orgId = existingOrg.uuid;
 		console.log(`Org "${orgName}" already exists (${orgId})`);
 	} else {
 		orgId = randomUUID();
-		await db
-			.insertInto("orgs")
-			.values({
-				id: orgId,
-				name: orgName,
-				slug,
-				metadata: {},
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.execute();
+		await stdb.callReducer("create_org", [
+			orgId, orgName, slug, "", "", "", JSON.stringify({}),
+		], { injectRootKey: false });
 		console.log(`Created org "${orgName}" (${orgId})`);
 	}
 
 	// 2. Ensure default roles exist
-	let adminRole = await db
-		.selectFrom("org_role")
-		.selectAll()
-		.where("org_id", "=", orgId)
-		.where("is_master", "=", true)
-		.executeTakeFirst();
+	let adminRole = await stdb.queryOne<{
+		uuid: string;
+		is_master: boolean;
+		is_admin: boolean;
+		can_view: boolean;
+		can_edit: boolean;
+		have_api_access: boolean;
+		have_billing_options: boolean;
+		have_webhook_access: boolean;
+		have_gpg_access: boolean;
+		have_cert_access: boolean;
+		have_audit_access: boolean;
+	}>(`SELECT * FROM org_role WHERE org_id = '${orgId}' AND is_master = true`);
 
 	if (!adminRole) {
 		const roles = [
@@ -832,51 +555,45 @@ async function createDevUser() {
 			{ name: "Viewer", can_edit: false, can_view: true, have_api_access: false, have_billing_options: false, have_webhook_access: false, have_gpg_access: false, have_cert_access: false, have_audit_access: false, is_admin: false, is_master: false, color: "#FF33A1" },
 		];
 
-		await db
-			.insertInto("org_role")
-			.values(
-				roles.map(r => ({
-					id: randomUUID(),
-					...r,
-					org_id: orgId,
-					created_at: new Date(),
-					updated_at: new Date(),
-				})),
-			)
-			.execute();
+		for (const r of roles) {
+			const roleId = randomUUID();
+			await stdb.callReducer("create_org_role", [
+				roleId, r.name, orgId, r.color,
+				r.is_admin, r.is_master, r.can_view, r.can_edit,
+				r.have_api_access, r.have_billing_options, r.have_webhook_access,
+				r.have_gpg_access, r.have_cert_access, r.have_audit_access,
+			], { injectRootKey: false });
+		}
 
-		adminRole = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("org_id", "=", orgId)
-			.where("is_master", "=", true)
-			.executeTakeFirstOrThrow();
+		adminRole = await stdb.queryOne<typeof adminRole>(
+			`SELECT * FROM org_role WHERE org_id = '${orgId}' AND is_master = true`,
+		);
 
 		console.log("Created default roles");
 	} else {
 		console.log("Default roles already exist");
 	}
 
-	// 3. Create user in Zitadel + DB
-	const existingUser = await db
-		.selectFrom("users")
-		.selectAll()
-		.where("email", "=", email)
-		.executeTakeFirst();
+	if (!adminRole) throw new Error("Failed to find admin role after creation");
+
+	// 3. Create user in Keycloak + STDB
+	const existingUser = await stdb.queryOne<{ uuid: string }>(
+		`SELECT uuid FROM user WHERE email = '${email}'`,
+	);
 
 	if (existingUser) {
-		console.log(`\nUser "${email}" already exists (${existingUser.id})`);
+		console.log(`\nUser "${email}" already exists (${existingUser.uuid})`);
 
-		// Ensure FGA tuples exist even for previously created users
-		await assignFGARoles(existingUser.id, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
+		// Ensure auth tuples exist even for previously created users
+		await assignRoleTuples(stdb, existingUser.uuid, orgId, adminRole);
 
 		if (seedFlag) {
-			await seedData(db, orgId, existingUser.id);
+			await seedData(stdb, orgId, existingUser.uuid);
 		}
 
 		console.log("\nDev user ready:");
 		console.log(`  Email:    ${email}`);
-		console.log(`  User ID:  ${existingUser.id}`);
+		console.log(`  User ID:  ${existingUser.uuid}`);
 		console.log(`  Org ID:   ${orgId}`);
 		console.log(`  Role:     Org Admin`);
 		console.log(`  Password: Test@1234`);
@@ -888,55 +605,46 @@ async function createDevUser() {
 	const firstName = parts[0]?.slice(0, 200) ?? "User";
 	const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
 
-	// Create user in Zitadel via v2 API
-	const { pat } = resolveZitadelPat();
-	if (!pat) {
-		throw new Error("ZITADEL_PAT (or ZITADEL_PAT_FILE) is required to create a dev user in Zitadel.");
-	}
-	const zitadelUrl = `${zitadelBase()}/v2/users/human`;
-	const zRes = await fetch(zitadelUrl, {
+	// Create user in Keycloak
+	const token = await getKeycloakAdminToken();
+	const kcRes = await adminFetch(token, "/users", {
 		method: "POST",
-		headers: {
-			Authorization: `Bearer ${pat}`,
-			"Content-Type": "application/json",
-		},
 		body: JSON.stringify({
 			username: email,
-			profile: { givenName: firstName, familyName: lastName },
-			email: { email, isVerified: true },
-			password: { password, changeRequired: false },
+			email,
+			emailVerified: true,
+			enabled: true,
+			firstName,
+			lastName,
+			credentials: [{
+				type: "password",
+				value: password,
+				temporary: false,
+			}],
 		}),
 	});
-	if (!zRes.ok) {
-		const text = await zRes.text();
-		throw new Error(`Zitadel create user failed: ${zRes.status} ${text}`);
+	if (!kcRes.ok) {
+		const text = await kcRes.text();
+		throw new Error(`Keycloak create user failed: ${kcRes.status} ${text}`);
 	}
-	const zUser = (await zRes.json()) as { userId: string };
-	console.log(`Zitadel: user created (${zUser.userId})`);
+	const location = kcRes.headers.get("Location") ?? "";
+	const keycloakUserId = location.split("/").pop() ?? "";
+	if (!keycloakUserId) throw new Error("Keycloak create user: missing user ID in Location header");
+	console.log(`Keycloak: user created (${keycloakUserId})`);
 
 	const userId = randomUUID();
+	const now = new Date().toISOString();
 
-	await db
-		.insertInto("users")
-		.values({
-			id: userId,
-			email,
-			org_id: orgId,
-			role_id: adminRole.id,
-			auth_service_id: zUser.userId,
-			full_name: fullName,
-			is_active: true,
-			profile_picture_url: null,
-			created_at: new Date(),
-			updated_at: new Date(),
-		})
-		.execute();
+	await stdb.callReducer("create_user", [
+		userId, email, fullName, orgId, adminRole.uuid,
+		keycloakUserId, true, "",
+	], { injectRootKey: false });
 
-	// Assign FGA roles for the new user
-	await assignFGARoles(userId, orgId, { ...adminRole, is_master: adminRole.is_master ?? false });
+	// Assign auth tuples for the new user
+	await assignRoleTuples(stdb, userId, orgId, adminRole);
 
 	if (seedFlag) {
-		await seedData(db, orgId, userId);
+		await seedData(stdb, orgId, userId);
 	}
 
 	console.log(`\nDev user created:`);
@@ -945,8 +653,8 @@ async function createDevUser() {
 	console.log(`  Password:        ${password}`);
 	console.log(`  User ID:         ${userId}`);
 	console.log(`  Org:             ${orgName} (${orgId})`);
-	console.log(`  Role:            Org Admin (${adminRole.id})`);
-	console.log(`  Auth Service ID: ${zUser.userId}`);
+	console.log(`  Role:            Org Admin (${adminRole.uuid})`);
+	console.log(`  Auth Service ID: ${keycloakUserId}`);
 }
 
 const cmd = process.argv[2];
@@ -963,7 +671,7 @@ if (cmd === "init") {
 } else {
 	console.log("Usage: bun run scripts/cli.ts <command>\n");
 	console.log("Commands:");
-	console.log("  init                              Create RustFS bucket + Zitadel OIDC apps");
+	console.log("  init                              Create RustFS bucket + retrieve Keycloak client secrets");
 	console.log("  create-dev-user [email] [name] [--seed]    Create a local dev user (+ seed data with --seed)");
 	process.exit(cmd ? 1 : 0);
 }

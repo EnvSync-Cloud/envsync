@@ -17,14 +17,10 @@ if (!isE2E) {
 	Object.assign(process.env, {
 		NODE_ENV: "development",
 		PORT: "0",
-		DB_LOGGING: "false",
-		DB_AUTO_MIGRATE: "true",
-		DATABASE_SSL: "false",
-		DATABASE_HOST: process.env.DATABASE_HOST ?? "localhost",
-		DATABASE_PORT: process.env.DATABASE_PORT ?? "5432",
-		DATABASE_USER: process.env.DATABASE_USER ?? "postgres",
-		DATABASE_PASSWORD: process.env.DATABASE_PASSWORD ?? "postgres",
-		DATABASE_NAME: "envsync_test",
+		// SpacetimeDB
+		STDB_URL: "http://localhost:3000",
+		STDB_DB_NAME: "envsync-test",
+		STDB_ROOT_KEY: "test-root-key",
 		// S3
 		S3_BUCKET: "test-bucket",
 		S3_REGION: "us-east-1",
@@ -39,30 +35,19 @@ if (!isE2E) {
 		SMTP_PORT: "1025",
 		SMTP_SECURE: "false",
 		SMTP_FROM: "test@envsync.local",
-		// Zitadel
-		ZITADEL_URL: "http://localhost:8080",
-		ZITADEL_PAT: "test-pat",
-		ZITADEL_WEB_CLIENT_ID: "test-web-client-id",
-		ZITADEL_WEB_CLIENT_SECRET: "test-web-client-secret",
-		ZITADEL_CLI_CLIENT_ID: "test-cli-client-id",
-		ZITADEL_CLI_CLIENT_SECRET: "test-cli-client-secret",
-		ZITADEL_API_CLIENT_ID: "test-api-client-id",
-		ZITADEL_API_CLIENT_SECRET: "test-api-client-secret",
-		ZITADEL_WEB_REDIRECT_URI: "http://localhost:3000/callback",
-		ZITADEL_WEB_CALLBACK_URL: "http://localhost:3000",
-		ZITADEL_API_REDIRECT_URI: "http://localhost:4000/callback",
-		// Vault
-		VAULT_ADDR: "http://localhost:8200",
-		VAULT_ROLE_ID: "test-role-id",
-		VAULT_SECRET_ID: "test-secret-id",
-		VAULT_MOUNT_PATH: "envsync",
-		// miniKMS
-		MINIKMS_GRPC_ADDR: "localhost:50051",
-		MINIKMS_TLS_ENABLED: "false",
-		// OpenFGA
-		OPENFGA_API_URL: "http://localhost:8090",
-		OPENFGA_STORE_ID: "test-store-id",
-		OPENFGA_MODEL_ID: "test-model-id",
+		// Keycloak
+		KEYCLOAK_URL: "http://localhost:8080",
+		KEYCLOAK_REALM: "envsync",
+		KEYCLOAK_ADMIN_USER: "admin",
+		KEYCLOAK_ADMIN_PASSWORD: "admin",
+		KEYCLOAK_WEB_CLIENT_ID: "envsync-web",
+		KEYCLOAK_WEB_CLIENT_SECRET: "test-web-secret",
+		KEYCLOAK_CLI_CLIENT_ID: "envsync-cli",
+		KEYCLOAK_API_CLIENT_ID: "envsync-api",
+		KEYCLOAK_API_CLIENT_SECRET: "test-api-secret",
+		KEYCLOAK_WEB_REDIRECT_URI: "http://localhost:3000/callback",
+		KEYCLOAK_WEB_CALLBACK_URL: "http://localhost:3000",
+		KEYCLOAK_API_REDIRECT_URI: "http://localhost:4000/callback",
 		// App URLs
 		LANDING_PAGE_URL: "http://localhost:3000",
 		DASHBOARD_URL: "http://localhost:8080",
@@ -82,50 +67,23 @@ if (!isE2E) {
 	mock.module("@/helpers/jwt", () => ({
 		verifyJWTToken: async (token: string) => {
 			const sub = token.replace("test-token-", "");
-			return { sub, iss: "http://localhost:8080", aud: "test" };
+			return { sub, iss: "http://localhost:8080/realms/envsync", aud: "test" };
 		},
 	}));
 
-	// Mock Zitadel helpers — no-op user management
-	mock.module("@/helpers/zitadel", () => ({
-		getZitadelIssuer: () => "http://localhost:8080",
-		createZitadelUser: async (payload: any) => ({
-			id: `zitadel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+	// Mock Keycloak helpers — no-op user management
+	mock.module("@/helpers/keycloak", () => ({
+		getKeycloakIssuer: () => "http://localhost:8080/realms/envsync",
+		createKeycloakUser: async (payload: any) => ({
+			id: `kc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 		}),
-		updateZitadelUser: async () => {},
-		deleteZitadelUser: async () => {},
-		sendZitadelPasswordReset: async () => {},
-		zitadelTokenExchange: async (code: string) => ({
+		updateKeycloakUser: async () => {},
+		deleteKeycloakUser: async () => {},
+		sendKeycloakPasswordReset: async () => {},
+		keycloakTokenExchange: async (code: string) => ({
 			access_token: `mock-access-token-${code}`,
 			id_token: `mock-id-token-${code}`,
 		}),
-	}));
-
-	// Mock Vault — in-memory KV v2 implementation
-	const { MockVaultClient } = await import("./vault");
-
-	mock.module("@/libs/vault/index", () => ({
-		VaultClient: {
-			getInstance: async () => MockVaultClient,
-		},
-	}));
-
-	// Mock KMS — in-memory AES-256-GCM with deterministic test keys
-	const { MockKMSClient } = await import("./kms");
-
-	mock.module("@/libs/kms/client", () => ({
-		KMSClient: {
-			getInstance: async () => MockKMSClient,
-		},
-	}));
-
-	// Mock OpenFGA — in-memory tuple store with hierarchy resolution
-	const { MockFGAClient } = await import("./fga");
-
-	mock.module("@/libs/openfga/index", () => ({
-		FGAClient: {
-			getInstance: async () => MockFGAClient,
-		},
 	}));
 
 	// Mock Mail — no-op, captures calls

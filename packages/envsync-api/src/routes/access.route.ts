@@ -71,7 +71,7 @@ app.get(
 	describeRoute({
 		operationId: "callbackWebLogin",
 		summary: "Web Login Callback",
-		description: "Handle web login callback from Zitadel",
+		description: "Handle web login callback from Keycloak",
 		tags: ["Access"],
 		parameters: [
 			{
@@ -132,7 +132,7 @@ app.get(
 	describeRoute({
 		operationId: "callbackApiLogin",
 		summary: "API Login Callback",
-		description: "Handle API login callback from Zitadel",
+		description: "Handle API login callback from Keycloak",
 		tags: ["Access"],
 		parameters: [
 			{

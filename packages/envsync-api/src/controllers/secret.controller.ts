@@ -6,78 +6,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
-import { smartEncrypt, kmsEncrypt, kmsDecrypt, kmsBatchEncrypt, rsaLayerDecrypt } from "@/helpers/key-store";
 import { secretOperations } from "@/libs/telemetry/metrics";
-
-/**
- * Build the AAD string for secret encryption.
- */
-function secretAAD(org_id: string, app_id: string, env_type_id: string, key: string): string {
-	return `secret:${org_id}:${app_id}:${env_type_id}:${key}`;
-}
-
-/**
- * Encrypt a secret value with double-layer encryption:
- * 1. smartEncrypt (RSA/BYOK layer) — inner layer
- * 2. kmsEncrypt (miniKMS layer) — outer layer
- * Result: KMS:v1:{keyVersionId}:{base64(RSA:... or HYB:...)}
- */
-async function doubleLayerEncrypt(
-	org_id: string,
-	app_id: string,
-	env_type_id: string,
-	key: string,
-	value: string,
-	publicKey: string,
-): Promise<string> {
-	// Layer 1: RSA/BYOK encryption
-	const rsaBlob = smartEncrypt(value, publicKey);
-	// Layer 2: KMS encryption wrapping the RSA blob
-	const aad = secretAAD(org_id, app_id, env_type_id, key);
-	return kmsEncrypt(org_id, app_id, rsaBlob, aad);
-}
-
-/**
- * KMS-unwrap a secret value, returning the inner RSA/HYB blob for BYOK clients.
- * All values must be KMS-wrapped (KMS:v1: prefix).
- */
-async function kmsUnwrapSecret(
-	org_id: string,
-	app_id: string,
-	env_type_id: string,
-	key: string,
-	value: string,
-): Promise<string> {
-	if (!value.startsWith("KMS:v1:")) {
-		throw new Error(`Secret "${key}" is not KMS-wrapped.`);
-	}
-	const aad = secretAAD(org_id, app_id, env_type_id, key);
-	return kmsDecrypt(org_id, app_id, value, aad);
-}
-
-/**
- * Full two-layer decrypt for managed secrets (reveal):
- * 1. KMS-unwrap → RSA:/HYB: blob
- * 2. RSA decrypt with private key → plaintext
- * All values must be KMS-wrapped (KMS:v1: prefix).
- */
-async function fullDecryptSecret(
-	org_id: string,
-	app_id: string,
-	env_type_id: string,
-	key: string,
-	value: string,
-	privateKey: string,
-): Promise<string> {
-	if (!value.startsWith("KMS:v1:")) {
-		throw new Error(`Secret "${key}" is not KMS-wrapped.`);
-	}
-	// Layer 1: KMS unwrap
-	const aad = secretAAD(org_id, app_id, env_type_id, key);
-	const rsaBlob = await kmsDecrypt(org_id, app_id, value, aad);
-	// Layer 2: RSA/BYOK decrypt
-	return rsaLayerDecrypt(rsaBlob, privateKey);
-}
 
 export class SecretController {
 	public static readonly createSecret = async (c: Context) => {
@@ -126,23 +55,17 @@ export class SecretController {
 			return c.json({ error: "Secrets are not enabled for this app." }, 403);
 		}
 
-		// Double-layer encrypt: smartEncrypt (BYOK) → kmsEncrypt (miniKMS)
-		const encryptedValue = await doubleLayerEncrypt(
-			org_id, app_id, env_type_id, key, value || "", app.public_key!,
-		);
-		secretOperations.add(1, { operation: "encrypted" });
-
-		// Create the secret in Vault (double-encrypted)
+		// STDB handles encryption atomically — pass plaintext
 		const secret = await SecretService.createSecret({
 			key,
 			org_id,
-			value: encryptedValue,
+			value: value || "",
 			app_id,
 			env_type_id,
 		});
 		secretOperations.add(1, { operation: "created" });
 
-		// Create PiT record with encrypted value
+		// Create PiT record
 		await SecretStorePiTService.createSecretStorePiT({
 			org_id,
 			app_id,
@@ -152,7 +75,7 @@ export class SecretController {
 			envs: [
 				{
 					key,
-					value: encryptedValue,
+					value: value || "",
 					operation: "CREATE",
 				},
 			],
@@ -219,22 +142,16 @@ export class SecretController {
 			return c.json({ error: "Secrets are not enabled for this app." }, 403);
 		}
 
-		// Double-layer encrypt: smartEncrypt (BYOK) → kmsEncrypt (miniKMS)
-		const encryptedValue = await doubleLayerEncrypt(
-			org_id, app_id, env_type_id, key, value || "", app.public_key!,
-		);
-		secretOperations.add(1, { operation: "encrypted" });
-
-		// Update the secret in Vault (double-encrypted)
+		// STDB handles encryption atomically — pass plaintext
 		await SecretService.updateSecret({
 			key,
 			org_id,
-			value: encryptedValue,
+			value: value || "",
 			app_id,
 			env_type_id,
 		});
 
-		// Create PiT record with encrypted value
+		// Create PiT record
 		await SecretStorePiTService.createSecretStorePiT({
 			org_id,
 			app_id,
@@ -244,7 +161,7 @@ export class SecretController {
 			envs: [
 				{
 					key,
-					value: encryptedValue,
+					value: value || "",
 					operation: "UPDATE",
 				},
 			],
@@ -390,29 +307,11 @@ export class SecretController {
 			return c.json({ error: `Secrets already exist for keys: ${existingKeys.join(", ")}` }, 400);
 		}
 
-		// Double-layer encrypt: smartEncrypt (BYOK) → kmsBatchEncrypt (miniKMS)
-		// Layer 1: RSA/BYOK encryption (synchronous)
-		const rsaBlobs = envs.map((env: { key: string; value: string }) => ({
-			key: env.key,
-			blob: smartEncrypt(env.value || "", app.public_key!),
-			aad: secretAAD(org_id, app_id, env_type_id, env.key),
-		}));
-		// Layer 2: Batch KMS encryption (single gRPC call, avoids race condition)
-		const kmsValues = await kmsBatchEncrypt(
-			org_id, app_id,
-			rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
-		);
-		secretOperations.add(envs.length, { operation: "encrypted" });
-		const encryptedEnvs = rsaBlobs.map((r, i) => ({
-			key: r.key,
-			value: kmsValues[i],
-		}));
-
-		// Create secrets in Vault (double-encrypted)
-		await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
+		// STDB handles encryption atomically — pass plaintext
+		await SecretService.batchCreateSecrets(org_id, app_id, env_type_id, envs);
 		secretOperations.add(envs.length, { operation: "created" });
 
-		// Create PiT record with encrypted values
+		// Create PiT record
 		await SecretStorePiTService.createSecretStorePiT({
 			org_id,
 			app_id,
@@ -421,9 +320,9 @@ export class SecretController {
 				change_message ||
 				`Batch created ${envs.length} secrets: ${envs.map(env => env.key).join(", ")}`,
 			user_id,
-			envs: encryptedEnvs.map(env => ({
+			envs: envs.map((env: { key: string; value: string }) => ({
 				key: env.key,
-				value: env.value,
+				value: env.value || "",
 				operation: "CREATE" as const,
 			})),
 		});
@@ -505,28 +404,10 @@ export class SecretController {
 			);
 		}
 
-		// Double-layer encrypt: smartEncrypt (BYOK) → kmsBatchEncrypt (miniKMS)
-		// Layer 1: RSA/BYOK encryption (synchronous)
-		const rsaBlobs = envs.map((env: { key: string; value: string }) => ({
-			key: env.key,
-			blob: smartEncrypt(env.value || "", app.public_key!),
-			aad: secretAAD(org_id, app_id, env_type_id, env.key),
-		}));
-		// Layer 2: Batch KMS encryption (single gRPC call, avoids race condition)
-		const kmsValues = await kmsBatchEncrypt(
-			org_id, app_id,
-			rsaBlobs.map(r => ({ value: r.blob, aad: r.aad })),
-		);
-		secretOperations.add(envs.length, { operation: "encrypted" });
-		const encryptedEnvs = rsaBlobs.map((r, i) => ({
-			key: r.key,
-			value: kmsValues[i],
-		}));
+		// STDB handles encryption atomically — pass plaintext
+		await SecretService.batchUpdateSecrets(org_id, app_id, env_type_id, envs);
 
-		// Update secrets in Vault (double-encrypted)
-		await SecretService.batchUpdateSecrets(org_id, app_id, env_type_id, encryptedEnvs);
-
-		// Create PiT record with encrypted values
+		// Create PiT record
 		await SecretStorePiTService.createSecretStorePiT({
 			org_id,
 			app_id,
@@ -535,9 +416,9 @@ export class SecretController {
 				change_message ||
 				`Batch updated ${envs.length} secrets: ${envs.map(env => env.key).join(", ")}`,
 			user_id,
-			envs: encryptedEnvs.map(env => ({
+			envs: envs.map((env: { key: string; value: string }) => ({
 				key: env.key,
-				value: env.value,
+				value: env.value || "",
 				operation: "UPDATE" as const,
 			})),
 		});
@@ -662,23 +543,15 @@ export class SecretController {
 			return c.json({ error: "App does not belong to the organization." }, 403);
 		}
 
-		// Get the secrets from Vault (values are double-encrypted)
+		// STDB returns decrypted values directly
 		const secrets = await SecretService.getAllSecret({
 			app_id,
 			env_type_id,
 			org_id,
 		});
+		secretOperations.add(secrets.length, { operation: "decrypted" });
 
-		// KMS-unwrap to return the RSA blob (BYOK clients decrypt with their private key)
-		const unwrappedSecrets = await Promise.all(
-			secrets.map(async (secret) => ({
-				...secret,
-				value: await kmsUnwrapSecret(org_id, app_id, env_type_id, secret.key, secret.value),
-			})),
-		);
-		secretOperations.add(unwrappedSecrets.length, { operation: "decrypted" });
-
-		return c.json(unwrappedSecrets);
+		return c.json(secrets);
 	};
 
 	public static readonly getSecret = async (c: Context) => {
@@ -707,7 +580,7 @@ export class SecretController {
 			return c.json({ error: "App does not belong to the organization." }, 403);
 		}
 
-		// Get the secret from Vault
+		// STDB returns decrypted values directly
 		const secret = await SecretService.getSecret({
 			key,
 			app_id,
@@ -719,13 +592,8 @@ export class SecretController {
 			return c.json({ error: "Secret not found." }, 404);
 		}
 
-		// KMS-unwrap to return the RSA blob
-		const unwrappedValue = await kmsUnwrapSecret(org_id, app_id, env_type_id, key, secret.value);
 		secretOperations.add(1, { operation: "decrypted" });
-		return c.json({
-			...secret,
-			value: unwrappedValue,
-		});
+		return c.json(secret);
 	};
 
 	public static readonly getSecretHistory = async (c: Context) => {
@@ -972,7 +840,7 @@ export class SecretController {
 			org_id,
 		});
 
-		// Get target state from PiT (values resolved from Vault)
+		// Get target state from PiT (values from PiT records)
 		const targetSecrets = await SecretStorePiTService.getEnvsTillPiTId({
 			org_id,
 			app_id,
@@ -1257,7 +1125,7 @@ export class SecretController {
 			org_id,
 		});
 
-		// Get target state from PiT (values resolved from Vault)
+		// Get target state from PiT (values from PiT records)
 		const targetSecrets = await SecretStorePiTService.getEnvsTillPiTId({
 			org_id,
 			app_id,
@@ -1401,7 +1269,7 @@ export class SecretController {
 			org_id,
 		});
 
-		// Get target state from timestamp (values resolved from Vault)
+		// Get target state from timestamp (values from PiT records)
 		const targetSecrets = await SecretStorePiTService.getEnvsTillTimestamp({
 			org_id,
 			app_id,
@@ -1523,12 +1391,12 @@ export class SecretController {
 			return c.json({ error: "App does not belong to the organization." }, 403);
 		}
 
-		// Only managed secrets can be revealed (server has the private key)
+		// Only managed secrets can be revealed server-side
 		if (!app.is_managed_secret) {
 			return c.json({ error: "Cannot reveal secrets for non-managed apps. Decrypt client-side with your own key." }, 403);
 		}
 
-		// Get secrets from Vault (values are double-encrypted)
+		// STDB returns decrypted values directly — filter by requested keys
 		const secrets = await SecretService.getAllSecret({
 			app_id,
 			env_type_id,
@@ -1539,23 +1407,7 @@ export class SecretController {
 			return c.json({ error: "Secret not found." }, 404);
 		}
 
-		// Filter secrets by requested keys and perform full two-layer decrypt
-		const privateKey = await AppService.getManagedAppPrivateKey(app_id);
-
-		const filteredSecrets = await Promise.all(
-			secrets
-				.filter(secret => keys.includes(secret.key))
-				.map(async (secret) => {
-					const decryptedValue = await fullDecryptSecret(
-						org_id, app_id, env_type_id, secret.key,
-						secret.value, privateKey!,
-					);
-					return {
-						...secret,
-						value: decryptedValue,
-					};
-				}),
-		);
+		const filteredSecrets = secrets.filter(secret => keys.includes(secret.key));
 		secretOperations.add(filteredSecrets.length, { operation: "decrypted" });
 
 		return c.json(filteredSecrets);

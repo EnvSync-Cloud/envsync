@@ -1,7 +1,7 @@
 /**
  * E2E: Certificate flow — init CA → issue → list → revoke → OCSP → CRL
  *
- * Uses real PostgreSQL, OpenFGA, miniKMS, and Zitadel.
+ * Uses real SpacetimeDB and Keycloak.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

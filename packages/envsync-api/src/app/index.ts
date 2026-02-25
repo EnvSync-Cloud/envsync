@@ -9,8 +9,6 @@ import { poweredBy } from "hono/powered-by";
 import { prettyJSON } from "hono/pretty-json";
 import { openAPISpecs } from "hono-openapi";
 
-import { NoResultError } from "kysely";
-
 import { AppError } from "@/libs/errors";
 import log, { LogTypes, apiResponseLogger } from "@/libs/logger";
 import { getTracer } from "@/libs/telemetry";
@@ -28,20 +26,9 @@ app.onError((err, c) => {
 		return c.json({ error: err.message, code: err.code }, err.statusCode as ContentfulStatusCode);
 	}
 
-	// 2. Kysely NoResultError — unwrapped executeTakeFirstOrThrow()
-	if (err instanceof NoResultError) {
-		return c.json({ error: "Resource not found", code: "NOT_FOUND" }, 404);
-	}
-
-	// 3. Malformed JSON body
+	// 2. Malformed JSON body
 	if (err instanceof SyntaxError || err.message?.includes("JSON Parse error")) {
 		return c.json({ error: "Invalid JSON in request body", code: "BAD_REQUEST" }, 400);
-	}
-
-	// 4. PostgreSQL FK constraint violation (code 23503)
-	if ((err as any).code === "23503") {
-		const detail = (err as any).detail ?? err.message;
-		return c.json({ error: `Foreign key constraint violation: ${detail}`, code: "VALIDATION_ERROR" }, 422);
 	}
 
 	log(`Unhandled error: ${err.message}`, LogTypes.ERROR, "GlobalErrorHandler");

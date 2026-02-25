@@ -1,7 +1,7 @@
 /**
  * E2E: Webhook CRUD — create → list → get → update → delete
  *
- * Uses real PostgreSQL and OpenFGA.
+ * Uses real SpacetimeDB and Keycloak.
  * Master has have_webhook_access → can_manage_webhooks via FGA model.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

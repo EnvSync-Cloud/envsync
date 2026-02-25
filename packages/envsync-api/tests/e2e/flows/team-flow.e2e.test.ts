@@ -1,7 +1,7 @@
 /**
  * E2E: Team flow — create team → add members → remove → delete
  *
- * Tests team CRUD with real PostgreSQL and OpenFGA.
+ * Tests team CRUD with real SpacetimeDB and Keycloak.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

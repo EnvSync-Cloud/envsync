@@ -2,7 +2,7 @@
  * E2E: CLI commands — auth, app lifecycle, config, gen-pem, GPG keys,
  * certificates, environment management, and run command.
  *
- * Uses real PostgreSQL, OpenFGA, and a real Bun.serve HTTP server.
+ * Uses real SpacetimeDB, Keycloak, and a real Bun.serve HTTP server.
  * The Go CLI binary is built with backendURL baked in via ldflags.
  *
  * Already tested elsewhere: push/pull (cli-sync.e2e.test.ts)

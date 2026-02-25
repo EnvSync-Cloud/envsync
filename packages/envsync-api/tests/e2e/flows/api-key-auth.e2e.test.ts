@@ -1,7 +1,7 @@
 /**
  * E2E: API key authentication flow — create key → use it → regenerate → verify
  *
- * Tests API key CRUD and auth with real PostgreSQL and OpenFGA.
+ * Tests API key CRUD and auth with real SpacetimeDB and Keycloak.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

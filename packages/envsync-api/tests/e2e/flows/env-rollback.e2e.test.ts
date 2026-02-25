@@ -1,7 +1,7 @@
 /**
  * E2E: Env Rollback — create → update → capture PITs → rollback → verify
  *
- * Uses real PostgreSQL and OpenFGA. Vault is mocked with in-memory KV v2.
+ * Uses real SpacetimeDB and Keycloak.
  * Tests rollback to PIT ID, rollback to timestamp, and single-variable rollback.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

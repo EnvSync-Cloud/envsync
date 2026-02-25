@@ -1,12 +1,54 @@
-import { v4 as uuidv4 } from "uuid";
-
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { DB } from "@/libs/db";
-import { orNotFound, BusinessRuleError, ValidationError } from "@/libs/errors";
+import { STDBClient } from "@/libs/stdb";
+import { BusinessRuleError, NotFoundError, ValidationError } from "@/libs/errors";
 import { AuthorizationService } from "@/services/authorization.service";
 
+interface OrgRoleRow {
+	uuid: string;
+	name: string;
+	color: string;
+	org_id: string;
+	can_edit: boolean;
+	can_view: boolean;
+	have_api_access: boolean;
+	have_billing_options: boolean;
+	have_webhook_access: boolean;
+	have_gpg_access: boolean;
+	have_cert_access: boolean;
+	have_audit_access: boolean;
+	is_admin: boolean;
+	is_master: boolean;
+	created_at: string;
+	updated_at: string;
+}
+
+function mapRow(row: OrgRoleRow) {
+	return {
+		id: row.uuid,
+		name: row.name,
+		color: row.color,
+		org_id: row.org_id,
+		can_edit: row.can_edit,
+		can_view: row.can_view,
+		have_api_access: row.have_api_access,
+		have_billing_options: row.have_billing_options,
+		have_webhook_access: row.have_webhook_access,
+		have_gpg_access: row.have_gpg_access,
+		have_cert_access: row.have_cert_access,
+		have_audit_access: row.have_audit_access,
+		is_admin: row.is_admin,
+		is_master: row.is_master,
+		created_at: new Date(row.created_at),
+		updated_at: new Date(row.updated_at),
+	};
+}
+
 export class RoleService {
+	private static stdb() {
+		return STDBClient.getInstance();
+	}
+
 	public static createRole = async ({
 		name,
 		org_id,
@@ -36,30 +78,28 @@ export class RoleService {
 		is_master: boolean;
 		color: string;
 	}) => {
-		const db = await DB.getInstance();
+		const id = crypto.randomUUID();
+		const now = new Date().toISOString();
+		const colorVal = color || "#000000";
 
-		const { id } = await db
-			.insertInto("org_role")
-			.values({
-				id: uuidv4(),
-				name,
-				color: color || "#000000", // Default color, can be changed later
-				org_id,
-				can_edit,
-				can_view,
-				have_api_access,
-				have_billing_options,
-				have_webhook_access,
-				have_gpg_access,
-				have_cert_access,
-				have_audit_access,
-				is_admin,
-				is_master,
-				created_at: new Date(),
-				updated_at: new Date(),
-			})
-			.returning("id")
-			.executeTakeFirstOrThrow();
+		await this.stdb().callReducer("create_org_role", [
+			id,
+			name,
+			colorVal,
+			org_id,
+			can_edit,
+			can_view,
+			have_api_access,
+			have_billing_options,
+			have_webhook_access,
+			have_gpg_access,
+			have_cert_access,
+			have_audit_access,
+			is_admin,
+			is_master,
+			now,
+			now,
+		]);
 
 		await invalidateCache(CacheKeys.rolesByOrg(org_id));
 
@@ -67,8 +107,6 @@ export class RoleService {
 	};
 
 	public static createDefaultRoles = async (org_id: string) => {
-		const db = await DB.getInstance();
-
 		const rawRoles = [
 			{
 				name: "Org Admin",
@@ -82,7 +120,7 @@ export class RoleService {
 				have_audit_access: true,
 				is_admin: true,
 				is_master: true,
-				color: "#FF5733", // Example color for Org Admin
+				color: "#FF5733",
 			},
 			{
 				name: "Billing Admin",
@@ -95,7 +133,8 @@ export class RoleService {
 				have_cert_access: false,
 				have_audit_access: false,
 				is_admin: false,
-				color: "#33FF57", // Example color for Billing Admin
+				is_master: false,
+				color: "#33FF57",
 			},
 			{
 				name: "Manager",
@@ -108,7 +147,8 @@ export class RoleService {
 				have_cert_access: false,
 				have_audit_access: true,
 				is_admin: false,
-				color: "#3357FF", // Example color for Manager
+				is_master: false,
+				color: "#3357FF",
 			},
 			{
 				name: "Developer",
@@ -121,7 +161,8 @@ export class RoleService {
 				have_cert_access: false,
 				have_audit_access: false,
 				is_admin: false,
-				color: "#572F13", // Example color for Developer
+				is_master: false,
+				color: "#572F13",
 			},
 			{
 				name: "Viewer",
@@ -134,24 +175,37 @@ export class RoleService {
 				have_cert_access: false,
 				have_audit_access: false,
 				is_admin: false,
-				color: "#FF33A1", // Example color for Viewer
+				is_master: false,
+				color: "#FF33A1",
 			},
 		];
 
-		const roleInserts = rawRoles.map(role => ({
-			id: uuidv4(),
-			...role,
-			org_id,
-			created_at: new Date(),
-			updated_at: new Date(),
-		}));
+		const stdb = this.stdb();
+		const now = new Date().toISOString();
+		const roles: { id: string; name: string }[] = [];
 
-		const roles = await db
-			.insertInto("org_role")
-			.values(roleInserts)
-			.returning("name")
-			.returning("id")
-			.execute();
+		for (const role of rawRoles) {
+			const id = crypto.randomUUID();
+			await stdb.callReducer("create_org_role", [
+				id,
+				role.name,
+				role.color,
+				org_id,
+				role.can_edit,
+				role.can_view,
+				role.have_api_access,
+				role.have_billing_options,
+				role.have_webhook_access,
+				role.have_gpg_access,
+				role.have_cert_access,
+				role.have_audit_access,
+				role.is_admin,
+				role.is_master,
+				now,
+				now,
+			]);
+			roles.push({ id, name: role.name });
+		}
 
 		await invalidateCache(CacheKeys.rolesByOrg(org_id));
 
@@ -160,44 +214,40 @@ export class RoleService {
 
 	public static getRole = async (id: string) => {
 		return cacheAside(CacheKeys.role(id), CacheTTL.LONG, async () => {
-			const db = await DB.getInstance();
+			const stdb = RoleService.stdb();
 
-			const role = await orNotFound(
-				db
-					.selectFrom("org_role")
-					.selectAll()
-					.where("id", "=", id)
-					.executeTakeFirstOrThrow(),
-				"Role",
-				id,
+			const row = await stdb.queryOne<OrgRoleRow>(
+				`SELECT * FROM org_role WHERE uuid = '${id}'`,
 			);
 
-			return role;
+			if (!row) {
+				throw new NotFoundError("Role", id);
+			}
+
+			return mapRow(row);
 		});
 	};
 
 	public static getRoles = async (org_id: string, page = 1, per_page = 50) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
-		const role = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.limit(per_page)
-			.offset((page - 1) * per_page)
-			.execute();
+		const rows = await stdb.queryPaginated<OrgRoleRow>(
+			`SELECT * FROM org_role WHERE org_id = '${org_id}'`,
+			per_page,
+			(page - 1) * per_page,
+		);
 
-		return role;
+		return rows.map(mapRow);
 	};
 
 	public static getRoleStats = async (org_id: string) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
-		const stats = await db
-			.selectFrom("org_role")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.execute();
+		const rows = await stdb.query<OrgRoleRow>(
+			`SELECT * FROM org_role WHERE org_id = '${org_id}'`,
+		);
+
+		const stats = rows.map(mapRow);
 
 		return {
 			admin_access_count: stats.filter(role => role.is_admin).length,
@@ -231,23 +281,35 @@ export class RoleService {
 			color?: string;
 		},
 	) => {
-		const db = await DB.getInstance();
-
 		// is_master is not allowed to be updated after creation
 		if (data.is_master !== undefined) {
 			throw new BusinessRuleError("is_master cannot be updated after creation");
 		}
 
-		await db
-			.updateTable("org_role")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.where("is_master", "=", false)
-			.where("org_id", "=", org_id)
-			.execute();
+		const stdb = this.stdb();
+		const now = new Date().toISOString();
+
+		// Build SET clause dynamically from provided fields
+		const setClauses: string[] = [];
+		if (data.name !== undefined) setClauses.push(`name = '${data.name}'`);
+		if (data.color !== undefined) setClauses.push(`color = '${data.color}'`);
+		if (data.can_edit !== undefined) setClauses.push(`can_edit = ${data.can_edit}`);
+		if (data.can_view !== undefined) setClauses.push(`can_view = ${data.can_view}`);
+		if (data.have_api_access !== undefined) setClauses.push(`have_api_access = ${data.have_api_access}`);
+		if (data.have_billing_options !== undefined) setClauses.push(`have_billing_options = ${data.have_billing_options}`);
+		if (data.have_webhook_access !== undefined) setClauses.push(`have_webhook_access = ${data.have_webhook_access}`);
+		if (data.have_gpg_access !== undefined) setClauses.push(`have_gpg_access = ${data.have_gpg_access}`);
+		if (data.have_cert_access !== undefined) setClauses.push(`have_cert_access = ${data.have_cert_access}`);
+		if (data.have_audit_access !== undefined) setClauses.push(`have_audit_access = ${data.have_audit_access}`);
+		if (data.is_admin !== undefined) setClauses.push(`is_admin = ${data.is_admin}`);
+		setClauses.push(`updated_at = '${now}'`);
+
+		await stdb.callReducer("update_org_role", [
+			id,
+			org_id,
+			JSON.stringify(data),
+			now,
+		]);
 
 		// Re-sync FGA tuples for all users with this role
 		await AuthorizationService.resyncAllUsersWithRole(id, org_id);
@@ -256,25 +318,24 @@ export class RoleService {
 	};
 
 	public static deleteRole = async (id: string, org_id: string) => {
-		const db = await DB.getInstance();
+		const stdb = this.stdb();
 
 		// is_master role cannot be deleted
-		const role = await orNotFound(
-			db
-				.selectFrom("org_role")
-				.selectAll()
-				.where("id", "=", id)
-				.where("org_id", "=", org_id)
-				.executeTakeFirstOrThrow(),
-			"Role",
-			id,
+		const row = await stdb.queryOne<OrgRoleRow>(
+			`SELECT * FROM org_role WHERE uuid = '${id}' AND org_id = '${org_id}'`,
 		);
+
+		if (!row) {
+			throw new NotFoundError("Role", id);
+		}
+
+		const role = mapRow(row);
 
 		if (role.is_master) {
 			throw new BusinessRuleError("Cannot delete master role");
 		}
 
-		await db.deleteFrom("org_role").where("id", "=", id).executeTakeFirstOrThrow();
+		await stdb.callReducer("delete_org_role", [id]);
 
 		await invalidateCache(CacheKeys.role(id), CacheKeys.rolesByOrg(org_id));
 	};

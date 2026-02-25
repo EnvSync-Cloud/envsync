@@ -10,7 +10,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { isPasswordStrong } from "@/utils/password";
 import { config } from "@/utils/env";
 import { runSaga } from "@/helpers/saga";
-import { DB } from "@/libs/db";
+import { STDBClient } from "@/libs/stdb";
 
 export class OnboardingController {
 	public static readonly createOrgInvite = async (c: Context) => {
@@ -73,8 +73,8 @@ export class OnboardingController {
 					});
 				},
 				compensate: async (c) => {
-					const db = await DB.getInstance();
-					await db.deleteFrom("orgs").where("id", "=", c.org_id).execute();
+					const stdb = STDBClient.getInstance();
+					await stdb.callReducer("delete_org", [c.org_id]);
 				},
 			},
 			{
@@ -84,8 +84,13 @@ export class OnboardingController {
 					c.admin_role_id = roles.find(role => role.name === "Org Admin")?.id || "";
 				},
 				compensate: async (c) => {
-					const db = await DB.getInstance();
-					await db.deleteFrom("org_role").where("org_id", "=", c.org_id).execute();
+					const stdb = STDBClient.getInstance();
+					const roles = await stdb.query<{ uuid: string }>(
+						`SELECT uuid FROM org_role WHERE org_id = '${c.org_id}'`,
+					);
+					for (const role of roles) {
+						await stdb.callReducer("delete_role", [role.uuid]);
+					}
 				},
 			},
 			{

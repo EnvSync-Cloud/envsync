@@ -1,7 +1,7 @@
 /**
  * E2E: Env type CRUD — create → list → get → update → delete
  *
- * Uses real PostgreSQL and OpenFGA (real tuple writes).
+ * Uses real SpacetimeDB and Keycloak.
  *
  * Note: GET /:id controller reads `id` from request body, which is invalid
  * for GET requests. We verify via list filtering instead.

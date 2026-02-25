@@ -1,7 +1,7 @@
 /**
  * E2E: Secrets CRUD — create single/batch → list → update → delete
  *
- * Uses real PostgreSQL and OpenFGA. Vault stores encrypted secrets.
+ * Uses real SpacetimeDB and Keycloak.
  * Requires app with enable_secrets: true.
  *
  * Note: GET /api/secret/i/:key is skipped because the controller reads
