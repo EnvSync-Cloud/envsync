@@ -4,13 +4,19 @@ import { Badge } from "@/components/ui/badge";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
+    <motion.header 
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="fixed top-0 w-full z-50 bg-slate-950/60 backdrop-blur-xl border-b border-white/[0.05]"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
@@ -48,12 +54,12 @@ const Header = () => {
             </Link>
             <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
             <a href="https://app.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">
-              <Button variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:text-white hover:bg-slate-800">
+              <Button variant="outline" className="border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all">
                 Sign In
               </Button>
             </a>
             <Link to="/onboarding">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)] transition-all">
                 Get Started
               </Button>
             </Link>
@@ -96,11 +102,11 @@ const Header = () => {
               </Link>
               <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
+                <Button variant="outline" className="border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all text-left justify-start">
                   Sign In
                 </Button>
                 <Link to="/onboarding">
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)] transition-all justify-start">
                     Get Started
                   </Button>
                 </Link>
@@ -109,7 +115,7 @@ const Header = () => {
           </div>
         )}
       </div>
-    </header>
+    </motion.header>
   );
 };
 
