@@ -2,50 +2,129 @@ import { Shield, Zap, Globe, GitBranch, Users, Lock } from "lucide-react";
 import { BentoGrid, BentoGridItem } from "./ui/bento-grid";
 import { motion } from "framer-motion";
 
-const Skeleton = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></div>
+const SkeletonOne = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex flex-col gap-2">
+      <div className="h-4 w-24 bg-emerald-500/20 rounded-full animate-pulse" />
+      <div className="h-3 w-32 bg-white/5 rounded-full" />
+      <div className="h-3 w-28 bg-white/5 rounded-full" />
+    </div>
+    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover/skeleton:bg-emerald-500/20 transition-colors" />
+  </div>
+);
+
+const SkeletonTwo = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-4 rounded bg-emerald-500/20" />
+        <div className="h-2 w-16 bg-white/5 rounded-full" />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-4 rounded bg-emerald-500/20" />
+        <div className="h-2 w-20 bg-white/5 rounded-full" />
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonThree = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex flex-col gap-2">
+      <div className="h-4 w-32 bg-emerald-500/20 rounded-full" />
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-2 w-8 bg-white/5 rounded-full" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonFour = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex items-center justify-between h-full">
+      <div className="flex flex-col gap-2">
+        <div className="h-4 w-24 bg-emerald-500/20 rounded-full" />
+        <div className="h-3 w-32 bg-white/5 rounded-full" />
+        <div className="h-3 w-20 bg-white/5 rounded-full" />
+      </div>
+      <div className="flex flex-col gap-1 items-end">
+        <div className="h-2 w-16 bg-emerald-500/10 rounded-full" />
+        <div className="h-2 w-12 bg-emerald-500/10 rounded-full" />
+        <div className="h-2 w-20 bg-emerald-500/20 rounded-full" />
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonFive = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex flex-col gap-2">
+      <div className="h-8 w-full bg-white/5 rounded-lg border border-white/[0.05]" />
+      <div className="flex gap-2">
+        <div className="h-10 w-10 rounded bg-emerald-500/10 border border-emerald-500/20" />
+        <div className="h-10 w-full rounded bg-white/5 border border-white/[0.05]" />
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonSix = () => (
+  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+    <div className="flex flex-col justify-center items-center h-full">
+      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+        <motion.div 
+          initial={{ width: "0%" }}
+          whileInView={{ width: "70%" }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+        />
+      </div>
+    </div>
+  </div>
 );
 
 const features = [
   {
     title: "Military-grade encryption",
     description: "End-to-end encryption with AES-256 and zero-knowledge architecture. Your secrets are always protected.",
-    header: <Skeleton />,
+    header: <SkeletonOne />,
     icon: <Shield className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-2",
   },
   {
     title: "Lightning fast sync",
     description: "Deploy configuration changes across all environments in seconds.",
-    header: <Skeleton />,
+    header: <SkeletonTwo />,
     icon: <Zap className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-1",
   },
   {
     title: "Multi-environment",
     description: "Manage development, staging, and production environments with granular access controls.",
-    header: <Skeleton />,
+    header: <SkeletonThree />,
     icon: <Globe className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-1",
   },
   {
     title: "Git-like workflows",
     description: "Version control for your configurations with branching, merging, and full rollback capabilities.",
-    header: <Skeleton />,
+    header: <SkeletonFour />,
     icon: <GitBranch className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-2",
   },
   {
     title: "Team collaboration",
     description: "Share secrets securely with team members using strict role-based permissions.",
-    header: <Skeleton />,
+    header: <SkeletonFive />,
     icon: <Users className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-2",
   },
   {
     title: "Secrets management lifecycle",
     description: "Manage GPG keys and certificates easily.",
-    header: <Skeleton />,
+    header: <SkeletonSix />,
     icon: <Lock className="h-4 w-4 text-emerald-500" />,
     className: "md:col-span-1",
   },
