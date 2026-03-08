@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import createGlobe from "cobe";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,7 +27,6 @@ const Globe = () => {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
 
   useEffect(() => {
-    // Simulate real-time activity updates every 4 seconds
     const interval = setInterval(() => {
       setCurrentActivityIndex((prev) => (prev + 1) % mockActivities.length);
     }, 4000);
@@ -36,22 +35,28 @@ const Globe = () => {
   }, []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    let currentWidth = 0;
+    const onResize = () => {
+      if (canvasRef.current) {
+        currentWidth = canvasRef.current.offsetWidth;
+      }
+    };
+    window.addEventListener('resize', onResize);
+    onResize();
 
     let phi = 0;
     
-    // Create markers once and reuse
     const createMarkers = (activeIndex: number) => 
       mockActivities.map((activity, index) => ({
         location: [activity.lat, activity.lng] as [number, number],
         size: index === activeIndex ? 0.08 : 0.04,
       }));
     
-    globeRef.current = createGlobe(canvas, {
+    // Using a dynamic internal resolution tracking via resize listener
+    globeRef.current = createGlobe(canvasRef.current!, {
       devicePixelRatio: 2,
-      width: 600 * 2,
-      height: 600 * 2,
+      width: currentWidth * 2,
+      height: currentWidth * 2,
       phi: 0,
       theta: 0.1,
       dark: 1,
@@ -66,10 +71,14 @@ const Globe = () => {
         // Slower, smoother rotation
         phi += 0.003;
         state.phi = phi;
+        // Dynamically update the WebGL boundaries on every frame to prevent clipping when CSS scales down
+        state.width = currentWidth * 2;
+        state.height = currentWidth * 2;
       }
     });
 
     return () => {
+      window.removeEventListener('resize', onResize);
       if (globeRef.current) {
         globeRef.current.destroy();
         globeRef.current = null;
@@ -77,12 +86,11 @@ const Globe = () => {
     };
   }, []);
 
-  // Update markers when activity changes without recreating globe
   useEffect(() => {
     if (globeRef.current) {
       const newMarkers = mockActivities.map((activity, index) => ({
         location: [activity.lat, activity.lng] as [number, number],
-        size: index === currentActivityIndex ? 0.08 : 0.03, // Emphasize active marker
+        size: index === currentActivityIndex ? 0.08 : 0.03,
       }));
       
       globeRef.current.updateMarkers?.(newMarkers);
@@ -93,16 +101,16 @@ const Globe = () => {
 
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-transparent to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-transparent z-10 pointer-events-none" />
       
       {/* Activity Popup Overlay */}
-      <div className="absolute z-20 top-20 left-1/2 -translate-x-1/2 w-[340px] px-4">
+      <div className="absolute z-20 -top-4 sm:top-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[280px] sm:max-w-[340px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentActivityIndex}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="bg-[#0d1117]/80 backdrop-blur-md border border-emerald-500/20 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)] rounded-2xl p-4 flex items-center gap-4"
           >
@@ -112,7 +120,7 @@ const Globe = () => {
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-baseline mb-0.5">
                 <p className="text-sm font-semibold text-white truncate">{activeActivity.user}</p>
-                <span className="text-xs text-emerald-400">{activeActivity.time}</span>
+                <span className="text-xs text-emerald-400 shrink-0 ml-2">{activeActivity.time}</span>
               </div>
               <p className="text-xs text-neutral-400 truncate">{activeActivity.action}</p>
             </div>
@@ -121,15 +129,15 @@ const Globe = () => {
       </div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1, delay: 0.5 }}
-        className="w-full h-full flex items-center justify-center opacity-80"
+        className="w-full flex items-center justify-center opacity-80 mt-8 sm:mt-0"
       >
         <canvas
           ref={canvasRef}
-          className="w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] md:w-[600px] md:h-[600px]"
-          style={{ width: '600px', height: '600px', maxWidth: '100%', aspectRatio: '1/1' }}
+          className="w-full max-w-[260px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-[500px] xl:max-w-[600px] aspect-square"
+          style={{ width: '100%', height: 'auto', aspectRatio: '1/1' }}
         />
       </motion.div>
     </div>
