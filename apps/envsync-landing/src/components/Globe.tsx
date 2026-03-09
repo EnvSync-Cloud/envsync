@@ -1,6 +1,6 @@
-
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import createGlobe from "cobe";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ActivityItem {
   id: number;
@@ -13,182 +13,133 @@ interface ActivityItem {
 }
 
 const mockActivities: ActivityItem[] = [
-  { id: 1, user: "Sarah Chen", action: "Updated API_KEY in production", location: "San Francisco", time: "2m ago", lat: 37.7749, lng: -122.4194 },
-  { id: 2, user: "Alex Kumar", action: "Synced database credentials", location: "Mumbai", time: "5m ago", lat: 19.0760, lng: 72.8777 },
-  { id: 3, user: "Emma Wilson", action: "Added new environment variables", location: "London", time: "8m ago", lat: 51.5074, lng: -0.1278 },
-  { id: 4, user: "Carlos Rodriguez", action: "Rotated JWT secrets", location: "São Paulo", time: "12m ago", lat: -23.5505, lng: -46.6333 },
-  { id: 5, user: "Yuki Tanaka", action: "Updated staging config", location: "Tokyo", time: "15m ago", lat: 35.6762, lng: 139.6503 },
-  { id: 6, user: "David Kim", action: "Deployed new secrets", location: "Seoul", time: "18m ago", lat: 37.5665, lng: 126.9780 },
+  { id: 1, user: "Sarah Chen", action: "Updated API_KEY in production", location: "San Francisco", time: "Just now", lat: 37.7749, lng: -122.4194 },
+  { id: 2, user: "Alex Kumar", action: "Synced database credentials", location: "Mumbai", time: "Just now", lat: 19.0760, lng: 72.8777 },
+  { id: 3, user: "Emma Wilson", action: "Added new environment variables", location: "London", time: "Just now", lat: 51.5074, lng: -0.1278 },
+  { id: 4, user: "Carlos Rodriguez", action: "Rotated JWT secrets", location: "São Paulo", time: "Just now", lat: -23.5505, lng: -46.6333 },
+  { id: 5, user: "Yuki Tanaka", action: "Updated staging config", location: "Tokyo", time: "Just now", lat: 35.6762, lng: 139.6503 },
+  { id: 6, user: "David Kim", action: "Deployed new secrets", location: "Seoul", time: "Just now", lat: 37.5665, lng: 126.9780 },
 ];
 
 const Globe = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const globeRef = useRef<any>(null);
-  const [currentActivity, setCurrentActivity] = useState(0);
-  const [visibleActivities, setVisibleActivities] = useState<ActivityItem[]>([]);
+  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
 
   useEffect(() => {
-    // Simulate real-time activity updates
     const interval = setInterval(() => {
-      setCurrentActivity((prev) => (prev + 1) % mockActivities.length);
-    }, 3000);
+      setCurrentActivityIndex((prev) => (prev + 1) % mockActivities.length);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Track which item just entered so we can animate it
-  const [enteringId, setEnteringId] = useState<string | null>(null);
-
   useEffect(() => {
-    const newActivity = mockActivities[currentActivity];
-    const key = `${newActivity.id}-${Date.now()}`;
-    setVisibleActivities((prev) => {
-      const updated = [{ ...newActivity, _key: key }, ...prev.slice(0, 4)];
-      return updated;
-    });
-    setEnteringId(key);
-    // Clear entering state after the animation completes
-    const timer = setTimeout(() => setEnteringId(null), 500);
-    return () => clearTimeout(timer);
-  }, [currentActivity]);
-
-  const getItemStyle = useCallback(
-    (item: any, index: number) => {
-      const isEntering = item._key === enteringId;
-      return {
-        opacity: isEntering ? 0 : 1 - index * 0.2,
-        transform: isEntering
-          ? "translateY(-20px) scale(0.97)"
-          : `translateY(0px) scale(1)`,
-        transition:
-          "opacity 0.4s cubic-bezier(0.22,1,0.36,1), transform 0.4s cubic-bezier(0.22,1,0.36,1)",
-        // Force reflow so the entering animation plays
-        animation: isEntering
-          ? "activity-enter 0.4s cubic-bezier(0.22,1,0.36,1) forwards"
-          : undefined,
-      } as React.CSSProperties;
-    },
-    [enteringId]
-  );
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    let currentWidth = 0;
+    const onResize = () => {
+      if (canvasRef.current) {
+        currentWidth = canvasRef.current.offsetWidth;
+      }
+    };
+    window.addEventListener('resize', onResize);
+    onResize();
 
     let phi = 0;
     
-    // Create markers once and reuse
     const createMarkers = (activeIndex: number) => 
       mockActivities.map((activity, index) => ({
         location: [activity.lat, activity.lng] as [number, number],
         size: index === activeIndex ? 0.08 : 0.04,
       }));
     
-    globeRef.current = createGlobe(canvas, {
+    // Using a dynamic internal resolution tracking via resize listener
+    globeRef.current = createGlobe(canvasRef.current!, {
       devicePixelRatio: 2,
-      width: 320 * 2, // Match display size
-      height: 320 * 2, // Match display size
+      width: currentWidth * 2,
+      height: currentWidth * 2,
       phi: 0,
-      theta: 0.3,
+      theta: 0.1,
       dark: 1,
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 6,
-      baseColor: [0.3, 0.3, 0.3],
-      markerColor: [0.1, 0.8, 1],
-      glowColor: [1, 1, 1],
-      markers: createMarkers(currentActivity),
+      baseColor: [0.1, 0.1, 0.1],
+      markerColor: [0.1, 0.8, 0.5],
+      glowColor: [0.1, 0.1, 0.1],
+      markers: createMarkers(currentActivityIndex),
       onRender: (state) => {
         // Slower, smoother rotation
         phi += 0.003;
         state.phi = phi;
+        // Dynamically update the WebGL boundaries on every frame to prevent clipping when CSS scales down
+        state.width = currentWidth * 2;
+        state.height = currentWidth * 2;
       }
     });
 
     return () => {
+      window.removeEventListener('resize', onResize);
       if (globeRef.current) {
         globeRef.current.destroy();
         globeRef.current = null;
       }
     };
-  }, []); // Remove currentActivity dependency to prevent recreation
+  }, []);
 
-  // Update markers when activity changes without recreating globe
   useEffect(() => {
     if (globeRef.current) {
       const newMarkers = mockActivities.map((activity, index) => ({
         location: [activity.lat, activity.lng] as [number, number],
-        size: index === currentActivity ? 0.08 : 0.04,
+        size: index === currentActivityIndex ? 0.08 : 0.03,
       }));
       
-      // Update markers directly
       globeRef.current.updateMarkers?.(newMarkers);
     }
-  }, [currentActivity]);
+  }, [currentActivityIndex]);
+
+  const activeActivity = mockActivities[currentActivityIndex];
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto">
-      <div className="flex flex-col lg:flex-row items-center gap-8">
-        {/* Globe */}
-        <div className="relative">
-          <canvas
-            ref={canvasRef}
-            className="w-80 h-80 lg:w-96 lg:h-96"
-            style={{ width: '320px', height: '320px' }}
-          />
-          <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-full blur-xl" />
-        </div>
-
-        {/* Activity Feed */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-slate-900/80 backdrop-blur-sm rounded-xl border border-slate-700 p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse mr-3" />
-              <h3 className="text-white text-lg font-semibold">Live Team Activity</h3>
+    <div className="relative w-full flex flex-col items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-transparent z-10 pointer-events-none" />
+      
+      {/* Activity Popup Overlay */}
+      <div className="absolute z-20 top-0 sm:top-2 left-1/2 -translate-x-1/2 w-[95%] max-w-[280px] sm:max-w-[340px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentActivityIndex}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="bg-[#0d1117]/80 backdrop-blur-md border border-emerald-500/20 shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)] rounded-2xl p-4 flex items-center gap-4"
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-lg">
+              {activeActivity.user.charAt(0)}
             </div>
-            
-            {/* Keyframes for enter animation */}
-            <style>{`
-              @keyframes activity-enter {
-                from {
-                  opacity: 0;
-                  transform: translateY(-20px) scale(0.97);
-                }
-                to {
-                  opacity: 1;
-                  transform: translateY(0) scale(1);
-                }
-              }
-            `}</style>
-
-            <div className="space-y-3 max-h-64 overflow-hidden">
-              {visibleActivities.map((activity: any, index) => (
-                <div
-                  key={activity._key ?? `${activity.id}-${index}`}
-                  className={`flex items-start space-x-3 p-3 rounded-lg ${
-                    index === 0
-                      ? 'bg-emerald-500/10 border border-emerald-500/20'
-                      : 'bg-slate-800/50'
-                  }`}
-                  style={getItemStyle(activity, index)}
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-blue-400 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0">
-                    {activity.user.split(' ').map((n: string) => n[0]).join('')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-white font-medium text-sm">{activity.user}</span>
-                      <span className="text-slate-400 text-xs">• {activity.location}</span>
-                    </div>
-                    <p className="text-slate-300 text-sm">{activity.action}</p>
-                    <p className="text-slate-500 text-xs mt-1">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-baseline mb-0.5">
+                <p className="text-sm font-semibold text-white truncate">{activeActivity.user}</p>
+                <span className="text-xs text-emerald-400 shrink-0 ml-2">{activeActivity.time}</span>
+              </div>
+              <p className="text-xs text-neutral-400 truncate">{activeActivity.action}</p>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
+
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, delay: 0.5 }}
+        className="w-full flex items-center justify-center opacity-80 mt-8 sm:mt-0"
+      >
+        <canvas
+          ref={canvasRef}
+          className="w-full max-w-[300px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-[450px] xl:max-w-[500px] aspect-square"
+          style={{ width: '100%', height: 'auto', aspectRatio: '1/1' }}
+        />
+      </motion.div>
     </div>
   );
 };

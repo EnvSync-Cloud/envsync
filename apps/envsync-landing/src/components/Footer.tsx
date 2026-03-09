@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-900 border-t border-slate-800">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-slate-950 border-t border-white/[0.05] relative overflow-hidden">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
@@ -53,7 +53,7 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-slate-800 pt-8 mt-8">
+        <div className="border-t border-white/[0.05] pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-slate-400 text-sm">
               &copy; {new Date().getFullYear()} EnvSync. All rights reserved.
