@@ -48,12 +48,12 @@ const formatNumber = (n: number): string => {
 const StatCard = ({ stat, isVisible }: { stat: Stat; isVisible: boolean }) => {
   const count = useCountUp(stat.value, isVisible);
   return (
-    <div className="py-16 border border-border bg-[hsl(var(--surface-1))] p-6 text-center transition-colors hover:border-primary/40">
-      <div className="mb-2 text-6xl font-bold tabular-nums text-foreground md:text-5xl">
+    <div className="py-6 md:py-16 border border-border bg-[hsl(var(--surface-1))] p-6 text-center transition-colors hover:border-primary/40">
+      <div className="mb-2 text-4xl font-bold tabular-nums text-foreground md:text-6xl">
         {formatNumber(count)}
         {stat.suffix}
       </div>
-      <div className="text-lg font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</div>
+      <div className="text-sm md:text-lg font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</div>
     </div>
   );
 };
