@@ -132,7 +132,7 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="container mx-auto border-x border-t border-border py-20 md:py-24">
+    <section id="features" className="container mx-auto border-x border-t border-border py-20 md:py-24 px-0 pb-0 md:pb-0">
       <div className="relative container mx-auto px-0 z-10">
 
         <motion.div
@@ -140,14 +140,25 @@ const Features = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.35 }}
-          className="text-center mb-16"
+          className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8"
         >
-          <h2 className="mb-5 text-4xl font-bold text-foreground md:text-5xl">
-            Everything you need to secure your secrets
-          </h2>
-          <p className="mx-auto max-w-3xl text-lg text-muted-foreground md:text-xl">
-            Built for teams shipping across multiple stages with strict security and fast release cycles.
-          </p>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-45"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+              backgroundSize: "36px 36px",
+            }}
+          />
+          <div className="relative z-10">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Everything you need to secure your secrets
+            </h2>
+            <p className="max-w-3xl text-lg text-muted-foreground md:text-xl">
+              Built for teams shipping across multiple stages with strict security and fast release cycles.
+            </p>
+          </div>
         </motion.div>
 
         <BentoGrid>

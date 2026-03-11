@@ -48,12 +48,12 @@ const formatNumber = (n: number): string => {
 const StatCard = ({ stat, isVisible }: { stat: Stat; isVisible: boolean }) => {
   const count = useCountUp(stat.value, isVisible);
   return (
-    <div className="border border-border bg-[hsl(var(--surface-1))] p-6 text-center transition-colors hover:border-primary/40">
-      <div className="mb-2 text-4xl font-bold tabular-nums text-foreground md:text-5xl">
+    <div className="py-16 border border-border bg-[hsl(var(--surface-1))] p-6 text-center transition-colors hover:border-primary/40">
+      <div className="mb-2 text-6xl font-bold tabular-nums text-foreground md:text-5xl">
         {formatNumber(count)}
         {stat.suffix}
       </div>
-      <div className="text-sm font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</div>
+      <div className="text-lg font-medium uppercase tracking-wider text-muted-foreground">{stat.label}</div>
     </div>
   );
 };
@@ -83,20 +83,20 @@ const SocialProof = () => {
   return (
     <section
       ref={ref}
-      className="container mx-auto border-x border-t border-border py-16 md:py-20"
+      className="container mx-auto border-x border-t border-border p-0"
     >
       <div className="relative container mx-auto px-0 z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.35 }}
-          className="mb-10 text-center"
-        >
-          <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">
-            Trusted by engineering teams
-          </h2>
-        </motion.div>
+        {/* <motion.div */}
+        {/*   initial={{ opacity: 0, y: 20 }} */}
+        {/*   whileInView={{ opacity: 1, y: 0 }} */}
+        {/*   viewport={{ once: true }} */}
+        {/*   transition={{ duration: 0.35 }} */}
+        {/*   className="mb-10 text-center" */}
+        {/* > */}
+        {/*   <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl"> */}
+        {/*     Trusted by engineering teams */}
+        {/*   </h2> */}
+        {/* </motion.div> */}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
