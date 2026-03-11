@@ -57,21 +57,21 @@ const About = () => {
       <Header />
 
       <main className="pt-20 md:pt-24">
-        <section className="container mx-auto border-x border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-4xl text-center">
+        <section className="container mx-auto border-x border-border px-0 py-16 md:py-20">
+          <div className="w-full text-center">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">About</p>
             <h1 className="mb-6 text-5xl font-bold text-foreground md:text-6xl">
               Building secure configuration workflows for modern teams.
             </h1>
-            <p className="mx-auto max-w-3xl text-lg text-muted-foreground md:text-xl">
+            <p className="text-lg text-muted-foreground md:text-xl">
               EnvSync is focused on one thing: make secret and environment management reliable,
               secure, and fast enough for daily shipping.
             </p>
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-0 md:grid-cols-3">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="grid w-full grid-cols-1 gap-0 md:grid-cols-3">
             <div className="border border-border bg-[hsl(var(--surface-1))] p-6">
               <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Mission</p>
               <p className="mt-3 text-lg font-semibold text-foreground">Secure by default</p>
@@ -87,8 +87,8 @@ const About = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-5xl border border-border bg-[hsl(var(--surface-1))] p-8 md:p-10">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full border border-border bg-[hsl(var(--surface-1))] p-8 md:p-10">
             <h2 className="mb-5 text-3xl font-bold text-foreground md:text-4xl">Why we built EnvSync</h2>
             <p className="mb-4 text-muted-foreground">
               Traditional configuration handling is fragmented and error-prone at scale. Teams waste
@@ -101,8 +101,8 @@ const About = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-6xl">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full">
             <h2 className="mb-10 text-center text-3xl font-bold text-foreground md:text-4xl">Core principles</h2>
             <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
               {values.map((value, index) => (
@@ -120,8 +120,8 @@ const About = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-6xl">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full">
             <h2 className="mb-10 text-center text-3xl font-bold text-foreground md:text-4xl">Team</h2>
             <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
               {team.map((member, index) => (
@@ -148,10 +148,10 @@ const About = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-4xl border border-border bg-[hsl(var(--surface-1))] p-8 text-center md:p-10">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full border border-border bg-[hsl(var(--surface-1))] p-8 text-center md:p-10">
             <h2 className="mb-5 text-4xl font-bold text-foreground">Ready to build with EnvSync?</h2>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+            <p className="mb-8 text-lg text-muted-foreground">
               Start with a secure baseline and scale configuration workflows with your team.
             </p>
             <Link to="/onboarding">

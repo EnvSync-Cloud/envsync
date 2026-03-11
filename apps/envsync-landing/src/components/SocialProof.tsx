@@ -85,7 +85,7 @@ const SocialProof = () => {
       ref={ref}
       className="container mx-auto border-x border-t border-border py-16 md:py-20"
     >
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 z-10">
+      <div className="relative container mx-auto px-0 z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -103,7 +103,7 @@ const SocialProof = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.35, delay: 0.1 }}
-          className="mx-auto grid max-w-5xl grid-cols-2 gap-0 md:grid-cols-4"
+          className="grid w-full grid-cols-2 gap-0 md:grid-cols-4"
         >
           {stats.map((stat) => (
             <StatCard key={stat.label} stat={stat} isVisible={isVisible} />

@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 const Footer = () => {
   return (
     <footer className="container relative mx-auto border-x border-t border-border bg-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="container relative z-10 mx-auto px-0 py-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="md:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
               <img

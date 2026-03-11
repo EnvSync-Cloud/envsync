@@ -47,7 +47,7 @@ const CellIcon = ({ value }: { value: CellValue }) => {
 const Compare = () => {
   return (
     <section className="container mx-auto border-x border-t border-border py-20 md:py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="relative container mx-auto px-0 z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ const Compare = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45, delay: 0.1 }}
-          className="mx-auto max-w-5xl overflow-x-auto border border-border bg-[hsl(var(--surface-1))]"
+          className="w-full overflow-x-auto border border-border bg-[hsl(var(--surface-1))]"
         >
           <Table>
             <TableHeader>

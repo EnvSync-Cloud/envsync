@@ -83,21 +83,21 @@ const Integrations = () => {
       <Header />
 
       <main className="pt-20 md:pt-24">
-        <section className="container mx-auto border-x border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-4xl text-center">
+        <section className="container mx-auto border-x border-border px-0 py-16 md:py-20">
+          <div className="w-full text-center">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Integrations</p>
             <h1 className="mb-6 text-5xl font-bold text-foreground md:text-6xl">
               Connect EnvSync with the tools your team ships on.
             </h1>
-            <p className="mx-auto max-w-3xl text-lg text-muted-foreground md:text-xl">
+            <p className="text-lg text-muted-foreground md:text-xl">
               Build a consistent secret delivery workflow across notifications, CI, cloud platforms,
               and runtime environments.
             </p>
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-6xl">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full">
             <div className="mb-8 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
                 <MessageCircle className="h-5 w-5 text-primary" />
@@ -113,8 +113,8 @@ const Integrations = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-6xl">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full">
             <div className="mb-8 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
                 <Shield className="h-5 w-5 text-primary" />
@@ -130,10 +130,10 @@ const Integrations = () => {
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border px-4 py-16 sm:px-6 lg:px-8 md:py-20">
-          <div className="mx-auto max-w-4xl border border-border bg-[hsl(var(--surface-1))] p-8 text-center md:p-10">
+        <section className="container mx-auto border-x border-t border-border px-0 py-16 md:py-20">
+          <div className="w-full border border-border bg-[hsl(var(--surface-1))] p-8 text-center md:p-10">
             <h3 className="mb-5 text-3xl font-bold text-foreground">Need a custom integration?</h3>
-            <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+            <p className="mb-8 text-lg text-muted-foreground">
               Tell us what your stack needs. We prioritize integrations that improve secure delivery velocity.
             </p>
             <Button size="lg" className="px-8">

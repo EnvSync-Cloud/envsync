@@ -44,7 +44,7 @@ const stepVariants = {
 const HowItWorks = () => {
   return (
     <section className="container mx-auto border-x border-t border-border py-20 md:py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-0">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -65,7 +65,7 @@ const HowItWorks = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="relative mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-3"
+          className="relative grid w-full grid-cols-1 gap-0 md:grid-cols-3"
         >
           {steps.map((step, index) => (
             <motion.div

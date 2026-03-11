@@ -133,7 +133,7 @@ const features = [
 const Features = () => {
   return (
     <section id="features" className="container mx-auto border-x border-t border-border py-20 md:py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="relative container mx-auto px-0 z-10">
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -150,7 +150,7 @@ const Features = () => {
           </p>
         </motion.div>
 
-        <BentoGrid className="max-w-6xl mx-auto">
+        <BentoGrid>
           {features.map((feature, i) => (
             <BentoGridItem
               key={i}

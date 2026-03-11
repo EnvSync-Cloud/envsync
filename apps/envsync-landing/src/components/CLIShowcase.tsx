@@ -20,7 +20,7 @@ const lines: { type: "command" | "output" | "comment"; text: string }[] = [
 const CLIShowcase = () => {
   return (
     <section className="container mx-auto border-x border-t border-border py-20 md:py-24">
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 z-10">
+      <div className="relative container mx-auto px-0 z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -41,7 +41,7 @@ const CLIShowcase = () => {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.35, delay: 0.1 }}
-          className="mx-auto grid max-w-5xl grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]"
+          className="grid w-full grid-cols-1 gap-0 lg:grid-cols-[2fr_1fr]"
         >
           <div className="overflow-hidden border border-border bg-[hsl(var(--surface-1))]">
             <div className="flex items-center justify-between border-b border-border bg-[hsl(var(--surface-2))] px-4 py-3">
@@ -80,7 +80,7 @@ const CLIShowcase = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+          <div className="grid grid-cols-2 gap-0 lg:grid-cols-1">
             <div className="border border-border bg-[hsl(var(--surface-1))] p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Latency</p>
               <p className="mt-2 text-2xl font-semibold text-foreground">~120ms</p>
