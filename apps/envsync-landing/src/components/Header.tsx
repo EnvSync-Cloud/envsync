@@ -19,7 +19,7 @@ const Header = () => {
     >
       <div className="container mx-auto border-x border-border px-0">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 ml-4">
             <img
               src="/EnvSync.svg"
               alt="EnvSync Logo"
@@ -31,7 +31,7 @@ const Header = () => {
             </Badge>
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8 h-full">
             <Link
               to="/about"
               className={`transition-colors ${
@@ -58,22 +58,22 @@ const Header = () => {
             >
               Blog
             </a>
-            <a href="https://app.envsync.cloud">
+            <a href="https://app.envsync.cloud" className="h-full">
               <Button
                 variant="outline"
-                className="border-border bg-card text-foreground hover:bg-accent"
+                className="border-border bg-card text-foreground hover:bg-accent h-full px-8"
               >
                 Sign In
               </Button>
             </a>
-            <Link to="/onboarding">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Link to="/onboarding" className="h-full !ml-0">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 h-full px-8">
                 Get Started
               </Button>
             </Link>
           </nav>
 
-          <div className="md:hidden">
+          <div className="md:hidden mr-4">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-muted-foreground hover:text-foreground"
