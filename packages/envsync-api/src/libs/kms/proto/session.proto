@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package minikms.v1;
+
+option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// SessionService manages time-based session tokens tied to member certificates.
+// Sessions are required for vault read/write operations and provide zero-trust access control.
+service SessionService {
+  // CreateSession authenticates a member and issues a session token.
+  // BYOK/CLI: member signs a nonce with their cert private key.
+  // Web/managed: envsync-api provides member cert serial after OIDC auth.
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+
+  // ValidateSession checks if a session token is still valid.
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+
+  // RevokeSession invalidates a session token.
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // RevokeMemberSessions invalidates all sessions for a member.
+  rpc RevokeMemberSessions(RevokeMemberSessionsRequest) returns (RevokeMemberSessionsResponse);
+
+  // ListSessions returns active sessions for a member.
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+}
+
+message CreateSessionRequest {
+  // Authentication method
+  oneof auth {
+    CertAuth cert_auth = 1;     // BYOK/CLI: certificate-based auth
+    ManagedAuth managed_auth = 2; // Web: pre-authenticated via OIDC
+  }
+
+  // Requested scopes (optional, defaults to role-based defaults)
+  repeated string scopes = 3;
+}
+
+// Certificate-based authentication for BYOK/CLI members.
+message CertAuth {
+  string cert_pem = 1;       // Member certificate in PEM format
+  bytes signed_nonce = 2;     // Nonce signed with member's private key
+  bytes nonce = 3;            // Original nonce value
+}
+
+// Pre-authenticated via OIDC for web/managed members.
+message ManagedAuth {
+  string member_id = 1;
+  string org_id = 2;
+  string cert_serial = 3;     // Member cert serial (looked up by envsync-api)
+}
+
+message CreateSessionResponse {
+  string session_token = 1;   // JWT session token
+  google.protobuf.Timestamp expires_at = 2;
+  repeated string scopes = 3;
+}
+
+message ValidateSessionRequest {
+  string session_token = 1;
+}
+
+message ValidateSessionResponse {
+  bool valid = 1;
+  string member_id = 2;
+  string org_id = 3;
+  string role = 4;
+  string cert_serial = 5;
+  repeated string scopes = 6;
+  google.protobuf.Timestamp expires_at = 7;
+}
+
+message RevokeSessionRequest {
+  string session_token = 1;
+}
+
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+message RevokeMemberSessionsRequest {
+  string member_id = 1;
+  string org_id = 2;
+}
+
+message RevokeMemberSessionsResponse {
+  int32 revoked_count = 1;
+}
+
+message ListSessionsRequest {
+  string member_id = 1;
+  string org_id = 2;
+}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+message SessionInfo {
+  string jti = 1;
+  string cert_serial = 2;
+  repeated string scopes = 3;
+  google.protobuf.Timestamp issued_at = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  bool revoked = 6;
+}
