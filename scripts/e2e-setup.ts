@@ -4,7 +4,7 @@
  *
  * Subcommands:
  *   init    — Start docker services, wait for health, create e2e database,
- *             initialize Vault (KV v2 + AppRole), write .env.e2e.test
+ *             write .env.e2e.test
  *   cleanup — Drop e2e database, remove .env.e2e.test
  *
  * Usage:
@@ -21,7 +21,6 @@ import {
 	loadEnvFile,
 	updateEnvFile,
 	waitForPostgres,
-	waitForVault,
 	waitForOpenFGA,
 	waitForMailpit,
 	waitForZitadel,
@@ -29,7 +28,6 @@ import {
 	waitForGrafana,
 	readPatFromVolume,
 	readLoginPatFromVolume,
-	initVault,
 } from "./lib/services";
 import { bootstrapZitadelProject } from "../packages/envsync-api/tests/e2e/helpers/zitadel-bootstrap";
 
@@ -52,8 +50,6 @@ function dockerComposeUp(): void {
 			"-d",
 			"postgres",
 			"redis",
-			"vault-init",
-			"vault",
 			"openfga_db",
 			"openfga_migrate",
 			"openfga",
@@ -143,7 +139,6 @@ async function init(): Promise<void> {
 	console.log("\nWaiting for services...");
 	await new Promise(r => setTimeout(r, 3000));
 	await waitForPostgres();
-	await waitForVault();
 	await waitForOpenFGA();
 	await waitForMailpit();
 	await waitForZitadel();
@@ -171,13 +166,6 @@ async function init(): Promise<void> {
 	// Create E2E database
 	createE2EDatabase();
 
-	// Initialize Vault with E2E-specific policy/role
-	const vaultPort = process.env.VAULT_PORT ?? "8200";
-	const vaultAddr = process.env.VAULT_ADDR ?? `http://localhost:${vaultPort}`;
-	const mountPath = "envsync";
-
-	const vaultResult = await initVault(vaultAddr, mountPath, "envsync-e2e", "envsync-e2e");
-
 	// Resolve OpenFGA URL
 	const openfgaUrl = (
 		process.env.OPENFGA_API_URL ?? `http://localhost:${process.env.OPENFGA_HTTP_PORT ?? "8090"}`
@@ -185,12 +173,8 @@ async function init(): Promise<void> {
 
 	// Write .env.e2e.test
 	const e2eEnv: Record<string, string> = {
-		VAULT_ADDR: vaultResult.vaultAddr,
-		VAULT_ROLE_ID: vaultResult.roleId,
-		VAULT_SECRET_ID: vaultResult.secretId,
-		VAULT_MOUNT_PATH: vaultResult.mountPath,
-		VAULT_TOKEN: vaultResult.rootToken,
-		VAULT_UNSEAL_KEY: vaultResult.unsealKey,
+		MINIKMS_GRPC_ADDR: "localhost:50051",
+		MINIKMS_TLS_ENABLED: "false",
 		OPENFGA_API_URL: openfgaUrl,
 		ZITADEL_URL: zitadelUrl,
 		ZITADEL_PAT: adminPatFromVolume,

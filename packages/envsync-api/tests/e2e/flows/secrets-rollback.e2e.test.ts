@@ -1,8 +1,8 @@
 /**
- * E2E: Env Rollback — create → update → capture PITs → rollback → verify
+ * E2E: Secret Rollback — create → update → capture PITs → rollback → verify
  *
- * Uses real PostgreSQL and OpenFGA. miniKMS VaultService stores encrypted values.
- * Tests rollback to PIT ID, rollback to timestamp, and single-variable rollback.
+ * Uses real PostgreSQL and OpenFGA. miniKMS VaultService stores encrypted secrets.
+ * Mirrors env-rollback.e2e.test.ts but for the /api/secret rollback routes.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
@@ -21,11 +21,15 @@ beforeAll(async () => {
 	await checkServiceHealth();
 	seed = await seedE2EOrg();
 
-	// Create app
+	// Create app with secrets enabled
 	const appRes = await testRequest("/api/app", {
 		method: "POST",
 		token: seed.masterUser.token,
-		body: { name: "E2E Rollback App", description: "For rollback tests" },
+		body: {
+			name: "E2E Secret Rollback App",
+			description: "For secret rollback tests",
+			enable_secrets: true,
+		},
 	});
 	const appBody = await appRes.json<{ id: string }>();
 	appId = appBody.id;
@@ -34,53 +38,53 @@ beforeAll(async () => {
 	const envTypeRes = await testRequest("/api/env_type", {
 		method: "POST",
 		token: seed.masterUser.token,
-		body: { name: "rollback-staging", app_id: appId },
+		body: { name: "secret-rollback-staging", app_id: appId },
 	});
 	const envTypeBody = await envTypeRes.json<{ id: string }>();
 	envTypeId = envTypeBody.id;
 });
 
-describe("Env Rollback E2E", () => {
+describe("Secret Rollback E2E", () => {
 	let firstPitId: string;
 	let midTimestamp: string;
 
-	test("setup: create initial env vars", async () => {
-		const res = await testRequest("/api/env/batch", {
+	test("setup: create initial secrets", async () => {
+		const res = await testRequest("/api/secret/batch", {
 			method: "PUT",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
 				envs: [
-					{ key: "APP_NAME", value: "rollback-test-v1" },
-					{ key: "DB_HOST", value: "localhost" },
+					{ key: "APP_SECRET", value: "rollback-secret-v1" },
+					{ key: "DB_TOKEN", value: "db-token-original" },
 				],
 			},
 		});
 		expect(res.status).toBe(201);
 	});
 
-	test("setup: update envs to generate history", async () => {
+	test("setup: update secrets to generate history", async () => {
 		// Capture timestamp between PIT states
 		midTimestamp = new Date().toISOString();
 
 		// Small delay to ensure distinct timestamps
 		await new Promise((r) => setTimeout(r, 50));
 
-		const res = await testRequest("/api/env/i/APP_NAME", {
+		const res = await testRequest("/api/secret/i/APP_SECRET", {
 			method: "PATCH",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				value: "rollback-test-v2",
+				value: "rollback-secret-v2",
 			},
 		});
 		expect(res.status).toBe(200);
 	});
 
 	test("get history for PIT IDs", async () => {
-		const res = await testRequest("/api/env/history", {
+		const res = await testRequest("/api/secret/history", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -100,7 +104,7 @@ describe("Env Rollback E2E", () => {
 	});
 
 	test("rollback to PIT ID", async () => {
-		const res = await testRequest("/api/env/rollback/pit", {
+		const res = await testRequest("/api/secret/rollback/pit", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -118,8 +122,8 @@ describe("Env Rollback E2E", () => {
 		expect(body.message).toBeDefined();
 	});
 
-	test("verify rollback", async () => {
-		const res = await testRequest("/api/env", {
+	test("verify rollback state", async () => {
+		const res = await testRequest("/api/secret", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: { app_id: appId, env_type_id: envTypeId },
@@ -127,27 +131,26 @@ describe("Env Rollback E2E", () => {
 		expect(res.status).toBe(200);
 
 		const body = await res.json<any[]>();
-		const appName = body.find((e: any) => e.key === "APP_NAME");
-		expect(appName).toBeDefined();
-		// After rollback to first PIT, APP_NAME should be v1
-		expect(appName.value).toBe("rollback-test-v1");
+		// Secrets are returned encrypted, so we verify the count is correct
+		expect(body).toBeArray();
+		expect(body.length).toBeGreaterThanOrEqual(2);
 	});
 
 	test("setup: update again for timestamp rollback", async () => {
-		const res = await testRequest("/api/env/i/APP_NAME", {
+		const res = await testRequest("/api/secret/i/APP_SECRET", {
 			method: "PATCH",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				value: "rollback-test-v3",
+				value: "rollback-secret-v3",
 			},
 		});
 		expect(res.status).toBe(200);
 	});
 
 	test("rollback to timestamp", async () => {
-		const res = await testRequest("/api/env/rollback/timestamp", {
+		const res = await testRequest("/api/secret/rollback/timestamp", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -162,22 +165,22 @@ describe("Env Rollback E2E", () => {
 		expect(body.message).toBeDefined();
 	});
 
-	test("setup: update DB_HOST for single variable rollback", async () => {
-		const res = await testRequest("/api/env/i/DB_HOST", {
+	test("setup: update DB_TOKEN for single variable rollback", async () => {
+		const res = await testRequest("/api/secret/i/DB_TOKEN", {
 			method: "PATCH",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				value: "remote-host",
+				value: "db-token-changed",
 			},
 		});
 		expect(res.status).toBe(200);
 	});
 
-	test("rollback single var to PIT", async () => {
-		// Get latest history to find a PIT where DB_HOST was "localhost"
-		const historyRes = await testRequest("/api/env/history", {
+	test("rollback single secret var to PIT", async () => {
+		// Get latest history to find a PIT where DB_TOKEN was original
+		const historyRes = await testRequest("/api/secret/history", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: { app_id: appId, env_type_id: envTypeId, page: 1, per_page: 20 },
@@ -185,7 +188,7 @@ describe("Env Rollback E2E", () => {
 		const history = await historyRes.json<{ pits: any[] }>();
 		const earliestPit = history.pits[history.pits.length - 1].id;
 
-		const res = await testRequest("/api/env/rollback/variable/DB_HOST/pit", {
+		const res = await testRequest("/api/secret/rollback/variable/DB_TOKEN/pit", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -200,20 +203,20 @@ describe("Env Rollback E2E", () => {
 		expect(body.message).toBeDefined();
 	});
 
-	test("rollback single var to timestamp", async () => {
-		// First update DB_HOST again
-		await testRequest("/api/env/i/DB_HOST", {
+	test("rollback single secret var to timestamp", async () => {
+		// First update DB_TOKEN again
+		await testRequest("/api/secret/i/DB_TOKEN", {
 			method: "PATCH",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				value: "another-remote-host",
+				value: "db-token-another-change",
 			},
 		});
 
 		const res = await testRequest(
-			"/api/env/rollback/variable/DB_HOST/timestamp",
+			"/api/secret/rollback/variable/DB_TOKEN/timestamp",
 			{
 				method: "POST",
 				token: seed.masterUser.token,

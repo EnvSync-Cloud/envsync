@@ -2,6 +2,8 @@
  * Mock KMS client for unit tests.
  * Performs real AES-256-GCM encryption/decryption using Node.js crypto,
  * ensuring correct roundtrip behavior without requiring a running miniKMS server.
+ *
+ * Also provides in-memory VaultService and SessionService mocks.
  */
 import {
 	createCipheriv,
@@ -10,6 +12,18 @@ import {
 	randomBytes,
 	randomUUID,
 } from "node:crypto";
+
+import type {
+	VaultWriteRequest,
+	VaultWriteResult,
+	VaultReadRequest,
+	VaultReadResult,
+	VaultListEntry,
+	VaultVersionEntry,
+	CreateSessionManagedRequest,
+	CreateSessionResult,
+	ValidateSessionResult,
+} from "@/libs/kms/client";
 
 /**
  * Derive a deterministic 256-bit key from org+app IDs (test-only).
@@ -59,6 +73,19 @@ function mockKeyPem(): string {
 export function resetPKI(): void {
 	orgCAs.clear();
 	pkiCerts.clear();
+}
+
+// ── Vault service in-memory state ───────────────────────────────────
+
+const vaultStore = new Map<string, { value: Buffer; version: number; createdBy: string; createdAt: number }>();
+
+function vaultKey(orgId: string, scopeId: string, entryType: string, key: string, envTypeId?: string): string {
+	return `${orgId}:${scopeId}:${entryType}:${envTypeId || ""}:${key}`;
+}
+
+/** Reset all in-memory vault data between tests */
+export function resetVaultStore(): void {
+	vaultStore.clear();
 }
 
 export const MockKMSClient = {
@@ -224,5 +251,106 @@ export const MockKMSClient = {
 
 	async getRootCA(): Promise<{ certPem: string }> {
 		return { certPem: MOCK_ROOT_CA_PEM };
+	},
+
+	// ─── Vault service mock methods ─────────────────────────────────
+
+	async vaultWrite(req: VaultWriteRequest, _sessionToken: string): Promise<VaultWriteResult> {
+		const k = vaultKey(req.orgId, req.scopeId, req.entryType, req.key, req.envTypeId);
+		const existing = vaultStore.get(k);
+		const version = (existing?.version || 0) + 1;
+		vaultStore.set(k, { value: req.value, version, createdBy: req.createdBy, createdAt: Date.now() });
+		return { id: `mock-${k}-v${version}`, version, keyVersionId: `mock-kv-${randomUUID().slice(0, 8)}` };
+	},
+
+	async vaultRead(req: VaultReadRequest, _sessionToken: string): Promise<VaultReadResult> {
+		const k = vaultKey(req.orgId, req.scopeId, req.entryType, req.key, req.envTypeId);
+		const entry = vaultStore.get(k);
+		if (!entry) {
+			const err = new Error("NOT_FOUND") as any;
+			err.code = 5; // gRPC NOT_FOUND
+			throw err;
+		}
+		return {
+			id: `mock-${k}`, orgId: req.orgId, scopeId: req.scopeId, entryType: req.entryType,
+			key: req.key, envTypeId: req.envTypeId, encryptedValue: entry.value,
+			keyVersionId: "mock-kv", version: entry.version,
+			createdAt: String(Math.floor(entry.createdAt / 1000)), createdBy: entry.createdBy,
+		};
+	},
+
+	async vaultDelete(
+		_orgId: string,
+		_scopeId: string,
+		_entryType: string,
+		_key: string,
+		_envTypeId: string | undefined,
+		_sessionToken: string,
+	): Promise<boolean> {
+		return true;
+	},
+
+	async vaultDestroy(
+		orgId: string,
+		scopeId: string,
+		entryType: string,
+		key: string,
+		envTypeId: string | undefined,
+		_version: number,
+		_sessionToken: string,
+	): Promise<number> {
+		const k = vaultKey(orgId, scopeId, entryType, key, envTypeId);
+		return vaultStore.delete(k) ? 1 : 0;
+	},
+
+	async vaultList(
+		orgId: string,
+		scopeId: string,
+		entryType: string,
+		envTypeId: string | undefined,
+		_sessionToken: string,
+	): Promise<VaultListEntry[]> {
+		const prefix = `${orgId}:${scopeId}:${entryType}:${envTypeId || ""}:`;
+		const entries: VaultListEntry[] = [];
+		for (const [k, v] of vaultStore) {
+			if (k.startsWith(prefix)) {
+				const key = k.slice(prefix.length);
+				entries.push({ key, latestVersion: v.version, createdAt: String(v.createdAt), updatedAt: String(v.createdAt) });
+			}
+		}
+		return entries;
+	},
+
+	async vaultHistory(
+		_orgId: string,
+		_scopeId: string,
+		_entryType: string,
+		_key: string,
+		_envTypeId: string | undefined,
+		_sessionToken: string,
+	): Promise<VaultVersionEntry[]> {
+		return [];
+	},
+
+	// ─── Session service mock methods ───────────────────────────────
+
+	async createSessionManaged(req: CreateSessionManagedRequest): Promise<CreateSessionResult> {
+		return {
+			sessionToken: `mock-session-${req.memberId}-${req.orgId}`,
+			expiresAt: String(Math.floor(Date.now() / 1000) + 3600),
+			scopes: [],
+		};
+	},
+
+	async validateSession(_token: string): Promise<ValidateSessionResult> {
+		return { valid: true, memberId: "mock", orgId: "mock", role: "admin", certSerial: "mock", scopes: [], expiresAt: "" };
+	},
+
+	async revokeSession(_token: string): Promise<boolean> {
+		return true;
+	},
+
+	async revokeMemberSessions(_memberId: string, _orgId: string): Promise<number> {
+		return 0;
 	},
 };

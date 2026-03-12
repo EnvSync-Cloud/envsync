@@ -1,7 +1,7 @@
 /**
  * E2E: Environment variable CRUD — create → read → update → delete
  *
- * Uses real PostgreSQL and OpenFGA. Vault stores KMS-encrypted env vars.
+ * Uses real PostgreSQL and OpenFGA. miniKMS VaultService stores encrypted env vars.
  * Tests single and batch operations. Values are transparently encrypted/decrypted
  * by EnvService — the API always returns plaintext.
  */
@@ -145,5 +145,56 @@ describe("Env CRUD E2E", () => {
 		expect(keys).not.toContain("API_KEY");
 		expect(keys).toContain("DATABASE_URL");
 		expect(keys).toContain("REDIS_URL");
+	});
+
+	test("get single env variable by key", async () => {
+		const res = await testRequest("/api/env/i/DATABASE_URL", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<{ key: string; value: string }>();
+		expect(body.key).toBe("DATABASE_URL");
+		expect(body.value).toBe("postgres://localhost:5432/updateddb");
+	});
+
+	test("batch delete env variables", async () => {
+		// First add some variables to batch delete
+		await testRequest("/api/env/batch", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				envs: [
+					{ key: "BATCH_DEL_1", value: "val1" },
+					{ key: "BATCH_DEL_2", value: "val2" },
+				],
+			},
+		});
+
+		const res = await testRequest("/api/env/batch", {
+			method: "DELETE",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				keys: ["BATCH_DEL_1", "BATCH_DEL_2"],
+			},
+		});
+		expect(res.status).toBe(200);
+
+		// Verify they're gone
+		const listRes = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		const body = await listRes.json<any[]>();
+		const keys = body.map((e: any) => e.key);
+		expect(keys).not.toContain("BATCH_DEL_1");
+		expect(keys).not.toContain("BATCH_DEL_2");
 	});
 });

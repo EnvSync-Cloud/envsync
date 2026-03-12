@@ -4,7 +4,7 @@ import { testRequest } from "../helpers/request";
 import { cleanupDB, seedOrg, type SeedOrgResult } from "../helpers/db";
 import { createTestApiKey } from "../helpers/auth";
 import { resetFGA, setupUserOrgTuples } from "../helpers/fga";
-import { resetVault } from "../helpers/vault";
+import { resetVaultStore } from "../helpers/kms";
 
 let seed: SeedOrgResult;
 
@@ -23,7 +23,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-	resetVault();
+	resetVaultStore();
 });
 
 describe("GET /api/auth/me", () => {

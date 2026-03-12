@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { testRequest } from "../helpers/request";
 import { seedOrg, seedApp, seedEnvType, type SeedOrgResult } from "../helpers/db";
 import { MockFGAClient, resetFGA, setupUserOrgTuples } from "../helpers/fga";
-import { resetVault } from "../helpers/vault";
+import { resetVaultStore } from "../helpers/kms";
 import { generateKeyPair } from "@/helpers/key-store";
 
 let seed: SeedOrgResult;
@@ -85,7 +85,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-	resetVault();
+	resetVaultStore();
 });
 
 describe("PUT /api/secret/single", () => {

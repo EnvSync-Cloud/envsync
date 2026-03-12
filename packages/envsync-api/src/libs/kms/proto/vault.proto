@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+package minikms.v1;
+
+option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// VaultService provides zero-trust secret storage, replacing HashiCorp Vault KV v2.
+// All operations require a valid session token in gRPC metadata.
+// Write operations create new versions (append-only).
+// ECIES encryption happens inside Write; ECIES decryption inside Read.
+service VaultService {
+  // Write stores an encrypted value, creating a new version.
+  rpc Write(VaultWriteRequest) returns (VaultWriteResponse);
+
+  // Read retrieves the latest version of a vault entry.
+  rpc Read(VaultReadRequest) returns (VaultReadResponse);
+
+  // ReadVersion retrieves a specific version of a vault entry.
+  rpc ReadVersion(VaultReadVersionRequest) returns (VaultReadResponse);
+
+  // Delete performs a soft delete (marks as deleted, recoverable).
+  rpc Delete(VaultDeleteRequest) returns (VaultDeleteResponse);
+
+  // Destroy permanently deletes a vault entry (irrecoverable).
+  rpc Destroy(VaultDestroyRequest) returns (VaultDestroyResponse);
+
+  // List returns all active keys within a scope.
+  rpc List(VaultListRequest) returns (VaultListResponse);
+
+  // History returns the version history of a vault entry.
+  rpc History(VaultHistoryRequest) returns (VaultHistoryResponse);
+}
+
+message VaultWriteRequest {
+  string org_id = 1;
+  string scope_id = 2;       // app_id
+  string entry_type = 3;     // "env", "secret", "gpg"
+  string key = 4;
+  string env_type_id = 5;    // for env/secret scoping
+  bytes value = 6;            // RSA/Hybrid encrypted blob (Layer 1 output)
+  string created_by = 7;     // member_id
+}
+
+message VaultWriteResponse {
+  string id = 1;
+  int32 version = 2;
+  string key_version_id = 3;
+}
+
+message VaultReadRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string key = 4;
+  string env_type_id = 5;
+  // If true, return the KMS-unwrapped ECIES blob for client-side decryption (BYOK).
+  // If false (managed), server performs full decryption.
+  bool client_side_decrypt = 6;
+}
+
+message VaultReadResponse {
+  string id = 1;
+  string org_id = 2;
+  string scope_id = 3;
+  string entry_type = 4;
+  string key = 5;
+  string env_type_id = 6;
+  bytes encrypted_value = 7;    // Depends on client_side_decrypt:
+                                 //   true: ECIES blob (Layer 2 output) for client-side ECIES+RSA decrypt
+                                 //   false: RSA/Hybrid blob (Layer 1 output) for client RSA decrypt only
+  string key_version_id = 8;
+  int32 version = 9;
+  google.protobuf.Timestamp created_at = 10;
+  string created_by = 11;
+
+  // For BYOK client-side decrypt: includes the member's Org CA wrap data
+  bytes ecies_ephemeral_pub = 12;      // from the ECIES encryption
+  bytes member_wrap_ephemeral_pub = 13; // from org_ca_wraps
+  bytes member_wrapped_orgca_key = 14;  // from org_ca_wraps
+}
+
+message VaultReadVersionRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string key = 4;
+  string env_type_id = 5;
+  int32 version = 6;
+  bool client_side_decrypt = 7;
+}
+
+message VaultDeleteRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string key = 4;
+  string env_type_id = 5;
+}
+
+message VaultDeleteResponse {
+  bool success = 1;
+}
+
+message VaultDestroyRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string key = 4;
+  string env_type_id = 5;
+  int32 version = 6;  // 0 = destroy all versions
+}
+
+message VaultDestroyResponse {
+  bool success = 1;
+  int32 destroyed_count = 2;
+}
+
+message VaultListRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string env_type_id = 4;
+}
+
+message VaultListResponse {
+  repeated VaultListEntry entries = 1;
+}
+
+message VaultListEntry {
+  string key = 1;
+  int32 latest_version = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message VaultHistoryRequest {
+  string org_id = 1;
+  string scope_id = 2;
+  string entry_type = 3;
+  string key = 4;
+  string env_type_id = 5;
+}
+
+message VaultHistoryResponse {
+  repeated VaultVersionEntry versions = 1;
+}
+
+message VaultVersionEntry {
+  int32 version = 1;
+  string key_version_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  string created_by = 4;
+  bool deleted = 5;
+  bool destroyed = 6;
+}

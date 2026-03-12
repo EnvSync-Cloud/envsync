@@ -1,8 +1,8 @@
 /**
- * E2E: Env Point-in-Time — create vars → update → get history → PIT → diff → timeline
+ * E2E: Secret Point-in-Time — create secrets → update → get history → PIT → diff → timeline
  *
- * Uses real PostgreSQL and OpenFGA. miniKMS VaultService stores encrypted values.
- * Creates env vars, updates them to generate history, then queries PIT endpoints.
+ * Uses real PostgreSQL and OpenFGA. miniKMS VaultService stores encrypted secrets.
+ * Mirrors env-point-in-time.e2e.test.ts but for the /api/secret PIT routes.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
@@ -21,11 +21,15 @@ beforeAll(async () => {
 	await checkServiceHealth();
 	seed = await seedE2EOrg();
 
-	// Create app
+	// Create app with secrets enabled
 	const appRes = await testRequest("/api/app", {
 		method: "POST",
 		token: seed.masterUser.token,
-		body: { name: "E2E PIT App", description: "For PIT tests" },
+		body: {
+			name: "E2E Secret PIT App",
+			description: "For secret PIT tests",
+			enable_secrets: true,
+		},
 	});
 	const appBody = await appRes.json<{ id: string }>();
 	appId = appBody.id;
@@ -34,48 +38,48 @@ beforeAll(async () => {
 	const envTypeRes = await testRequest("/api/env_type", {
 		method: "POST",
 		token: seed.masterUser.token,
-		body: { name: "pit-staging", app_id: appId },
+		body: { name: "secret-pit-staging", app_id: appId },
 	});
 	const envTypeBody = await envTypeRes.json<{ id: string }>();
 	envTypeId = envTypeBody.id;
 });
 
-describe("Env Point-in-Time E2E", () => {
+describe("Secret Point-in-Time E2E", () => {
 	let firstPitId: string;
 	let secondPitId: string;
 
-	test("create initial env vars (setup)", async () => {
-		const res = await testRequest("/api/env/batch", {
+	test("create initial secrets (setup)", async () => {
+		const res = await testRequest("/api/secret/batch", {
 			method: "PUT",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
 				envs: [
-					{ key: "DATABASE_URL", value: "postgres://localhost/pit_test" },
-					{ key: "REDIS_URL", value: "redis://localhost:6379" },
-					{ key: "LOG_LEVEL", value: "info" },
+					{ key: "DB_PASSWORD", value: "secret-password-v1" },
+					{ key: "API_SECRET", value: "sk-secret-key-123" },
+					{ key: "JWT_SECRET", value: "jwt-super-secret" },
 				],
 			},
 		});
 		expect(res.status).toBe(201);
 	});
 
-	test("update variable (generates history)", async () => {
-		const res = await testRequest("/api/env/i/DATABASE_URL", {
+	test("update secret (generates history)", async () => {
+		const res = await testRequest("/api/secret/i/DB_PASSWORD", {
 			method: "PATCH",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				value: "postgres://localhost/pit_test_v2",
+				value: "secret-password-v2",
 			},
 		});
 		expect(res.status).toBe(200);
 	});
 
-	test("get env history", async () => {
-		const res = await testRequest("/api/env/history", {
+	test("get secret history", async () => {
+		const res = await testRequest("/api/secret/history", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -97,8 +101,8 @@ describe("Env Point-in-Time E2E", () => {
 		secondPitId = body.pits[0].id; // most recent
 	});
 
-	test("get envs at point in time", async () => {
-		const res = await testRequest("/api/env/pit", {
+	test("get secrets at point in time", async () => {
+		const res = await testRequest("/api/secret/pit", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -114,8 +118,8 @@ describe("Env Point-in-Time E2E", () => {
 		expect(body.length).toBeGreaterThan(0);
 	});
 
-	test("get envs at timestamp", async () => {
-		const res = await testRequest("/api/env/timestamp", {
+	test("get secrets at timestamp", async () => {
+		const res = await testRequest("/api/secret/timestamp", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -130,8 +134,8 @@ describe("Env Point-in-Time E2E", () => {
 		expect(body).toBeArray();
 	});
 
-	test("get env diff between PITs", async () => {
-		const res = await testRequest("/api/env/diff", {
+	test("get secret diff between PITs", async () => {
+		const res = await testRequest("/api/secret/diff", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
@@ -149,18 +153,18 @@ describe("Env Point-in-Time E2E", () => {
 			deleted: any[];
 		}>();
 		expect(body).toBeDefined();
-		// The update of DATABASE_URL should appear as modified
+		// The update of DB_PASSWORD should appear as modified
 		expect(body.modified.length + body.added.length + body.deleted.length).toBeGreaterThan(0);
 	});
 
-	test("get variable timeline", async () => {
-		const res = await testRequest("/api/env/timeline/DATABASE_URL", {
+	test("get secret variable timeline", async () => {
+		const res = await testRequest("/api/secret/timeline/DB_PASSWORD", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
 				app_id: appId,
 				env_type_id: envTypeId,
-				key: "DATABASE_URL",
+				key: "DB_PASSWORD",
 			},
 		});
 		expect(res.status).toBe(200);

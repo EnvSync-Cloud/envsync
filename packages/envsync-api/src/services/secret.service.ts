@@ -1,7 +1,9 @@
+import * as grpc from "@grpc/grpc-js";
+
 import { DB } from "@/libs/db";
 import { ConflictError, NotFoundError } from "@/libs/errors";
-import { VaultClient } from "@/libs/vault";
-import { secretPath, secretScopePath } from "@/libs/vault/paths";
+import { KMSClient } from "@/libs/kms/client";
+import { getVaultSessionToken } from "@/libs/kms/session-manager";
 
 import { KeyValidationService } from "./key_validation.service";
 
@@ -29,7 +31,7 @@ function toSecretRecord(
 	env_type_id: string,
 	key: string,
 	value: string,
-	created_time: string,
+	created_at: string,
 ) {
 	return {
 		id: `${org_id}:${app_id}:${env_type_id}:${key}`,
@@ -38,8 +40,8 @@ function toSecretRecord(
 		env_type_id,
 		key,
 		value,
-		created_at: new Date(created_time),
-		updated_at: new Date(created_time),
+		created_at: created_at ? new Date(Number(created_at) * 1000) : new Date(),
+		updated_at: created_at ? new Date(Number(created_at) * 1000) : new Date(),
 	};
 }
 
@@ -50,18 +52,21 @@ export class SecretService {
 		env_type_id,
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		value: string;
 		env_type_id: string;
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const keyCheck = await KeyValidationService.checkKeyExists({
 			key,
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 			excludeTable: "secret_store",
 		});
 
@@ -69,9 +74,20 @@ export class SecretService {
 			throw new ConflictError(keyCheck.message!);
 		}
 
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-		const result = await vault.kvWrite(path, { value });
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const result = await kms.vaultWrite(
+			{
+				orgId: org_id,
+				scopeId: app_id,
+				entryType: "secret",
+				key,
+				envTypeId: env_type_id,
+				value: Buffer.from(value, "utf-8"),
+				createdBy: user_id,
+			},
+			sessionToken,
+		);
 
 		return { id: `${org_id}:${app_id}:${env_type_id}:${key}`, vault_version: result.version };
 	};
@@ -81,28 +97,41 @@ export class SecretService {
 		env_type_id,
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		env_type_id: string;
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
-		const result = await vault.kvRead(path);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
-		if (!result) {
-			return undefined;
+		try {
+			const result = await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "secret", key, envTypeId: env_type_id, clientSideDecrypt: false },
+				sessionToken,
+			);
+
+			return toSecretRecord(
+				org_id,
+				app_id,
+				env_type_id,
+				key,
+				result.encryptedValue.toString("utf-8"),
+				result.createdAt,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				return undefined;
+			}
+			throw err;
 		}
-
-		return toSecretRecord(
-			org_id,
-			app_id,
-			env_type_id,
-			key,
-			result.data.value,
-			result.metadata.created_time,
-		);
 	};
 
 	public static updateSecret = async ({
@@ -111,22 +140,47 @@ export class SecretService {
 		app_id,
 		org_id,
 		env_type_id,
+		user_id,
 	}: {
 		key: string;
 		value: string;
 		app_id: string;
 		org_id: string;
 		env_type_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Secret", key);
+		// Verify exists
+		try {
+			await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "secret", key, envTypeId: env_type_id },
+				sessionToken,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				throw new NotFoundError("Secret", key);
+			}
+			throw err;
 		}
 
-		const result = await vault.kvWrite(path, { value });
+		const result = await kms.vaultWrite(
+			{
+				orgId: org_id,
+				scopeId: app_id,
+				entryType: "secret",
+				key,
+				envTypeId: env_type_id,
+				value: Buffer.from(value, "utf-8"),
+				createdBy: user_id,
+			},
+			sessionToken,
+		);
 		return { vault_version: result.version };
 	};
 
@@ -135,53 +189,67 @@ export class SecretService {
 		app_id,
 		env_type_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		app_id: string;
 		env_type_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = secretPath(org_id, app_id, env_type_id, key);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Secret", key);
+		// Verify exists
+		try {
+			await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "secret", key, envTypeId: env_type_id },
+				sessionToken,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				throw new NotFoundError("Secret", key);
+			}
+			throw err;
 		}
 
-		await vault.kvMetadataDelete(path);
+		await kms.vaultDestroy(org_id, app_id, "secret", key, env_type_id, 0, sessionToken);
 	};
 
 	public static getAllSecret = async ({
 		app_id,
 		org_id,
 		env_type_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
 		env_type_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const scopePath = secretScopePath(org_id, app_id, env_type_id);
-		const keys = await vault.kvList(scopePath);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const entries = await kms.vaultList(org_id, app_id, "secret", env_type_id, sessionToken);
 
-		if (keys.length === 0) {
+		if (entries.length === 0) {
 			return [];
 		}
 
 		const results = await Promise.all(
-			keys.map(key => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, key);
-				const result = await vault.kvRead(path);
-				if (!result) return null;
-				return toSecretRecord(
-					org_id,
-					app_id,
-					env_type_id,
-					key,
-					result.data.value,
-					result.metadata.created_time,
-				);
+			entries.map(entry => limit(async () => {
+				try {
+					const result = await kms.vaultRead(
+						{ orgId: org_id, scopeId: app_id, entryType: "secret", key: entry.key, envTypeId: env_type_id, clientSideDecrypt: false },
+						sessionToken,
+					);
+					return toSecretRecord(org_id, app_id, env_type_id, entry.key, result.encryptedValue.toString("utf-8"), result.createdAt);
+				} catch {
+					return null;
+				}
 			})),
 		);
 
@@ -196,6 +264,7 @@ export class SecretService {
 			key: string;
 			value: string;
 		}[],
+		user_id: string,
 	) => {
 		const keys = envs.map(env => env.key);
 		const conflicts = await KeyValidationService.validateKeys({
@@ -203,6 +272,7 @@ export class SecretService {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 			excludeTable: "secret_store",
 		});
 
@@ -211,12 +281,23 @@ export class SecretService {
 			throw new ConflictError(`Key conflicts found: ${conflictMessages}`);
 		}
 
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		const results = await Promise.all(
 			envs.map(env => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, env.key);
-				const result = await vault.kvWrite(path, { value: env.value });
+				const result = await kms.vaultWrite(
+					{
+						orgId: org_id,
+						scopeId: app_id,
+						entryType: "secret",
+						key: env.key,
+						envTypeId: env_type_id,
+						value: Buffer.from(env.value, "utf-8"),
+						createdBy: user_id,
+					},
+					sessionToken,
+				);
 				return { key: env.key, vault_version: result.version };
 			})),
 		);
@@ -232,13 +313,25 @@ export class SecretService {
 			key: string;
 			value: string;
 		}[],
+		user_id: string,
 	) => {
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		const results = await Promise.all(
 			envs.map(env => limit(async () => {
-				const path = secretPath(org_id, app_id, env_type_id, env.key);
-				const result = await vault.kvWrite(path, { value: env.value });
+				const result = await kms.vaultWrite(
+					{
+						orgId: org_id,
+						scopeId: app_id,
+						entryType: "secret",
+						key: env.key,
+						envTypeId: env_type_id,
+						value: Buffer.from(env.value, "utf-8"),
+						createdBy: user_id,
+					},
+					sessionToken,
+				);
 				return { key: env.key, vault_version: result.version };
 			})),
 		);
@@ -251,23 +344,26 @@ export class SecretService {
 		app_id: string,
 		env_type_id: string,
 		keys: string[],
+		user_id: string,
 	) => {
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		await Promise.all(
-			keys.map(key => limit(() => {
-				const path = secretPath(org_id, app_id, env_type_id, key);
-				return vault.kvMetadataDelete(path);
-			})),
+			keys.map(key => limit(() =>
+				kms.vaultDestroy(org_id, app_id, "secret", key, env_type_id, 0, sessionToken),
+			)),
 		);
 	};
 
 	public static getAppSecretSummary = async ({
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const db = await DB.getInstance();
 		const envTypes = await db
@@ -277,13 +373,13 @@ export class SecretService {
 			.where("org_id", "=", org_id)
 			.execute();
 
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		const summary = await Promise.all(
 			envTypes.map(async et => {
-				const scopePath = secretScopePath(org_id, app_id, et.id);
-				const keys = await vault.kvList(scopePath);
-				return { env_type_id: et.id, count: keys.length };
+				const entries = await kms.vaultList(org_id, app_id, "secret", et.id, sessionToken);
+				return { env_type_id: et.id, count: entries.length };
 			}),
 		);
 

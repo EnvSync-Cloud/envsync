@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { testRequest } from "../helpers/request";
 import { cleanupDB, seedOrg, seedUser, type SeedOrgResult } from "../helpers/db";
 import { resetFGA, setupUserOrgTuples } from "../helpers/fga";
-import { resetVault } from "../helpers/vault";
+import { resetVaultStore } from "../helpers/kms";
 
 let seed: SeedOrgResult;
 let viewerToken: string;
@@ -29,7 +29,7 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-	resetVault();
+	resetVaultStore();
 });
 
 describe("GET /api/app", () => {

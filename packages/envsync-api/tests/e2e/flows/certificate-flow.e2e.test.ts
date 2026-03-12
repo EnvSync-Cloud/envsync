@@ -29,18 +29,21 @@ beforeAll(async () => {
 });
 
 describe("Certificate Flow E2E", () => {
-	test("1. master initializes org CA (201)", async () => {
+	test("1. master initializes org CA (201 or 409 if already initialized)", async () => {
 		const res = await testRequest("/api/certificate/ca/init", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: { org_name: seed.org.name },
 		});
-		expect(res.status).toBe(201);
+		// seedE2EOrg() now initializes the org CA, so 409 is expected when already initialized
+		expect([201, 409]).toContain(res.status);
 
-		const body = await res.json<{ id: string; cert_type: string; cert_pem: string }>();
-		expect(body.id).toBeDefined();
-		expect(body.cert_type).toBe("org_ca");
-		expect(body.cert_pem).toContain("BEGIN CERTIFICATE");
+		if (res.status === 201) {
+			const body = await res.json<{ id: string; cert_type: string; cert_pem: string }>();
+			expect(body.id).toBeDefined();
+			expect(body.cert_type).toBe("org_ca");
+			expect(body.cert_pem).toContain("BEGIN CERTIFICATE");
+		}
 	});
 
 	test("2. viewer denied init (403)", async () => {

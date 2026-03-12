@@ -1,9 +1,10 @@
+import * as grpc from "@grpc/grpc-js";
+
 import { DB } from "@/libs/db";
-import { ConflictError, NotFoundError, ValidationError } from "@/libs/errors";
+import { ConflictError, NotFoundError } from "@/libs/errors";
 import { variableOperations } from "@/libs/telemetry/metrics";
-import { VaultClient } from "@/libs/vault";
-import { envPath, envScopePath } from "@/libs/vault/paths";
-import { kmsEncrypt, kmsDecrypt, kmsBatchEncrypt } from "@/helpers/key-store";
+import { KMSClient } from "@/libs/kms/client";
+import { getVaultSessionToken } from "@/libs/kms/session-manager";
 
 import { KeyValidationService } from "./key_validation.service";
 
@@ -31,7 +32,7 @@ function toEnvRecord(
 	env_type_id: string,
 	key: string,
 	value: string,
-	created_time: string,
+	created_at: string,
 ) {
 	return {
 		id: `${org_id}:${app_id}:${env_type_id}:${key}`,
@@ -40,36 +41,9 @@ function toEnvRecord(
 		env_type_id,
 		key,
 		value,
-		created_at: new Date(created_time),
-		updated_at: new Date(created_time),
+		created_at: created_at ? new Date(Number(created_at) * 1000) : new Date(),
+		updated_at: created_at ? new Date(Number(created_at) * 1000) : new Date(),
 	};
-}
-
-/**
- * Build the AAD string for env variable encryption.
- */
-function envAAD(org_id: string, app_id: string, env_type_id: string, key: string): string {
-	return `env:${org_id}:${app_id}:${env_type_id}:${key}`;
-}
-
-/**
- * Decrypt a KMS-encrypted value read from Vault.
- * All values must be KMS-encrypted (KMS:v1: prefix).
- */
-async function decryptEnvValue(
-	org_id: string,
-	app_id: string,
-	env_type_id: string,
-	key: string,
-	value: string,
-): Promise<string> {
-	if (!value.startsWith("KMS:v1:")) {
-		throw new ValidationError(`Env value for key "${key}" is not KMS-encrypted.`);
-	}
-	const aad = envAAD(org_id, app_id, env_type_id, key);
-	const decrypted = await kmsDecrypt(org_id, app_id, value, aad);
-	variableOperations.add(1, { operation: "decrypted" });
-	return decrypted;
 }
 
 export class EnvService {
@@ -79,18 +53,21 @@ export class EnvService {
 		env_type_id,
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		value: string;
 		env_type_id: string;
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const keyCheck = await KeyValidationService.checkKeyExists({
 			key,
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 			excludeTable: "env_store",
 		});
 
@@ -98,14 +75,20 @@ export class EnvService {
 			throw new ConflictError(keyCheck.message!);
 		}
 
-		// Encrypt via miniKMS before writing to Vault
-		const aad = envAAD(org_id, app_id, env_type_id, key);
-		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
-		variableOperations.add(1, { operation: "encrypted" });
-
-		const vault = await VaultClient.getInstance();
-		const path = envPath(org_id, app_id, env_type_id, key);
-		await vault.kvWrite(path, { value: encryptedValue });
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		await kms.vaultWrite(
+			{
+				orgId: org_id,
+				scopeId: app_id,
+				entryType: "env",
+				key,
+				envTypeId: env_type_id,
+				value: Buffer.from(value, "utf-8"),
+				createdBy: user_id,
+			},
+			sessionToken,
+		);
 		variableOperations.add(1, { operation: "created" });
 
 		return { id: `${org_id}:${app_id}:${env_type_id}:${key}` };
@@ -116,33 +99,43 @@ export class EnvService {
 		env_type_id,
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		env_type_id: string;
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = envPath(org_id, app_id, env_type_id, key);
-		const result = await vault.kvRead(path);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
-		if (!result) {
-			return undefined;
+		try {
+			const result = await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "env", key, envTypeId: env_type_id, clientSideDecrypt: false },
+				sessionToken,
+			);
+
+			const plaintext = result.encryptedValue.toString("utf-8");
+
+			return toEnvRecord(
+				org_id,
+				app_id,
+				env_type_id,
+				key,
+				plaintext,
+				result.createdAt,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				return undefined;
+			}
+			throw err;
 		}
-
-		// Decrypt value transparently
-		const decryptedValue = await decryptEnvValue(
-			org_id, app_id, env_type_id, key, result.data.value,
-		);
-
-		return toEnvRecord(
-			org_id,
-			app_id,
-			env_type_id,
-			key,
-			decryptedValue,
-			result.metadata.created_time,
-		);
 	};
 
 	public static updateEnv = async ({
@@ -151,28 +144,47 @@ export class EnvService {
 		app_id,
 		org_id,
 		env_type_id,
+		user_id,
 	}: {
 		key: string;
 		value: string;
 		app_id: string;
 		org_id: string;
 		env_type_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = envPath(org_id, app_id, env_type_id, key);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		// Verify the key exists before updating
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Env", key);
+		try {
+			await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "env", key, envTypeId: env_type_id },
+				sessionToken,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				throw new NotFoundError("Env", key);
+			}
+			throw err;
 		}
 
-		// Encrypt via miniKMS before writing to Vault
-		const aad = envAAD(org_id, app_id, env_type_id, key);
-		const encryptedValue = await kmsEncrypt(org_id, app_id, value, aad);
-		variableOperations.add(1, { operation: "encrypted" });
-
-		await vault.kvWrite(path, { value: encryptedValue });
+		await kms.vaultWrite(
+			{
+				orgId: org_id,
+				scopeId: app_id,
+				entryType: "env",
+				key,
+				envTypeId: env_type_id,
+				value: Buffer.from(value, "utf-8"),
+				createdBy: user_id,
+			},
+			sessionToken,
+		);
 	};
 
 	public static deleteEnv = async ({
@@ -180,60 +192,68 @@ export class EnvService {
 		app_id,
 		env_type_id,
 		org_id,
+		user_id,
 	}: {
 		key: string;
 		app_id: string;
 		env_type_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const path = envPath(org_id, app_id, env_type_id, key);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		// Verify the key exists before deleting
-		const existing = await vault.kvRead(path);
-		if (!existing) {
-			throw new NotFoundError("Env", key);
+		try {
+			await kms.vaultRead(
+				{ orgId: org_id, scopeId: app_id, entryType: "env", key, envTypeId: env_type_id },
+				sessionToken,
+			);
+		} catch (err) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
+				throw new NotFoundError("Env", key);
+			}
+			throw err;
 		}
 
-		await vault.kvMetadataDelete(path);
+		await kms.vaultDestroy(org_id, app_id, "env", key, env_type_id, 0, sessionToken);
 	};
 
 	public static getAllEnv = async ({
 		app_id,
 		org_id,
 		env_type_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
 		env_type_id: string;
+		user_id: string;
 	}) => {
-		const vault = await VaultClient.getInstance();
-		const scopePath = envScopePath(org_id, app_id, env_type_id);
-		const keys = await vault.kvList(scopePath);
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const entries = await kms.vaultList(org_id, app_id, "env", env_type_id, sessionToken);
 
-		if (keys.length === 0) {
+		if (entries.length === 0) {
 			return [];
 		}
 
 		const results = await Promise.all(
-			keys.map(key => limit(async () => {
-				const path = envPath(org_id, app_id, env_type_id, key);
-				const result = await vault.kvRead(path);
-				if (!result) return null;
-
-				// Decrypt value transparently
-				const decryptedValue = await decryptEnvValue(
-					org_id, app_id, env_type_id, key, result.data.value,
-				);
-
-				return toEnvRecord(
-					org_id,
-					app_id,
-					env_type_id,
-					key,
-					decryptedValue,
-					result.metadata.created_time,
-				);
+			entries.map(entry => limit(async () => {
+				try {
+					const result = await kms.vaultRead(
+						{ orgId: org_id, scopeId: app_id, entryType: "env", key: entry.key, envTypeId: env_type_id, clientSideDecrypt: false },
+						sessionToken,
+					);
+					const plaintext = result.encryptedValue.toString("utf-8");
+					return toEnvRecord(org_id, app_id, env_type_id, entry.key, plaintext, result.createdAt);
+				} catch {
+					return null;
+				}
 			})),
 		);
 
@@ -248,6 +268,7 @@ export class EnvService {
 			key: string;
 			value: string;
 		}[],
+		user_id: string,
 	) => {
 		const keys = envs.map(env => env.key);
 		const conflicts = await KeyValidationService.validateKeys({
@@ -255,6 +276,7 @@ export class EnvService {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 			excludeTable: "env_store",
 		});
 
@@ -263,24 +285,24 @@ export class EnvService {
 			throw new ConflictError(`Key conflicts found: ${conflictMessages}`);
 		}
 
-		const vault = await VaultClient.getInstance();
-
-		// Batch encrypt all values via miniKMS in a single call, then write to Vault
-		const encryptedValues = await kmsBatchEncrypt(
-			org_id,
-			app_id,
-			envs.map(env => ({
-				value: env.value,
-				aad: envAAD(org_id, app_id, env_type_id, env.key),
-			})),
-		);
-		variableOperations.add(envs.length, { operation: "encrypted" });
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		await Promise.all(
-			envs.map((env, i) => limit(() => {
-				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: encryptedValues[i] });
-			})),
+			envs.map(env => limit(() =>
+				kms.vaultWrite(
+					{
+						orgId: org_id,
+						scopeId: app_id,
+						entryType: "env",
+						key: env.key,
+						envTypeId: env_type_id,
+						value: Buffer.from(env.value, "utf-8"),
+						createdBy: user_id,
+					},
+					sessionToken,
+				),
+			)),
 		);
 		variableOperations.add(envs.length, { operation: "created" });
 	};
@@ -293,25 +315,26 @@ export class EnvService {
 			key: string;
 			value: string;
 		}[],
+		user_id: string,
 	) => {
-		const vault = await VaultClient.getInstance();
-
-		// Batch encrypt all values via miniKMS in a single call, then write to Vault
-		const encryptedValues = await kmsBatchEncrypt(
-			org_id,
-			app_id,
-			envs.map(env => ({
-				value: env.value,
-				aad: envAAD(org_id, app_id, env_type_id, env.key),
-			})),
-		);
-		variableOperations.add(envs.length, { operation: "encrypted" });
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		await Promise.all(
-			envs.map((env, i) => limit(() => {
-				const path = envPath(org_id, app_id, env_type_id, env.key);
-				return vault.kvWrite(path, { value: encryptedValues[i] });
-			})),
+			envs.map(env => limit(() =>
+				kms.vaultWrite(
+					{
+						orgId: org_id,
+						scopeId: app_id,
+						entryType: "env",
+						key: env.key,
+						envTypeId: env_type_id,
+						value: Buffer.from(env.value, "utf-8"),
+						createdBy: user_id,
+					},
+					sessionToken,
+				),
+			)),
 		);
 	};
 
@@ -320,23 +343,26 @@ export class EnvService {
 		app_id: string,
 		env_type_id: string,
 		keys: string[],
+		user_id: string,
 	) => {
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		await Promise.all(
-			keys.map(key => limit(() => {
-				const path = envPath(org_id, app_id, env_type_id, key);
-				return vault.kvMetadataDelete(path);
-			})),
+			keys.map(key => limit(() =>
+				kms.vaultDestroy(org_id, app_id, "env", key, env_type_id, 0, sessionToken),
+			)),
 		);
 	};
 
 	public static getAppEnvSummary = async ({
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const db = await DB.getInstance();
 		const envTypes = await db
@@ -346,13 +372,13 @@ export class EnvService {
 			.where("org_id", "=", org_id)
 			.execute();
 
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		const summary = await Promise.all(
 			envTypes.map(async et => {
-				const scopePath = envScopePath(org_id, app_id, et.id);
-				const keys = await vault.kvList(scopePath);
-				return { env_type_id: et.id, count: keys.length };
+				const entries = await kms.vaultList(org_id, app_id, "env", et.id, sessionToken);
+				return { env_type_id: et.id, count: entries.length };
 			}),
 		);
 

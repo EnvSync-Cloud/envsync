@@ -51,11 +51,6 @@ if (!isE2E) {
 		ZITADEL_WEB_REDIRECT_URI: "http://localhost:3000/callback",
 		ZITADEL_WEB_CALLBACK_URL: "http://localhost:3000",
 		ZITADEL_API_REDIRECT_URI: "http://localhost:4000/callback",
-		// Vault
-		VAULT_ADDR: "http://localhost:8200",
-		VAULT_ROLE_ID: "test-role-id",
-		VAULT_SECRET_ID: "test-secret-id",
-		VAULT_MOUNT_PATH: "envsync",
 		// miniKMS
 		MINIKMS_GRPC_ADDR: "localhost:50051",
 		MINIKMS_TLS_ENABLED: "false",
@@ -101,22 +96,19 @@ if (!isE2E) {
 		}),
 	}));
 
-	// Mock Vault — in-memory KV v2 implementation
-	const { MockVaultClient } = await import("./vault");
-
-	mock.module("@/libs/vault/index", () => ({
-		VaultClient: {
-			getInstance: async () => MockVaultClient,
-		},
-	}));
-
-	// Mock KMS — in-memory AES-256-GCM with deterministic test keys
+	// Mock KMS — in-memory AES-256-GCM with deterministic test keys + Vault + Session mocks
 	const { MockKMSClient } = await import("./kms");
 
 	mock.module("@/libs/kms/client", () => ({
 		KMSClient: {
 			getInstance: async () => MockKMSClient,
 		},
+	}));
+
+	// Mock session-manager — returns a static token for vault operations
+	mock.module("@/libs/kms/session-manager", () => ({
+		getVaultSessionToken: async () => "mock-session-token",
+		invalidateSessionToken: () => {},
 	}));
 
 	// Mock OpenFGA — in-memory tuple store with hierarchy resolution

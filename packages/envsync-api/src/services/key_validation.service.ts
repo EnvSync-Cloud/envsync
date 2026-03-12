@@ -1,5 +1,7 @@
-import { VaultClient } from "@/libs/vault";
-import { envPath, envScopePath, secretPath, secretScopePath } from "@/libs/vault/paths";
+import * as grpc from "@grpc/grpc-js";
+
+import { KMSClient } from "@/libs/kms/client";
+import { getVaultSessionToken } from "@/libs/kms/session-manager";
 
 export class KeyValidationService {
 	/**
@@ -10,41 +12,62 @@ export class KeyValidationService {
 		app_id,
 		env_type_id,
 		org_id,
+		user_id,
 		excludeTable,
 	}: {
 		key: string;
 		app_id: string;
 		env_type_id: string;
 		org_id: string;
+		user_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 
 		// Check env path unless excluded
 		if (excludeTable !== "env_store") {
-			const path = envPath(org_id, app_id, env_type_id, key);
-			const result = await vault.kvRead(path);
-
-			if (result) {
+			try {
+				await kms.vaultRead(
+					{ orgId: org_id, scopeId: app_id, entryType: "env", key, envTypeId: env_type_id },
+					sessionToken,
+				);
 				return {
 					exists: true,
 					type: "environment_variable" as const,
 					message: `Key "${key}" already exists as an environment variable`,
 				};
+			} catch (err) {
+				const isNotFound = err instanceof Error && "code" in err && (
+					(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+					((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+				);
+				if (!isNotFound) {
+					throw err;
+				}
 			}
 		}
 
 		// Check secret path unless excluded
 		if (excludeTable !== "secret_store") {
-			const path = secretPath(org_id, app_id, env_type_id, key);
-			const result = await vault.kvRead(path);
-
-			if (result) {
+			try {
+				await kms.vaultRead(
+					{ orgId: org_id, scopeId: app_id, entryType: "secret", key, envTypeId: env_type_id },
+					sessionToken,
+				);
 				return {
 					exists: true,
 					type: "secret" as const,
 					message: `Key "${key}" already exists as a secret`,
 				};
+			} catch (err) {
+				const isNotFound = err instanceof Error && "code" in err && (
+					(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+					((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+				);
+				if (!isNotFound) {
+					throw err;
+				}
 			}
 		}
 
@@ -65,29 +88,32 @@ export class KeyValidationService {
 		app_id,
 		env_type_id,
 		org_id,
+		user_id,
 		excludeTable,
 	}: {
 		keys: string[];
 		app_id: string;
 		env_type_id: string;
 		org_id: string;
+		user_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}) {
-		const vault = await VaultClient.getInstance();
+		const kms = await KMSClient.getInstance();
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
 		const conflicts: { key: string; type: string | null; message: string | null }[] = [];
 
 		// Fetch existing keys via LIST (much more efficient than N individual reads)
-		const [envKeys, secretKeys] = await Promise.all([
+		const [envEntries, secretEntries] = await Promise.all([
 			excludeTable === "env_store"
 				? Promise.resolve([])
-				: vault.kvList(envScopePath(org_id, app_id, env_type_id)),
+				: kms.vaultList(org_id, app_id, "env", env_type_id, sessionToken),
 			excludeTable === "secret_store"
 				? Promise.resolve([])
-				: vault.kvList(secretScopePath(org_id, app_id, env_type_id)),
+				: kms.vaultList(org_id, app_id, "secret", env_type_id, sessionToken),
 		]);
 
-		const envKeySet = new Set(envKeys);
-		const secretKeySet = new Set(secretKeys);
+		const envKeySet = new Set(envEntries.map(e => e.key));
+		const secretKeySet = new Set(secretEntries.map(e => e.key));
 
 		for (const key of keys) {
 			if (excludeTable !== "env_store" && envKeySet.has(key)) {
@@ -117,15 +143,17 @@ export class KeyValidationService {
 		app_id,
 		env_type_id,
 		org_id,
+		user_id,
 		excludeTable,
 	}: {
 		keys: string[];
 		app_id: string;
 		env_type_id: string;
 		org_id: string;
+		user_id: string;
 		excludeTable?: "env_store" | "secret_store";
 	}): Promise<{ safeKeys: string[]; conflicts: { key: string; type: string | null; message: string | null }[] }> {
-		const conflicts = await this.validateKeys({ keys, app_id, env_type_id, org_id, excludeTable });
+		const conflicts = await this.validateKeys({ keys, app_id, env_type_id, org_id, user_id, excludeTable });
 		const conflictKeySet = new Set(conflicts.map(c => c.key));
 		const safeKeys = keys.filter(k => !conflictKeySet.has(k));
 		return { safeKeys, conflicts };

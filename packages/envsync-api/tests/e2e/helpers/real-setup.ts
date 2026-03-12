@@ -3,14 +3,14 @@
  *
  * All services are real:
  * - JWT verification → real Zitadel JWKS endpoint
- * - Vault → real Vault with AppRole auth
+ * - miniKMS → real miniKMS for encryption, PKI, vault, sessions
  * - OpenFGA → real OpenFGA (auto-bootstraps store+model)
  * - Mail → real Mailpit SMTP
  * - Zitadel → real Zitadel for user management + token issuance
  *
  * Prerequisites:
  *   1. Run `bun run e2e:init` (or `bun run scripts/e2e-setup.ts init`) to set up services
- *   2. Docker services must be running (postgres, redis, vault, openfga, mailpit, zitadel)
+ *   2. Docker services must be running (postgres, redis, minikms, openfga, mailpit, zitadel)
  *
  * Usage: TEST_MODE=e2e bun test tests/e2e --preload tests/e2e/helpers/real-setup.ts
  */
@@ -21,7 +21,7 @@ import path from "node:path";
 // ── 1. Prevent loadRootEnv from overwriting test env vars ────────────
 process.env.SKIP_ROOT_ENV = "1";
 
-// ── 2. Load .env.e2e.test for Vault/service/Zitadel credentials ─────
+// ── 2. Load .env.e2e.test for service/Zitadel credentials ───────────
 const projectRoot = findProjectRoot();
 const envE2EPath = path.join(projectRoot, ".env.e2e.test");
 if (fs.existsSync(envE2EPath)) {
@@ -32,7 +32,6 @@ if (fs.existsSync(envE2EPath)) {
 }
 
 // ── 3. Set all required environment variables ────────────────────────
-// Vault creds come from .env.e2e.test (loaded above)
 // ZITADEL_URL points to real Zitadel instance
 const zitadelUrl = process.env.ZITADEL_URL ?? "http://localhost:8080";
 
@@ -74,11 +73,6 @@ Object.assign(process.env, {
 	ZITADEL_WEB_REDIRECT_URI: process.env.ZITADEL_WEB_REDIRECT_URI ?? "http://localhost:3000/callback",
 	ZITADEL_WEB_CALLBACK_URL: process.env.ZITADEL_WEB_CALLBACK_URL ?? "http://localhost:3000",
 	ZITADEL_API_REDIRECT_URI: process.env.ZITADEL_API_REDIRECT_URI ?? "http://localhost:4000/callback",
-	// Vault — real credentials from .env.e2e.test (already loaded)
-	VAULT_ADDR: process.env.VAULT_ADDR ?? "http://localhost:8200",
-	VAULT_ROLE_ID: process.env.VAULT_ROLE_ID,
-	VAULT_SECRET_ID: process.env.VAULT_SECRET_ID,
-	VAULT_MOUNT_PATH: process.env.VAULT_MOUNT_PATH ?? "envsync",
 	// OpenFGA — real OpenFGA (auto-bootstraps store+model)
 	OPENFGA_API_URL: process.env.OPENFGA_API_URL ?? "http://localhost:8090",
 	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",

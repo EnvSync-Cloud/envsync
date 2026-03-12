@@ -16,7 +16,7 @@ services:
   #     - rustfs
   #     - mailpit
   #     - zitadel
-  #     - vault
+  #     - minikms
   #   networks:
   #     - envsync_network
 
@@ -41,7 +41,7 @@ services:
 
   minikms_migrate:
     image: postgres:17
-    command: ["psql", "-h", "minikms_db", "-U", "postgres", "-d", "minikms", "-f", "/migrations/001_initial_schema.sql"]
+    command: ["sh", "-c", "psql -h minikms_db -U postgres -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql"]
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -54,7 +54,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:latest
+    image: ghcr.io/envsync-cloud/minikms:sha-903ad86
     ports:
       - "${MINIKMS_GRPC_PORT:-50051}:50051"
     restart: always
@@ -206,39 +206,6 @@ services:
       zitadel:
         condition: service_healthy
         restart: false
-
-  vault-init:
-    image: alpine:latest
-    command: sh -c "chown -R 100:1000 /vault/data"
-    volumes:
-      - vault_data:/vault/data
-    restart: "no"
-
-  vault:
-    image: hashicorp/vault:latest
-    command: vault server -config=/vault/config/vault.hcl
-    ports:
-      - "${VAULT_PORT:-8200}:8200"
-    restart: always
-    environment:
-      VAULT_ADDR: http://localhost:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-}
-      SKIP_SETCAP: "true"
-      SKIP_CHOWN: "true"
-    volumes:
-      - vault_data:/vault/data
-      - ./docker/vault/vault.hcl:/vault/config/vault.hcl:ro
-    depends_on:
-      vault-init:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_started
-      redis:
-        condition: service_started
-      zitadel:
-        condition: service_started
-    networks:
-      - envsync_network
 
   openfga_db:
     image: postgres:17
@@ -454,7 +421,6 @@ volumes:
   postgres_data:
   redis_data:
   mailpit_data:
-  vault_data:
   rustfs_data:
   zitadel_db_data:
   zitadel_data:
