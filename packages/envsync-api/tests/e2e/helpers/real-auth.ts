@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { DB } from "@/libs/db";
 import { KMSClient } from "@/libs/kms/client";
 import { FGAClient } from "@/libs/openfga/index";
+import { CertificateService } from "@/services/certificate.service";
 
 import { createZitadelTestUser, getZitadelAccessToken } from "./zitadel-bootstrap";
 
@@ -170,6 +171,10 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 	// Create master user
 	const masterUser = await seedE2EUser(orgId, roles.master.id);
 
+	// Initialize org CA and issue member cert for master user
+	await CertificateService.initOrgCA(orgId, `E2E Test Org ${slug}`, masterUser.id);
+	await CertificateService.issueMemberCert(orgId, masterUser.id, masterUser.email, "master");
+
 	// Write FGA tuples for master user with full permissions
 	const fga = await FGAClient.getInstance();
 	const userRef = `user:${masterUser.id}`;
@@ -238,6 +243,14 @@ export async function seedE2EUser(
 		email,
 		password,
 	);
+
+	// 4. Issue member cert if org CA is already initialized
+	//    (skipped for the master user created inside seedE2EOrg — their cert
+	//     is issued explicitly after org CA init)
+	const orgCA = await CertificateService.getOrgCA(orgId);
+	if (orgCA) {
+		await CertificateService.issueMemberCert(orgId, id, email, "member");
+	}
 
 	return {
 		id,
