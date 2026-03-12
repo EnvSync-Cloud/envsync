@@ -41,9 +41,9 @@ const Hero = () => {
   }, [cycle]);
 
   return (
-    <section className="container mx-auto min-h-[100dvh] md:h-screen border-x border-border p-0">
+    <section className="container mx-auto min-h-[100dvh] lg:h-screen border-x border-border p-0 pt-16 lg:pt-0">
       <div className="container mx-auto grid min-h-[calc(100dvh-5rem)] h-full grid-cols-1 gap-0 p-0 lg:grid-cols-2">
-        <div className="relative flex flex-col justify-center overflow-hidden border border-border bg-[hsl(var(--surface-1))] px-10 py-32 pb-24">
+        <div className="relative flex flex-col justify-center overflow-hidden border border-border bg-[hsl(var(--surface-1))] px-10 py-16 pb-24">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 opacity-45"
@@ -102,7 +102,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.5 }}
-          className="grid grid-rows-[1fr_1fr] gap-0 md:pt-7"
+          className="grid grid-rows-[1fr_1fr] gap-0 lg:pt-16"
         >
           <div className="overflow-hidden border border-border bg-[#0b0f14]">
             <div className="flex items-center justify-between border-b border-border bg-[hsl(var(--surface-2))] px-4 py-2.5">

@@ -82,7 +82,7 @@ const Integrations = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pt-7">
+      <main className="pt-16">
         <section className="container mx-auto border-x border-border px-0 ">
           <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
             <div

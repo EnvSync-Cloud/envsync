@@ -49,7 +49,7 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="pt-7" id="onboarding-form">
+      <main className="pt-16" id="onboarding-form">
         <section className="container mx-auto border-x border-border p-0">
           <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
             <div
