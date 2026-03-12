@@ -16,7 +16,6 @@ services:
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://rustfs:9001
       S3_BUCKET_URL: http://rustfs:9001
-      VAULT_ADDR: http://vault:8200
       OPENFGA_API_URL: http://openfga:8090
       ZITADEL_URL: http://zitadel:8080
       MINIKMS_GRPC_ADDR: minikms:50051
@@ -27,8 +26,6 @@ services:
       redis:
         condition: service_healthy
       rustfs:
-        condition: service_started
-      vault:
         condition: service_started
       openfga:
         condition: service_healthy
@@ -46,7 +43,6 @@ services:
       - .env
     environment:
       ZITADEL_PAT_FILE: /zitadel-data/admin.pat
-      VAULT_ADDR: http://vault:8200
       OPENFGA_API_URL: http://openfga:8090
       DATABASE_HOST: postgres
       S3_ENDPOINT: http://rustfs:9001
@@ -59,8 +55,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      vault:
-        condition: service_started
       openfga:
         condition: service_healthy
       zitadel:
@@ -185,24 +179,6 @@ services:
     networks:
       - envsync_network
 
-  vault:
-    image: hashicorp/vault:latest
-    restart: unless-stopped
-    command: vault server -config=/vault/config/vault.hcl
-    environment:
-      VAULT_ADDR: http://localhost:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-}
-      SKIP_SETCAP: "true"
-      SKIP_CHOWN: "true"
-    volumes:
-      - vault_data:/vault/data
-      - ./docker/vault/vault.hcl:/vault/config/vault.hcl:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - envsync_network
-
   openfga_db:
     image: postgres:17
     restart: unless-stopped
@@ -274,7 +250,7 @@ services:
       - envsync_network
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:latest
+    image: ghcr.io/envsync-cloud/minikms:sha-9003498
     restart: unless-stopped
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
@@ -435,7 +411,6 @@ volumes:
   postgres_data:
   redis_data:
   rustfs_data:
-  vault_data:
   zitadel_db_data:
   zitadel_data:
   openfga_db_data:
