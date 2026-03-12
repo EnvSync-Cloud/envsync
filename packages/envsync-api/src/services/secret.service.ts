@@ -123,7 +123,11 @@ export class SecretService {
 				result.createdAt,
 			);
 		} catch (err) {
-			if (err instanceof Error && "code" in err && (err as grpc.ServiceError).code === grpc.status.NOT_FOUND) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
 				return undefined;
 			}
 			throw err;
@@ -155,7 +159,11 @@ export class SecretService {
 				sessionToken,
 			);
 		} catch (err) {
-			if (err instanceof Error && "code" in err && (err as grpc.ServiceError).code === grpc.status.NOT_FOUND) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
 				throw new NotFoundError("Secret", key);
 			}
 			throw err;
@@ -199,7 +207,11 @@ export class SecretService {
 				sessionToken,
 			);
 		} catch (err) {
-			if (err instanceof Error && "code" in err && (err as grpc.ServiceError).code === grpc.status.NOT_FOUND) {
+			const isNotFound = err instanceof Error && "code" in err && (
+				(err as grpc.ServiceError).code === grpc.status.NOT_FOUND ||
+				((err as grpc.ServiceError).code === grpc.status.INTERNAL && err.message.includes("vault entry not found"))
+			);
+			if (isNotFound) {
 				throw new NotFoundError("Secret", key);
 			}
 			throw err;

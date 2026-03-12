@@ -45,6 +45,7 @@ export async function getVaultSessionToken(memberId: string, orgId: string): Pro
 		memberId,
 		orgId,
 		certSerial: cert.serial_hex,
+		scopes: ["vault:read", "vault:write", "vault:delete"],
 	});
 
 	const expiresAt = result.expiresAt
