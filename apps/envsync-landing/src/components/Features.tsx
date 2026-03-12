@@ -3,38 +3,38 @@ import { BentoGrid, BentoGridItem } from "./ui/bento-grid";
 import { motion } from "framer-motion";
 
 const SkeletonOne = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="group/skeleton relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex flex-col gap-2">
-      <div className="h-4 w-24 bg-emerald-500/20 rounded-full animate-pulse" />
-      <div className="h-3 w-32 bg-white/5 rounded-full" />
-      <div className="h-3 w-28 bg-white/5 rounded-full" />
+      <div className="h-4 w-24 bg-primary/20" />
+      <div className="h-3 w-32 bg-foreground/10" />
+      <div className="h-3 w-28 bg-foreground/10" />
     </div>
-    <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover/skeleton:bg-emerald-500/20 transition-colors" />
+    <div className="absolute inset-y-0 right-0 w-1 bg-primary/30 transition-colors group-hover/skeleton:bg-primary" />
   </div>
 );
 
 const SkeletonTwo = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <div className="h-4 w-4 rounded bg-emerald-500/20" />
-        <div className="h-2 w-16 bg-white/5 rounded-full" />
+        <div className="h-4 w-4 bg-primary/20" />
+        <div className="h-2 w-16 bg-foreground/10" />
       </div>
       <div className="flex items-center gap-2">
-        <div className="h-4 w-4 rounded bg-emerald-500/20" />
-        <div className="h-2 w-20 bg-white/5 rounded-full" />
+        <div className="h-4 w-4 bg-primary/20" />
+        <div className="h-2 w-20 bg-foreground/10" />
       </div>
     </div>
   </div>
 );
 
 const SkeletonThree = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex flex-col gap-2">
-      <div className="h-4 w-32 bg-emerald-500/20 rounded-full" />
+      <div className="h-4 w-32 bg-primary/20" />
       <div className="flex gap-1">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-2 w-8 bg-white/5 rounded-full" />
+          <div key={i} className="h-2 w-8 bg-foreground/10" />
         ))}
       </div>
     </div>
@@ -42,43 +42,43 @@ const SkeletonThree = () => (
 );
 
 const SkeletonFour = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex items-center justify-between h-full">
       <div className="flex flex-col gap-2">
-        <div className="h-4 w-24 bg-emerald-500/20 rounded-full" />
-        <div className="h-3 w-32 bg-white/5 rounded-full" />
-        <div className="h-3 w-20 bg-white/5 rounded-full" />
+        <div className="h-4 w-24 bg-primary/20" />
+        <div className="h-3 w-32 bg-foreground/10" />
+        <div className="h-3 w-20 bg-foreground/10" />
       </div>
       <div className="flex flex-col gap-1 items-end">
-        <div className="h-2 w-16 bg-emerald-500/10 rounded-full" />
-        <div className="h-2 w-12 bg-emerald-500/10 rounded-full" />
-        <div className="h-2 w-20 bg-emerald-500/20 rounded-full" />
+        <div className="h-2 w-16 bg-primary/15" />
+        <div className="h-2 w-12 bg-primary/15" />
+        <div className="h-2 w-20 bg-primary/30" />
       </div>
     </div>
   </div>
 );
 
 const SkeletonFive = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex flex-col gap-2">
-      <div className="h-8 w-full bg-white/5 rounded-lg border border-white/[0.05]" />
+      <div className="h-8 w-full border border-border bg-foreground/10" />
       <div className="flex gap-2">
-        <div className="h-10 w-10 rounded bg-emerald-500/10 border border-emerald-500/20" />
-        <div className="h-10 w-full rounded bg-white/5 border border-white/[0.05]" />
+        <div className="h-10 w-10 border border-primary/40 bg-primary/15" />
+        <div className="h-10 w-full border border-border bg-foreground/10" />
       </div>
     </div>
   </div>
 );
 
 const SkeletonSix = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 border border-white/[0.05] p-4 overflow-hidden relative group/skeleton">
+  <div className="relative flex h-full min-h-[6rem] w-full flex-1 overflow-hidden border border-border bg-[hsl(var(--surface-2))] p-4">
     <div className="flex flex-col justify-center items-center h-full">
-      <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-        <motion.div 
+      <div className="h-2 w-full overflow-hidden bg-foreground/10">
+        <motion.div
           initial={{ width: "0%" }}
           whileInView={{ width: "70%" }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+          className="h-full bg-primary"
         />
       </div>
     </div>
@@ -87,74 +87,81 @@ const SkeletonSix = () => (
 
 const features = [
   {
-    title: "Military-grade encryption",
-    description: "End-to-end encryption with AES-256 and zero-knowledge architecture. Your secrets are always protected.",
+    title: "End-to-end encryption",
+    description: "AES-256 with a zero-knowledge model keeps plaintext out of places it should never be.",
     header: <SkeletonOne />,
-    icon: <Shield className="h-4 w-4 text-emerald-500" />,
+    icon: <Shield className="h-4 w-4 text-primary" />,
     className: "md:col-span-2",
   },
   {
-    title: "Lightning fast sync",
-    description: "Deploy configuration changes across all environments in seconds.",
+    title: "Fast sync",
+    description: "Ship config updates across environments in seconds, not deployment windows.",
     header: <SkeletonTwo />,
-    icon: <Zap className="h-4 w-4 text-emerald-500" />,
+    icon: <Zap className="h-4 w-4 text-primary" />,
     className: "md:col-span-1",
   },
   {
-    title: "Multi-environment",
-    description: "Manage development, staging, and production environments with granular access controls.",
+    title: "Multi-environment control",
+    description: "Operate dev, staging, and production with the same policy and approval surface.",
     header: <SkeletonThree />,
-    icon: <Globe className="h-4 w-4 text-emerald-500" />,
+    icon: <Globe className="h-4 w-4 text-primary" />,
     className: "md:col-span-1",
   },
   {
-    title: "Git-like workflows",
-    description: "Version control for your configurations with branching, merging, and full rollback capabilities.",
+    title: "Versioned workflows",
+    description: "Track every config change with history, diff visibility, and rollback support.",
     header: <SkeletonFour />,
-    icon: <GitBranch className="h-4 w-4 text-emerald-500" />,
+    icon: <GitBranch className="h-4 w-4 text-primary" />,
     className: "md:col-span-2",
   },
   {
-    title: "Team collaboration",
-    description: "Share secrets securely with team members using strict role-based permissions.",
+    title: "Team-level access",
+    description: "Control secret visibility with scoped permissions mapped to your org structure.",
     header: <SkeletonFive />,
-    icon: <Users className="h-4 w-4 text-emerald-500" />,
+    icon: <Users className="h-4 w-4 text-primary" />,
     className: "md:col-span-2",
   },
   {
-    title: "Secrets management lifecycle",
-    description: "Manage GPG keys and certificates easily.",
+    title: "Key lifecycle",
+    description: "Manage certificates and signing keys in one operational workflow.",
     header: <SkeletonSix />,
-    icon: <Lock className="h-4 w-4 text-emerald-500" />,
+    icon: <Lock className="h-4 w-4 text-primary" />,
     className: "md:col-span-1",
   },
 ];
 
 const Features = () => {
   return (
-    <section id="features" className="py-32 bg-slate-950 relative overflow-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
-        <motion.div 
+    <section id="features" className="container mx-auto border-x border-t border-border py-0 px-0">
+      <div className="relative container mx-auto px-0 z-10">
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.35 }}
+          className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-12"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Everything you need to <br/>
-            <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
-              secure your secrets
-            </span>
-          </h2>
-          <p className="text-xl text-neutral-400 max-w-3xl mx-auto font-light">
-            Built by developers, for developers. EnvSync provides all the tools you need 
-            to manage environment variables and secrets at scale.
-          </p>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-45"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+              backgroundSize: "36px 36px",
+            }}
+          />
+          <div className="relative z-10">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Everything you need to secure your secrets
+            </h2>
+            <p className="max-w-3xl text-lg text-muted-foreground md:text-xl">
+              Built for teams shipping across multiple stages with strict security and fast release cycles.
+            </p>
+          </div>
         </motion.div>
-        
-        <BentoGrid className="max-w-6xl mx-auto">
+
+        <BentoGrid>
           {features.map((feature, i) => (
             <BentoGridItem
               key={i}
@@ -162,7 +169,7 @@ const Features = () => {
               description={feature.description}
               header={feature.header}
               icon={feature.icon}
-              className={feature.className + " border-white/[0.1] bg-slate-900/50 hover:bg-slate-900/80 backdrop-blur-sm shadow-xl"}
+              className={feature.className}
             />
           ))}
         </BentoGrid>

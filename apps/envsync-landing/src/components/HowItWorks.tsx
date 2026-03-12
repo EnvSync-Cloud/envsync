@@ -43,68 +43,61 @@ const stepVariants = {
 
 const HowItWorks = () => {
   return (
-    <section className="py-32 bg-slate-950 relative border-t border-white/[0.05]">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div 
+    <section className="container mx-auto border-x border-t border-border py-0 px-0">
+      <div className="container mx-auto px-0">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-20"
+          transition={{ duration: 0.35 }}
+          className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-12"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Get started in{" "}
-            <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">
-              three steps
-            </span>
-          </h2>
-          <p className="text-xl text-neutral-400 max-w-2xl mx-auto font-light">
-            From installation to syncing secrets across your team in under a
-            minute.
-          </p>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-45"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+              backgroundSize: "36px 36px",
+            }}
+          />
+          <div className="relative z-10">
+            <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+              Get started in three steps
+            </h2>
+            <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
+              From install to production sync in three repeatable commands.
+            </p>
+          </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start relative max-w-6xl mx-auto"
+          className="relative grid w-full grid-cols-1 gap-0 md:grid-cols-3"
         >
           {steps.map((step, index) => (
-            <motion.div variants={stepVariants} key={step.number} className="relative flex flex-col items-center text-center group">
-              {/* Arrow between steps - hidden on mobile */}
-              {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-10 -right-4 translate-x-1/2 z-10">
-                  <ArrowRight className="h-6 w-6 text-slate-800" />
-                </div>
-              )}
-
-              {/* Numbered circle */}
-              <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-white/[0.1] shadow-xl flex items-center justify-center mb-8 group-hover:border-emerald-500/50 group-hover:bg-slate-800 transition-all duration-300">
-                <step.icon className="h-8 w-8 text-emerald-400 group-hover:scale-110 transition-transform duration-300" />
+            <motion.div
+              variants={stepVariants}
+              key={step.number}
+              className="group relative border border-border bg-[hsl(var(--surface-1))] p-6"
+            >
+              <div className="mb-5 flex h-14 w-14 items-center justify-center border border-border bg-[hsl(var(--surface-2))] transition-colors group-hover:border-primary/50">
+                <step.icon className="h-6 w-6 text-primary" />
               </div>
 
-              {/* Step number badge */}
-              <span className="text-xs font-bold tracking-wider uppercase text-emerald-500 mb-3">
+              <span className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                 Step {step.number}
               </span>
 
-              {/* Title */}
-              <h3 className="text-2xl font-semibold text-white mb-6">
-                {step.title}
-              </h3>
+              <h3 className="mb-5 text-2xl font-semibold text-foreground">{step.title}</h3>
 
-              {/* Code mockup */}
-              <div className="w-full bg-[#0d1117] border border-white/[0.05] shadow-2xl rounded-xl p-5 text-left relative overflow-hidden group-hover:border-white/[0.1] transition-colors">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/0 via-emerald-500/50 to-emerald-500/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700"></div>
-                </div>
-                <code className="text-emerald-400 sm:text-xs md:text-sm font-mono block">
-                  <span className="text-blue-400">$</span> {step.code}
+              <div className="border border-border bg-[hsl(var(--surface-2))] p-4 text-left">
+                <p className="mb-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">Command</p>
+                <code className="block font-mono text-xs text-foreground sm:text-sm">
+                  <span className="text-primary">$</span> {step.code}
                 </code>
               </div>
             </motion.div>

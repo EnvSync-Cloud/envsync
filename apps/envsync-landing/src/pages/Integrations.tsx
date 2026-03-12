@@ -1,177 +1,191 @@
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Shield, Cloud, Zap, Disc } from "lucide-react";
+import { ArrowRight, MessageCircle, Shield } from "lucide-react";
+
+type Integration = {
+  name: string;
+  description: string;
+  icon: string;
+  status: "coming-soon";
+};
+
+const notificationIntegrations: Integration[] = [
+  {
+    name: "Slack",
+    description: "Route environment and security alerts directly into operational channels.",
+    icon: "/images/Slack.svg",
+    status: "coming-soon",
+  },
+  {
+    name: "Discord",
+    description: "Stream change notifications to Discord for distributed engineering teams.",
+    icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Discord.svg",
+    status: "coming-soon",
+  },
+];
+
+const platformIntegrations: Integration[] = [
+  {
+    name: "Vercel",
+    description: "Sync environment updates into deployments without manual dashboard steps.",
+    icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Vercel-Dark.svg",
+    status: "coming-soon",
+  },
+  {
+    name: "Cloudflare",
+    description: "Push variables and secrets to edge workloads with controlled rollout behavior.",
+    icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Cloudflare-Dark.svg",
+    status: "coming-soon",
+  },
+  {
+    name: "AWS",
+    description: "Bridge cloud workloads with centralized environment and secret policy layers.",
+    icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/AWS-Dark.svg",
+    status: "coming-soon",
+  },
+  {
+    name: "GitHub Actions",
+    description: "Inject managed environment values into CI workflows with less drift risk.",
+    icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/GithubActions-Dark.svg",
+    status: "coming-soon",
+  },
+];
+
+const IntegrationGrid = ({ integrations }: { integrations: Integration[] }) => (
+  <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
+    {integrations.map((integration) => (
+      <div
+        key={integration.name}
+        className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-6 md:p-7"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+              <img src={integration.icon} alt={`${integration.name} icon`} className="h-6 w-6" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground">{integration.name}</h3>
+          </div>
+          <Badge className="rounded-none border border-border bg-[hsl(var(--surface-2))] text-xs text-muted-foreground hover:bg-[hsl(var(--surface-2))]">
+            Coming soon
+          </Badge>
+        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground md:text-base">{integration.description}</p>
+      </div>
+    ))}
+  </div>
+);
 
 const Integrations = () => {
-  const notificationIntegrations = [
-    {
-      name: "Slack",
-      description: "Get real-time notifications about environment changes and security alerts directly in your Slack channels.",
-      icon: "/images/Slack.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    },
-    {
-      name: "Discord",
-      description: "Receive instant updates and alerts about your environment variables in your Discord server.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Discord.svg",
-      status: "coming-soon", 
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    }
-  ];
-
-  const kmsIntegrations = [
-    {
-      name: "Vercel",
-      description: "Seamlessly sync your environment variables with Vercel deployments.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Vercel-Dark.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    },
-    {
-      name: "CloudFlare",
-      description: "Integrate with CloudFlare Workers and Pages for secure environment management.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Cloudflare-Dark.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    },
-    {
-      name: "AWS",
-      description: "Connect with AWS services for enterprise-grade secret management.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/AWS-Dark.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    },
-    {
-      name: "Github Actions",
-      description: "Automate your CI/CD workflows with secure environment variable management.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/GithubActions-Dark.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    },
-    {
-      name: "Vercel",
-      description: "Seamlessly sync your environment variables with Vercel deployments.",
-      icon: "https://raw.githubusercontent.com/tandpfun/skill-icons/refs/heads/main/icons/Vercel-Dark.svg",
-      status: "coming-soon",
-      color: "text-slate-300",
-      bgColor: "bg-slate-800"
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background">
       <Header />
-      
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header Section */}
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Integrations
+
+      <main className="pt-7">
+        <section className="container mx-auto border-x border-border px-0 ">
+          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Integrations</p>
+            <h1 className="mb-6 text-5xl font-bold text-foreground md:text-6xl">
+              Connect EnvSync with the tools your team ships on.
             </h1>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              Connect EnvSync with your favorite tools and services to streamline your development workflow.
+            <p className="text-lg text-muted-foreground md:text-xl">
+              Build a consistent secret delivery workflow across notifications, CI, cloud platforms,
+              and runtime environments.
             </p>
+            </div>
           </div>
+        </section>
 
-          {/* Notifications Section */}
-          <section className="mb-16">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-slate-800 rounded-lg">
-                <MessageCircle className="h-6 w-6 text-slate-300" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Notifications</h2>
-                <p className="text-slate-300">Stay informed with real-time alerts</p>
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full">
+            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-45"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                  backgroundSize: "36px 36px",
+                }}
+              />
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Notifications</h2>
+                  <p className="text-sm text-muted-foreground md:text-base">
+                    Keep engineering and security teams informed in real-time.
+                  </p>
+                </div>
               </div>
             </div>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              {notificationIntegrations.map((integration) => (
-                <Card key={integration.name} className="bg-slate-800 border-slate-700 hover:shadow-lg transition-shadow opacity-75">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${integration.bgColor}`}>
-                          <img src={integration.icon} alt={`${integration.name} icon`} className={`h-6 w-6 ${integration.color}`} />
-                        </div>
-                        <CardTitle className="text-xl text-white">{integration.name}</CardTitle>
-                      </div>
-                      <Badge variant="outline" className="text-slate-400 border-slate-600">
-                        Coming Soon
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-base text-slate-300">
-                      {integration.description}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </section>
+            <IntegrationGrid integrations={notificationIntegrations} />
+          </div>
+        </section>
 
-          {/* KMS Section */}
-          <section>
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-slate-800 rounded-lg">
-                <Shield className="h-6 w-6 text-slate-300" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Key Management Systems</h2>
-                <p className="text-slate-300">Enterprise-grade security integrations</p>
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full">
+            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-45"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                  backgroundSize: "36px 36px",
+                }}
+              />
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Deployment Platforms</h2>
+                  <p className="text-sm text-muted-foreground md:text-base">
+                    Push controlled environment updates wherever your workloads run.
+                  </p>
+                </div>
               </div>
             </div>
-            
-            <div className="grid md:grid-cols-3 gap-6">
-              {kmsIntegrations.map((integration) => (
-                <Card key={integration.name} className="bg-slate-800 border-slate-700 hover:shadow-lg transition-shadow opacity-75">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${integration.bgColor}`}>
-                          <img src={integration.icon} alt={`${integration.name} icon`} className={`h-6 w-6 ${integration.color}`} />
-                        </div>
-                        <CardTitle className="text-xl text-white">{integration.name}</CardTitle>
-                      </div>
-                      <Badge variant="outline" className="text-slate-400 border-slate-600">
-                        Coming Soon
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-base text-slate-300">
-                      {integration.description}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </section>
+            <IntegrationGrid integrations={platformIntegrations} />
+          </div>
+        </section>
 
-          {/* CTA Section */}
-          <section className="mt-20 text-center">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-12">
-              <h3 className="text-3xl font-bold text-white mb-4">
-                Need a custom integration?
-              </h3>
-              <p className="text-slate-300 text-lg mb-8 max-w-2xl mx-auto">
-                We're always looking to expand our integration ecosystem. Let us know what tools you'd like to see connected with EnvSync.
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-8 text-left md:p-10">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+              <h3 className="mb-4 text-3xl font-bold text-foreground">Need a custom integration?</h3>
+              <p className="mb-8 max-w-2xl text-lg text-muted-foreground">
+                Tell us what your stack needs. We prioritize integrations that improve secure delivery velocity.
               </p>
-              <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="lg" className="px-8">
                 Request Integration
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

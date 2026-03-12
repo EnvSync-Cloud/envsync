@@ -1,148 +1,188 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Github } from "lucide-react";
-import Globe from "./Globe";
+import { ArrowRight, Github, KeyRound, ShieldCheck, Terminal, Workflow } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getLatestBlog } from "@/helpers/get-latest-blog";
-import { Spotlight } from "./ui/spotlight";
 import { motion } from "framer-motion";
 
-interface BlogPost {
-  id: string;
-  Published: string;
-  Slug: string;
-  Date: number;
-  Authors: string[];
-  Page: string;
-  preview: string[][][];
-}
+const terminalLines: { type: "command" | "output"; text: string }[] = [
+  { type: "command", text: "envsync login" },
+  { type: "output", text: "[ok] authenticated as team@envsync.cloud" },
+  { type: "command", text: "envsync pull --env staging" },
+  { type: "output", text: "[ok] wrote 12 vars to .env.staging" },
+  { type: "command", text: "envsync push --env production --strict" },
+  { type: "output", text: "[ok] synced 12 vars in 1.1s" },
+];
 
 const Hero = () => {
-  const [latestBlog, setLatestBlog] = useState<BlogPost | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [visibleLines, setVisibleLines] = useState(0);
+  const [cycle, setCycle] = useState(0);
 
   useEffect(() => {
-    const fetchLatestBlog = async () => {
-      try {
-        const blog = await getLatestBlog();
-        if (blog) {
-          setLatestBlog(blog);
+    setVisibleLines(0);
+
+    const revealDelay = 600;
+    const revealTimer = setInterval(() => {
+      setVisibleLines((prev) => {
+        if (prev < terminalLines.length) {
+          return prev + 1;
         }
-      } catch (error) {
-        console.error('Failed to fetch latest blog:', error);
-      } finally {
-        setIsLoading(false);
-      }
+        return prev;
+      });
+    }, revealDelay);
+
+    const resetTimer = setTimeout(() => {
+      setCycle((prev) => prev + 1);
+    }, terminalLines.length * revealDelay + 1800);
+
+    return () => {
+      clearInterval(revealTimer);
+      clearTimeout(resetTimer);
     };
-
-    fetchLatestBlog();
-  }, []);
-
-  const handleBlogClick = () => {
-    if (latestBlog) {
-      window.open(`https://blog.envsync.cloud/blog/${latestBlog.Slug}`, '_blank');
-    }
-  };
+  }, [cycle]);
 
   return (
-    <section className="min-h-[100dvh] w-full flex items-center justify-center bg-slate-950 relative overflow-hidden antialiased py-20 lg:py-0">
-      <Spotlight
-        className="-top-40 left-0 md:left-60 lg:left-0 lg:-top-20"
-        fill="white"
-      />
-      
-      {/* Background grid for subtle texture */}
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px] pointer-events-none" />
-      
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 z-20 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12 min-h-0 py-12 lg:py-0">
-        
-        {/* Main Text Content */}
-        <div className="flex-1 flex flex-col items-center lg:items-start text-center lg:text-left z-20 mt-16 md:mt-24 lg:mt-0 max-w-2xl mx-auto lg:mx-0">
-          
-          {/* Latest blog post section */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mb-8 w-full flex justify-center lg:justify-start"
-          >
-            {isLoading ? (
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-slate-400 text-sm font-medium shadow-sm">
-                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Loading latest post...</span>
+    <section className="container mx-auto min-h-[100dvh] md:h-screen border-x border-border p-0">
+      <div className="container mx-auto grid min-h-[calc(100dvh-5rem)] h-full grid-cols-1 gap-0 p-0 lg:grid-cols-2">
+        <div className="relative flex flex-col justify-center overflow-hidden border border-border bg-[hsl(var(--surface-1))] px-10 py-32 pb-24">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-45"
+            style={{
+              backgroundImage:
+                "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+              backgroundSize: "36px 36px",
+            }}
+          />
+          <div className="relative z-10">
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.2 }}
+              className="mb-5 text-4xl font-bold leading-[1.04] tracking-tight text-foreground sm:text-5xl md:text-6xl"
+            >
+              Shipping secure apps
+              <br className="hidden sm:block" />
+              <span className="text-primary">starts with controlled secrets.</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.3 }}
+              className="mb-7 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl"
+            >
+              EnvSync gives your team one source of truth for environment variables across development,
+              staging, and production with audit-ready access control.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.4 }}
+              className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row"
+            >
+              <Link to="/onboarding" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full px-8 text-base">
+                  Get Started for Free
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="https://github.com/envsync-cloud" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="w-full px-8 text-base">
+                  <Github className="h-4 w-4" />
+                  View on GitHub
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.5 }}
+          className="grid grid-rows-[1fr_1fr] gap-0 md:pt-7"
+        >
+          <div className="overflow-hidden border border-border bg-[#0b0f14]">
+            <div className="flex items-center justify-between border-b border-border bg-[hsl(var(--surface-2))] px-4 py-2.5">
+              <div className="flex space-x-2">
+                <div className="h-2.5 w-2.5 border border-red-400/60 bg-red-400/20" />
+                <div className="h-2.5 w-2.5 border border-amber-400/60 bg-amber-400/20" />
+                <div className="h-2.5 w-2.5 border border-green-400/60 bg-green-400/20" />
               </div>
-            ) : latestBlog ? (
-              <button
-                onClick={handleBlogClick}
-                className="inline-flex items-center px-4 py-2 rounded-full bg-slate-900/50 backdrop-blur-sm border border-slate-800 text-slate-300 text-sm font-medium hover:bg-slate-800 hover:text-white transition-all duration-300 cursor-pointer group shadow-xl"
-              >
-                <span className="relative flex size-2 mr-3 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
-                </span>
-                <span className="font-semibold text-xs md:text-sm tracking-wide truncate max-w-[200px] sm:max-w-xs md:max-w-sm">
-                  Latest: {latestBlog.preview[0]?.[0]?.[0] || latestBlog.Page}
-                </span>
-                <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1 shrink-0" />
-              </button>
-            ) : null}
-          </motion.div>
+              <span className="font-mono text-xs tracking-wider text-muted-foreground/90">
+                zsh — envsync-live
+              </span>
+              <span className="font-mono text-[11px] text-muted-foreground/80">running</span>
+            </div>
 
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-500 mb-6 lg:mb-8 leading-[1.1] tracking-tight"
-          >
-            Sync your secrets, <br className="hidden sm:block" />
-            <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent pb-2 block">
-              secure your apps.
-            </span>
-          </motion.h1>
-          
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="text-lg sm:text-xl lg:text-2xl text-neutral-400 mb-10 lg:mb-12 max-w-2xl leading-relaxed font-light"
-          >
-            EnvSync is the modern enterprise alternative to Doppler and Vault. 
-            Manage environment variables across all your applications.
-          </motion.p>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center w-full lg:w-auto"
-          >
-            <Link to="/onboarding" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-6 text-lg font-medium shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)] transition-all">
-                Get Started for Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link to="https://github.com/envsync-cloud" className="w-full sm:w-auto">
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="w-full border-slate-800 bg-slate-900/50 backdrop-blur-md px-8 py-6 text-lg text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-700 transition-all"
-              >
-                <Github className="mr-2 h-5 w-5" />
-                View on GitHub
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
+            <div className="relative bg-[#0b0f14] p-4 font-mono text-sm leading-relaxed md:p-6 md:text-[15px]">
+              <div className="relative z-10 space-y-1">
+                {terminalLines.slice(0, visibleLines).map((line, index) => (
+                  <motion.div
+                    key={`${cycle}-${index}`}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="min-h-[1.5em]"
+                  >
+                    {line.type === "command" ? (
+                      <>
+                        <span className="text-primary">user@device</span>
+                        <span className="text-slate-500">:</span>
+                        <span className="ml-1 text-slate-400">~/my-app</span>
+                        <span className="ml-2 text-primary">$</span>
+                        <span className="ml-2 text-slate-100">{line.text}</span>
+                        {index === visibleLines - 1 && visibleLines < terminalLines.length && (
+                          <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-slate-200/70 align-middle" />
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-slate-300/90">{line.text}</span>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-        {/* Globe Section */}
-        <div className="flex-1 w-full max-w-3xl lg:max-w-none relative z-0 flex items-center justify-center lg:justify-end pointer-events-none mt-12 lg:mt-0">
-          <Globe />
-        </div>
-        
+          <div className="grid grid-cols-2 gap-0 h-full">
+            <div className="col-span-2 border border-border bg-[hsl(var(--surface-1))] p-5">
+              <p className="mb-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">Deployment State</p>
+              <p className="text-2xl font-semibold text-foreground">All environments in sync</p>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                <div className="border border-border bg-[hsl(var(--surface-2))] p-2 text-center text-muted-foreground">dev</div>
+                <div className="border border-primary/40 bg-[hsl(var(--surface-2))] p-2 text-center text-primary">staging</div>
+                <div className="border border-border bg-[hsl(var(--surface-2))] p-2 text-center text-muted-foreground">prod</div>
+              </div>
+            </div>
+
+            <div className="border border-border bg-[hsl(var(--surface-1))] p-4">
+              <ShieldCheck className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">Security</p>
+              <p className="mt-1 text-lg font-semibold">End-to-end encrypted</p>
+            </div>
+
+            <div className="border border-border bg-[hsl(var(--surface-1))] p-4">
+              <Workflow className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">Workflow</p>
+              <p className="mt-1 text-lg font-semibold">Versioned rollbacks</p>
+            </div>
+
+            <div className="border border-border bg-[hsl(var(--surface-1))] p-4">
+              <KeyRound className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">Secrets</p>
+              <p className="mt-1 text-lg font-semibold">Centralized by app</p>
+            </div>
+
+            <div className="border border-border bg-[hsl(var(--surface-1))] p-4">
+              <Terminal className="mb-3 h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">CLI</p>
+              <p className="mt-1 font-mono text-sm text-foreground">envsync pull --env prod</p>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

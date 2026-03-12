@@ -14,11 +14,11 @@ const Index = () => {
     <div className="h-fit" onLoad={() => window.scrollTo(0, 0)}>
       <Header />
       <Hero />
-      <HowItWorks />
+      <SocialProof />
       <Features />
+      <HowItWorks />
       <CLIShowcase />
       <Compare />
-      <SocialProof />
       <CTA />
       <Footer />
     </div>

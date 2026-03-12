@@ -3,22 +3,13 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckCircle, ArrowRight, Shield, Zap, Users, Loader2, AlertCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/helpers/api";
 
 const Onboarding = () => {
   const [email, setEmail] = useState("");
-
-  // Auto scroll to the form when the component mounts
-  useEffect(() => {
-    const formElement = document.getElementById("onboarding-form");
-    if (formElement) {
-      formElement.scrollIntoView({ behavior: "smooth" });
-    }
-  }, []);
 
   const createOrgInviteMutation = useMutation({
     mutationFn: (email: string) => api.onboarding.createOrgInvite({ email }),
@@ -56,142 +47,174 @@ const Onboarding = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background">
       <Header />
-      
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" id="onboarding-form">
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:40px_40px]" />
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center mb-12">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              Start Your <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">EnvSync</span> Journey
-            </h1>
-            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
-              Join thousands of developers who trust EnvSync to manage their environment variables securely and efficiently.
-            </p>
+      <main className="pt-7" id="onboarding-form">
+        <section className="container mx-auto border-x border-border p-0">
+          <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Onboarding</p>
+              <h1 className="mb-5 text-5xl font-bold text-foreground md:text-6xl">
+                Start your EnvSync journey
+              </h1>
+              <p className="max-w-3xl text-lg text-muted-foreground md:text-xl">
+                Join teams using EnvSync to manage environment variables with secure, repeatable workflows.
+              </p>
+            </div>
           </div>
+        </section>
 
-          <div className="max-w-md mx-auto">
-            {!createOrgInviteMutation.isSuccess ? (
-              <Card className="bg-slate-800 border-slate-700 shadow-xl shadow-black/20">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-white text-2xl">Get Started</CardTitle>
-                  <CardDescription className="text-slate-300">
-                    Enter your email to begin your journey with EnvSync
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <Label htmlFor="email" className="text-slate-300">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@company.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        disabled={createOrgInviteMutation.isPending}
-                        className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-emerald-500 disabled:opacity-50"
-                      />
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full border border-border bg-[hsl(var(--surface-1))] ">
+            <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+              <div className="border border-border bg-[hsl(var(--surface-2))] p-6 md:p-8">
+                {!createOrgInviteMutation.isSuccess ? (
+                  <div>
+                    <div className="mb-6">
+                      <h2 className="text-2xl font-semibold text-foreground">Get Started</h2>
+                      <p className="mt-2 text-muted-foreground">
+                        Enter your email to begin your journey with EnvSync
+                      </p>
                     </div>
-                    
-                    {createOrgInviteMutation.isError && (
-                      <div className="flex items-center gap-2 text-red-400 text-sm">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>
-                          {createOrgInviteMutation.error instanceof Error 
-                            ? createOrgInviteMutation.error.message 
-                            : "Something went wrong. Please try again."}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      size="lg"
-                      disabled={createOrgInviteMutation.isPending || !email}
-                    >
-                      {createOrgInviteMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Creating Invite...
-                        </>
-                      ) : (
-                        <>
-                          Get Started
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                  <p className="text-sm text-slate-400 text-center mt-4">
-                    No setup fees • Start immediately
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-slate-800 border-slate-700">
-                <CardContent className="pt-8 text-center">
-                  <div className="w-16 h-16 bg-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Welcome to EnvSync!</h3>
-                  <p className="text-slate-300 mb-6">
-                    We've sent you an email at <span className="text-emerald-400">{email}</span> with your next steps.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <Button 
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                      onClick={() => window.open('mailto:', '_blank')}
-                    >
-                      Check Your Email
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      className="border-slate-700 text-black hover:bg-slate-800 hover:text-slate-200 px-8 py-4 text-lg"
-                      onClick={() => {
-                        setEmail("");
-                        createOrgInviteMutation.reset();
-                      }}
-                    >
-                      Submit Another Email
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-slate-800/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-6">Why Choose EnvSync?</h2>
-              <p className="text-xl text-slate-300">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="email" className="text-muted-foreground">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@company.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          disabled={createOrgInviteMutation.isPending}
+                          className="mt-2 h-10 rounded-none border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary disabled:opacity-50"
+                        />
+                      </div>
+
+                      {createOrgInviteMutation.isError && (
+                        <div className="flex items-center gap-2 border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          <span>
+                            {createOrgInviteMutation.error instanceof Error
+                              ? createOrgInviteMutation.error.message
+                              : "Something went wrong. Please try again."}
+                          </span>
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        className="w-full disabled:cursor-not-allowed"
+                        size="lg"
+                        disabled={createOrgInviteMutation.isPending || !email}
+                      >
+                        {createOrgInviteMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Creating Invite...
+                          </>
+                        ) : (
+                          <>
+                            Get Started
+                            <ArrowRight className="h-5 w-5" />
+                          </>
+                        )}
+                      </Button>
+
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        No setup fees • Start immediately
+                      </p>
+                    </form>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-4 flex items-center gap-2">
+                      <CheckCircle className="h-6 w-6 text-primary" />
+                      <h3 className="text-2xl font-bold text-foreground">Welcome to EnvSync!</h3>
+                    </div>
+                    <p className="mb-6 text-muted-foreground">
+                      We have sent you an email at <span className="text-primary">{email}</span> with your next steps.
+                    </p>
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button
+                        onClick={() => window.open("mailto:", "_blank")}
+                      >
+                        Check Your Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setEmail("");
+                          createOrgInviteMutation.reset();
+                        }}
+                      >
+                        Submit Another Email
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="-mt-px border border-border bg-[hsl(var(--surface-1))] p-6 lg:-mt-0 lg:-ml-px md:p-8">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary">What happens next</p>
+                <div className="space-y-3 text-sm md:text-base">
+                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                    1. Receive your onboarding invite via email.
+                  </div>
+                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                    2. Create your organization and first project.
+                  </div>
+                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                    3. Sync your first environment using the CLI.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+              <h2 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">Why choose EnvSync?</h2>
+              <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
                 Everything you need to manage environment variables at scale.
               </p>
             </div>
-            
-            <div className="grid md:grid-cols-3 gap-8">
-              {features.map((feature, index) => (
-                <div key={index} className="bg-slate-800 rounded-xl p-8 text-center">
-                  <div className="bg-emerald-600/20 p-4 rounded-lg w-fit mx-auto mb-4">
-                    <feature.icon className="h-8 w-8 text-emerald-400" />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-4">{feature.title}</h3>
-                  <p className="text-slate-300">{feature.description}</p>
-                </div>
-              ))}
-            </div>
           </div>
-        </div>
-      </section>
+
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
+            {features.map((feature, index) => (
+              <div key={index} className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-7 text-left">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+                  <feature.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="mb-3 text-xl font-bold text-foreground">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

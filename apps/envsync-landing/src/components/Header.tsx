@@ -11,64 +11,72 @@ const Header = () => {
   const location = useLocation();
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="fixed top-0 w-full z-50 bg-slate-950/60 backdrop-blur-xl border-b border-white/[0.05]"
+      transition={{ duration: 0.35 }}
+      className="fixed top-0 z-50 w-full border-b border-border bg-background/95"
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto border-x border-border px-0">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <img 
-              src="/EnvSync.svg" 
-              alt="EnvSync Logo" 
+          <Link to="/" className="flex items-center space-x-2 ml-4">
+            <img
+              src="/EnvSync.svg"
+              alt="EnvSync Logo"
               className="h-8 w-8"
             />
-            <span className="text-xl font-bold text-white">EnvSync</span>
-            <Badge className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-2 py-1 text-xs shadow-lg shadow-orange-500/50">
+            <span className="text-xl font-bold text-foreground">EnvSync</span>
+            <Badge className="rounded-none border border-orange-500/60 bg-orange-500/15 px-2 py-1 text-xs font-bold text-orange-300 hover:bg-orange-500/20">
               ALPHA
             </Badge>
           </Link>
-          
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link 
-              to="/about" 
+
+          <nav className="hidden md:flex items-center space-x-8 h-full">
+            <Link
+              to="/about"
               className={`transition-colors ${
-                location.pathname === '/about' 
-                  ? 'text-emerald-400' 
-                  : 'text-slate-300 hover:text-white'
+                location.pathname === "/about"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               About
             </Link>
-            <Link 
-              to="/integrations" 
+            <Link
+              to="/integrations"
               className={`transition-colors ${
-                location.pathname === '/integrations' 
-                  ? 'text-emerald-400' 
-                  : 'text-slate-300 hover:text-white'
+                location.pathname === "/integrations"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Integrations
             </Link>
-            <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
-            <a href="https://app.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">
-              <Button variant="outline" className="border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all">
+            <a
+              href="https://blog.envsync.cloud"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Blog
+            </a>
+            <a href="https://app.envsync.cloud" className="h-full">
+              <Button
+                variant="outline"
+                className="border-border bg-card text-foreground hover:bg-accent h-full px-8"
+              >
                 Sign In
               </Button>
             </a>
-            <Link to="/onboarding">
-              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)] transition-all">
+            <Link to="/onboarding" className="h-full !ml-0">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 h-full px-8">
                 Get Started
               </Button>
             </Link>
           </nav>
 
-          <div className="md:hidden">
+          <div className="md:hidden mr-4">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-slate-300 hover:text-white"
+              className="text-muted-foreground hover:text-foreground"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -76,37 +84,47 @@ const Header = () => {
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-slate-800">
+          <div className="border-t border-border py-4 md:hidden">
             <nav className="flex flex-col space-y-4">
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className={`transition-colors ${
-                  location.pathname === '/about' 
-                    ? 'text-emerald-400' 
-                    : 'text-slate-300 hover:text-white'
+                  location.pathname === "/about"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 About
               </Link>
-              <Link 
-                to="/integrations" 
+              <Link
+                to="/integrations"
                 className={`transition-colors ${
-                  location.pathname === '/integrations' 
-                    ? 'text-emerald-400' 
-                    : 'text-slate-300 hover:text-white'
+                  location.pathname === "/integrations"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Integrations
               </Link>
-              <a href="https://blog.envsync.cloud" className="text-slate-300 hover:text-white transition-colors">Blog</a>
+              <a
+                href="https://blog.envsync.cloud"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Blog
+              </a>
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="outline" className="border-slate-800 bg-slate-900/50 hover:bg-slate-800 hover:text-white transition-all text-left justify-start">
-                  Sign In
-                </Button>
+                <a href="https://app.envsync.cloud">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-border bg-card text-foreground hover:bg-accent"
+                  >
+                    Sign In
+                  </Button>
+                </a>
                 <Link to="/onboarding">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)] transition-all justify-start">
+                  <Button className="w-full justify-start bg-primary text-primary-foreground hover:bg-primary/90">
                     Get Started
                   </Button>
                 </Link>

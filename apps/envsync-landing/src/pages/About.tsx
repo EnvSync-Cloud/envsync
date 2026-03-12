@@ -1,18 +1,10 @@
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Shield, Users, Target, Award, CheckCircle, ArrowRight } from "lucide-react";
+import { Shield, Users, Target, Award, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const About = () => {
-  // const stats = [
-  //   { value: "50K+", label: "Developers Trust Us" },
-  //   { value: "99.9%", label: "Uptime Guarantee" },
-  //   { value: "500+", label: "Enterprise Customers" },
-  //   { value: "24/7", label: "Expert Support" }
-  // ];
-
   const values = [
     {
       icon: Shield,
@@ -61,146 +53,170 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-background">
       <Header />
-      
-      {/* Hero Section */}
-      <section className="pt-24 pb-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:40px_40px]" />
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              About <span className="bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">EnvSync</span>
+
+      <main className="pt-7">
+        <section className="container mx-auto border-x border-border p-0">
+          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">About</p>
+            <h1 className="mb-6 text-5xl font-bold text-foreground md:text-6xl">
+              Building secure configuration workflows for modern teams.
             </h1>
-            <p className="text-xl text-slate-300 mb-8 max-w-3xl mx-auto">
-              We're on a mission to make environment variable management secure, simple, and scalable for development teams worldwide.
+            <p className="text-lg text-muted-foreground md:text-xl">
+              EnvSync is focused on one thing: make secret and environment management reliable,
+              secure, and fast enough for daily shipping.
+            </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="grid w-full grid-cols-1 gap-0 md:grid-cols-3">
+            <div className="border border-border bg-[hsl(var(--surface-1))] p-6">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Mission</p>
+              <p className="mt-3 text-lg font-semibold text-foreground">Secure by default</p>
+            </div>
+            <div className="-ml-px border border-border bg-[hsl(var(--surface-1))] p-6">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Approach</p>
+              <p className="mt-3 text-lg font-semibold text-foreground">Developer-first UX</p>
+            </div>
+            <div className="-ml-px border border-border bg-[hsl(var(--surface-1))] p-6">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Product</p>
+              <p className="mt-3 text-lg font-semibold text-foreground">API + CLI + Dashboard</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full border border-border bg-[hsl(var(--surface-1))] p-8 md:p-10">
+            <h2 className="mb-5 text-3xl font-bold text-foreground md:text-4xl">Why we built EnvSync</h2>
+            <p className="mb-4 text-muted-foreground">
+              Traditional configuration handling is fragmented and error-prone at scale. Teams waste
+              delivery time on drift, manual updates, and security workarounds instead of product work.
+            </p>
+            <p className="text-muted-foreground">
+              EnvSync unifies configuration operations into one system so engineering teams can ship
+              quickly without sacrificing control, auditability, or reliability.
             </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Stats Section
-      <section className="py-16 bg-slate-800/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl md:text-4xl font-bold text-emerald-400 mb-2">
-                  {stat.value}
-                </div>
-                <div className="text-slate-300">
-                  {stat.label}
-                </div>
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full">
+            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-45"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                  backgroundSize: "36px 36px",
+                }}
+              />
+              <div className="relative z-10">
+                <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Core principles</h2>
+                <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
+                  The operating principles behind every product and security decision.
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-      {/* Mission Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-6">Our Mission</h2>
-              <p className="text-xl text-slate-300">
-                To eliminate the complexity and security risks associated with managing environment variables and secrets across modern development workflows.
-              </p>
             </div>
-            
-            <div className="bg-slate-800 rounded-2xl p-8 md:p-12 mb-16">
-              <h3 className="text-2xl font-bold text-white mb-6">The Problem We're Solving</h3>
-              <p className="text-slate-300 mb-6">
-                Traditional approaches to managing environment variables are fragmented, insecure, and don't scale with modern development practices. Developers waste countless hours dealing with configuration drift, security vulnerabilities, and deployment failures caused by misconfigured environments.
-              </p>
-              <p className="text-slate-300">
-                EnvSync provides a unified, secure, and developer-friendly solution that integrates seamlessly into existing workflows while providing enterprise-grade security and reliability.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Values Section */}
-      <section className="py-20 bg-slate-800/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-6">Our Values</h2>
-              <p className="text-xl text-slate-300">
-                These principles guide everything we do at EnvSync.
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
               {values.map((value, index) => (
-                <div key={index} className="bg-slate-800 rounded-xl p-8">
-                  <div className="flex items-center mb-4">
-                    <div className="bg-emerald-600/20 p-3 rounded-lg mr-4">
-                      <value.icon className="h-6 w-6 text-emerald-400" />
+                <div key={index} className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-7">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+                      <value.icon className="h-5 w-5 text-primary" />
                     </div>
-                    <h3 className="text-xl font-bold text-white">{value.title}</h3>
+                    <h3 className="text-xl font-bold text-foreground">{value.title}</h3>
                   </div>
-                  <p className="text-slate-300">{value.description}</p>
+                  <p className="text-muted-foreground">{value.description}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Team Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-6">Meet Our Team</h2>
-              <p className="text-xl text-slate-300">
-                Experienced engineers and product leaders dedicated to solving developer problems.
-              </p>
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="w-full">
+            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-45"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                  backgroundSize: "36px 36px",
+                }}
+              />
+              <div className="relative z-10">
+                <h2 className="mb-4 text-3xl font-bold text-foreground md:text-4xl">Team</h2>
+                <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
+                  Engineers focused on secure systems and reliable developer tooling.
+                </p>
+              </div>
             </div>
-            
-            <div className="flex flex-wrap justify-center gap-8">
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
               {team.map((member, index) => (
-                <div key={index} className="bg-slate-800 rounded-xl p-8 text-center max-w-sm">
-                  <div className="mb-4">
-                    <img 
+                <div key={index} className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-7 text-center">
+                  <img
                       src={member.profile_image}
                       alt={`${member.name}'s avatar`}
-                      className="w-24 h-24 rounded-full mx-auto mb-4"
+                      className="mx-auto mb-4 h-20 w-20 border border-border object-cover"
                     />
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">{member.name}</h3>
-                  <p className="text-emerald-400 mb-4">{member.role}</p>
-                  <p className="text-slate-300 text-sm">{member.bio}</p>
+                  <h3 className="mb-1 text-lg font-bold text-foreground">{member.name}</h3>
+                  <p className="mb-3 text-sm font-semibold text-primary">{member.role}</p>
+                  <p className="text-sm text-muted-foreground">{member.bio}</p>
+                  <a
+                    href={`https://github.com/${member.github}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-block text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    @{member.github}
+                  </a>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-slate-800 to-slate-900">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">
-              Ready to join thousands of developers?
-            </h2>
-            <p className="text-xl text-slate-300 mb-8">
-              Experience the future of environment variable management today.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <section className="container mx-auto border-x border-t border-border p-0">
+          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-8 text-left md:p-10">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-45"
+              style={{
+                backgroundImage:
+                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
+                backgroundSize: "36px 36px",
+              }}
+            />
+            <div className="relative z-10">
+              <h2 className="mb-4 text-4xl font-bold text-foreground">Ready to build with EnvSync?</h2>
+              <p className="mb-8 max-w-2xl text-lg text-muted-foreground">
+                Start with a secure baseline and scale configuration workflows with your team.
+              </p>
               <Link to="/onboarding">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4">
-                  Start Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+                <Button size="lg" className="px-8">
+                    Start Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
               </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <Footer />
     </div>
