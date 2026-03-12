@@ -1,7 +1,7 @@
 /**
  * Auth helpers for E2E tests.
  *
- * Uses the same DB seed helpers as mock tests, plus real FGA/Vault clients.
+ * Uses the same DB seed helpers as mock tests, plus real FGA/KMS clients.
  * Tokens are real JWTs issued by the real Zitadel instance.
  */
 import { v4 as uuidv4 } from "uuid";
@@ -9,7 +9,6 @@ import { v4 as uuidv4 } from "uuid";
 import { DB } from "@/libs/db";
 import { KMSClient } from "@/libs/kms/client";
 import { FGAClient } from "@/libs/openfga/index";
-import { VaultClient } from "@/libs/vault/index";
 
 import { createZitadelTestUser, getZitadelAccessToken } from "./zitadel-bootstrap";
 
@@ -304,13 +303,6 @@ export async function checkServiceHealth(): Promise<void> {
 			check: async () => {
 				const fga = await FGAClient.getInstance();
 				await fga.healthCheck();
-			},
-		},
-		{
-			name: "Vault",
-			check: async () => {
-				const vault = await VaultClient.getInstance();
-				await vault.healthCheck();
 			},
 		},
 		{

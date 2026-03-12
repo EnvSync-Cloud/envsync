@@ -2,7 +2,7 @@
  * E2E: App lifecycle — create → list → get → update → delete
  *
  * Uses real PostgreSQL and OpenFGA (real tuple writes).
- * Vault and Zitadel are mocked (via real-setup.ts preload).
+ * Zitadel is mocked (via real-setup.ts preload).
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
