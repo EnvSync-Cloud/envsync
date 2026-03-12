@@ -31,6 +31,7 @@ export class EnvController {
 			env_type_id,
 			key,
 			org_id,
+			user_id,
 		});
 
 		if (existingEnv) {
@@ -43,6 +44,7 @@ export class EnvController {
 			value: value || "",
 			app_id,
 			env_type_id,
+			user_id,
 		});
 
 		// Create Point-in-Time record for tracking
@@ -102,6 +104,7 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
+			user_id,
 		});
 
 		if (!currentEnv) {
@@ -114,6 +117,7 @@ export class EnvController {
 			value: value || "",
 			app_id,
 			env_type_id,
+			user_id,
 		});
 
 		// Create Point-in-Time record for tracking
@@ -173,6 +177,7 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
+			user_id,
 		});
 
 		if (!currentEnv) {
@@ -184,6 +189,7 @@ export class EnvController {
 			env_type_id,
 			key,
 			org_id,
+			user_id,
 		});
 
 		// Create Point-in-Time record for tracking
@@ -239,6 +245,7 @@ export class EnvController {
 			env_type_id,
 			key,
 			org_id,
+			user_id,
 		});
 
 		// Log the retrieval of the environment variable
@@ -275,6 +282,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 		});
 
 		// Log the retrieval of the environment variables
@@ -313,7 +321,7 @@ export class EnvController {
 			return c.json({ error: "You do not have permission to perform this action." }, 403);
 		}
 
-		await EnvService.batchCreateEnvs(org_id, app_id, env_type_id, envs);
+		await EnvService.batchCreateEnvs(org_id, app_id, env_type_id, envs, user_id);
 
 		// Create Point-in-Time record for batch creation
 		await EnvStorePiTService.createEnvStorePiT({
@@ -375,11 +383,12 @@ export class EnvController {
 					org_id,
 					app_id,
 					env_type_id,
+					user_id,
 				}),
 			),
 		);
 
-		await EnvService.batchUpdateEnvs(org_id, app_id, env_type_id, envs);
+		await EnvService.batchUpdateEnvs(org_id, app_id, env_type_id, envs, user_id);
 
 		// Create detailed change message
 		const changes = envs.map((env, index) => {
@@ -448,11 +457,12 @@ export class EnvController {
 					org_id,
 					app_id,
 					env_type_id,
+					user_id,
 				}),
 			),
 		);
 
-		await EnvService.batchDeleteEnvs(org_id, app_id, env_type_id, keys);
+		await EnvService.batchDeleteEnvs(org_id, app_id, env_type_id, keys, user_id);
 
 		// Create Point-in-Time record for batch deletion
 		const deletedEnvs = currentEnvs
@@ -666,6 +676,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 		});
 
 		// Get target state from PiT
@@ -690,6 +701,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -709,6 +721,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -723,6 +736,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -796,6 +810,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 		});
 
 		// Get target state from timestamp
@@ -820,6 +835,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -839,6 +855,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -853,6 +870,7 @@ export class EnvController {
 					app_id,
 					env_type_id,
 					org_id,
+					user_id,
 				});
 				rollbackOperations.push({
 					key,
@@ -923,6 +941,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 		});
 
 		// Get target state from PiT
@@ -944,6 +963,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,
@@ -960,6 +980,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,
@@ -976,6 +997,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,
@@ -1072,6 +1094,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			org_id,
+			user_id,
 		});
 
 		// Get target state from timestamp
@@ -1093,6 +1116,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,
@@ -1109,6 +1133,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,
@@ -1125,6 +1150,7 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				org_id,
+				user_id,
 			});
 			rollbackOperation = {
 				key,

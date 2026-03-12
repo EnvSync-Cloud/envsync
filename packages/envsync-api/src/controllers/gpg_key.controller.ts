@@ -116,7 +116,7 @@ export class GpgKeyController {
 		const user_id = c.get("user_id");
 		const id = c.req.param("id");
 
-		await GpgKeyService.deleteKey(id, org_id);
+		await GpgKeyService.deleteKey(id, org_id, user_id);
 
 		await AuditLogService.notifyAuditSystem({
 			action: "gpg_key_deleted",
@@ -172,7 +172,7 @@ export class GpgKeyController {
 		const user_id = c.get("user_id");
 		const { gpg_key_id, data, mode, detached } = await c.req.json();
 
-		const result = await GpgKeyService.signData(gpg_key_id, org_id, data, mode, detached);
+		const result = await GpgKeyService.signData(gpg_key_id, org_id, user_id, data, mode, detached);
 
 		await AuditLogService.notifyAuditSystem({
 			action: "gpg_data_signed",

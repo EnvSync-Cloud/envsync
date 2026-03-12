@@ -78,11 +78,13 @@ export class AppController {
 		const envCount = await AppService.getEnvCountByApp({
 			app_id: app.id,
 			org_id,
+			user_id: c.get("user_id"),
 		});
 
 		const secretCount = await AppService.getSecretCountByApp({
 			app_id: app.id,
 			org_id,
+			user_id: c.get("user_id"),
 		});
 
 		return c.json({ ...app, env_types, envCount, secretCount });
