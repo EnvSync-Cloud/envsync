@@ -3,11 +3,10 @@
  * EnvSync CLI – full init from project root.
  * 1. Ensure .env exists (copy from .env.example)
  * 2. Start Docker Compose services (without envsync_api)
- * 3. Wait for postgres, Zitadel, RustFS, Vault, OpenFGA
- * 4. Initialize & configure Vault (KV v2, AppRole auth)
- * 5. Initialize OpenFGA (create store, write authorization model)
- * 6. Run DB migrations
- * 7. Run API init (RustFS bucket; Zitadel apps created in console, secrets in .env)
+ * 3. Wait for postgres, Zitadel, RustFS, miniKMS, OpenFGA
+ * 4. Initialize OpenFGA (create store, write authorization model)
+ * 5. Run DB migrations
+ * 6. Run API init (RustFS bucket; Zitadel apps created in console, secrets in .env)
  *
  * Run from monorepo root: bun run scripts/cli.ts init
  */
@@ -25,13 +24,14 @@ import {
 	updateEnvFile,
 	waitFor,
 	waitForPostgres,
-	waitForVault,
 	waitForOpenFGA,
 	waitForZitadel,
+	waitForMiniKMS,
 	waitForGrafana,
 	readPatFromVolume,
-	initVault,
 } from "./lib/services";
+import { randomBytes } from "node:crypto";
+import { updateRootEnv } from "../packages/envsync-api/dist/utils/load-root-env";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -80,7 +80,7 @@ async function ensureEnv(): Promise<void> {
 }
 
 function dockerUp(): void {
-	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, vault, openfga, otel)...");
+	console.log("\nStarting Docker Compose (postgres, redis, rustfs, mailpit, zitadel, minikms, openfga, otel)...");
 	const result = spawnSync(
 		"docker",
 		[
@@ -92,8 +92,6 @@ function dockerUp(): void {
 			"rustfs",
 			"mailpit",
 			"zitadel",
-			"vault-init",
-			"vault",
 			"openfga_db",
 			"openfga_migrate",
 			"openfga",
@@ -147,24 +145,6 @@ async function waitForRustfs(): Promise<void> {
 	);
 }
 
-
-/** Initialize Vault and save credentials to root .env. */
-async function initVaultAndSave(): Promise<void> {
-	const vaultPort = process.env.VAULT_PORT ?? "8200";
-	const vaultAddr = process.env.VAULT_ADDR ?? `http://localhost:${vaultPort}`;
-	const mountPath = process.env.VAULT_MOUNT_PATH || "envsync";
-
-	const result = await initVault(vaultAddr, mountPath);
-	updateRootEnvAndReload({
-		VAULT_ADDR: result.vaultAddr,
-		VAULT_TOKEN: result.rootToken,
-		VAULT_UNSEAL_KEY: result.unsealKey,
-		VAULT_ROLE_ID: result.roleId,
-		VAULT_SECRET_ID: result.secretId,
-		VAULT_MOUNT_PATH: result.mountPath,
-	});
-	console.log("  Vault credentials saved to .env (VAULT_ADDR, VAULT_TOKEN, VAULT_ROLE_ID, VAULT_SECRET_ID, VAULT_MOUNT_PATH).");
-}
 
 /**
  * Initialize OpenFGA for EnvSync:
@@ -253,10 +233,24 @@ function runApiInit(): void {
 	if (result.status !== 0) throw new Error("API init failed.");
 }
 
+async function initMiniKMS() {
+	// a 32 byte hex string
+	const rootKey = randomBytes(32).toString("hex");
+	console.log("miniKMS: root key", rootKey);
+
+	updateRootEnv({
+		MINIKMS_ROOT_KEY: rootKey,
+	});
+	console.log("miniKMS: root key written to root .env");
+}
+
 async function init(): Promise<void> {
-	console.log("EnvSync full init (env, Docker, migrations, Zitadel, RustFS, Vault, OpenFGA)\n");
+	console.log("EnvSync full init (env, Docker, migrations, Zitadel, RustFS, miniKMS, OpenFGA)\n");
 
 	await ensureEnv();
+	// Initialize miniKMS
+	await initMiniKMS();
+
 	loadEnvFile(path.join(rootDir, ".env"));
 
 	dockerUp();
@@ -266,7 +260,7 @@ async function init(): Promise<void> {
 	await waitForPostgres();
 	await waitForZitadel();
 	await waitForRustfs();
-	await waitForVault();
+	await waitForMiniKMS();
 	await waitForOpenFGA();
 
 	const patFromVolume = await readPatFromVolume(rootDir);
@@ -275,7 +269,6 @@ async function init(): Promise<void> {
 		console.log("Zitadel: PAT read from docker volume and saved to .env (continuing with updated env).");
 	}
 
-	await initVaultAndSave();
 	await initOpenFGA();
 
 	// Wait for Grafana (dashboards are auto-provisioned)
@@ -320,8 +313,6 @@ function servicesUp(): void {
 			"rustfs",
 			"mailpit",
 			"zitadel",
-			"vault-init",
-			"vault",
 			"zitadel_login",
 			"openfga_db",
 			"openfga_migrate",

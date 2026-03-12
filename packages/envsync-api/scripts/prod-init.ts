@@ -3,12 +3,11 @@
  * Production one-shot init script for EnvSync.
  *
  * Bootstraps all infrastructure services on first deployment:
- *   1. Vault: init, unseal, KV v2 mount, AppRole setup
- *   2. Zitadel: read PAT, create project + OIDC apps (Web, CLI, API)
- *   3. OpenFGA: create store + write authorization model
- *   4. Database: run Kysely migrations
- *   5. RustFS: create S3 bucket
- *   6. miniKMS: verify gRPC reachability
+ *   1. Zitadel: read PAT, create project + OIDC apps (Web, CLI, API)
+ *   2. OpenFGA: create store + write authorization model
+ *   3. Database: run Kysely migrations
+ *   4. RustFS: create S3 bucket
+ *   5. miniKMS: verify gRPC reachability
  *
  * Usage (inside Docker):
  *   docker compose -f docker-compose.prod.yaml run --rm envsync_init
@@ -105,159 +104,7 @@ async function waitForHttp(label: string, url: string, okStatuses?: number[]): P
 	);
 }
 
-// ── 1. Vault ────────────────────────────────────────────────────────
-
-interface VaultResult {
-	rootToken: string;
-	unsealKey: string;
-	roleId: string;
-	secretId: string;
-}
-
-async function initVault(): Promise<VaultResult> {
-	const vaultAddr = requireEnv("VAULT_ADDR").replace(/\/$/, "");
-	const mountPath = optionalEnv("VAULT_MOUNT_PATH", "envsync");
-	const policyName = "envsync-api";
-	const roleName = "envsync-api";
-
-	console.log(`\n=== Vault (${vaultAddr}) ===`);
-
-	let rootToken = optionalEnv("VAULT_TOKEN");
-	let unsealKey = optionalEnv("VAULT_UNSEAL_KEY");
-
-	async function vaultFetch(urlPath: string, opts: RequestInit = {}): Promise<Response> {
-		return fetch(`${vaultAddr}${urlPath}`, {
-			...opts,
-			headers: {
-				"Content-Type": "application/json",
-				...(rootToken ? { "X-Vault-Token": rootToken } : {}),
-				...(opts.headers || {}),
-			},
-			signal: AbortSignal.timeout(10000),
-		});
-	}
-
-	// Check init status
-	const initRes = await vaultFetch("/v1/sys/init");
-	const { initialized } = (await initRes.json()) as { initialized: boolean };
-
-	if (!initialized) {
-		console.log("  Initializing (1 key share, 1 threshold)...");
-		const resp = await vaultFetch("/v1/sys/init", {
-			method: "PUT",
-			body: JSON.stringify({ secret_shares: 1, secret_threshold: 1 }),
-		});
-		if (!resp.ok) throw new Error(`Vault init failed (${resp.status}): ${await resp.text()}`);
-		const data = (await resp.json()) as { keys: string[]; keys_base64: string[]; root_token: string };
-		rootToken = data.root_token;
-		unsealKey = data.keys_base64[0] || data.keys[0] || "";
-		console.log("  Vault initialized.");
-	} else {
-		console.log("  Already initialized.");
-	}
-
-	// Unseal if sealed
-	const healthRes = await vaultFetch("/v1/sys/health");
-	if (healthRes.status === 503) {
-		if (!unsealKey) throw new Error("Vault is sealed but no unseal key is available.");
-		console.log("  Unsealing...");
-		const unsealRes = await vaultFetch("/v1/sys/unseal", {
-			method: "PUT",
-			body: JSON.stringify({ key: unsealKey }),
-		});
-		if (!unsealRes.ok) throw new Error(`Vault unseal failed: ${await unsealRes.text()}`);
-		console.log("  Unsealed.");
-	} else {
-		console.log("  Already unsealed.");
-	}
-
-	if (!rootToken) throw new Error("No root token available. Set VAULT_TOKEN env var.");
-
-	// Enable KV v2
-	console.log(`  Enabling KV v2 at "${mountPath}/"...`);
-	const mountRes = await vaultFetch(`/v1/sys/mounts/${mountPath}`, {
-		method: "POST",
-		body: JSON.stringify({ type: "kv", options: { version: "2" } }),
-	});
-	if (mountRes.ok) {
-		console.log(`  KV v2 enabled.`);
-	} else if (mountRes.status === 400 && (await mountRes.text()).includes("existing mount")) {
-		console.log(`  KV v2 already mounted.`);
-	} else {
-		throw new Error(`Failed to enable KV v2 (${mountRes.status})`);
-	}
-
-	// Enable AppRole
-	console.log("  Enabling AppRole...");
-	const authRes = await vaultFetch("/v1/sys/auth/approle", {
-		method: "POST",
-		body: JSON.stringify({ type: "approle" }),
-	});
-	if (authRes.ok) {
-		console.log("  AppRole enabled.");
-	} else if (authRes.status === 400 && (await authRes.text()).includes("existing mount")) {
-		console.log("  AppRole already enabled.");
-	} else {
-		throw new Error(`Failed to enable AppRole (${authRes.status})`);
-	}
-
-	// Create policy
-	console.log(`  Creating policy '${policyName}'...`);
-	const policy = `
-path "${mountPath}/data/*" { capabilities = ["create","read","update","delete","list"] }
-path "${mountPath}/metadata/*" { capabilities = ["read","delete","list"] }
-path "${mountPath}/delete/*" { capabilities = ["update"] }
-path "${mountPath}/undelete/*" { capabilities = ["update"] }
-path "${mountPath}/destroy/*" { capabilities = ["update"] }
-path "auth/token/renew-self" { capabilities = ["update"] }
-path "sys/health" { capabilities = ["read"] }
-`.trim();
-	const policyRes = await vaultFetch(`/v1/sys/policy/${policyName}`, {
-		method: "PUT",
-		body: JSON.stringify({ policy }),
-	});
-	if (!policyRes.ok) throw new Error(`Failed to create policy: ${await policyRes.text()}`);
-	console.log(`  Policy created.`);
-
-	// Create role
-	console.log(`  Creating AppRole role '${roleName}'...`);
-	const roleRes = await vaultFetch(`/v1/auth/approle/role/${roleName}`, {
-		method: "POST",
-		body: JSON.stringify({
-			token_policies: [policyName],
-			token_ttl: "1h",
-			token_max_ttl: "4h",
-			secret_id_ttl: "0",
-			secret_id_num_uses: 0,
-		}),
-	});
-	if (!roleRes.ok) throw new Error(`Failed to create role: ${await roleRes.text()}`);
-
-	// Get role_id
-	const roleIdRes = await vaultFetch(`/v1/auth/approle/role/${roleName}/role-id`);
-	if (!roleIdRes.ok) throw new Error(`Failed to get role_id: ${await roleIdRes.text()}`);
-	const { data: roleIdData } = (await roleIdRes.json()) as { data: { role_id: string } };
-
-	// Generate secret_id
-	const secretIdRes = await vaultFetch(`/v1/auth/approle/role/${roleName}/secret-id`, {
-		method: "POST",
-		body: JSON.stringify({}),
-	});
-	if (!secretIdRes.ok) throw new Error(`Failed to generate secret_id: ${await secretIdRes.text()}`);
-	const { data: secretIdData } = (await secretIdRes.json()) as { data: { secret_id: string } };
-
-	console.log(`  Role ID: ${roleIdData.role_id}`);
-	console.log(`  Secret ID: ${secretIdData.secret_id.slice(0, 8)}...`);
-
-	return {
-		rootToken,
-		unsealKey,
-		roleId: roleIdData.role_id,
-		secretId: secretIdData.secret_id,
-	};
-}
-
-// ── 2. Zitadel ──────────────────────────────────────────────────────
+// ── 1. Zitadel ──────────────────────────────────────────────────────
 
 interface ZitadelResult {
 	pat: string;
@@ -388,7 +235,7 @@ async function initZitadel(): Promise<ZitadelResult | null> {
 	};
 }
 
-// ── 3. OpenFGA ──────────────────────────────────────────────────────
+// ── 2. OpenFGA ──────────────────────────────────────────────────────
 
 interface OpenFGAResult {
 	storeId: string;
@@ -424,7 +271,7 @@ async function initOpenFGA(): Promise<OpenFGAResult> {
 	return { storeId, modelId };
 }
 
-// ── 4. Database migrations ──────────────────────────────────────────
+// ── 3. Database migrations ──────────────────────────────────────────
 
 async function initDatabase(): Promise<void> {
 	console.log("\n=== Database ===");
@@ -471,7 +318,7 @@ async function initDatabase(): Promise<void> {
 	await db.destroy();
 }
 
-// ── 5. RustFS (S3 bucket) ───────────────────────────────────────────
+// ── 4. RustFS (S3 bucket) ───────────────────────────────────────────
 
 async function initRustfs(): Promise<void> {
 	const endpoint = requireEnv("S3_ENDPOINT");
@@ -572,11 +419,6 @@ async function main() {
 		waits.push(waitForTcp("miniKMS", host, Number(portStr)));
 	}
 
-	const vaultAddr = optionalEnv("VAULT_ADDR")?.replace(/\/$/, "");
-	if (vaultAddr) {
-		waits.push(waitForHttp("Vault", `${vaultAddr}/v1/sys/health`, [200, 429, 501, 503]));
-	}
-
 	const openfgaUrl = optionalEnv("OPENFGA_API_URL")?.replace(/\/$/, "");
 	if (openfgaUrl) {
 		waits.push(waitForHttp("OpenFGA", `${openfgaUrl}/healthz`, [200]));
@@ -593,13 +435,6 @@ async function main() {
 	await Promise.all(waits);
 
 	// ── Service steps ────────────────────────────────────────────────
-
-	await step("Vault", ["VAULT_ADDR"], initVault, vault => ({
-		VAULT_TOKEN: vault.rootToken,
-		VAULT_UNSEAL_KEY: vault.unsealKey,
-		VAULT_ROLE_ID: vault.roleId,
-		VAULT_SECRET_ID: vault.secretId,
-	}));
 
 	await step("Zitadel", ["ZITADEL_URL"], initZitadel, zitadel =>
 		zitadel

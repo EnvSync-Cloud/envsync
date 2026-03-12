@@ -20,11 +20,9 @@ import * as openpgp from "openpgp";
 import { config } from "../src/utils/env";
 import { findMonorepoRoot, updateRootEnv } from "../src/utils/load-root-env";
 import { DB, JsonValue } from "../src/libs/db";
-import { VaultClient } from "../src/libs/vault";
-import { envPath, gpgKeyPath } from "../src/libs/vault/paths";
+import { getVaultSessionToken } from "../src/libs/kms/session-manager";
 import { KMSClient } from "../src/libs/kms/client";
 import { SecretKeyGenerator } from "sk-keygen";
-import type { EllipticCurveName } from "openpgp";
 
 const ZITADEL_PROJECT_NAME = "EnvSync";
 
@@ -288,17 +286,6 @@ async function initRustfsBucket() {
 	throw lastError;
 }
 
-async function initMiniKMS() {
-	// a 32 byte hex string
-	const rootKey = randomBytes(32).toString("hex");
-	console.log("miniKMS: root key", rootKey);
-
-	updateRootEnv({
-		MINIKMS_ROOT_KEY: rootKey,
-	});
-	console.log("miniKMS: root key written to root .env");
-}
-
 async function init() {
 	console.log("EnvSync API init: RustFS bucket + Zitadel OIDC apps\n");
 
@@ -313,9 +300,6 @@ async function init() {
 			"\nZitadel: Set ZITADEL_PAT in .env (or ZITADEL_PAT_FILE to bootstrap admin.pat) and re-run init to create OIDC apps.",
 		);
 	}
-
-	// Initialize miniKMS
-	await initMiniKMS();
 
 	console.log("\nInit done.");
 }
@@ -575,27 +559,90 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 	};
 
 	let envVarCount = 0;
-	const vault = await VaultClient.getInstance();
 	const kms = await KMSClient.getInstance();
 	const kmsHealthy = await kms.healthCheck();
 	if (!kmsHealthy) {
 		throw new Error("Seed: miniKMS is not healthy. Cannot seed without encryption.");
 	}
 
+	// Look up dev user (needed for cert creation and GPG seeding)
+	const devUser = await db
+		.selectFrom("users")
+		.select(["email", "full_name"])
+		.where("id", "=", userId)
+		.executeTakeFirstOrThrow();
+
+	// Create CA + member cert for new users (needed for vault session token)
+	if (!dbAlreadySeeded) {
+		try {
+			const caResult = await kms.createOrgCA(orgId, "EnvSync Dev");
+
+			const now = new Date();
+			await db
+				.insertInto("org_certificates")
+				.values({
+					id: randomUUID(),
+					org_id: orgId,
+					user_id: userId,
+					serial_hex: caResult.serialHex,
+					cert_type: "org_ca",
+					subject_cn: "EnvSync Dev CA",
+					status: "active",
+					description: "Dev organization CA",
+					created_at: now,
+					updated_at: now,
+				})
+				.execute();
+
+			console.log(`Seed: Initialized org CA (serial: ${caResult.serialHex})`);
+
+			const memberResult = await kms.issueMemberCert(userId, devUser.email, orgId, "admin");
+			await db
+				.insertInto("org_certificates")
+				.values({
+					id: randomUUID(),
+					org_id: orgId,
+					user_id: userId,
+					serial_hex: memberResult.serialHex,
+					cert_type: "member",
+					subject_cn: devUser.email,
+					subject_email: devUser.email,
+					status: "active",
+					description: "Dev user member certificate",
+					created_at: now,
+					updated_at: now,
+				})
+				.execute();
+
+			console.log(`Seed: Issued member certificate for ${devUser.email}`);
+		} catch (err) {
+			console.warn("Seed: Failed to create certificates (miniKMS PKI may not be available):", (err as Error).message);
+		}
+	}
+
+	const sessionToken = await getVaultSessionToken(userId, orgId);
 	for (const [appName, envsByType] of Object.entries(envVars)) {
 		const appId = appIds[appName];
 		for (const [envTypeName, vars] of Object.entries(envsByType)) {
 			const etId = envTypeIds[appName][envTypeName];
 			for (const [key, value] of Object.entries(vars)) {
-				const aad = `env:${orgId}:${appId}:${etId}:${key}`;
-				const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
-				const writeValue = `KMS:v1:${keyVersionId}:${ciphertext}`;
-				await vault.kvWrite(envPath(orgId, appId, etId, key), { value: writeValue });
+				await kms.vaultWrite(
+					{
+						orgId,
+						scopeId: appId,
+						entryType: "env",
+						key,
+						envTypeId: etId,
+						value: Buffer.from(value, "utf-8"),
+						createdBy: userId,
+					},
+					sessionToken,
+				);
 				envVarCount++;
 			}
 		}
 	}
-	console.log(`Seed: Wrote ${envVarCount} env vars to Vault (KMS-encrypted)`);
+	console.log(`Seed: Wrote ${envVarCount} env vars to miniKMS vault`);
 
 	if (!dbAlreadySeeded) {
 		// -- d) Create 1 team + add dev user as member --
@@ -644,14 +691,7 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 
 		console.log(`Seed: Created API key for dev user (${apiKey})`);
 
-		// -- f) Look up dev user for GPG + cert seeding --
-		const devUser = await db
-			.selectFrom("users")
-			.select(["email", "full_name"])
-			.where("id", "=", userId)
-			.executeTakeFirstOrThrow();
-
-		// -- g) Create a sample GPG key --
+		// -- f) Create a sample GPG key --
 		let gpgKeyId: string | null = null;
 		try {
 			const passphrase = randomBytes(32).toString("hex");
@@ -667,14 +707,19 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 			const fingerprint = parsedPublic.getFingerprint().toUpperCase();
 			const keyIdStr = fingerprint.slice(-16);
 
-			const kmsResult = await kms.encrypt(orgId, "gpg", passphrase, `gpg:${fingerprint}`);
-
-			const vaultKeyPath = gpgKeyPath(orgId, fingerprint);
-			await vault.kvWrite(vaultKeyPath, {
-				armored_private_key: privateKey,
-				kms_wrapped_passphrase: kmsResult.ciphertext,
-				kms_key_version_id: kmsResult.keyVersionId,
-			});
+			const gpgSessionToken = await getVaultSessionToken(userId, orgId);
+			const blob = JSON.stringify({ armored_private_key: privateKey, passphrase });
+			await kms.vaultWrite(
+				{
+					orgId,
+					scopeId: "gpg",
+					entryType: "gpg",
+					key: fingerprint,
+					value: Buffer.from(blob, "utf-8"),
+					createdBy: userId,
+				},
+				gpgSessionToken,
+			);
 
 			gpgKeyId = randomUUID();
 			await db
@@ -690,7 +735,7 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 					algorithm: "ecc-curve25519",
 					key_size: null,
 					public_key: publicKey,
-					private_key_ref: vaultKeyPath,
+					private_key_ref: `vault:gpg:${orgId}:${fingerprint}`,
 					usage_flags: new JsonValue(["sign", "certify"]),
 					trust_level: "ultimate",
 					expires_at: null,
@@ -703,52 +748,6 @@ async function seedData(db: Awaited<ReturnType<typeof DB.getInstance>>, orgId: s
 			console.log(`Seed: Created GPG key (${fingerprint.slice(0, 16)}...)`);
 		} catch (err) {
 			console.warn("Seed: Failed to create sample GPG key:", (err as Error).message);
-		}
-
-		// -- h) Initialize org CA + issue member cert --
-		try {
-			const caResult = await kms.createOrgCA(orgId, "EnvSync Dev");
-
-			const now = new Date();
-			await db
-				.insertInto("org_certificates")
-				.values({
-					id: randomUUID(),
-					org_id: orgId,
-					user_id: userId,
-					serial_hex: caResult.serialHex,
-					cert_type: "org_ca",
-					subject_cn: "EnvSync Dev CA",
-					status: "active",
-					description: "Dev organization CA",
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-
-			console.log(`Seed: Initialized org CA (serial: ${caResult.serialHex})`);
-
-			const memberResult = await kms.issueMemberCert(userId, devUser.email, orgId, "admin");
-			await db
-				.insertInto("org_certificates")
-				.values({
-					id: randomUUID(),
-					org_id: orgId,
-					user_id: userId,
-					serial_hex: memberResult.serialHex,
-					cert_type: "member",
-					subject_cn: devUser.email,
-					subject_email: devUser.email,
-					status: "active",
-					description: "Dev user member certificate",
-					created_at: now,
-					updated_at: now,
-				})
-				.execute();
-
-			console.log(`Seed: Issued member certificate for ${devUser.email}`);
-		} catch (err) {
-			console.warn("Seed: Failed to create certificates (miniKMS PKI may not be available):", (err as Error).message);
 		}
 
 		// -- FGA tuples for seeded resources --
