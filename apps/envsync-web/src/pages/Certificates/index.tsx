@@ -132,20 +132,25 @@ const Certificates = () => {
   const hasCA = orgCA && !("error" in orgCA);
 
   return (
-    <div className="space-y-6">
+    <div className="animate-page-enter space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Certificates</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            PKI certificate management for your organization
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <ShieldCheck className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">Certificates</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              PKI certificate management for your organization
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {hasCA && (
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
               <DialogTrigger asChild>
-                <Button className="bg-indigo-500 hover:bg-indigo-600">
+                <Button className="bg-violet-500 hover:bg-violet-600">
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
@@ -244,7 +249,7 @@ const Certificates = () => {
                 )}
                 <DialogFooter>
                   {!issuedCert ? (
-                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-violet-500 hover:bg-violet-600">
                       {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Issue
                     </Button>
@@ -261,10 +266,10 @@ const Certificates = () => {
       </div>
 
       {/* CA Status Card */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <ShieldCheck className="w-5 h-5 mr-2 text-indigo-400" />
+            <ShieldCheck className="w-5 h-5 mr-2 text-violet-400" />
             Organization CA
           </CardTitle>
         </CardHeader>
@@ -290,7 +295,7 @@ const Certificates = () => {
               <p className="text-gray-400 mb-3">Organization CA not initialized</p>
               <Dialog open={isInitCAOpen} onOpenChange={setIsInitCAOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-indigo-500 hover:bg-indigo-600">
+                  <Button className="bg-violet-500 hover:bg-violet-600">
                     Initialize CA
                   </Button>
                 </DialogTrigger>
@@ -310,7 +315,7 @@ const Certificates = () => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-violet-500 hover:bg-violet-600">
                       {initCA.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       Initialize
                     </Button>
@@ -323,7 +328,7 @@ const Certificates = () => {
       </Card>
 
       {/* Certificates Table */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
             Certificates
@@ -345,7 +350,7 @@ const Certificates = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-gray-800">
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Subject</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Type</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Serial</th>
@@ -356,7 +361,7 @@ const Certificates = () => {
                 </thead>
                 <tbody>
                   {certificates.map((cert) => (
-                    <tr key={cert.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                    <tr key={cert.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
                       <td className="py-3 px-4">
                         <div className="text-white font-medium">{cert.subject_cn}</div>
                         {cert.subject_email && (

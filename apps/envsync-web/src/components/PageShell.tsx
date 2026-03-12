@@ -40,12 +40,12 @@ export function PageShell({
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           {Icon && (
-            <div className="p-2 bg-violet-500/10 rounded-lg">
+            <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
               <Icon className="size-5 text-violet-400" />
             </div>
           )}
           <div>
-            <h1 className="text-xl font-semibold text-gray-100">{title}</h1>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">{title}</h1>
             {description && (
               <p className="text-sm text-gray-400 mt-0.5">{description}</p>
             )}

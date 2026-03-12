@@ -14,7 +14,8 @@ import {
 import { toast } from "sonner";
 
 import { api } from "@/api";
-import type { GenerateGpgKeyRequest, GpgKey } from "@/api/gpg-keys.api";
+import type { GpgKey } from "@/api/gpg-keys.api";
+import { GenerateGpgKeyRequest, SignDataRequest } from "@envsync-cloud/envsync-ts-sdk";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,7 +48,7 @@ const GpgKeys = () => {
   const [genForm, setGenForm] = useState<GenerateGpgKeyRequest>({
     name: "",
     email: "",
-    algorithm: "ecc-curve25519",
+    algorithm: GenerateGpgKeyRequest.algorithm.ECC_CURVE25519,
     usage_flags: ["sign"],
     expires_in_days: 365,
   });
@@ -63,7 +64,7 @@ const GpgKeys = () => {
   const [isSignOpen, setIsSignOpen] = useState(false);
   const [signKeyId, setSignKeyId] = useState("");
   const [signData, setSignData] = useState("");
-  const [signMode, setSignMode] = useState<"binary" | "text" | "clearsign">("text");
+  const [signMode, setSignMode] = useState<SignDataRequest.mode>(SignDataRequest.mode.TEXT);
   const signDetached = true;
   const [signResult, setSignResult] = useState("");
 
@@ -79,7 +80,7 @@ const GpgKeys = () => {
     onSuccess: () => {
       toast.success("GPG key generated successfully");
       setIsGenerateOpen(false);
-      setGenForm({ name: "", email: "", algorithm: "ecc-curve25519", usage_flags: ["sign"], expires_in_days: 365 });
+      setGenForm({ name: "", email: "", algorithm: GenerateGpgKeyRequest.algorithm.ECC_CURVE25519, usage_flags: ["sign"], expires_in_days: 365 });
     },
     onError: ({ error }) => toast.error(error.message || "Failed to generate key"),
   });
@@ -171,14 +172,19 @@ const GpgKeys = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="animate-page-enter space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">GPG Keys</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Manage GPG keys for signing and verification
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <KeyRound className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">GPG Keys</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Manage GPG keys for signing and verification
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {/* Sign Dialog */}
@@ -219,7 +225,7 @@ const GpgKeys = () => {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <Label className="text-gray-300">Mode</Label>
-                    <Select value={signMode} onValueChange={(v) => setSignMode(v as any)}>
+                    <Select value={signMode} onValueChange={(v) => setSignMode(v as SignDataRequest.mode)}>
                       <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                         <SelectValue />
                       </SelectTrigger>
@@ -251,7 +257,7 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleSign} disabled={signMutation.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                <Button onClick={handleSign} disabled={signMutation.isPending} className="bg-violet-500 hover:bg-violet-600">
                   {signMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Sign
                 </Button>
@@ -319,7 +325,7 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleVerify} disabled={verifyMutation.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                <Button onClick={handleVerify} disabled={verifyMutation.isPending} className="bg-violet-500 hover:bg-violet-600">
                   {verifyMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Verify
                 </Button>
@@ -360,7 +366,7 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleImport} disabled={importKey.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                <Button onClick={handleImport} disabled={importKey.isPending} className="bg-violet-500 hover:bg-violet-600">
                   {importKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Import
                 </Button>
@@ -371,7 +377,7 @@ const GpgKeys = () => {
           {/* Generate Dialog */}
           <Dialog open={isGenerateOpen} onOpenChange={setIsGenerateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-indigo-500 hover:bg-indigo-600">
+              <Button className="bg-violet-500 hover:bg-violet-600">
                 <Plus className="w-4 h-4 mr-2" /> Generate Key
               </Button>
             </DialogTrigger>
@@ -391,7 +397,7 @@ const GpgKeys = () => {
                 </div>
                 <div>
                   <Label className="text-gray-300">Algorithm</Label>
-                  <Select value={genForm.algorithm} onValueChange={(v) => setGenForm((f) => ({ ...f, algorithm: v }))}>
+                  <Select value={genForm.algorithm} onValueChange={(v) => setGenForm((f) => ({ ...f, algorithm: v as GenerateGpgKeyRequest.algorithm }))}>
                     <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                       <SelectValue />
                     </SelectTrigger>
@@ -409,7 +415,7 @@ const GpgKeys = () => {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleGenerate} disabled={generateKey.isPending} className="bg-indigo-500 hover:bg-indigo-600">
+                <Button onClick={handleGenerate} disabled={generateKey.isPending} className="bg-violet-500 hover:bg-violet-600">
                   {generateKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Generate
                 </Button>
@@ -420,10 +426,10 @@ const GpgKeys = () => {
       </div>
 
       {/* Keys Table */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <KeyRound className="w-5 h-5 mr-2 text-indigo-400" />
+            <KeyRound className="w-5 h-5 mr-2 text-violet-400" />
             Keys
             {gpgKeys && gpgKeys.length > 0 && (
               <Badge variant="secondary" className="ml-2">{gpgKeys.length}</Badge>
@@ -441,7 +447,7 @@ const GpgKeys = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-gray-800">
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Name</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Fingerprint</th>
                     <th className="text-left text-gray-400 text-sm font-medium py-3 px-4">Algorithm</th>
@@ -453,7 +459,7 @@ const GpgKeys = () => {
                 </thead>
                 <tbody>
                   {gpgKeys.map((key) => (
-                    <tr key={key.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                    <tr key={key.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
                       <td className="py-3 px-4">
                         <div className="text-white font-medium">{key.name}</div>
                         <div className="text-gray-500 text-xs">{key.email}</div>

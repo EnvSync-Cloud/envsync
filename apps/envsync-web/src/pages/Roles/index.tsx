@@ -16,18 +16,23 @@ export const Roles = () => {
   }, [isLoading, roles]);
 
   return (
-    <div className="flex flex-col items-start sm:items-center justify-between gap-4">
+    <div className="animate-page-enter flex flex-col items-start sm:items-center justify-between gap-4">
       <div className="flex justify-between items-center w-full">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Roles</h1>
-          <p className="text-gray-400 mt-2">
-            Manage roles and assign permissions to control what users can access
-            across the platform.
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <ShieldAlert className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">Roles</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Manage roles and assign permissions to control what users can access
+              across the platform.
+            </p>
+          </div>
         </div>
         <RoleEditForm />
       </div>
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl w-full mt-2">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl w-full mt-2">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-3">
             <ShieldAlert className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
@@ -42,7 +47,7 @@ export const Roles = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-gray-800">
                     {[
                       "Name",
                       "Access Level",

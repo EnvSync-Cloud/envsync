@@ -136,13 +136,18 @@ export const ApiKeys = () => {
   const isEmpty = !isLoading && apiKeys.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-page-enter space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">API Keys</h1>
-          <p className="text-gray-400 mt-2">
-            Manage your API keys for accessing EnvSync services
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <Key className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">API Keys</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Manage your API keys for accessing EnvSync services
+            </p>
+          </div>
         </div>
 
         {/* Created Key Modal */}
@@ -189,7 +194,7 @@ export const ApiKeys = () => {
               </Button>
               <Button
                 onClick={() => copy.mutate(createdKey || "")}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                className="bg-violet-500 hover:bg-violet-600 text-white"
               >
                 <Copy className="w-4 h-4 mr-2" />
                 Copy Key
@@ -202,7 +207,7 @@ export const ApiKeys = () => {
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={createApiKey.isPending}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -245,7 +250,7 @@ export const ApiKeys = () => {
               </Button>
               <Button
                 onClick={handleCreateKey}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                className="bg-violet-500 hover:bg-violet-600 text-white"
                 disabled={createApiKey.isPending}
               >
                 {createApiKey.isPending ? (
@@ -262,10 +267,10 @@ export const ApiKeys = () => {
         </Dialog>
       </div>
 
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <Key className="size-8 mr-3 bg-indigo-400 border border-indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <Key className="size-8 mr-3 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
             API Keys
             <Count
               count={apiKeys?.length}
@@ -285,7 +290,7 @@ export const ApiKeys = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-gray-800">
                     {[
                       "Description",
                       "API Key",

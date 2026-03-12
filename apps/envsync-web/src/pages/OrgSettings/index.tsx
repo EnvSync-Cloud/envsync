@@ -5,6 +5,7 @@ import { OrgInfoCard } from "@/components/org-settings//OrgInfoCard";
 import { OrgOverviewCard } from "@/components/org-settings//OrgOverviewCard";
 import { DangerZoneCard } from "@/components/org-settings//DangerZoneCard";
 import { DeleteOrgModal } from "@/components/org-settings//DeleteOrgModal";
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { useOrgSettings } from "@/hooks/useOrgSettings";
 
 export const OrgSettings = () => {
@@ -52,31 +53,37 @@ export const OrgSettings = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="animate-page-enter space-y-8">
       <OrgSettingsHeader orgName={orgData?.name} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <OrgInfoCard
-          formData={formData}
-          formErrors={formErrors}
-          hasUnsavedChanges={hasUnsavedChanges}
-          orgSlug={orgData?.slug}
-          onInputChange={handleInputChange}
-          onLogoUpload={handleLogoUpload}
-          onLogoRemove={handleLogoRemove}
-          onSaveChanges={handleSaveChanges}
-          onResetChanges={handleResetChanges}
-          isSaving={isSaving}
-          logoPreview={logoPreview}
-        />
+      <BentoGrid className="md:auto-rows-auto">
+        <BentoGridItem className="md:col-span-2 p-0">
+          <OrgInfoCard
+            formData={formData}
+            formErrors={formErrors}
+            hasUnsavedChanges={hasUnsavedChanges}
+            orgSlug={orgData?.slug}
+            onInputChange={handleInputChange}
+            onLogoUpload={handleLogoUpload}
+            onLogoRemove={handleLogoRemove}
+            onSaveChanges={handleSaveChanges}
+            onResetChanges={handleResetChanges}
+            isSaving={isSaving}
+            logoPreview={logoPreview}
+          />
+        </BentoGridItem>
 
-        <OrgOverviewCard orgData={orgData} />
-      </div>
+        <BentoGridItem className="md:col-span-1 p-0">
+          <OrgOverviewCard orgData={orgData} />
+        </BentoGridItem>
 
-      <DangerZoneCard
-        onDeleteClick={handleOpenDeleteModal}
-        isDeleting={isDeleting}
-      />
+        <BentoGridItem className="md:col-span-3 p-0">
+          <DangerZoneCard
+            onDeleteClick={handleOpenDeleteModal}
+            isDeleting={isDeleting}
+          />
+        </BentoGridItem>
+      </BentoGrid>
 
       <DeleteOrgModal
         open={isDeleteModalOpen}

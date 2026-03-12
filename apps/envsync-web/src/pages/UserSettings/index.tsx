@@ -5,7 +5,9 @@ import { AccountSettingsCard } from "@/components/user-settings/AccountSettingsC
 import { DangerZoneCard } from "@/components/user-settings/DangerZoneCard";
 import { PasswordResetModal } from "@/components/user-settings/PasswordResetModal";
 import { DeleteAccountModal } from "@/components/user-settings/DeleteAccountModal";
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { Settings } from "lucide-react";
 
 export const UserSettings = () => {
   const {
@@ -59,43 +61,53 @@ export const UserSettings = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">Account Settings</h1>
-        <p className="text-gray-400 mt-2">
-          Manage your account configuration and preferences
-        </p>
+    <div className="animate-page-enter space-y-8">
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+          <Settings className="size-5 text-violet-400" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold text-gray-100 tracking-tight">Account Settings</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            Manage your account configuration and preferences
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ProfileInformationCard
-          formData={formData}
-          formErrors={formErrors}
-          hasUnsavedChanges={hasUnsavedChanges}
-          logoPreview={logoPreview}
-          fileInputRef={fileInputRef}
-          onInputChange={handleInputChange}
-          onLogoUpload={handleLogoUpload}
-          onLogoRemove={handleLogoRemove}
-          onSaveChanges={handleSaveChanges}
-          onResetChanges={handleResetChanges}
-          isLoading={updateUserSettings.isPending}
-        />
+      <BentoGrid className="md:auto-rows-auto">
+        <BentoGridItem className="md:col-span-2 p-0">
+          <ProfileInformationCard
+            formData={formData}
+            formErrors={formErrors}
+            hasUnsavedChanges={hasUnsavedChanges}
+            logoPreview={logoPreview}
+            fileInputRef={fileInputRef}
+            onInputChange={handleInputChange}
+            onLogoUpload={handleLogoUpload}
+            onLogoRemove={handleLogoRemove}
+            onSaveChanges={handleSaveChanges}
+            onResetChanges={handleResetChanges}
+            isLoading={updateUserSettings.isPending}
+          />
+        </BentoGridItem>
 
-        <AccountSettingsCard
-          emailNotifications={emailNotifications}
-          setEmailNotifications={setEmailNotifications}
-          onPasswordReset={() => setIsPasswordResetDialogOpen(true)}
-          isPasswordResetLoading={resetPasswordMutation.isPending}
-          userData={userData}
-        />
-      </div>
+        <BentoGridItem className="md:col-span-1 p-0">
+          <AccountSettingsCard
+            emailNotifications={emailNotifications}
+            setEmailNotifications={setEmailNotifications}
+            onPasswordReset={() => setIsPasswordResetDialogOpen(true)}
+            isPasswordResetLoading={resetPasswordMutation.isPending}
+            userData={userData}
+          />
+        </BentoGridItem>
 
-      {/* Danger Zone */}
-      <DangerZoneCard
-        onDeleteAccount={() => setIsDeleteAccountDialogOpen(true)}
-        isDeleteLoading={deleteUserMutation.isPending}
-      />
+        <BentoGridItem className="md:col-span-3 p-0">
+          <DangerZoneCard
+            onDeleteAccount={() => setIsDeleteAccountDialogOpen(true)}
+            isDeleteLoading={deleteUserMutation.isPending}
+          />
+        </BentoGridItem>
+      </BentoGrid>
 
       {/* Password Reset Modal */}
       <PasswordResetModal

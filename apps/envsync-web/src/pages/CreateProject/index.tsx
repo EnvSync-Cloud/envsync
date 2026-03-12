@@ -292,7 +292,7 @@ export const CreateProject = () => {
 
       <div className="flex size-full justify-between gap-6">
         {/* Create Project Form */}
-        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl w-3/5 h-fit">
+        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl w-3/5 h-fit">
           <CardHeader>
             <CardTitle className="text-white flex items-center">
               <div className="flex items-center gap-3">
@@ -560,7 +560,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
           </CardContent>
         </Card>
         {/* Project Preview */}
-        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl w-2/5 h-fit">
+        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl w-2/5 h-fit">
           <CardHeader>
             <CardTitle className="text-white flex items-center">
               <div className="flex items-center gap-3">

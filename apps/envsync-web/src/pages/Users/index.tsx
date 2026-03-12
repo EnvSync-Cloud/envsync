@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { UserPlus2, Mail } from "lucide-react";
+import { UserPlus2, Mail, Users as UsersIcon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useCallback, useMemo } from "react";
 import { InviteUserModal } from "@/components/users/InviteUserModal";
@@ -137,13 +137,18 @@ export const Users = () => {
   }, [user]);
 
   return (
-    <div className="space-y-6">
+    <div className="animate-page-enter space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Team</h1>
-          <p className="text-gray-400 mt-2">
-            Manage your team members and their access permissions
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <UsersIcon className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">Team</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Manage your team members and their access permissions
+            </p>
+          </div>
         </div>
         {canManageUsers && (
           <div className="flex items-center space-x-3">

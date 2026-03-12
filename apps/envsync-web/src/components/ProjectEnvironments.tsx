@@ -539,7 +539,7 @@ export const ProjectEnvironments = ({
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center space-y-4">
-          <div className="size-12 border-4 border-t-indigo-500 border-gray-700 rounded-full animate-spin"></div>
+          <div className="size-12 border-4 border-t-violet-500 border-gray-700 rounded-full animate-spin"></div>
           <div className="text-white">Loading project...</div>
         </div>
       </div>
@@ -563,7 +563,7 @@ export const ProjectEnvironments = ({
             </p>
             <Button
               onClick={() => window.location.reload()}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Retry
@@ -624,7 +624,7 @@ export const ProjectEnvironments = ({
               onClick={() =>
                 navigate(`/applications/${projectNameId}/manage-environments`)
               }
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
             >
               <Settings className="w-4 h-4 mr-2" />
               Create Environment Type
@@ -669,7 +669,7 @@ export const ProjectEnvironments = ({
             </Button>
             <Button
               onClick={() => setShowAddEnvVarDialog(true)}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={!selectedEnv || addEnvVarMutation.isPending}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -777,7 +777,7 @@ export const ProjectEnvironments = ({
           {isEnvVarsLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="flex flex-col items-center space-y-2">
-                <div className="size-8 border-4 border-t-indigo-500 border-gray-700 rounded-full animate-spin"></div>
+                <div className="size-8 border-4 border-t-violet-500 border-gray-700 rounded-full animate-spin"></div>
                 <p className="text-gray-400 text-sm">Loading variables...</p>
               </div>
             </div>
@@ -827,7 +827,7 @@ export const ProjectEnvironments = ({
               {selectedEnv && !searchQuery && can_edit && (
                 <Button
                   onClick={() => setShowAddEnvVarDialog(true)}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                  className="bg-violet-500 hover:bg-violet-600 text-white"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Variable
@@ -1015,7 +1015,7 @@ export const ProjectEnvironments = ({
             </Button>
             <Button
               onClick={handleAddEnvVar}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={addEnvVarMutation.isPending}
             >
               {addEnvVarMutation.isPending ? (
@@ -1095,7 +1095,7 @@ export const ProjectEnvironments = ({
             </Button>
             <Button
               onClick={handleUpdateEnvVar}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={updateEnvVarMutation.isPending}
             >
               {updateEnvVarMutation.isPending ? (
@@ -1199,7 +1199,7 @@ DATABASE_URL=postgresql://localhost:5432/mydb
 API_KEY=your-secret-key
 DEBUG=true
 PORT=3000`}
-                className="w-full h-48 bg-gray-900 border-gray-700 text-white rounded-lg p-3 font-mono text-sm resize-none focus:border-indigo-500 focus:ring-indigo-500/20"
+                className="w-full h-48 bg-gray-900 border-gray-700 text-white rounded-lg p-3 font-mono text-sm resize-none focus:border-violet-500 focus:ring-violet-500/20"
               />
             </div>
 
@@ -1264,7 +1264,7 @@ PORT=3000`}
             </Button>
             <Button
               onClick={handleBulkImport}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
+              className="bg-violet-500 hover:bg-violet-600 text-white"
               disabled={
                 parsedEnvVars.length === 0 || bulkImportErrors.length > 0
               }

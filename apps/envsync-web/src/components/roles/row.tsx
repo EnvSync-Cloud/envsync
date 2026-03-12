@@ -87,7 +87,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
   const deleteRole = api.roles.deleteRole();
 
   return (
-    <tr key={role.id} className="border-b border-gray-700 hover:bg-gray-750">
+    <tr key={role.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
       <td className="p-4">
         <div className="flex items-center justify-between">
           <span className="font-medium flex gap-2 items-center text-white">
@@ -122,7 +122,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
                   feature === "billing"
                     ? "bg-green-900 text-green-300"
                     : feature === "webhook"
-                    ? "bg-indigo-300 text-indigo-900"
+                    ? "bg-violet-300 text-violet-900"
                     : feature === "api"
                     ? "bg-yellow-900 text-yellow-300"
                     : "bg-gray-700 text-gray-300"

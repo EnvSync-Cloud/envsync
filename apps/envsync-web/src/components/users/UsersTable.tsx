@@ -37,7 +37,7 @@ export const UsersTable = ({
   onDeleteUser,
 }: UsersTableProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-3">
           <Users className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
@@ -52,7 +52,7 @@ export const UsersTable = ({
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
+                <tr className="border-b border-gray-800">
                   <th className="text-left py-3 px-4 text-gray-400 font-medium">
                     Member
                   </th>

@@ -94,18 +94,18 @@ body,
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #4c1d95;
   border-radius: 3px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #6d28d9;
 }
 
 /* Firefox scrollbar */
 .overflow-y-auto {
   scrollbar-width: thin;
-  scrollbar-color: #374151 #111827;
+  scrollbar-color: #4c1d95 #111827;
 }
 
 /* Ensure tables are responsive within scrollable containers */
@@ -118,7 +118,7 @@ body,
 }
 
 .overflow-x-auto::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #4c1d95;
   border-radius: 3px;
 }
 

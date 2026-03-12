@@ -298,7 +298,7 @@ const PointInTime = () => {
 
       {/* Empty State */}
       {pitHistory.length === 0 && !isHistoryLoading && (
-        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+        <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="p-4 bg-gray-800/50 rounded-full mb-4">
               <History className="w-8 h-8 text-gray-400" />
@@ -316,7 +316,7 @@ const PointInTime = () => {
 
       {/* Current PIT Overview Card */}
       {currentSelectedPit && (
-        <Card className="bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+        <Card className="bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -433,7 +433,7 @@ const PointInTime = () => {
       )}
 
       {/* PIT History Timeline */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

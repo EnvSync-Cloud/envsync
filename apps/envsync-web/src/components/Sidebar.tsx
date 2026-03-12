@@ -38,19 +38,22 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
   return (
     <div
       className={cn(
-        "h-full bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out",
+        "h-full bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border-r border-gray-800/50 flex flex-col transition-all duration-300 ease-in-out relative overflow-hidden",
         expanded ? "w-64" : "w-16"
       )}
     >
+      {/* Top accent glow */}
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-violet-500/5 to-transparent pointer-events-none" />
+
       {/* Logo area */}
-      <div className="px-4 py-5 flex-shrink-0 border-b border-gray-800">
+      <div className="px-4 py-5 flex-shrink-0 border-b border-gray-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <img src="/EnvSync.svg" alt="EnvSync" className="size-10" />
           </div>
           <button
             onClick={onToggle}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-violet-500/10 transition-colors"
             title={expanded ? "Collapse sidebar" : "Expand sidebar"}
           >
             {expanded ? (
@@ -94,8 +97,8 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
                           ? "px-3 py-2 space-x-3"
                           : "px-2 py-2 justify-center",
                         isActive
-                          ? "bg-violet-500/10 text-white border-l-2 border-violet-500"
-                          : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border-l-2 border-transparent"
+                          ? "bg-violet-500/10 text-white border-l-2 border-violet-500 shadow-glow-sm"
+                          : "text-gray-400 hover:bg-violet-500/5 hover:text-gray-200 hover:border-violet-500/30 border-l-2 border-transparent"
                       )}
                       title={!expanded ? item.name : undefined}
                     >
@@ -109,7 +112,7 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
 
                     {/* Tooltip for collapsed state */}
                     {!expanded && (
-                      <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 top-1/2 -translate-y-1/2 border border-gray-700">
+                      <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800/95 backdrop-blur-sm text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 top-1/2 -translate-y-1/2 border border-violet-500/20 shadow-glow-sm">
                         {item.name}
                       </div>
                     )}
@@ -128,7 +131,7 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
             onClick={() => {
               window.dispatchEvent(new CustomEvent("open-shortcuts-dialog"));
             }}
-            className="w-full flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-gray-800/50 rounded-lg transition-colors text-xs"
+            className="w-full flex items-center space-x-2 px-3 py-2 text-gray-500 hover:text-violet-300 hover:bg-violet-500/5 rounded-lg transition-colors text-xs"
           >
             <Keyboard className="size-3.5" />
             <span>Keyboard shortcuts</span>
@@ -141,7 +144,7 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
 
       {/* User profile section */}
       {user && (
-        <div className="p-3 border-t border-gray-800 flex-shrink-0">
+        <div className="p-3 border-t border-gray-800/50 flex-shrink-0">
           <div
             className={cn(
               "flex items-center transition-all duration-300",
@@ -163,7 +166,7 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
                 )}
               </div>
               {/* Online indicator */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-gray-900" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-gray-900 animate-pulse" />
             </div>
 
             {expanded && (
@@ -187,7 +190,7 @@ export const Sidebar = ({ expanded, onToggle }: SidebarProps) => {
                   <LogOut className="w-4 h-4" />
                 </button>
 
-                <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 top-1/2 -translate-y-1/2 border border-gray-700">
+                <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-gray-800/95 backdrop-blur-sm text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 top-1/2 -translate-y-1/2 border border-violet-500/20 shadow-glow-sm">
                   Logout
                 </div>
               </div>

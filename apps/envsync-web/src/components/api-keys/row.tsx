@@ -27,7 +27,7 @@ export const ApiKeyRow = ({
   handleDeleteApiKey,
 }: ApiKeyRowProps) => {
   return (
-    <tr key={apiKey.id} className="border-b border-gray-700 hover:bg-gray-800">
+    <tr key={apiKey.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
       <td className="py-4 px-4">
         <div className="flex flex-col">
           <span className="font-medium text-white">

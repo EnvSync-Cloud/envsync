@@ -1,4 +1,4 @@
-import { Database, Variable, Users, Key } from "lucide-react";
+import { Database, Variable, Users, Key, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface StatsCardsProps {
@@ -10,7 +10,7 @@ interface StatsCardsProps {
   };
 }
 
-const cards = [
+export const statCardConfigs = [
   {
     label: "Projects",
     key: "projectsCount" as const,
@@ -22,8 +22,8 @@ const cards = [
     label: "Variables",
     key: "variablesCount" as const,
     icon: Variable,
-    gradient: "from-indigo-500/20 to-indigo-600/20",
-    iconColor: "text-indigo-400",
+    gradient: "from-violet-500/20 to-violet-600/20",
+    iconColor: "text-violet-400",
   },
   {
     label: "Team Members",
@@ -41,26 +41,52 @@ const cards = [
   },
 ];
 
+export function BentoStatCard({
+  label,
+  value,
+  icon: Icon,
+  gradient,
+  iconColor,
+}: {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  gradient: string;
+  iconColor: string;
+}) {
+  return (
+    <div className="flex items-center justify-between h-full">
+      <div>
+        <p className="text-sm text-gray-400">{label}</p>
+        <p className="text-3xl font-bold text-gray-100 mt-1 tabular-nums">{value}</p>
+      </div>
+      <div className={`p-2.5 rounded-xl ring-1 ring-white/5 bg-gradient-to-br ${gradient}`}>
+        <Icon className={`size-5 ${iconColor}`} />
+      </div>
+    </div>
+  );
+}
+
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => {
+      {statCardConfigs.map((card) => {
         const Icon = card.icon;
         return (
           <Card
             key={card.key}
-            className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl hover:border-gray-700 transition-colors"
+            className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl hover:border-gray-700 transition-colors"
           >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400">{card.label}</p>
-                  <p className="text-2xl font-semibold text-gray-100 mt-1">
+                  <p className="text-2xl font-bold text-gray-100 mt-1 tabular-nums">
                     {stats[card.key]}
                   </p>
                 </div>
                 <div
-                  className={`p-2.5 rounded-lg bg-gradient-to-br ${card.gradient}`}
+                  className={`p-2.5 rounded-xl ring-1 ring-white/5 bg-gradient-to-br ${card.gradient}`}
                 >
                   <Icon className={`size-5 ${card.iconColor}`} />
                 </div>

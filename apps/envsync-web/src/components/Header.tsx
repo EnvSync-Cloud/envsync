@@ -37,7 +37,7 @@ export const Header = () => {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 
   return (
-    <header className="bg-gray-900/50 border-b border-gray-800 px-6 py-3 backdrop-blur-sm">
+    <header className="bg-gray-900/60 border-b border-gray-800/50 px-6 py-3 backdrop-blur-md">
       <div className="flex items-center justify-between h-10">
         {/* Left: Breadcrumbs */}
         <Breadcrumb>
@@ -73,7 +73,7 @@ export const Header = () => {
           onClick={() =>
             window.dispatchEvent(new CustomEvent("open-command-palette"))
           }
-          className="hidden md:flex items-center space-x-3 bg-gray-800/60 border border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-500 hover:text-gray-400 hover:border-gray-600 transition-all cursor-pointer group"
+          className="hidden md:flex items-center space-x-3 bg-gray-800/40 border border-gray-700/40 rounded-lg px-3 py-1.5 text-gray-500 hover:text-violet-400 hover:border-violet-500/30 hover:bg-violet-500/5 transition-all cursor-pointer group"
         >
           <Search className="size-3.5" />
           <span className="text-xs">Search or jump to...</span>
@@ -91,7 +91,7 @@ export const Header = () => {
                 new CustomEvent("toggle-notification-center")
               )
             }
-            className="relative p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 rounded-lg transition-colors"
+            className="relative p-2 text-gray-400 hover:text-violet-300 hover:bg-violet-500/10 rounded-lg transition-colors"
             title="Notifications"
           >
             <Bell className="size-4" />
@@ -101,7 +101,7 @@ export const Header = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-gray-800/50 transition-colors">
-                <div className="w-7 h-7 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700">
+                <div className="w-7 h-7 bg-gray-800 rounded-full flex items-center justify-center border border-gray-700 hover:border-violet-500/50 transition-colors">
                   {user?.user?.profile_picture_url ? (
                     <img
                       src={user.user.profile_picture_url}

@@ -70,6 +70,10 @@ export default {
           950: "#0a0a0a",
         },
       },
+      boxShadow: {
+        "glow-sm": "0 0 10px rgba(139, 92, 246, 0.15)",
+        "glow-md": "0 0 20px rgba(139, 92, 246, 0.2)",
+      },
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],

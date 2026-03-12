@@ -38,7 +38,7 @@ export function NotificationCenter() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="bg-gray-900 border-gray-800 w-[360px] sm:w-[400px]">
+      <SheetContent className="bg-gray-900/95 backdrop-blur-md border-gray-800/50 w-[360px] sm:w-[400px]">
         <SheetHeader>
           <div className="flex items-center justify-between">
             <SheetTitle className="text-gray-100">Notifications</SheetTitle>

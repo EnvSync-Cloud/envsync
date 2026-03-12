@@ -41,7 +41,7 @@ export function OnboardingBanner({
   };
 
   return (
-    <div className="relative rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-500/5 via-indigo-500/5 to-violet-500/5 p-5">
+    <div className="relative rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-500/5 via-violet-500/5 to-violet-500/5 p-5 shadow-glow-sm">
       <button
         onClick={handleDismiss}
         className="absolute top-3 right-3 p-1 text-gray-500 hover:text-gray-300 transition-colors"
@@ -66,7 +66,7 @@ export function OnboardingBanner({
             <Link
               key={idx}
               to={step.href}
-              className="flex items-center space-x-2 p-2.5 rounded-lg bg-gray-900/50 hover:bg-gray-800/50 border border-gray-800 hover:border-gray-700 transition-all"
+              className="flex items-center space-x-2 p-2.5 rounded-lg bg-gray-900/50 hover:bg-violet-500/5 border border-gray-800 hover:border-violet-500/20 transition-all"
             >
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${

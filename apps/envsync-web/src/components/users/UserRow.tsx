@@ -104,7 +104,7 @@ export const UserRow = ({
   };
 
   return (
-    <tr className="border-b rounded-xl border-gray-700 hover:bg-gray-750 transition-colors">
+    <tr className="border-b rounded-xl border-gray-800 hover:bg-gray-800/50 transition-colors">
       <td className="py-4 px-4">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
@@ -202,7 +202,7 @@ export const UserRow = ({
 };
 
 export const UserRowSkeleton = () => (
-  <tr className="border-b border-gray-700/50">
+  <tr className="border-b border-gray-800">
     <td className="py-3 px-4">
       <div className="flex items-center space-x-3">
         <Skeleton className="h-9 w-9 rounded-full bg-gray-700" />

@@ -144,9 +144,8 @@ export const useProjectEnvironments = (projectNameId: string) => {
       originalKey: string;
     }) => {
       return await api.environmentVariables.updateEnv(originalKey, {
-        key: data.key,
-        value: data.value,
-        env_type_id: data.env_type_id,
+        value: data.value!,
+        env_type_id: data.env_type_id!,
         app_id: projectNameId,
       });
     },
@@ -251,9 +250,8 @@ export const useProjectEnvironments = (projectNameId: string) => {
       originalKey: string;
     }) => {
       return await api.secrets.updateSecret(originalKey, {
-        key: data.key,
-        value: data.value,
-        env_type_id: data.env_type_id,
+        value: data.value!,
+        env_type_id: data.env_type_id!,
         app_id: projectNameId,
       });
     },

@@ -270,18 +270,23 @@ export const WebHooks = () => {
   const isEmpty = !isLoading && !webhooks.length;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-page-enter space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Webhooks</h1>
-          <p className="text-gray-400 mt-2">
-            Manage webhooks to receive real-time notifications about events in
-            your EnvSync projects
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-violet-500/10 rounded-lg ring-1 ring-violet-500/20">
+            <Webhook className="size-5 text-violet-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-100 tracking-tight">Webhooks</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Manage webhooks to receive real-time notifications about events in
+              your EnvSync projects
+            </p>
+          </div>
         </div>
 
         <Button
-          className="bg-indigo-500 hover:bg-indigo-600 text-white"
+          className="bg-violet-500 hover:bg-violet-600 text-white"
           disabled={createWebhook.isPending}
           onClick={() => setIsCreateModalOpen(true)}
         >
@@ -305,10 +310,10 @@ export const WebHooks = () => {
         />
       </div>
 
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center">
-            <Webhook className="size-8 mr-3 bg-indigo-400 border border-indigo-600 p-2 stroke-[3] text-white rounded-md" />
+            <Webhook className="size-8 mr-3 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
             Webhooks
             <Count
               className="ml-2"
@@ -332,7 +337,7 @@ export const WebHooks = () => {
               </p>
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                className="bg-violet-500 hover:bg-violet-600 text-white"
                 disabled={createWebhook.isPending}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -343,7 +348,7 @@ export const WebHooks = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
+                  <tr className="border-b border-gray-800">
                     {[
                       "Name",
                       "URL",
@@ -369,7 +374,7 @@ export const WebHooks = () => {
                 <tbody>
                   {isLoading
                     ? Array.from({ length: 6 }, (_, index) => (
-                        <tr key={index} className="border-b border-gray-700">
+                        <tr key={index} className="border-b border-gray-800">
                           <td className="py-4 px-4">
                             <div className="flex flex-col gap-2">
                               <Skeleton className="h-5 w-36 bg-gray-700" />
@@ -416,7 +421,7 @@ export const WebHooks = () => {
                     : webhooks?.map((webhook) => (
                         <tr
                           key={webhook.id}
-                          className="border-b border-gray-700 hover:bg-gray-800"
+                          className="border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
                         >
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
@@ -453,7 +458,7 @@ export const WebHooks = () => {
                             <Badge
                               variant="secondary"
                               className={cn(
-                                "text-xs flex items-center gap-1 w-fit bg-indigo-900/20 text-white/60",
+                                "text-xs flex items-center gap-1 w-fit bg-violet-900/20 text-white/60",
                                 WEBHOOK_TYPES.find(
                                   (t) => t.value === webhook.webhook_type
                                 )?.color
@@ -477,7 +482,7 @@ export const WebHooks = () => {
                                     className={cn(
                                       "rounded-full size-2 mr-1",
                                       event.includes("view")
-                                        ? "bg-indigo-500"
+                                        ? "bg-violet-500"
                                         : event.includes("create")
                                         ? "bg-violet-500"
                                         : event.includes("update")

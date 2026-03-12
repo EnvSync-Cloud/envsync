@@ -54,7 +54,7 @@ export const ApplicationCard = ({
   };
 
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl hover:border-gray-700 transition-all duration-200 group cursor-pointer hover:shadow-lg hover:shadow-violet-500/5 hover:-translate-y-0.5">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl hover:border-violet-500/50 transition-all duration-200 group cursor-pointer hover:shadow-glow-md hover:-translate-y-1">
       <CardHeader className="pb-3">
         <div
           onClick={() => navigate(`/applications/${app.id}`)}
@@ -67,7 +67,7 @@ export const ApplicationCard = ({
               </span>
             </div>
             <div>
-              <CardTitle className="text-gray-100 text-base font-semibold group-hover:text-white transition-colors">
+              <CardTitle className="text-gray-100 text-base font-semibold group-hover:text-white group-hover:translate-x-0.5 transition-all duration-200">
                 {app.name}
               </CardTitle>
             </div>

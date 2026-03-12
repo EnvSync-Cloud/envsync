@@ -17,10 +17,11 @@ export function initLogs(config: TelemetryConfig): LoggerProvider {
     url: `${config.endpoint}/v1/logs`,
   });
 
-  loggerProvider = new LoggerProvider({
+  const provider = new LoggerProvider({
     resource,
-    logRecordProcessors: [new BatchLogRecordProcessor(exporter)],
   });
+  (provider as any).addLogRecordProcessor(new BatchLogRecordProcessor(exporter));
+  loggerProvider = provider;
 
   interceptConsoleErrors();
 

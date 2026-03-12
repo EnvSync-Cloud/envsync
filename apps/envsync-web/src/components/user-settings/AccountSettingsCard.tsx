@@ -18,7 +18,7 @@ export const AccountSettingsCard = ({
   userData,
 }: AccountSettingsCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 shadow-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800/80 shadow-xl rounded-xl">
       <CardHeader>
         <div className="flex items-center space-x-2">
           <Bell className="size-8 bg-violet-400 border border-violet-600 p-2 stroke-[3] text-white rounded-md" />
