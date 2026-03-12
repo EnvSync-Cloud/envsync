@@ -5,10 +5,9 @@ import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB, JsonValue } from "@/libs/db";
 import { orNotFound, BusinessRuleError, NotFoundError } from "@/libs/errors";
-import { VaultClient } from "@/libs/vault";
 import { KMSClient } from "@/libs/kms/client";
+import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
-import { gpgKeyPath } from "@/libs/vault/paths";
 import { randomBytes } from "node:crypto";
 
 type GpgAlgorithm = "rsa" | "ecc-curve25519" | "ecc-p256" | "ecc-p384";
@@ -24,6 +23,27 @@ function algorithmToOpenPGP(algorithm: GpgAlgorithm, keySize?: number) {
 		case "ecc-p384":
 			return { type: "ecc" as const, curve: "p384" as const };
 	}
+}
+
+/**
+ * Parse a private_key_ref to extract org_id and fingerprint.
+ * New format: vault:gpg:{org_id}:{fingerprint}
+ * Legacy format: envsync/{org_id}/gpg/{fingerprint}
+ */
+function parsePrivateKeyRef(ref: string): { orgId: string; fingerprint: string } | null {
+	// New format
+	if (ref.startsWith("vault:gpg:")) {
+		const parts = ref.split(":");
+		if (parts.length >= 4) {
+			return { orgId: parts[2], fingerprint: parts[3] };
+		}
+	}
+	// Legacy Vault KV path format: {mount}/{org_id}/gpg/{fingerprint}
+	const match = ref.match(/^[^/]+\/([^/]+)\/gpg\/([^/]+)$/);
+	if (match) {
+		return { orgId: match[1], fingerprint: match[2] };
+	}
+	return null;
 }
 
 export class GpgKeyService {
@@ -62,7 +82,7 @@ export class GpgKeyService {
 		const fingerprint = parsedPublic.getFingerprint().toUpperCase();
 		const keyId = fingerprint.slice(-16);
 
-		const vaultPath = gpgKeyPath(org_id, fingerprint);
+		const privateKeyRef = `vault:gpg:${org_id}:${fingerprint}`;
 		const now = new Date();
 		const expiresAt = expires_in_days
 			? new Date(now.getTime() + expires_in_days * 24 * 60 * 60 * 1000)
@@ -70,29 +90,30 @@ export class GpgKeyService {
 
 		let gpgKeyRow: Record<string, unknown> | undefined;
 		let gpgKeyId: string | undefined;
-		let kmsResult: { ciphertext: string; keyVersionId: string } | undefined;
 
 		await runSaga("generateGpgKey", {}, [
 			{
-				name: "kms-encrypt",
-				execute: async () => {
-					const kms = await KMSClient.getInstance();
-					kmsResult = await kms.encrypt(org_id, "gpg", passphrase, `gpg:${fingerprint}`);
-				},
-			},
-			{
 				name: "vault-write",
 				execute: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvWrite(vaultPath, {
-						armored_private_key: privateKey,
-						kms_wrapped_passphrase: kmsResult!.ciphertext,
-						kms_key_version_id: kmsResult!.keyVersionId,
-					});
+					const kms = await KMSClient.getInstance();
+					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const blob = JSON.stringify({ armored_private_key: privateKey, passphrase });
+					await kms.vaultWrite(
+						{
+							orgId: org_id,
+							scopeId: "gpg",
+							entryType: "gpg",
+							key: fingerprint,
+							value: Buffer.from(blob, "utf-8"),
+							createdBy: user_id,
+						},
+						sessionToken,
+					);
 				},
 				compensate: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvMetadataDelete(vaultPath);
+					const kms = await KMSClient.getInstance();
+					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					await kms.vaultDestroy(org_id, "gpg", "gpg", fingerprint, undefined, 0, sessionToken);
 				},
 			},
 			{
@@ -124,7 +145,7 @@ export class GpgKeyService {
 								algorithm,
 								key_size: algorithm === "rsa" ? (key_size || 4096) : null,
 								public_key: publicKey,
-								private_key_ref: vaultPath,
+								private_key_ref: privateKeyRef,
 								usage_flags: new JsonValue(usage_flags),
 								trust_level: "ultimate",
 								expires_at: expiresAt,
@@ -185,20 +206,20 @@ export class GpgKeyService {
 			algorithm = `ecc-${curve}`;
 		}
 
-		const vaultPath = armored_private_key ? gpgKeyPath(org_id, fingerprint) : "";
+		const privateKeyRef = armored_private_key ? `vault:gpg:${org_id}:${fingerprint}` : "";
 		const now = new Date();
 		let importedGpgKey: Record<string, unknown> | undefined;
 		let importedGpgKeyId: string | undefined;
 		let reEncryptedArmor: string | undefined;
-		let importKmsResult: { ciphertext: string; keyVersionId: string } | undefined;
+		let newPassphrase: string | undefined;
 
 		const sagaSteps: Parameters<typeof runSaga<Record<string, never>>>[2] = [];
 
 		if (armored_private_key) {
-			const newPassphrase = randomBytes(32).toString("hex");
+			newPassphrase = randomBytes(32).toString("hex");
 
 			sagaSteps.push({
-				name: "kms-encrypt",
+				name: "re-encrypt-key",
 				execute: async () => {
 					// Decrypt the original private key
 					let decryptedKey: openpgp.PrivateKey;
@@ -214,29 +235,34 @@ export class GpgKeyService {
 					// Re-encrypt with new passphrase
 					const reEncrypted = await openpgp.encryptKey({
 						privateKey: decryptedKey,
-						passphrase: newPassphrase,
+						passphrase: newPassphrase!,
 					});
 					reEncryptedArmor = reEncrypted.armor();
-
-					// KMS-encrypt the new passphrase
-					const kms = await KMSClient.getInstance();
-					importKmsResult = await kms.encrypt(org_id, "gpg", newPassphrase, `gpg:${fingerprint}`);
 				},
 			});
 
 			sagaSteps.push({
 				name: "vault-write",
 				execute: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvWrite(vaultPath, {
-						armored_private_key: reEncryptedArmor!,
-						kms_wrapped_passphrase: importKmsResult!.ciphertext,
-						kms_key_version_id: importKmsResult!.keyVersionId,
-					});
+					const kms = await KMSClient.getInstance();
+					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const blob = JSON.stringify({ armored_private_key: reEncryptedArmor!, passphrase: newPassphrase! });
+					await kms.vaultWrite(
+						{
+							orgId: org_id,
+							scopeId: "gpg",
+							entryType: "gpg",
+							key: fingerprint,
+							value: Buffer.from(blob, "utf-8"),
+							createdBy: user_id,
+						},
+						sessionToken,
+					);
 				},
 				compensate: async () => {
-					const vault = await VaultClient.getInstance();
-					await vault.kvMetadataDelete(vaultPath);
+					const kms = await KMSClient.getInstance();
+					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					await kms.vaultDestroy(org_id, "gpg", "gpg", fingerprint, undefined, 0, sessionToken);
 				},
 			});
 		}
@@ -258,7 +284,7 @@ export class GpgKeyService {
 						algorithm,
 						key_size: keySize,
 						public_key: armored_public_key,
-						private_key_ref: vaultPath,
+						private_key_ref: privateKeyRef,
 						usage_flags: new JsonValue(["sign", "encrypt"]),
 						trust_level: "unknown",
 						is_default: false,
@@ -327,7 +353,7 @@ export class GpgKeyService {
 		};
 	};
 
-	public static deleteKey = async (id: string, org_id: string) => {
+	public static deleteKey = async (id: string, org_id: string, user_id: string) => {
 		const key = await GpgKeyService.getKey(id, org_id);
 
 		await runSaga("deleteGpgKey", {}, [
@@ -335,8 +361,12 @@ export class GpgKeyService {
 				name: "vault-delete",
 				execute: async () => {
 					if (key.private_key_ref) {
-						const vault = await VaultClient.getInstance();
-						await vault.kvMetadataDelete(key.private_key_ref);
+						const parsed = parsePrivateKeyRef(key.private_key_ref);
+						if (parsed) {
+							const kms = await KMSClient.getInstance();
+							const sessionToken = await getVaultSessionToken(user_id, parsed.orgId);
+							await kms.vaultDestroy(parsed.orgId, "gpg", "gpg", parsed.fingerprint, undefined, 0, sessionToken);
+						}
 					}
 				},
 			},
@@ -400,6 +430,7 @@ export class GpgKeyService {
 	public static signData = async (
 		gpg_key_id: string,
 		org_id: string,
+		user_id: string,
 		data: string,
 		mode: "binary" | "text" | "clearsign",
 		detached: boolean,
@@ -413,29 +444,28 @@ export class GpgKeyService {
 			throw new BusinessRuleError("No private key available for signing");
 		}
 
-		// Retrieve private key from Vault
-		const vault = await VaultClient.getInstance();
-		const vaultData = await vault.kvRead(key.private_key_ref);
-		if (!vaultData) {
-			throw new NotFoundError("Private key in Vault", key.private_key_ref);
+		// Retrieve private key + passphrase from VaultService as a JSON blob
+		const parsed = parsePrivateKeyRef(key.private_key_ref);
+		if (!parsed) {
+			throw new NotFoundError("Private key reference", key.private_key_ref);
 		}
 
-		const { armored_private_key, kms_wrapped_passphrase, kms_key_version_id } = vaultData.data;
-
-		// KMS-decrypt the passphrase
 		const kms = await KMSClient.getInstance();
-		const { plaintext: passphrase } = await kms.decrypt(
-			org_id,
-			"gpg",
-			kms_wrapped_passphrase,
-			`gpg:${key.fingerprint}`,
-			kms_key_version_id,
+		const sessionToken = await getVaultSessionToken(user_id, parsed.orgId);
+		const result = await kms.vaultRead(
+			{ orgId: parsed.orgId, scopeId: "gpg", entryType: "gpg", key: parsed.fingerprint, clientSideDecrypt: false },
+			sessionToken,
 		);
+
+		const gpgData = JSON.parse(result.encryptedValue.toString("utf-8")) as {
+			armored_private_key: string;
+			passphrase: string;
+		};
 
 		// Decrypt the private key
 		const privateKey = await openpgp.decryptKey({
-			privateKey: await openpgp.readPrivateKey({ armoredKey: armored_private_key }),
-			passphrase,
+			privateKey: await openpgp.readPrivateKey({ armoredKey: gpgData.armored_private_key }),
+			passphrase: gpgData.passphrase,
 		});
 
 		const messageData = Buffer.from(data, "base64");

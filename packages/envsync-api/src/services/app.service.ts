@@ -6,8 +6,8 @@ import { DB } from "@/libs/db";
 import { orNotFound, NotFoundError } from "@/libs/errors";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { appsCreated } from "@/libs/telemetry/metrics";
-import { VaultClient } from "@/libs/vault";
-import { envScopePath, secretScopePath } from "@/libs/vault/paths";
+import { KMSClient } from "@/libs/kms/client";
+import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
 import { AuthorizationService } from "@/services/authorization.service";
 
@@ -244,9 +244,11 @@ export class AppService {
 	public static getEnvCountByApp = async ({
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const db = await DB.getInstance();
 		const envTypes = await db
@@ -259,11 +261,12 @@ export class AppService {
 		if (envTypes.length === 0) return 0;
 
 		try {
-			const vault = await VaultClient.getInstance();
+			const kms = await KMSClient.getInstance();
+			const sessionToken = await getVaultSessionToken(user_id, org_id);
 			const counts = await Promise.all(
 				envTypes.map(async et => {
-					const keys = await vault.kvList(envScopePath(org_id, app_id, et.id));
-					return keys.length;
+					const entries = await kms.vaultList(org_id, app_id, "env", et.id, sessionToken);
+					return entries.length;
 				}),
 			);
 			return counts.reduce((sum, c) => sum + c, 0);
@@ -280,9 +283,11 @@ export class AppService {
 	public static getSecretCountByApp = async ({
 		app_id,
 		org_id,
+		user_id,
 	}: {
 		app_id: string;
 		org_id: string;
+		user_id: string;
 	}) => {
 		const db = await DB.getInstance();
 		const envTypes = await db
@@ -295,11 +300,12 @@ export class AppService {
 		if (envTypes.length === 0) return 0;
 
 		try {
-			const vault = await VaultClient.getInstance();
+			const kms = await KMSClient.getInstance();
+			const sessionToken = await getVaultSessionToken(user_id, org_id);
 			const counts = await Promise.all(
 				envTypes.map(async et => {
-					const keys = await vault.kvList(secretScopePath(org_id, app_id, et.id));
-					return keys.length;
+					const entries = await kms.vaultList(org_id, app_id, "secret", et.id, sessionToken);
+					return entries.length;
 				}),
 			);
 			return counts.reduce((sum, c) => sum + c, 0);
