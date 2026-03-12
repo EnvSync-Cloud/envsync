@@ -147,8 +147,6 @@ jobs:
       DATABASE_NAME: envsync_e2e_test
       CACHE_ENV: development
       OPENFGA_API_URL: http://localhost:8090
-      VAULT_ADDR: http://localhost:8200
-      VAULT_MOUNT_PATH: envsync
       ZITADEL_URL: http://localhost:8080
       MINIKMS_GRPC_ADDR: localhost:50051
       MINIKMS_TLS_ENABLED: "false"
@@ -168,6 +166,8 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5435 -U postgres -d minikms \
             -f docker/minikms/migrations/001_initial_schema.sql
+          PGPASSWORD=postgres psql -h localhost -p 5435 -U postgres -d minikms \
+            -f docker/minikms/migrations/002_vault_storage.sql
 
       - name: Start miniKMS
         run: |
@@ -226,145 +226,6 @@ jobs:
           echo "OpenFGA failed to start"
           docker logs openfga
           exit 1
-
-      - name: Start Vault
-        run: |
-          docker run -d --name vault --network host \
-            -e VAULT_DEV_ROOT_TOKEN_ID="ci-root-token" \
-            -e VAULT_ADDR=http://localhost:8200 \
-            --cap-add IPC_LOCK \
-            hashicorp/vault:latest server -dev -dev-listen-address=0.0.0.0:8200
-
-      - name: Wait for Vault to be ready
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8200/v1/sys/health > /dev/null 2>&1; then
-              echo "Vault is ready"
-              exit 0
-            fi
-            echo "Waiting for Vault... ($i/30)"
-            sleep 2
-          done
-          echo "Vault failed to start"
-          docker logs vault
-          exit 1
-
-      - name: Initialize Vault for E2E
-        run: |
-          set -euo pipefail
-
-          echo "== Vault startup logs (tail) =="
-          docker logs vault 2>&1 | tail -n 80 || true
-
-          # In dev mode, Vault is already initialized and unsealed.
-          # Prefer deterministic token; fallback to logs for compatibility.
-          VAULT_TOKEN="${VAULT_TOKEN:-ci-root-token}"
-          if [ -z "$VAULT_TOKEN" ]; then
-            VAULT_TOKEN=$(docker logs vault 2>&1 | grep 'Root Token:' | awk '{print $NF}' | tail -n1)
-          fi
-          if [ -z "$VAULT_TOKEN" ]; then
-            echo "Vault token is empty; dumping vault logs for debugging"
-            docker logs vault
-            exit 1
-          fi
-          echo "VAULT_TOKEN=${VAULT_TOKEN}" >> $GITHUB_ENV
-
-          vault_call() {
-            local label="$1"
-            local method="$2"
-            local url="$3"
-            local data="${4:-}"
-            local tmp
-            tmp="$(mktemp)"
-
-            echo ""
-            echo "== ${label} =="
-            echo "${method} ${url}"
-            if [ -n "${data}" ]; then
-              echo "payload: ${data}"
-            fi
-
-            local status
-            if [ -n "${data}" ]; then
-              status=$(curl -sS -o "${tmp}" -w "%{http_code}" -X "${method}" "${url}" \
-                -H "X-Vault-Token: ${VAULT_TOKEN}" \
-                -H "Content-Type: application/json" \
-                -d "${data}" || echo "000")
-            else
-              status=$(curl -sS -o "${tmp}" -w "%{http_code}" -X "${method}" "${url}" \
-                -H "X-Vault-Token: ${VAULT_TOKEN}" \
-                -H "Content-Type: application/json" || echo "000")
-            fi
-
-            echo "http_status: ${status}"
-            echo "response:"
-            cat "${tmp}" || true
-            echo ""
-
-            if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
-              echo "Vault API call failed at step: ${label}"
-              return 1
-            fi
-          }
-
-          # Enable KV v2 at envsync/
-          vault_call "Enable KV v2 (envsync)" "POST" \
-            "http://localhost:8200/v1/sys/mounts/envsync" \
-            '{"type":"kv","options":{"version":"2"}}' || true
-
-          # Enable AppRole
-          vault_call "Enable AppRole auth" "POST" \
-            "http://localhost:8200/v1/sys/auth/approle" \
-            '{"type":"approle"}' || true
-
-          # Create policy
-          POLICY=$(cat <<'EOF'
-          path "envsync/data/*" { capabilities = ["create","read","update","delete","list"] }
-          path "envsync/metadata/*" { capabilities = ["read","delete","list"] }
-          path "envsync/delete/*" { capabilities = ["update"] }
-          path "envsync/undelete/*" { capabilities = ["update"] }
-          path "envsync/destroy/*" { capabilities = ["update"] }
-          path "auth/token/renew-self" { capabilities = ["update"] }
-          path "sys/health" { capabilities = ["read"] }
-          EOF
-          )
-          POLICY_JSON=$(jq -n --arg policy "$POLICY" '{policy: $policy}')
-          vault_call "Create policy envsync-e2e" "PUT" \
-            "http://localhost:8200/v1/sys/policy/envsync-e2e" \
-            "${POLICY_JSON}"
-
-          # Create role
-          vault_call "Create AppRole envsync-e2e" "POST" \
-            "http://localhost:8200/v1/auth/approle/role/envsync-e2e" \
-            '{"token_policies":["envsync-e2e"],"token_ttl":"1h","token_max_ttl":"4h","secret_id_ttl":"0","secret_id_num_uses":0}'
-
-          # Get role_id
-          ROLE_JSON=$(curl -sS http://localhost:8200/v1/auth/approle/role/envsync-e2e/role-id \
-            -H "X-Vault-Token: ${VAULT_TOKEN}")
-          echo "== Get role_id response =="
-          echo "${ROLE_JSON}"
-          ROLE_ID=$(echo "${ROLE_JSON}" | jq -r '.data.role_id')
-          if [ -z "${ROLE_ID}" ] || [ "${ROLE_ID}" = "null" ]; then
-            echo "Failed to parse ROLE_ID from response"
-            exit 1
-          fi
-          echo "VAULT_ROLE_ID=${ROLE_ID}" >> $GITHUB_ENV
-
-          # Generate secret_id
-          SECRET_JSON=$(curl -sS -X POST http://localhost:8200/v1/auth/approle/role/envsync-e2e/secret-id \
-            -H "X-Vault-Token: ${VAULT_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
-          echo "== Generate secret_id response =="
-          echo "${SECRET_JSON}"
-          SECRET_ID=$(echo "${SECRET_JSON}" | jq -r '.data.secret_id')
-          if [ -z "${SECRET_ID}" ] || [ "${SECRET_ID}" = "null" ]; then
-            echo "Failed to parse SECRET_ID from response"
-            exit 1
-          fi
-          echo "VAULT_SECRET_ID=${SECRET_ID}" >> $GITHUB_ENV
-
-          echo "Vault configured for E2E (role_id=${ROLE_ID:0:8}...)"
 
       - name: Start Mailpit
         run: |
@@ -475,8 +336,6 @@ jobs:
         run: bun run test:e2e
         working-directory: packages/envsync-api
         env:
-          VAULT_ROLE_ID: ${{ env.VAULT_ROLE_ID }}
-          VAULT_SECRET_ID: ${{ env.VAULT_SECRET_ID }}
           ZITADEL_URL: http://localhost:8080
           ZITADEL_PAT: ${{ env.ZITADEL_PAT }}
           ZITADEL_LOGIN_PAT: ${{ env.ZITADEL_LOGIN_PAT }}
