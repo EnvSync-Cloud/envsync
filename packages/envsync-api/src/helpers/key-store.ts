@@ -159,40 +159,11 @@ export const smartEncrypt = (data: string, publicKey: string): string => {
 };
 
 /**
- * Encrypt a value using miniKMS. This is the preferred encryption method.
- * Returns a formatted string: KMS:v1:{keyVersionId}:{base64_ciphertext}
- */
-export const kmsEncrypt = async (
-	orgId: string,
-	appId: string,
-	value: string,
-	aad: string,
-): Promise<string> => {
-	const kms = await KMSClient.getInstance();
-	const { ciphertext, keyVersionId } = await kms.encrypt(orgId, appId, value, aad);
-	return `KMS:v1:${keyVersionId}:${ciphertext}`;
-};
-
-/**
- * Batch encrypt multiple values using miniKMS in a single gRPC call.
- * Avoids the race condition of parallel individual encrypt calls.
- * Returns formatted strings: KMS:v1:{keyVersionId}:{base64_ciphertext}
- */
-export const kmsBatchEncrypt = async (
-	orgId: string,
-	appId: string,
-	items: { value: string; aad: string }[],
-): Promise<string[]> => {
-	const kms = await KMSClient.getInstance();
-	const results = await kms.batchEncrypt(
-		orgId,
-		appId,
-		items.map(item => ({ plaintext: item.value, aad: item.aad })),
-	);
-	return results.map(r => `KMS:v1:${r.keyVersionId}:${r.ciphertext}`);
-};
-
-/**
+ * @deprecated Kept temporarily for legacy PiT rollback compatibility.
+ * Values stored before the miniKMS VaultService migration used KMS:v1: format.
+ * This function is needed to unwrap those values during rollback operations.
+ * Remove once all PiT records have been rotated to the new format.
+ *
  * Decrypt a KMS-encrypted value. Parses the KMS:v1: format and calls miniKMS.
  * Returns the inner plaintext (which may itself be RSA:/HYB: encrypted for secrets).
  * AAD must match the value used during encryption.
