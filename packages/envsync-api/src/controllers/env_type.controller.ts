@@ -124,7 +124,7 @@ export class EnvTypeController {
 
 	public static readonly getEnvType = async (c: Context) => {
 		const org_id = c.get("org_id");
-		const { id } = await c.req.json();
+		const id = c.req.param("id");
 
 		if (!id) {
 			return c.json({ error: "ID is required." }, 400);

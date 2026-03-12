@@ -92,13 +92,10 @@ describe("Env Type CRUD E2E", () => {
 		const res = await testRequest(`/api/env_type/${stagingId}`, {
 			token: seed.masterUser.token,
 		});
-		// GET /:id may read id from URL param — test the actual response
-		expect([200, 500]).toContain(res.status);
-		if (res.status === 200) {
-			const body = await res.json<{ id: string; name: string }>();
-			expect(body.id).toBe(stagingId);
-			expect(body.name).toBe("staging");
-		}
+		expect(res.status).toBe(200);
+		const body = await res.json<{ id: string; name: string }>();
+		expect(body.id).toBe(stagingId);
+		expect(body.name).toBe("staging");
 	});
 
 	test("update env type name", async () => {

@@ -90,7 +90,7 @@ describe("GPG REST API E2E", () => {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
-				key_id: keyId,
+				gpg_key_id: keyId,
 				data: "Hello, this is a test message to sign",
 			},
 		});
@@ -106,7 +106,7 @@ describe("GPG REST API E2E", () => {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: {
-				key_id: keyId,
+				gpg_key_id: keyId,
 				data: "Hello, this is a test message to sign",
 				signature: signatureArmored,
 			},
