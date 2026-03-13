@@ -14,8 +14,8 @@ services:
       NODE_ENV: production
       DATABASE_HOST: postgres
       REDIS_URL: redis://redis:6379
-      S3_ENDPOINT: http://rustfs:9001
-      S3_BUCKET_URL: http://rustfs:9001
+      S3_ENDPOINT: http://rustfs:9000
+      S3_BUCKET_URL: http://rustfs:9000
       OPENFGA_API_URL: http://openfga:8090
       ZITADEL_URL: http://zitadel:8080
       MINIKMS_GRPC_ADDR: minikms:50051
@@ -45,7 +45,7 @@ services:
       ZITADEL_PAT_FILE: /zitadel-data/admin.pat
       OPENFGA_API_URL: http://openfga:8090
       DATABASE_HOST: postgres
-      S3_ENDPOINT: http://rustfs:9001
+      S3_ENDPOINT: http://rustfs:9000
       ZITADEL_URL: http://zitadel:8080
       MINIKMS_GRPC_ADDR: minikms:50051
     volumes:

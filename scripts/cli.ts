@@ -321,11 +321,8 @@ async function initProd(): Promise<void> {
 	// 6. Run envsync_init inside Docker (streams + captures output)
 	console.log("\nRunning envsync_init (this may take a few minutes on first run)...\n");
 	const { stdout, exitCode } = await runProdInit();
-	if (exitCode !== 0) {
-		throw new Error(`envsync_init exited with code ${exitCode}`);
-	}
 
-	// 7. Parse generated credentials from init output
+	// 7. Parse generated credentials from init output (even on partial failure)
 	const credentials = parseCredentials(stdout);
 
 	// 8. Write credentials back to .env
@@ -335,6 +332,10 @@ async function initProd(): Promise<void> {
 		console.log(`\nSaved ${Object.keys(credentials).length} credential(s) to .env.`);
 	} else {
 		console.log("\nNo new credentials to save.");
+	}
+
+	if (exitCode !== 0) {
+		throw new Error(`envsync_init exited with code ${exitCode} (credentials were still saved to .env)`);
 	}
 
 	// 9. Print next steps (services are left running for prod)
