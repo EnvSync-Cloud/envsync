@@ -32,7 +32,7 @@ services:
       zitadel:
         condition: service_healthy
       minikms:
-        condition: service_healthy
+        condition: service_started
     networks:
       - envsync_network
 
@@ -62,7 +62,7 @@ services:
       rustfs:
         condition: service_started
       minikms:
-        condition: service_healthy
+        condition: service_started
     restart: "no"
     networks:
       - envsync_network
@@ -257,12 +257,6 @@ services:
       MINIKMS_DB_URL: "postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable"
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
-    healthcheck:
-      test: ["CMD", "/bin/grpc_health_probe", "-addr=:50051"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     depends_on:
       minikms_db:
         condition: service_healthy
