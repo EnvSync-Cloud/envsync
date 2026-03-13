@@ -44,14 +44,14 @@ function updateRootEnvAndReload(updates: Record<string, string>): void {
 }
 
 
-function askReinitEnv(): Promise<boolean> {
+function askReinitEnv(prompt?: string): Promise<boolean> {
 	return new Promise(resolve => {
 		if (!process.stdin.isTTY) {
 			resolve(false);
 			return;
 		}
 		const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-		rl.question(".env already exists. Re-initialize? (y)es: delete and recreate, (n)o: skip [N]: ", answer => {
+		rl.question(prompt ?? ".env already exists. Re-initialize? (y)es: delete and recreate, (n)o: skip [N]: ", answer => {
 			rl.close();
 			resolve(/^y(es)?$/i.test(answer.trim()));
 		});
@@ -79,25 +79,57 @@ async function ensureEnv(): Promise<void> {
 	console.log("Created .env from .env.example.");
 }
 
-async function ensureEnvProd(): Promise<void> {
+async function ensureEnvProd(): Promise<boolean> {
 	const envPath = path.join(rootDir, ".env");
 	const examplePath = path.join(rootDir, ".env.prod.example");
 	if (!fs.existsSync(examplePath)) {
 		throw new Error(".env.prod.example not found at repo root.");
 	}
 	if (fs.existsSync(envPath)) {
-		const reinit = await askReinitEnv();
+		const reinit = await askReinitEnv(
+			".env already exists. Re-initialize? This will reset .env AND remove all Docker volumes. (y)es / (n)o [N]: ",
+		);
 		if (reinit) {
 			fs.unlinkSync(envPath);
 			fs.copyFileSync(examplePath, envPath);
 			console.log("Recreated .env from .env.prod.example.");
-		} else {
-			console.log(".env already exists, skipping.");
+			return true;
 		}
-		return;
+		console.log(".env already exists, skipping.");
+		return false;
 	}
 	fs.copyFileSync(examplePath, envPath);
 	console.log("Created .env from .env.prod.example.");
+	return true;
+}
+
+/** Generate a password that satisfies typical complexity policies (upper, lower, digit, special). */
+function generateComplexPassword(length = 24): string {
+	const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	const lower = "abcdefghijklmnopqrstuvwxyz";
+	const digits = "0123456789";
+	const special = "!@#%&*";
+	const all = upper + lower + digits + special;
+
+	// Guarantee at least one of each category
+	const mandatory = [
+		upper[randomBytes(1)[0] % upper.length],
+		lower[randomBytes(1)[0] % lower.length],
+		digits[randomBytes(1)[0] % digits.length],
+		special[randomBytes(1)[0] % special.length],
+	];
+
+	const rest = Array.from(randomBytes(length - mandatory.length)).map(
+		b => all[b % all.length],
+	);
+
+	// Shuffle all characters together
+	const chars = [...mandatory, ...rest];
+	for (let i = chars.length - 1; i > 0; i--) {
+		const j = randomBytes(1)[0] % (i + 1);
+		[chars[i], chars[j]] = [chars[j], chars[i]];
+	}
+	return chars.join("");
 }
 
 function generateProdSecrets(): void {
@@ -125,10 +157,16 @@ function generateProdSecrets(): void {
 		return;
 	}
 
+	// Keys whose generated value must satisfy password-complexity policies
+	// (uppercase + lowercase + digit + special character).
+	const complexPasswordKeys = new Set(["ZITADEL_ADMIN_PASSWORD"]);
+
 	const updates: Record<string, string> = {};
 	for (const [placeholder, keys] of placeholderToKeys) {
 		let generated: string;
-		if (keys.some(k => k === "MINIKMS_ROOT_KEY")) {
+		if (keys.some(k => complexPasswordKeys.has(k))) {
+			generated = generateComplexPassword(24);
+		} else if (keys.some(k => k === "MINIKMS_ROOT_KEY")) {
 			generated = randomBytes(32).toString("hex");
 		} else if (keys.some(k => k === "ZITADEL_MASTERKEY")) {
 			generated = randomBytes(16).toString("hex");
@@ -142,6 +180,34 @@ function generateProdSecrets(): void {
 
 	updateEnvFile(envPath, updates);
 	console.log(`Generated secrets for ${Object.keys(updates).length} keys (${placeholderToKeys.size} unique values).`);
+}
+
+function dockerDownProdWithVolumes(): void {
+	console.log("\nTearing down prod Docker containers and volumes...");
+	const result = spawnSync(
+		"docker",
+		["compose", "-f", "docker-compose.prod.yaml", "down", "-v", "--remove-orphans"],
+		{ cwd: rootDir, stdio: "inherit", env: process.env },
+	);
+	if (result.status !== 0) {
+		console.warn("Warning: docker compose down -v failed (this is expected on first run).");
+	}
+}
+
+function showContainerLogs(composeFile: string, service: string): void {
+	const result = spawnSync(
+		"docker",
+		["compose", "-f", composeFile, "logs", "--tail", "40", service],
+		{ cwd: rootDir, stdio: "pipe", env: process.env },
+	);
+	const output = result.stdout?.toString() || "";
+	const errOutput = result.stderr?.toString() || "";
+	if (output || errOutput) {
+		console.error(`\n--- Logs for ${service} ---`);
+		if (output) process.stderr.write(output);
+		if (errOutput) process.stderr.write(errOutput);
+		console.error(`--- End logs for ${service} ---\n`);
+	}
 }
 
 function dockerUpProd(): void {
@@ -174,7 +240,14 @@ function dockerUpProd(): void {
 		],
 		{ cwd: rootDir, stdio: "inherit", env: process.env },
 	);
-	if (result.status !== 0) throw new Error("Docker Compose (prod) up failed.");
+	if (result.status !== 0) {
+		console.error("\nDocker Compose (prod) up failed. Fetching logs from key services...");
+		const debugServices = ["openfga_migrate", "openfga_db", "postgres", "zitadel_db", "minikms_db"];
+		for (const svc of debugServices) {
+			showContainerLogs("docker-compose.prod.yaml", svc);
+		}
+		throw new Error("Docker Compose (prod) up failed.");
+	}
 }
 
 function runProdInit(): Promise<{ stdout: string; exitCode: number }> {
@@ -228,28 +301,34 @@ async function initProd(): Promise<void> {
 	console.log("EnvSync production init\n");
 
 	// 1. Create .env from .env.prod.example
-	await ensureEnvProd();
+	const envCreated = await ensureEnvProd();
 
-	// 2. Replace CHANGE_ME placeholders with generated secrets
+	// 2. Tear down existing Docker volumes when .env was (re)created so that
+	//    PostgreSQL containers start fresh with the new generated passwords.
+	if (envCreated) {
+		dockerDownProdWithVolumes();
+	}
+
+	// 3. Replace CHANGE_ME placeholders with generated secrets
 	generateProdSecrets();
 
-	// 3. Load .env into process.env
+	// 4. Load .env into process.env
 	loadEnvFile(path.join(rootDir, ".env"));
 
-	// 4. Start prod infrastructure services
+	// 5. Start prod infrastructure services
 	dockerUpProd();
 
-	// 5. Run envsync_init inside Docker (streams + captures output)
+	// 6. Run envsync_init inside Docker (streams + captures output)
 	console.log("\nRunning envsync_init (this may take a few minutes on first run)...\n");
 	const { stdout, exitCode } = await runProdInit();
 	if (exitCode !== 0) {
 		throw new Error(`envsync_init exited with code ${exitCode}`);
 	}
 
-	// 6. Parse generated credentials from init output
+	// 7. Parse generated credentials from init output
 	const credentials = parseCredentials(stdout);
 
-	// 7. Write credentials back to .env
+	// 8. Write credentials back to .env
 	if (Object.keys(credentials).length > 0) {
 		const envPath = path.join(rootDir, ".env");
 		updateEnvFile(envPath, credentials);
@@ -258,7 +337,7 @@ async function initProd(): Promise<void> {
 		console.log("\nNo new credentials to save.");
 	}
 
-	// 8. Print next steps (services are left running for prod)
+	// 9. Print next steps (services are left running for prod)
 	console.log("\nProduction init complete. Start the API with:");
 	console.log("  docker compose -f docker-compose.prod.yaml up -d envsync_api");
 }

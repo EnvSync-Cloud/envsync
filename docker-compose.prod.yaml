@@ -197,7 +197,7 @@ services:
       - envsync_network
 
   openfga_migrate:
-    image: openfga/openfga:latest
+    image: openfga/openfga:v1.12.0
     command: migrate
     environment:
       OPENFGA_DATASTORE_ENGINE: postgres
@@ -210,7 +210,7 @@ services:
     restart: "no"
 
   openfga:
-    image: openfga/openfga:latest
+    image: openfga/openfga:v1.12.0
     restart: unless-stopped
     command: run
     environment:
@@ -254,11 +254,7 @@ services:
     restart: unless-stopped
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
-      MINIKMS_DB_HOST: minikms_db
-      MINIKMS_DB_PORT: "5432"
-      MINIKMS_DB_USER: ${MINIKMS_DB_USER:-postgres}
-      MINIKMS_DB_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
-      MINIKMS_DB_NAME: minikms
+      MINIKMS_DB_URL: "postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable"
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
     healthcheck:
