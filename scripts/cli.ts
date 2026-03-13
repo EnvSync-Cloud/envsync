@@ -111,12 +111,14 @@ function generateComplexPassword(length = 24): string {
 	const special = "!@#%&*";
 	const all = upper + lower + digits + special;
 
+	const randomByte = (): number => randomBytes(1)[0] ?? 0;
+
 	// Guarantee at least one of each category
 	const mandatory = [
-		upper[randomBytes(1)[0] % upper.length],
-		lower[randomBytes(1)[0] % lower.length],
-		digits[randomBytes(1)[0] % digits.length],
-		special[randomBytes(1)[0] % special.length],
+		upper[randomByte() % upper.length],
+		lower[randomByte() % lower.length],
+		digits[randomByte() % digits.length],
+		special[randomByte() % special.length],
 	];
 
 	const rest = Array.from(randomBytes(length - mandatory.length)).map(
@@ -126,7 +128,7 @@ function generateComplexPassword(length = 24): string {
 	// Shuffle all characters together
 	const chars = [...mandatory, ...rest];
 	for (let i = chars.length - 1; i > 0; i--) {
-		const j = randomBytes(1)[0] % (i + 1);
+		const j = randomByte() % (i + 1);
 		[chars[i], chars[j]] = [chars[j], chars[i]];
 	}
 	return chars.join("");

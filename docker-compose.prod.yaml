@@ -267,7 +267,7 @@ services:
 
   # --- Observability Stack (Grafana LGTM) ---
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.6.1
     restart: unless-stopped
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
