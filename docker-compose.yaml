@@ -54,7 +54,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-903ad86
+    image: ghcr.io/envsync-cloud/minikms:sha-735dfe8
     ports:
       - "${MINIKMS_GRPC_PORT:-50051}:50051"
     restart: always

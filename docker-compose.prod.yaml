@@ -250,7 +250,7 @@ services:
       - envsync_network
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-9003498
+    image: ghcr.io/envsync-cloud/minikms:sha-735dfe8
     restart: unless-stopped
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
