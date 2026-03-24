@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "envsync.fullname" . }}
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  rules:
+    - host: {{ include "envsync.apiHost" . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "envsync.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+    - host: {{ include "envsync.authHost" . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "envsync.fullname" . }}-zitadel
+                port:
+                  number: {{ .Values.zitadel.service.port }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ include "envsync.apiHost" . | quote }}
+        - {{ include "envsync.authHost" . | quote }}
+      secretName: {{ default (printf "%s-tls" (include "envsync.fullname" .)) .Values.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}

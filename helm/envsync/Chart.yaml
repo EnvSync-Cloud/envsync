@@ -1,0 +1,16 @@
+apiVersion: v2
+name: envsync
+description: Helm chart for self-hosted EnvSync control plane services
+type: application
+version: 0.1.0
+appVersion: "0.4.0"
+kubeVersion: ">=1.28.0-0"
+dependencies:
+  - name: postgresql
+    version: 18.5.6
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: postgresql.enabled
+  - name: redis
+    version: 24.1.2
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: redis.enabled

@@ -1,0 +1,50 @@
+global:
+  domain: envsync.local
+  publicScheme: http
+
+api:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+postgresql:
+  architecture: standalone
+  primary:
+    persistence:
+      size: 4Gi
+  readReplicas:
+    replicaCount: 0
+
+redis:
+  master:
+    persistence:
+      enabled: false
+
+ingress:
+  enabled: false
+
+zitadel:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+  persistence:
+    size: 1Gi
+
+rustfs:
+  persistence:
+    size: 4Gi
+
+bootstrap:
+  init:
+    activeDeadlineSeconds: 1500

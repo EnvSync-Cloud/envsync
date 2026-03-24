@@ -5,6 +5,7 @@
 services:
   envsync_api:
     image: ghcr.io/envsync-cloud/envsync-api:latest
+    user: "0"
     env_file:
       - .env
     ports:
@@ -17,7 +18,7 @@ services:
       S3_ENDPOINT: http://rustfs:9000
       S3_BUCKET_URL: http://rustfs:9000
       OPENFGA_API_URL: http://openfga:8090
-      ZITADEL_URL: http://zitadel:8080
+      ZITADEL_URL: ${ZITADEL_URL:-http://auth.127.0.0.1.sslip.io:8080}
       MINIKMS_GRPC_ADDR: minikms:50051
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
@@ -46,7 +47,7 @@ services:
       OPENFGA_API_URL: http://openfga:8090
       DATABASE_HOST: postgres
       S3_ENDPOINT: http://rustfs:9000
-      ZITADEL_URL: http://zitadel:8080
+      ZITADEL_URL: ${ZITADEL_URL:-http://auth.127.0.0.1.sslip.io:8080}
       MINIKMS_GRPC_ADDR: minikms:50051
     volumes:
       - zitadel_data:/zitadel-data:ro
@@ -177,7 +178,9 @@ services:
       zitadel_db:
         condition: service_healthy
     networks:
-      - envsync_network
+      envsync_network:
+        aliases:
+          - auth.127.0.0.1.sslip.io
 
   openfga_db:
     image: postgres:17

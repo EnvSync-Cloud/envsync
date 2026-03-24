@@ -1,0 +1,125 @@
+{{- if .Values.bootstrap.dbSetup.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "envsync.fullname" . }}-db-setup
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,pre-upgrade
+    "helm.sh/hook-weight": "-20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.bootstrap.dbSetup.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.bootstrap.dbSetup.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: db-setup
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: db-setup
+          image: "{{ .Values.bootstrap.dbSetup.image.repository }}:{{ .Values.bootstrap.dbSetup.image.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.dbSetup.image.pullPolicy }}
+          env:
+            - name: PGHOST
+              value: {{ include "envsync.postgresqlHost" . | quote }}
+            - name: PGPORT
+              value: {{ include "envsync.postgresqlPort" . | quote }}
+            - name: PGUSER
+              value: {{ include "envsync.postgresqlAdminUser" . | quote }}
+            - name: PGPASSWORD
+              value: {{ include "envsync.postgresqlAdminPassword" . | quote }}
+            - name: APP_DB
+              value: {{ include "envsync.appDatabaseName" . | quote }}
+            - name: APP_USER
+              value: {{ include "envsync.appDatabaseUser" . | quote }}
+            - name: APP_PASSWORD
+              value: {{ include "envsync.appDatabasePassword" . | quote }}
+            - name: ZITADEL_DB
+              value: {{ include "envsync.zitadelDbName" . | quote }}
+            - name: ZITADEL_USER
+              value: {{ include "envsync.zitadelDbUser" . | quote }}
+            - name: ZITADEL_PASSWORD
+              value: {{ include "envsync.zitadelDbPassword" . | quote }}
+            - name: OPENFGA_DB
+              value: {{ include "envsync.openfgaDbName" . | quote }}
+            - name: OPENFGA_USER
+              value: {{ include "envsync.openfgaDbUser" . | quote }}
+            - name: OPENFGA_PASSWORD
+              value: {{ include "envsync.openfgaDbPassword" . | quote }}
+            - name: MINIKMS_DB
+              value: {{ include "envsync.minikmsDbName" . | quote }}
+            - name: MINIKMS_USER
+              value: {{ include "envsync.minikmsDbUser" . | quote }}
+            - name: MINIKMS_PASSWORD
+              value: {{ include "envsync.minikmsDbPassword" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              set -eu
+
+              wait_for_postgres() {
+                until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" >/dev/null 2>&1; do
+                  echo "Waiting for PostgreSQL at ${PGHOST}:${PGPORT}..."
+                  sleep 5
+                done
+              }
+
+              sql_escape() {
+                printf "%s" "$1" | sed "s/'/''/g"
+              }
+
+              exec_psql() {
+                psql -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -c "$1"
+              }
+
+              ensure_role() {
+                local role="$1"
+                local password
+                password="$(sql_escape "$2")"
+
+                if ! psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${role}'" -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres | grep -q 1; then
+                  exec_psql "CREATE ROLE \"${role}\" LOGIN PASSWORD '${password}'"
+                fi
+
+                exec_psql "ALTER ROLE \"${role}\" LOGIN PASSWORD '${password}'"
+              }
+
+              ensure_db() {
+                local db="$1"
+                local owner="$2"
+
+                if ! psql -tAc "SELECT 1 FROM pg_database WHERE datname='${db}'" -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres | grep -q 1; then
+                  exec_psql "CREATE DATABASE \"${db}\" OWNER \"${owner}\""
+                fi
+
+                exec_psql "GRANT ALL PRIVILEGES ON DATABASE \"${db}\" TO \"${owner}\""
+                psql -v ON_ERROR_STOP=1 -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$db" -c "GRANT ALL ON SCHEMA public TO \"${owner}\""
+              }
+
+              wait_for_postgres
+
+              ensure_role "$APP_USER" "$APP_PASSWORD"
+              ensure_role "$ZITADEL_USER" "$ZITADEL_PASSWORD"
+              ensure_role "$OPENFGA_USER" "$OPENFGA_PASSWORD"
+              ensure_role "$MINIKMS_USER" "$MINIKMS_PASSWORD"
+
+              ensure_db "$APP_DB" "$APP_USER"
+              ensure_db "$ZITADEL_DB" "$ZITADEL_USER"
+              ensure_db "$OPENFGA_DB" "$OPENFGA_USER"
+              ensure_db "$MINIKMS_DB" "$MINIKMS_USER"
+
+              echo "Database bootstrap complete."
+{{- end }}

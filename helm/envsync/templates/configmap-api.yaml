@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "envsync.apiConfigMapName" . }}
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.environment | quote }}
+  PORT: {{ printf "%v" .Values.api.service.port | quote }}
+  DB_LOGGING: {{ printf "%v" .Values.api.config.dbLogging | quote }}
+  DB_AUTO_MIGRATE: {{ printf "%v" .Values.api.config.dbAutoMigrate | quote }}
+  DATABASE_HOST: {{ include "envsync.postgresqlHost" . | quote }}
+  DATABASE_PORT: {{ include "envsync.postgresqlPort" . | quote }}
+  DATABASE_NAME: {{ include "envsync.appDatabaseName" . | quote }}
+  DATABASE_SSL: {{ include "envsync.databaseSslEnabled" . | quote }}
+  S3_BUCKET: {{ include "envsync.s3Bucket" . | quote }}
+  S3_REGION: {{ include "envsync.s3Region" . | quote }}
+  S3_ENDPOINT: {{ include "envsync.rustfsEndpoint" . | quote }}
+  S3_BUCKET_URL: {{ include "envsync.rustfsBucketUrl" . | quote }}
+  CACHE_ENV: {{ .Values.api.config.cacheEnv | quote }}
+  REDIS_URL: {{ include "envsync.redisUrl" . | quote }}
+  SMTP_HOST: {{ .Values.smtp.host | quote }}
+  SMTP_PORT: {{ printf "%v" .Values.smtp.port | quote }}
+  SMTP_SECURE: {{ printf "%v" .Values.smtp.secure | quote }}
+  SMTP_FROM: {{ .Values.smtp.from | quote }}
+  ZITADEL_URL: {{ include "envsync.zitadelInternalUrl" . | quote }}
+  ZITADEL_WEB_REDIRECT_URI: {{ printf "%s://%s/api/access/web/callback" (include "envsync.publicScheme" .) (include "envsync.apiHost" .) | quote }}
+  ZITADEL_WEB_CALLBACK_URL: {{ printf "%s/auth/callback" (include "envsync.dashboardUrl" .) | quote }}
+  ZITADEL_API_REDIRECT_URI: {{ printf "%s://%s/api/access/api/callback" (include "envsync.publicScheme" .) (include "envsync.apiHost" .) | quote }}
+  LANDING_PAGE_URL: {{ include "envsync.landingUrl" . | quote }}
+  DASHBOARD_URL: {{ include "envsync.dashboardUrl" . | quote }}
+  OPENFGA_API_URL: {{ include "envsync.openfgaInternalUrl" . | quote }}
+  MINIKMS_GRPC_ADDR: {{ include "envsync.minikmsAddress" . | quote }}
+  MINIKMS_TLS_ENABLED: {{ printf "%v" .Values.minikms.tlsEnabled | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.api.config.otelExporterEndpoint | quote }}
+  OTEL_SERVICE_NAME: {{ .Values.api.config.otelServiceName | quote }}
+  OTEL_SDK_DISABLED: {{ printf "%v" .Values.api.config.otelSdkDisabled | quote }}
