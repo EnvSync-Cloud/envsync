@@ -10,7 +10,7 @@ DATE=$(date +%Y-%m-%d_%H-%M-%S)
 BACKUP_DIR="/var/backups/envsync/${DATE}"  
 
 # Kubernetes namespace where EnvSync pods are running
-NAMESPACE="default" 
+NAMESPACE="envsync" 
 
 # Dynamically find the postgres pod name — never hardcode pod names,
 # Kubernetes regenerates them on every restart
