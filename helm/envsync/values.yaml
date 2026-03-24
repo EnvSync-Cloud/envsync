@@ -1,0 +1,247 @@
+global:
+  domain: envsync.local
+  publicScheme: https
+  environment: production
+  imagePullSecrets: []
+  commonLabels: {}
+  podAnnotations: {}
+  storageClass: ""
+
+api:
+  image:
+    repository: ghcr.io/envsync-cloud/envsync-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  service:
+    type: ClusterIP
+    port: 4000
+  config:
+    dbLogging: false
+    dbAutoMigrate: false
+    cacheEnv: production
+    otelExporterEndpoint: http://otel-collector:4318
+    otelServiceName: envsync-api
+    otelSdkDisabled: true
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  podLabels: {}
+  podAnnotations: {}
+  extraEnv: []
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+bootstrap:
+  kubectlImage:
+    repository: bitnami/kubectl
+    tag: latest
+    pullPolicy: IfNotPresent
+  dbSetup:
+    enabled: true
+    image:
+      repository: postgres
+      tag: "17"
+      pullPolicy: IfNotPresent
+    backoffLimit: 4
+    activeDeadlineSeconds: 900
+  init:
+    enabled: true
+    backoffLimit: 1
+    activeDeadlineSeconds: 1200
+  migrate:
+    enabled: true
+    backoffLimit: 1
+    activeDeadlineSeconds: 900
+
+database:
+  sslMode: disable
+  roles:
+    zitadel:
+      username: zitadel
+      database: zitadel
+      password: ""
+    openfga:
+      username: openfga
+      database: openfga
+      password: ""
+    minikms:
+      username: minikms
+      database: minikms
+      password: ""
+
+postgresql:
+  enabled: true
+  architecture: replication
+  auth:
+    username: envsync
+    password: ""
+    database: envsync
+    postgresPassword: ""
+    replicationPassword: ""
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+  readReplicas:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 20Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
+
+external:
+  postgresql:
+    enabled: false
+    host: ""
+    port: 5432
+    sslMode: require
+    adminUsername: postgres
+    adminPassword: ""
+    app:
+      username: envsync
+      password: ""
+      database: envsync
+    zitadel:
+      username: zitadel
+      password: ""
+      database: zitadel
+    openfga:
+      username: openfga
+      password: ""
+      database: openfga
+    minikms:
+      username: minikms
+      password: ""
+      database: minikms
+  redis:
+    enabled: false
+    url: ""
+  s3:
+    enabled: false
+    endpoint: ""
+    bucketUrl: ""
+    bucket: ""
+    region: us-east-1
+    accessKey: ""
+    secretKey: ""
+
+smtp:
+  host: smtp.example.com
+  port: 587
+  secure: true
+  user: ""
+  pass: ""
+  from: noreply@example.com
+
+urls:
+  landing: ""
+  dashboard: ""
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    api: ""
+    auth: ""
+  tls:
+    enabled: false
+    secretName: ""
+
+zitadel:
+  image:
+    repository: ghcr.io/zitadel/zitadel
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 8080
+  externalDomain: ""
+  masterkey: ""
+  admin:
+    username: zitadel-admin
+    password: ""
+  machinePatExpirationDate: "2029-01-01T00:00:00Z"
+  loginClientPatExpirationDate: "2029-01-01T00:00:00Z"
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+openfga:
+  image:
+    repository: openfga/openfga
+    tag: v1.12.0
+    pullPolicy: IfNotPresent
+  service:
+    httpPort: 8090
+    grpcPort: 8091
+  playgroundEnabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+minikms:
+  image:
+    repository: ghcr.io/envsync-cloud/minikms
+    tag: sha-735dfe8
+    pullPolicy: IfNotPresent
+  service:
+    port: 50051
+  rootKey: ""
+  tlsEnabled: false
+  tlsCaCert: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+rustfs:
+  enabled: true
+  image:
+    repository: rustfs/rustfs
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 9000
+  bucket: envsync-bucket
+  region: us-east-1
+  accessKey: ""
+  secretKey: ""
+  consoleEnabled: false
+  persistence:
+    size: 20Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

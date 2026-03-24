@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "envsync.fullname" . }}-openfga
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "envsync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: openfga
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: openfga
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-database
+          image: "{{ .Values.bootstrap.dbSetup.image.repository }}:{{ .Values.bootstrap.dbSetup.image.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.dbSetup.image.pullPolicy }}
+          env:
+            - name: PGPASSWORD
+              value: {{ include "envsync.postgresqlAdminPassword" . | quote }}
+            - name: DB_HOST
+              value: {{ include "envsync.postgresqlHost" . | quote }}
+            - name: DB_PORT
+              value: {{ include "envsync.postgresqlPort" . | quote }}
+            - name: DB_USER
+              value: {{ include "envsync.postgresqlAdminUser" . | quote }}
+            - name: DB_NAME
+              value: {{ include "envsync.openfgaDbName" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; do
+                echo "Waiting for database ${DB_NAME}..."
+                sleep 5
+              done
+        - name: migrate
+          image: "{{ .Values.openfga.image.repository }}:{{ .Values.openfga.image.tag }}"
+          imagePullPolicy: {{ .Values.openfga.image.pullPolicy }}
+          args: ["migrate"]
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              value: {{ include "envsync.openfgaDatabaseUri" . | quote }}
+      containers:
+        - name: openfga
+          image: "{{ .Values.openfga.image.repository }}:{{ .Values.openfga.image.tag }}"
+          imagePullPolicy: {{ .Values.openfga.image.pullPolicy }}
+          args: ["run"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.openfga.service.httpPort }}
+            - name: grpc
+              containerPort: {{ .Values.openfga.service.grpcPort }}
+          env:
+            - name: OPENFGA_DATASTORE_ENGINE
+              value: postgres
+            - name: OPENFGA_DATASTORE_URI
+              value: {{ include "envsync.openfgaDatabaseUri" . | quote }}
+            - name: OPENFGA_PLAYGROUND_ENABLED
+              value: {{ printf "%v" .Values.openfga.playgroundEnabled | quote }}
+            - name: OPENFGA_HTTP_ADDR
+              value: {{ printf "0.0.0.0:%v" .Values.openfga.service.httpPort | quote }}
+            - name: OPENFGA_GRPC_ADDR
+              value: {{ printf "0.0.0.0:%v" .Values.openfga.service.grpcPort | quote }}
+          readinessProbe:
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8091"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["/usr/local/bin/grpc_health_probe", "-addr=:8091"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.openfga.resources | nindent 12 }}

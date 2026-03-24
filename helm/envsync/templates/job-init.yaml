@@ -1,0 +1,112 @@
+{{- if .Values.bootstrap.init.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "envsync.fullname" . }}-init
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "20"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.bootstrap.init.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.bootstrap.init.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: bootstrap
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "envsync.bootstrapServiceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: shared
+          emptyDir: {}
+        - name: zitadel-data
+          persistentVolumeClaim:
+            claimName: {{ include "envsync.fullname" . }}-zitadel-data
+      initContainers:
+        - name: check-lock
+          image: "{{ .Values.bootstrap.kubectlImage.repository }}:{{ .Values.bootstrap.kubectlImage.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.kubectlImage.pullPolicy }}
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              status="$(kubectl get configmap {{ include "envsync.bootstrapLockName" . }} -o jsonpath='{.data.status}' 2>/dev/null || true)"
+              if [ "$status" = "complete" ]; then
+                echo "complete" > /shared/skip
+              fi
+        - name: run-bootstrap
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+            - name: zitadel-data
+              mountPath: /zitadel-data
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: {{ include "envsync.apiConfigMapName" . }}
+            - secretRef:
+                name: {{ include "envsync.apiSecretName" . }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if [ -f /shared/skip ]; then
+                echo "Bootstrap already completed; skipping."
+                exit 0
+              fi
+
+              bun run scripts/prod-init.ts | tee /shared/prod-init.log
+              grep -E '^[A-Z0-9_]+=' /shared/prod-init.log > /shared/bootstrap.env
+              if [ ! -s /shared/bootstrap.env ]; then
+                echo "No bootstrap credentials were produced."
+                exit 1
+              fi
+          env:
+            - name: ZITADEL_PAT_FILE
+              value: /zitadel-data/admin.pat
+        - name: apply-bootstrap
+          image: "{{ .Values.bootstrap.kubectlImage.repository }}:{{ .Values.bootstrap.kubectlImage.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.kubectlImage.pullPolicy }}
+          volumeMounts:
+            - name: shared
+              mountPath: /shared
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if [ -f /shared/skip ]; then
+                echo "Bootstrap already completed; lock is already complete."
+                exit 0
+              fi
+
+              kubectl create secret generic {{ include "envsync.bootstrapSecretName" . }} \
+                --dry-run=client \
+                --from-env-file=/shared/bootstrap.env \
+                -o yaml | kubectl apply -f -
+
+              kubectl patch configmap {{ include "envsync.bootstrapLockName" . }} \
+                --type merge \
+                -p '{"data":{"status":"complete","completedAt":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'"}}'
+      containers:
+        - name: done
+          image: "{{ .Values.bootstrap.kubectlImage.repository }}:{{ .Values.bootstrap.kubectlImage.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.kubectlImage.pullPolicy }}
+          command: ["/bin/sh", "-ec", "echo Bootstrap finished."]
+{{- end }}

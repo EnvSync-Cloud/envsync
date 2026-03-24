@@ -1,0 +1,15 @@
+EnvSync has been installed into namespace {{ .Release.Namespace }}.
+
+Core commands:
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl logs job/{{ include "envsync.fullname" . }}-init -n {{ .Release.Namespace }}
+  kubectl get configmap {{ include "envsync.bootstrapLockName" . }} -n {{ .Release.Namespace }} -o yaml
+
+Local access:
+  kubectl port-forward svc/{{ include "envsync.fullname" . }}-api -n {{ .Release.Namespace }} 4000:{{ .Values.api.service.port }}
+  curl http://127.0.0.1:4000/health
+
+Public hosts:
+  API:    {{ include "envsync.publicScheme" . }}://{{ include "envsync.apiHost" . }}
+  Auth:   {{ include "envsync.publicScheme" . }}://{{ include "envsync.authHost" . }}
+  App:    {{ include "envsync.dashboardUrl" . }}

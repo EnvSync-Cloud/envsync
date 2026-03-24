@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "envsync.fullname" . }}-zitadel
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "envsync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: zitadel
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: zitadel
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-database
+          image: "{{ .Values.bootstrap.dbSetup.image.repository }}:{{ .Values.bootstrap.dbSetup.image.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.dbSetup.image.pullPolicy }}
+          env:
+            - name: PGPASSWORD
+              value: {{ include "envsync.postgresqlAdminPassword" . | quote }}
+            - name: DB_HOST
+              value: {{ include "envsync.postgresqlHost" . | quote }}
+            - name: DB_PORT
+              value: {{ include "envsync.postgresqlPort" . | quote }}
+            - name: DB_USER
+              value: {{ include "envsync.postgresqlAdminUser" . | quote }}
+            - name: DB_NAME
+              value: {{ include "envsync.zitadelDbName" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; do
+                echo "Waiting for database ${DB_NAME}..."
+                sleep 5
+              done
+      containers:
+        - name: zitadel
+          image: "{{ .Values.zitadel.image.repository }}:{{ .Values.zitadel.image.tag }}"
+          imagePullPolicy: {{ .Values.zitadel.image.pullPolicy }}
+          command:
+            - start-from-init
+            - --masterkey
+            - {{ required "zitadel.masterkey is required" .Values.zitadel.masterkey | quote }}
+          securityContext:
+            runAsUser: 0
+          ports:
+            - name: http
+              containerPort: {{ .Values.zitadel.service.port }}
+          env:
+            - name: ZITADEL_EXTERNALDOMAIN
+              value: {{ default (include "envsync.authHost" .) .Values.zitadel.externalDomain | quote }}
+            - name: ZITADEL_EXTERNALSECURE
+              value: {{ eq (include "envsync.publicScheme" .) "https" | quote }}
+            - name: ZITADEL_TLS_ENABLED
+              value: "false"
+            - name: ZITADEL_DATABASE_POSTGRES_HOST
+              value: {{ include "envsync.postgresqlHost" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_PORT
+              value: {{ include "envsync.postgresqlPort" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_DATABASE
+              value: {{ include "envsync.zitadelDbName" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+              value: {{ include "envsync.postgresqlAdminUser" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+              value: {{ include "envsync.postgresqlAdminPassword" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE
+              value: {{ include "envsync.databaseSslMode" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
+              value: {{ include "envsync.zitadelDbUser" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+              value: {{ include "envsync.zitadelDbPassword" . | quote }}
+            - name: ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE
+              value: {{ include "envsync.databaseSslMode" . | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED
+              value: "false"
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME
+              value: {{ .Values.zitadel.admin.username | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
+              value: {{ required "zitadel.admin.password is required" .Values.zitadel.admin.password | quote }}
+            - name: ZITADEL_FIRSTINSTANCE_ORG_NAME
+              value: "EnvSync"
+            - name: ZITADEL_FIRSTINSTANCE_PATPATH
+              value: /current-dir/admin.pat
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME
+              value: admin
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME
+              value: EnvSync IAM Owner
+            - name: ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE
+              value: {{ .Values.zitadel.machinePatExpirationDate | quote }}
+            - name: ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED
+              value: "false"
+            - name: ZITADEL_FIRSTINSTANCE_LOGINCLIENTPATPATH
+              value: /current-dir/login-client.pat
+            - name: ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_USERNAME
+              value: login-client
+            - name: ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_MACHINE_NAME
+              value: Automatically Initialized IAM_LOGIN_CLIENT
+            - name: ZITADEL_FIRSTINSTANCE_ORG_LOGINCLIENT_PAT_EXPIRATIONDATE
+              value: {{ .Values.zitadel.loginClientPatExpirationDate | quote }}
+          readinessProbe:
+            exec:
+              command: ["/app/zitadel", "ready"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 60
+          startupProbe:
+            exec:
+              command: ["/app/zitadel", "ready"]
+            failureThreshold: 60
+            periodSeconds: 5
+            timeoutSeconds: 60
+          resources:
+            {{- toYaml .Values.zitadel.resources | nindent 12 }}
+          volumeMounts:
+            - name: zitadel-data
+              mountPath: /current-dir
+      volumes:
+        - name: zitadel-data
+          persistentVolumeClaim:
+            claimName: {{ include "envsync.fullname" . }}-zitadel-data

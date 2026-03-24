@@ -1,0 +1,63 @@
+{{- if not .Values.external.s3.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "envsync.fullname" . }}-rustfs
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "envsync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: rustfs
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: rustfs
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rustfs
+          image: "{{ .Values.rustfs.image.repository }}:{{ .Values.rustfs.image.tag }}"
+          imagePullPolicy: {{ .Values.rustfs.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.rustfs.service.port }}
+          env:
+            - name: RUSTFS_DATA_DIR
+              value: /data
+            - name: RUSTFS_ACCESS_KEY
+              value: {{ required "rustfs.accessKey is required" .Values.rustfs.accessKey | quote }}
+            - name: RUSTFS_SECRET_KEY
+              value: {{ required "rustfs.secretKey is required" .Values.rustfs.secretKey | quote }}
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: {{ printf "%v" .Values.rustfs.consoleEnabled | quote }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.rustfs.resources | nindent 12 }}
+          volumeMounts:
+            - name: rustfs-data
+              mountPath: /data
+      volumes:
+        - name: rustfs-data
+          persistentVolumeClaim:
+            claimName: {{ include "envsync.fullname" . }}-rustfs-data
+{{- end }}

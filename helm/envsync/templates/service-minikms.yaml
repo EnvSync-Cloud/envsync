@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "envsync.fullname" . }}-minikms
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "envsync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: minikms
+  ports:
+    - name: grpc
+      port: {{ .Values.minikms.service.port }}
+      targetPort: grpc

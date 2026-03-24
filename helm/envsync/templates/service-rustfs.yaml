@@ -1,0 +1,17 @@
+{{- if not .Values.external.s3.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "envsync.fullname" . }}-rustfs
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "envsync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: rustfs
+  ports:
+    - name: http
+      port: {{ .Values.rustfs.service.port }}
+      targetPort: http
+{{- end }}

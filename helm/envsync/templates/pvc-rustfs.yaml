@@ -1,0 +1,17 @@
+{{- if not .Values.external.s3.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "envsync.fullname" . }}-rustfs-data
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.rustfs.persistence.size }}
+  {{- with .Values.global.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

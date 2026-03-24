@@ -1,0 +1,40 @@
+{{- if .Values.bootstrap.migrate.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "envsync.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.bootstrap.migrate.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.bootstrap.migrate.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          command: ["bun", "run", "scripts/migrate.ts", "latest"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "envsync.apiConfigMapName" . }}
+            - secretRef:
+                name: {{ include "envsync.apiSecretName" . }}
+{{- end }}

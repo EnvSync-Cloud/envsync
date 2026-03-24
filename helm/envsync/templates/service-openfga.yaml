@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "envsync.fullname" . }}-openfga
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "envsync.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: openfga
+  ports:
+    - name: http
+      port: {{ .Values.openfga.service.httpPort }}
+      targetPort: http
+    - name: grpc
+      port: {{ .Values.openfga.service.grpcPort }}
+      targetPort: grpc

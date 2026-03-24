@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "envsync.fullname" . }}-minikms
+  labels:
+    {{- include "envsync.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "envsync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: minikms
+  template:
+    metadata:
+      labels:
+        {{- include "envsync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: minikms
+      {{- with .Values.global.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-database
+          image: "{{ .Values.bootstrap.dbSetup.image.repository }}:{{ .Values.bootstrap.dbSetup.image.tag }}"
+          imagePullPolicy: {{ .Values.bootstrap.dbSetup.image.pullPolicy }}
+          env:
+            - name: PGPASSWORD
+              value: {{ include "envsync.postgresqlAdminPassword" . | quote }}
+            - name: DB_HOST
+              value: {{ include "envsync.postgresqlHost" . | quote }}
+            - name: DB_PORT
+              value: {{ include "envsync.postgresqlPort" . | quote }}
+            - name: DB_USER
+              value: {{ include "envsync.postgresqlAdminUser" . | quote }}
+            - name: DB_NAME
+              value: {{ include "envsync.minikmsDbName" . | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; do
+                echo "Waiting for database ${DB_NAME}..."
+                sleep 5
+              done
+      containers:
+        - name: minikms
+          image: "{{ .Values.minikms.image.repository }}:{{ .Values.minikms.image.tag }}"
+          imagePullPolicy: {{ .Values.minikms.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.minikms.service.port }}
+          env:
+            - name: MINIKMS_ROOT_KEY
+              value: {{ required "minikms.rootKey is required" .Values.minikms.rootKey | quote }}
+            - name: MINIKMS_DB_URL
+              value: {{ include "envsync.minikmsDatabaseUrl" . | quote }}
+            - name: MINIKMS_REDIS_URL
+              value: {{ include "envsync.redisUrl" . | quote }}
+            - name: MINIKMS_GRPC_ADDR
+              value: {{ printf "0.0.0.0:%v" .Values.minikms.service.port | quote }}
+            - name: MINIKMS_TLS_ENABLED
+              value: {{ printf "%v" .Values.minikms.tlsEnabled | quote }}
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.minikms.resources | nindent 12 }}
