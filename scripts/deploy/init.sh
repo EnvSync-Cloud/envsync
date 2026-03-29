@@ -43,106 +43,52 @@ done
 
 echo "K3S is ready." 
 
-# Create a temporary directory to hold all Kubernetes YAML manifests
-MANIFEST_DIR="/tmp/envsync-manifests"
-mkdir -p "$MANIFEST_DIR" 
+# Directory where our manifests live relative to this script
+MANIFEST_DIR="$(dirname "$0")/manifests"
 
-echo "Generating Kubernetes manifests..."
+echo "Injecting domain into manifests..."
 
-# Namespace keeps all EnvSync resources grouped together in K3S
-cat > "$MANIFEST_DIR/namespace.yaml" << EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: envsync
-EOF 
+# sed replaces the PLACEHOLDER values in the manifest files
+# with the actual domain the operator entered
+# -i edits the files in place
+sed -i "s/PLACEHOLDER_API_DOMAIN/api.${ROOT_DOMAIN}/g" "$MANIFEST_DIR/13-ingress.yaml"
+sed -i "s/PLACEHOLDER_APP_DOMAIN/app.${ROOT_DOMAIN}/g" "$MANIFEST_DIR/13-ingress.yaml"
+sed -i "s/PLACEHOLDER_AUTH_DOMAIN/auth.${ROOT_DOMAIN}/g" "$MANIFEST_DIR/13-ingress.yaml"
+sed -i "s/PLACEHOLDER_S3_DOMAIN/s3.${ROOT_DOMAIN}/g"   "$MANIFEST_DIR/13-ingress.yaml"
 
-# Generate one IngressRoute per subdomain using ROOT_DOMAIN variable
-# Traefik is built into K3S so no separate ingress controller needed
-cat > "$MANIFEST_DIR/ingress.yaml" << EOF
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: envsync-api
-  namespace: envsync
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(\`api.${ROOT_DOMAIN}\`)
-      kind: Rule
-      services:
-        - name: envsync-api
-          port: 3000
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: envsync-web
-  namespace: envsync
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(\`app.${ROOT_DOMAIN}\`)
-      kind: Rule
-      services:
-        - name: envsync-web
-          port: 5173
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: envsync-auth
-  namespace: envsync
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(\`auth.${ROOT_DOMAIN}\`)
-      kind: Rule
-      services:
-        - name: zitadel
-          port: 8080
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: envsync-s3
-  namespace: envsync
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(\`s3.${ROOT_DOMAIN}\`)
-      kind: Rule
-      services:
-        - name: rustfs
-          port: 9000
-EOF 
+# Also inject the auth domain into zitadel so it knows its external URL
+sed -i "s/PLACEHOLDER_AUTH_DOMAIN/auth.${ROOT_DOMAIN}/g" "$MANIFEST_DIR/10-zitadel.yaml"
 
-echo "Applying manifests..."
+# Also inject the api domain into envsync-web so it knows where the API is
+sed -i "s/PLACEHOLDER_API_DOMAIN/api.${ROOT_DOMAIN}/g" "$MANIFEST_DIR/12-envsync-web.yaml"
 
-# Apply namespace first so it exists before other resources try to use it
-kubectl apply -f "$MANIFEST_DIR/namespace.yaml"
+echo "Applying manifests in dependency order..."
 
-# Apply ingress routes so Traefik knows where to route traffic
-kubectl apply -f "$MANIFEST_DIR/ingress.yaml"
+# Apply each manifest in numbered order
+# Each number prefix ensures correct dependency sequencing
+for manifest in "$MANIFEST_DIR"/*.yaml; do
+  echo "  Applying $(basename "$manifest")..."
+  kubectl apply -f "$manifest"
+done
 
-echo "Manifests applied." 
+echo "Waiting for core pods to be ready..."
 
-echo "Waiting for pods to be ready..."
+# Wait for postgres first since everything depends on it
+kubectl wait --namespace envsync \
+  --for=condition=ready pod \
+  --selector=app=postgres \
+  --timeout=120s
 
-# Wait up to 120 seconds for all deployments in the envsync namespace
+# Wait for envsync-api last since it depends on all other services
 kubectl wait --namespace envsync \
   --for=condition=ready pod \
   --selector=app=envsync-api \
-  --timeout=120s
+  --timeout=180s
 
 echo "Pods are ready."
 
 # Run EnvSync's own initialization sequence
-# This creates the Zitadel OIDC apps and writes client IDs to .env
+# This creates Zitadel OIDC apps and writes client IDs to .env
 echo "Running EnvSync init..."
 bun run cli init
 
@@ -155,4 +101,3 @@ echo "  Auth:    https://auth.${ROOT_DOMAIN}"
 echo "  S3:      https://s3.${ROOT_DOMAIN}"
 echo "  Web app: https://app.${ROOT_DOMAIN}"
 echo "============================================" 
-
