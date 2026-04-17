@@ -69,7 +69,7 @@ pf_check "internet (cloudflare)"   "https://1.1.1.1"
 pf_check "ghcr.io"                 "https://ghcr.io"
 pf_check "letsencrypt ACME v2"     "https://acme-v02.api.letsencrypt.org/directory"
 pf_check "npm registry"            "https://registry.npmjs.org"
-pf_check "docker apt repo"         "https://download.docker.com/linux/${ID}/gpg"
+pf_check "get.docker.com"           "https://get.docker.com"
 pf_check "bun.sh"                  "https://bun.sh/install"
 if [ "$pf_fail" -eq 1 ]; then
   die "One or more required endpoints are unreachable — fix network/firewall and retry."
@@ -108,36 +108,15 @@ fi
 
 # ---------- 4. Docker CE with buildx + compose ----------
 section "Docker"
-docker_ok=0
 if command -v docker >/dev/null 2>&1 \
    && docker buildx version >/dev/null 2>&1 \
    && docker compose version >/dev/null 2>&1; then
-  docker_ok=1
-fi
-
-if [ "$docker_ok" -eq 1 ]; then
   skip "docker + buildx + compose already installed"
 else
-  ok "installing Docker CE from Docker's official apt repo"
-  # Remove conflicting distro packages quietly (they can't coexist with docker-ce).
-  apt-get remove -y docker.io docker-doc docker-compose docker-compose-v2 \
-    podman-docker containerd runc >/dev/null 2>&1 || true
-
-  install -d -m 0755 /etc/apt/keyrings
-  if [ ! -s /etc/apt/keyrings/docker.asc ]; then
-    curl -fsSL "https://download.docker.com/linux/${ID}/gpg" \
-      -o /etc/apt/keyrings/docker.asc
-    chmod a+r /etc/apt/keyrings/docker.asc
-  fi
-
-  cat > /etc/apt/sources.list.d/docker.list <<EOF
-deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${ID} ${CODENAME} stable
-EOF
-
-  apt-get update -y
-  apt-get install -y \
-    docker-ce docker-ce-cli containerd.io \
-    docker-buildx-plugin docker-compose-plugin
+  ok "installing Docker CE via get.docker.com"
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  sh /tmp/get-docker.sh
+  rm -f /tmp/get-docker.sh
 fi
 
 systemctl enable --now docker >/dev/null
