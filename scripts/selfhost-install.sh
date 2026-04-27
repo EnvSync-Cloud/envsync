@@ -13,11 +13,72 @@ set -euo pipefail
 
 c_red=$'\033[0;31m'; c_green=$'\033[0;32m'; c_yellow=$'\033[0;33m'
 c_blue=$'\033[0;34m'; c_dim=$'\033[2m'; c_bold=$'\033[1m'; c_reset=$'\033[0m'
+c_orange=$'\033[38;5;214m'
 section() { printf '\n%s==> %s%s\n' "$c_bold$c_blue" "$1" "$c_reset"; }
 ok()      { printf '  %s[ ok ]%s %s\n' "$c_green" "$c_reset" "$1"; }
 skip()    { printf '  %s[skip]%s %s\n' "$c_dim"   "$c_reset" "$1"; }
 warn()    { printf '  %s[warn]%s %s\n' "$c_yellow" "$c_reset" "$1"; }
 die()     { printf '  %s[fail]%s %s\n' "$c_red"   "$c_reset" "$1" >&2; exit 1; }
+
+# ---- download progress helpers (adapted from opencode installer) ----
+_unbuffered_sed() {
+  if echo | sed -u -e "" >/dev/null 2>&1; then
+    sed -nu "$@"
+  elif echo | sed -l -e "" >/dev/null 2>&1; then
+    sed -nl "$@"
+  else
+    local pad; pad="$(printf "\n%512s" "")"
+    sed -ne "s/$/\\${pad}/" "$@"
+  fi
+}
+
+_print_progress() {
+  local bytes="$1" length="$2"
+  [ "$length" -gt 0 ] || return 0
+  local width=50 percent on off filled empty
+  percent=$(( bytes * 100 / length ))
+  [ "$percent" -gt 100 ] && percent=100
+  on=$(( percent * width / 100 ))
+  off=$(( width - on ))
+  filled=$(printf "%*s" "$on"  ""); filled=${filled// /■}
+  empty=$(printf  "%*s" "$off" ""); empty=${empty// /･}
+  printf "\r  %s%s%s %3d%%" "$c_orange" "$filled$empty" "$c_reset" "$percent" >&4
+}
+
+download_with_progress() {
+  local url="$1" output="$2"
+  if [ -t 2 ]; then exec 4>&2; else exec 4>/dev/null; fi
+  local tmp_dir="${TMPDIR:-/tmp}"
+  local tracefile="${tmp_dir}/envsync_dl_$$.trace"
+  rm -f "$tracefile"
+  mkfifo "$tracefile"
+  printf "\033[?25l" >&4
+  # shellcheck disable=SC2064
+  trap "trap - RETURN; rm -f \"$tracefile\"; printf '\033[?25h' >&4; exec 4>&-" RETURN
+  ( curl --trace-ascii "$tracefile" -s -L -o "$output" "$url" ) &
+  local curl_pid=$!
+  _unbuffered_sed \
+    -e 'y/ACDEGHLNORTV/acdeghlnortv/' \
+    -e '/^0000: content-length:/p' \
+    -e '/^<= recv data/p' \
+    "$tracefile" | {
+      local length=0 bytes=0
+      while IFS=" " read -r -a line; do
+        [ "${#line[@]}" -lt 2 ] && continue
+        local tag="${line[0]} ${line[1]}"
+        if [ "$tag" = "0000: content-length:" ]; then
+          length="${line[2]}"; length=$(echo "$length" | tr -d '\r'); bytes=0
+        elif [ "$tag" = "<= recv" ]; then
+          local size="${line[3]}"; bytes=$(( bytes + size ))
+          [ "$length" -gt 0 ] && _print_progress "$bytes" "$length"
+        fi
+      done
+    }
+  wait "$curl_pid"
+  local ret=$?
+  echo "" >&4
+  return "$ret"
+}
 
 # ---------- 0. Re-attach stdin for `curl | bash` piped installs ----------
 # If stdin is not a TTY (i.e. we're being piped from curl), try to re-open it
@@ -99,7 +160,10 @@ if command -v bun >/dev/null 2>&1; then
   skip "bun $(bun --version) already installed"
 else
   ok "installing bun to $BUN_INSTALL"
-  curl -fsSL https://bun.sh/install | bash >/dev/null
+  _bun_tmp="$(mktemp /tmp/bun-install-XXXXXX.sh)"
+  download_with_progress "https://bun.sh/install" "$_bun_tmp"
+  bash "$_bun_tmp" >/dev/null
+  rm -f "$_bun_tmp"
   ln -sf "$BUN_INSTALL/bin/bun"  /usr/local/bin/bun
   ln -sf "$BUN_INSTALL/bin/bunx" /usr/local/bin/bunx 2>/dev/null || \
     ln -sf "$BUN_INSTALL/bin/bun" /usr/local/bin/bunx
@@ -114,7 +178,7 @@ if command -v docker >/dev/null 2>&1 \
   skip "docker + buildx + compose already installed"
 else
   ok "installing Docker CE via get.docker.com"
-  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh
+  download_with_progress "https://get.docker.com" "/tmp/get-docker.sh"
   sh /tmp/get-docker.sh
   rm -f /tmp/get-docker.sh
 fi
@@ -125,11 +189,12 @@ ok "$(docker --version)"
 ok "$(docker buildx version | head -1)"
 ok "$(docker compose version)"
 
-# ---------- 5. Host directories ----------
-section "Host directories"
-install -d -m 0755 /opt/envsync /opt/envsync/deploy /opt/envsync/releases /opt/envsync/backups
-install -d -m 0755 /etc/envsync /var/lib/envsync/traefik
-ok "/opt/envsync, /etc/envsync, /var/lib/envsync/traefik ready"
+# ---------- 5. Host directory permissions ----------
+section "Host directory permissions"
+for d in /opt/envsync /etc/envsync; do
+  [ -d "$d" ] && chmod 0755 "$d"
+done
+ok "directory permissions verified"
 
 # ---------- 6. Swarm ----------
 section "Docker Swarm"
@@ -265,16 +330,22 @@ bunx @envsync-cloud/deploy-cli deploy
 section "Post-deploy health"
 bunx @envsync-cloud/deploy-cli health || true
 
+printf '\n'
+printf '%s█▀▀█ █▀▀▄ █  █%s  %s▄▀▀▀ █  █ █▀▀▄ █▀▀▀%s\n' "$c_dim" "$c_reset" "$c_green$c_bold" "$c_reset"
+printf '%s█▀▀▀ █  █ ▀▄▄▀%s  %s▀▀▀▄ ▀▄▄▀ █  █ █   %s\n' "$c_dim" "$c_reset" "$c_green$c_bold" "$c_reset"
+printf '%s▀▀▀▀ ▀  ▀     %s  %s▀▀▀▀  ██  ▀  ▀ ▀▀▀▀%s\n' "$c_dim" "$c_reset" "$c_green$c_bold" "$c_reset"
+
 cat <<EOF
 
-${c_green}${c_bold}EnvSync self-host install complete.${c_reset}
+${c_dim}Self-host install complete. Your EnvSync instance is live.${c_reset}
 
-  Dashboard:  https://app.${ROOT_DOMAIN}
-  API:        https://api.${ROOT_DOMAIN}
-  Keycloak:   https://auth.${ROOT_DOMAIN}
-  HyperDX:    https://obs.${ROOT_DOMAIN}
+  Dashboard:  ${c_bold}https://app.${ROOT_DOMAIN}${c_reset}
+  API:        ${c_bold}https://api.${ROOT_DOMAIN}${c_reset}
+  Keycloak:   ${c_bold}https://auth.${ROOT_DOMAIN}${c_reset}
+  HyperDX:    ${c_bold}https://obs.${ROOT_DOMAIN}${c_reset}
 
-Next steps:
+${c_dim}Next steps:${c_reset}
   envsync-deploy health
   envsync-deploy backup
+
 EOF

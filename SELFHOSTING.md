@@ -8,12 +8,14 @@ A comprehensive guide for deploying and managing EnvSync in a self-hosted enviro
 
 1.  [Infrastructure Requirements](#infrastructure-requirements)
 2.  [Installation Guide](#installation-guide)
-2.1 [Quick Install (One-Shot Script)](#quick-install-one-shot-script)
-2.2 [Manuall Setup](#manuall-setup)
+    - 2.1 [Quick Install (One-Shot Script)](#quick-install-one-shot-script)
+    - 2.2 [Deploy CLI (Step-by-Step)](#deploy-cli-step-by-step)
 3.  [DNS Setup](#dns-setup)
 4.  [Post-Deployment](#post-deployment)
-5.  [Configuration](#configuration)
-6.  [Troubleshooting](#troubleshooting)
+5.  [EnvSync CLI](#envsync-cli)
+6.  [Deploy CLI Reference](#deploy-cli-reference)
+7.  [Configuration](#configuration)
+8.  [Troubleshooting](#troubleshooting)
 ---
 
 ## Infrastructure Requirements
@@ -23,8 +25,8 @@ A comprehensive guide for deploying and managing EnvSync in a self-hosted enviro
 #### Minimal Configuration (Development/Small Teams)
 
 - CPU: 2 vCPU (minimum)
-- RAM: 4 GB (minimum, 8 GB recommended)
-- Storage: 50 GB SSD
+- RAM: 4 GB (minimum, 6 GB recommended)
+- Storage: 25 GB SSD
 - OS: Ubuntu 24.04 LTS
 
 Use cases: Testing, small team deployments (< 50 users), development environments.
@@ -32,8 +34,8 @@ Use cases: Testing, small team deployments (< 50 users), development environment
 #### Recommended Configuration (Production/Medium Teams)
 
 - CPU: 4 vCPU
-- RAM: 16 GB
-- Storage: 200 GB SSD
+- RAM: 12 GB
+- Storage: 100 GB SSD
 - OS: Ubuntu 24.04 LTS
 
 Use cases: Production deployments (50-500 users), moderate analytics load.
@@ -41,8 +43,8 @@ Use cases: Production deployments (50-500 users), moderate analytics load.
 #### High-Performance Configuration (Enterprise/Large Teams)
 
 - CPU: 8+ vCPU
-- RAM: 32 GB+
-- Storage: 500 GB+ SSD (consider separate volumes for databases)
+- RAM: 24 GB+
+- Storage: 200 GB+ SSD (consider separate volumes for databases)
 - OS: Ubuntu 24.04 LTS
 
 Use cases: Production deployments (500+ users), heavy analytics, backup/disaster recovery infrastructure.
@@ -90,7 +92,9 @@ Everything the installer does is the same set of commands documented below, just
 
 ---
 
-## Manuall Setup:
+## Deploy CLI (Step-by-Step)
+
+If you prefer to run each stage individually instead of the one-shot script, use the deploy CLI directly. This gives you more control over each step.
 
 ### Step 1: Launch and Prepare the Instance
 
@@ -103,19 +107,18 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git unzip jq
 ```
 
-### Step 2: Install Bun
-
-Bun is the runtime required for the deploy-cli tool.
-```bash
-curl https://bun.sh/install | bash
-```
-
-### Step 3: Become Root
+### Step 2: Become Root
 
 Most deployment steps require root access. Switch to root user:
 ```bash
 sudo bash
-source ~/.bashrc
+```
+
+### Step 3: Install Bun
+
+Bun is the runtime required for the deploy-cli tool.
+```bash
+curl https://bun.sh/install | bash
 ```
 
 Verify Bun is available:
@@ -123,14 +126,7 @@ Verify Bun is available:
 bun --version
 ```
 
-### Step 4: Clone the EnvSync Repository
-
-```bash
-git clone https://github.com/EnvSync-Cloud/envsync.git
-cd envsync
-```
-
-### Step 5: Run Preinstall
+### Step 4: Run Preinstall
 
 The preinstall command validates your system and installs Docker + dependencies:
 ```bash
@@ -147,15 +143,15 @@ This command will:
 
 You may see a warning about kernel upgrades; this is normal and can be addressed after deployment.
 
-### Step 6: Storage Verification (Optional, but can save time and troubleshooting)
+### Step 5: Storage Verification (Optional)
 
 Before proceeding, verify you have sufficient disk space.
-Check the root filesystem (/) has at least 30 GB free. If not, resize your EBS volume.
+Check the root filesystem (/) has at least 30 GB free. If not, resize your volume.
 ```bash
 df -h
 ```
 
-### Step 7: Run Setup
+### Step 6: Run Setup
 
 The setup command configures your deployment parameters:
 ```bash
@@ -220,9 +216,9 @@ Set TTL to 300 seconds for faster propagation during initial setup, then increas
 
 ---
 
-## Post-Deployment
+## Post-Initialization
 
-### Step 1: Run Bootstrap
+### Step 7: Run Bootstrap
 
 The bootstrap command deploys the base infrastructure and databases:
 ```bash
@@ -241,7 +237,7 @@ This step will:
 This process typically takes 5-15 minutes depending on instance size and network speed.
 Expected completion message: Bootstrap process finishes without errors.
 
-### Step 2: Run Deploy
+### Step 8: Run Deploy
 
 The deploy command performs the final deployment:
 ```bash
@@ -255,7 +251,7 @@ This step will:
 - Start all services
 - Verify service health
 
-### Step 3: Verify Deployment
+### Step 9: Verify Deployment
 
 Check that all services are running:
 ```bash
@@ -270,7 +266,7 @@ docker service ls
 
 All services should show `replicas 1/1` with no errors.
 
-### Step 4: Access the Application
+### Step 10: Access the Application
 
 Once deployment is complete, access the services:
 
@@ -282,7 +278,7 @@ Once deployment is complete, access the services:
 
 All HTTPS connections should work without certificate warnings (Let's Encrypt handles this automatically).
 
-### Step 5: First-Time Setup
+### Step 11: First-Time Setup
 
 1. Create an admin user account in the web application
 2. Configure authentication settings
@@ -292,7 +288,99 @@ All HTTPS connections should work without certificate warnings (Let's Encrypt ha
 
 ---
 
-## Monitoring and Maintenance
+## EnvSync CLI
+
+The **EnvSync CLI** (`envsync`) is the end-user command-line tool for managing environment variables, secrets, teams, certificates, and more. It is separate from the deploy CLI used for server setup.
+
+### Installation
+
+#### From GitHub Releases (recommended)
+
+Download the latest release binary for your platform from [GitHub Releases](https://github.com/EnvSync-Cloud/envsync/releases):
+
+| Platform | Asset |
+|----------|-------|
+| Linux x86_64 | `envsync-cli_<version>_Linux_x86_64.tar.gz` |
+| Linux ARM64 | `envsync-cli_<version>_Linux_arm64.tar.gz` |
+| macOS (Universal) | `envsync-cli_<version>_Darwin_all.tar.gz` |
+| Windows x86_64 | `envsync-cli_<version>_Windows_x86_64.zip` |
+| Windows ARM64 | `envsync-cli_<version>_Windows_arm64.zip` |
+
+```bash
+# Example for Linux x86_64
+curl -fsSL https://github.com/EnvSync-Cloud/envsync/releases/latest/download/envsync-cli_0.7.7_Linux_x86_64.tar.gz -o envsync-cli.tar.gz
+tar xzf envsync-cli.tar.gz
+sudo mv envsync /usr/local/bin/
+envsync --help
+```
+
+#### From Source
+
+```bash
+git clone https://github.com/EnvSync-Cloud/envsync.git
+cd envsync/packages/envsync-cli
+make build
+sudo make install
+```
+
+### Configuration
+
+Point the CLI at your self-hosted API:
+
+```bash
+envsync config set backend_url https://api.<your-domain>
+```
+
+### Authentication
+
+```bash
+envsync auth login     # Interactive device-flow login via browser
+envsync auth whoami    # Show current user
+envsync auth logout    # Sign out
+```
+
+For CI/CD pipelines, set the `API_KEY` environment variable instead of interactive login.
+
+### Commands Overview
+
+| Command | Description |
+|---------|-------------|
+| `envsync init` | Initialize a project (creates `envsyncrc.toml`) |
+| `envsync pull` | Pull environment variables from remote |
+| `envsync push` | Push environment variables to remote |
+| `envsync run` | Run a command with injected environment variables |
+| `envsync export` | Export variables for CI workflows |
+| `envsync app create/list/delete` | Manage applications |
+| `envsync env sw/ls/del` | Switch, list, or delete environments |
+| `envsync team create/list/update/delete` | Manage teams and membership |
+| `envsync access app grant/revoke/grants/effective` | Manage app access control |
+| `envsync gpg generate/list/sign/verify/export/revoke/rotate` | GPG key management |
+| `envsync cert ca init/status` | Certificate Authority management |
+| `envsync cert issue/list/revoke/renew/rotate` | Certificate lifecycle |
+| `envsync request create-direct/create-promotion/approve/reject` | Protected environment change requests |
+| `envsync gen-pem` | Generate PEM key pair for self-managed secrets |
+| `envsync config set/get/reset` | CLI configuration |
+
+All commands support `--json` / `-j` for machine-readable output.
+
+### Shell Completions
+
+Release archives include pre-generated completions:
+
+```bash
+# Bash
+source completions/envsync.bash
+
+# Zsh
+source completions/envsync.zsh
+
+# Fish
+source completions/envsync.fish
+```
+
+---
+
+## Post-Deployment
 
 ### Service Health Checks
 
@@ -321,6 +409,117 @@ To manually check certificate status:
 
 ```bash
 docker exec envsync_traefik cat /letsencrypt/acme.json | jq '.acme[] | select(.domain.main=="your-domain.com")'
+```
+
+---
+
+## Deploy CLI Reference
+
+The deploy CLI (`@envsync-cloud/deploy-cli`) provides all commands needed to manage a self-hosted EnvSync instance. Run any command with:
+
+```bash
+bunx @envsync-cloud/deploy-cli <command>
+```
+
+Or if installed globally:
+
+```bash
+envsync-deploy <command>
+```
+
+Running `envsync-deploy` with no subcommand shows the current status and the recommended next step.
+
+### Commands Overview
+
+| Command | Description |
+|---------|-------------|
+| `preinstall` | Validate system, install Docker + dependencies, init Swarm |
+| `setup` | Write `/etc/envsync/deploy.yaml` for a new self-hosted install |
+| `bootstrap` | Bootstrap managed infra (destructive — rebuilds everything) |
+| `deploy` | Deploy the pinned release |
+| `upgrade [version]` | Upgrade to a target release version |
+| `promote` | Promote the candidate API slot to active |
+| `rollback` | Roll back to the previous API slot |
+| `backup` | Create a backup archive |
+| `restore <path>` | Restore from a backup archive |
+| `health` | Human-friendly health view |
+| `health --json` | Machine-readable health output |
+
+### Upgrade / Rollback
+
+Upgrade to the running deploy-cli package version:
+
+```bash
+bunx @envsync-cloud/deploy-cli upgrade
+```
+
+Upgrade to an exact target version:
+
+```bash
+bunx @envsync-cloud/deploy-cli@0.7.6 upgrade 0.7.5
+```
+
+Blue/green behavior:
+
+- The inactive API slot is updated first
+- Traffic promotes only after the candidate slot is ready
+- The previous API slot stays available for rollback
+
+Manual slot control:
+
+```bash
+envsync-deploy promote
+envsync-deploy rollback
+```
+
+### Backup / Restore
+
+Create a backup archive:
+
+```bash
+envsync-deploy backup
+```
+
+Restore a backup archive:
+
+```bash
+envsync-deploy restore /path/to/envsync-backup.tar.gz
+```
+
+Restore and start services immediately:
+
+```bash
+envsync-deploy restore /path/to/envsync-backup.tar.gz --deploy
+```
+
+### Health
+
+Human-friendly health view:
+
+```bash
+envsync-deploy health
+```
+
+Machine-readable health:
+
+```bash
+envsync-deploy health --json
+```
+
+The health output shows:
+
+- Bootstrap state
+- Active and rollback API slots
+- Service health for API, web, landing, and observability
+- ClickStack source/search readiness
+- Public URLs
+
+### Local Smoke Testing (for maintainers)
+
+Before publishing deploy-cli changes from the monorepo:
+
+```bash
+bun run selfhost:smoke
 ```
 
 ---
