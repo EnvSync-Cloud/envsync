@@ -161,12 +161,16 @@ if command -v bun >/dev/null 2>&1; then
 else
   ok "installing bun to $BUN_INSTALL"
   _bun_tmp="$(mktemp /tmp/bun-install-XXXXXX.sh)"
-  download_with_progress "https://bun.sh/install" "$_bun_tmp"
-  bash "$_bun_tmp" >/dev/null
+  curl -fsSL "https://bun.sh/install" -o "$_bun_tmp" \
+    || die "failed to download bun installer"
+  bash "$_bun_tmp" \
+    || die "bun installer failed — see output above"
   rm -f "$_bun_tmp"
-  ln -sf "$BUN_INSTALL/bin/bun"  /usr/local/bin/bun
-  ln -sf "$BUN_INSTALL/bin/bunx" /usr/local/bin/bunx 2>/dev/null || \
-    ln -sf "$BUN_INSTALL/bin/bun" /usr/local/bin/bunx
+  ln -sf "$BUN_INSTALL/bin/bun"  /usr/local/bin/bun  || true
+  ln -sf "$BUN_INSTALL/bin/bunx" /usr/local/bin/bunx 2>/dev/null \
+    || ln -sf "$BUN_INSTALL/bin/bun" /usr/local/bin/bunx || true
+  command -v bun >/dev/null 2>&1 \
+    || die "bun binary not found in PATH after install (BUN_INSTALL=$BUN_INSTALL)"
   ok "bun $(bun --version)"
 fi
 
@@ -178,8 +182,10 @@ if command -v docker >/dev/null 2>&1 \
   skip "docker + buildx + compose already installed"
 else
   ok "installing Docker CE via get.docker.com"
-  download_with_progress "https://get.docker.com" "/tmp/get-docker.sh"
-  sh /tmp/get-docker.sh
+  curl -fsSL "https://get.docker.com" -o /tmp/get-docker.sh \
+    || die "failed to download Docker installer"
+  sh /tmp/get-docker.sh \
+    || die "Docker installer failed — see output above"
   rm -f /tmp/get-docker.sh
 fi
 
