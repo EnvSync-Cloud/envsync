@@ -97,7 +97,7 @@ Local observability uses ClickStack / HyperDX:
 
 ## Related Paths
 
-- [docker-compose.yaml](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/docker-compose.yaml)
-- [packages/envsync-api/src/controllers/access.controller.ts](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/envsync-api/src/controllers/access.controller.ts)
-- [packages/envsync-api/src/helpers/keycloak.ts](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/envsync-api/src/helpers/keycloak.ts)
-- [packages/envsync-api/tests/e2e/helpers/bootstrap-env.ts](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/envsync-api/tests/e2e/helpers/bootstrap-env.ts)
+- [docker-compose.yaml](../../docker-compose.yaml)
+- [packages/envsync-api/src/controllers/access.controller.ts](./src/controllers/access.controller.ts)
+- [packages/envsync-api/src/helpers/keycloak.ts](./src/helpers/keycloak.ts)
+- [packages/envsync-api/tests/e2e/helpers/bootstrap-env.ts](./tests/e2e/helpers/bootstrap-env.ts)

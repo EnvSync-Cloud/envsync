@@ -136,6 +136,6 @@ bun run selfhost:smoke
 
 ## Related paths
 
-- [packages/deploy-cli](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/deploy-cli)
-- [packages/deploy-cli/src/index.ts](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/deploy-cli/src/index.ts)
-- [packages/envsync-keycloak-theme](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/envsync-keycloak-theme)
+- [packages/deploy-cli](./packages/deploy-cli)
+- [packages/deploy-cli/src/index.ts](./packages/deploy-cli/src/index.ts)
+- [packages/envsync-keycloak-theme](./packages/envsync-keycloak-theme)

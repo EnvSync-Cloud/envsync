@@ -137,8 +137,8 @@ Canonical local env vars:
 - `KEYCLOAK_API_CLIENT_ID`
 - `KEYCLOAK_API_CLIENT_SECRET`
 
-The local realm import lives under [docker/keycloak/realm-import](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/docker/keycloak/realm-import). Self-hosted deploys generate a derived realm config during setup.
-The local and E2E Keycloak container image is built from [packages/envsync-keycloak-theme](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/packages/envsync-keycloak-theme), not pulled from GHCR.
+The local realm import lives under [docker/keycloak/realm-import](./docker/keycloak/realm-import). Self-hosted deploys generate a derived realm config during setup.
+The local and E2E Keycloak container image is built from [packages/envsync-keycloak-theme](./packages/envsync-keycloak-theme), not pulled from GHCR.
 
 ## Observability
 
@@ -162,12 +162,12 @@ Self-hosted deployment now targets:
 - ClickStack / HyperDX
 - single-host Ubuntu/Debian in v1
 
-See [SELFHOSTING.md](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/SELFHOSTING.md).
+See [SELFHOSTING.md](./SELFHOSTING.md).
 
 ## SDKs
 
-- [sdks/envsync-ts-sdk/README.md](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/sdks/envsync-ts-sdk/README.md)
-- [sdks/envsync-go-sdk/sdk/README.md](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/sdks/envsync-go-sdk/sdk/README.md)
+- [sdks/envsync-ts-sdk/README.md](./sdks/envsync-ts-sdk/README.md)
+- [sdks/envsync-go-sdk/sdk/README.md](./sdks/envsync-go-sdk/sdk/README.md)
 
 ## Contributing
 

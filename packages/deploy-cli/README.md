@@ -148,4 +148,4 @@ bun run src/index.ts plan-topology /etc/envsync/deploy.yaml
 - `upgrade` and `deploy` reconcile managed versioned artifacts from `release.version`.
 - Custom image overrides are still preserved for advanced self-host setups.
 - Enterprise package publication now targets NPM Packages rather than the public npm registry.
-- The full deployment guide lives in [SELFHOSTING.md](/Users/bravo68web/Projects/OSS/EnvSync/monorepo/SELFHOSTING.md).
+- The full deployment guide lives in [SELFHOSTING.md](../../SELFHOSTING.md).
