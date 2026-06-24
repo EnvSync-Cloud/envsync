@@ -64,6 +64,11 @@ const deployConfigSchema = z.object({
 		dashboard_variant: z.enum(["oss", "enterprise"]).optional(),
 		include_manage_subtree: z.boolean().optional(),
 	}).default({}),
+	vpn: z.object({
+		provider: z.enum(["netbird", "none"]).default("none"),
+		internal_domain: z.string().default("envsync.local"),
+		nb_setup_key: z.string().default(""),
+	}).default({}),
 });
 
 export type DeployConfig = z.infer<typeof deployConfigSchema>;

@@ -88,6 +88,11 @@ export interface DeployConfig {
 			protocol?: "tcp" | "udp";
 		}>;
 	};
+	vpn?: {
+		provider: "netbird" | "none";
+		internal_domain?: string;
+		nb_setup_key?: string;
+	};
 	release_channel?: string;
 }
 
@@ -140,6 +145,7 @@ export interface DeployRenderPaths {
 	nginxLandingConf: string;
 	nginxWebConf: string;
 	nginxApiMaintenanceConf: string;
+	nginxVpnConf: string;
 }
 
 export type DeployRenderMode = "base" | "bootstrap" | "full";
@@ -302,6 +308,10 @@ export function buildRuntimeEnv(config: DeployConfig, generated: DeployGenerated
 		OTEL_SDK_DISABLED: "false",
 		CLICKSTACK_URL: publicHttpsUrl(config, hosts.obs),
 		KEYCLOAK_IMAGE_TAG: keycloakImageTag(config.images.keycloak),
+		// Is this too hacky? We go Shawn way.
+		...(config.vpn?.provider && config.vpn.provider !== "none" && config.vpn.nb_setup_key
+			? { NB_SETUP_KEY: config.vpn.nb_setup_key }
+			: {}),
 	};
 }
 
@@ -635,6 +645,115 @@ ${ports}
     networks: [envsync]`;
 }
 
+type VpnProvider = NonNullable<DeployConfig["vpn"]>["provider"];
+
+interface VpnServiceRenderResult {
+	serviceBlock: string;
+	extraVolumes: string[];
+}
+
+const VPN_SERVICE_RENDERERS: Record<VpnProvider, (config: DeployConfig, paths: DeployRenderPaths, runtimeEnv: RuntimeEnv) => VpnServiceRenderResult | null> = {
+	none: () => null,
+	netbird: renderNetbirdService,
+};
+
+function renderNetbirdService(config: DeployConfig, paths: DeployRenderPaths, runtimeEnv: RuntimeEnv): VpnServiceRenderResult {
+	const nbSetupKey = runtimeEnv.NB_SETUP_KEY ?? "";
+	return {
+		serviceBlock: `
+  netbird_nginx:
+    image: ghcr.io/envsync-cloud/netbird-nginx
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    networks: [envsync]
+    environment:
+${renderEnvList({ NB_SETUP_KEY: nbSetupKey })}
+    volumes:
+      - netbird_client:/var/lib/netbird
+      - ${paths.nginxVpnConf}:/etc/nginx/nginx.conf:ro`,
+		// Adding comment for readability, extra volume below. We gotta do something about too many ` bhaiya.
+		extraVolumes: ["netbird_client"],
+	};
+}
+
+function renderVpnService(config: DeployConfig, paths: DeployRenderPaths, runtimeEnv: RuntimeEnv): VpnServiceRenderResult | null {
+	const provider = config.vpn?.provider ?? "none";
+	const renderer = VPN_SERVICE_RENDERERS[provider];
+	if (!renderer) return null;
+	return renderer(config, paths, runtimeEnv);
+}
+
+export function renderNginxVpnConf(config: DeployConfig) {
+	const domain = config.vpn?.internal_domain ?? "envsync.local";
+	return `events {}
+
+stream {
+  server {
+    listen 5432;
+    proxy_pass postgres:5432;
+  }
+  server {
+    listen 6379;
+    proxy_pass redis:6379;
+  }
+  server {
+    listen 50051;
+    proxy_pass minikms:50051;
+  }
+  server {
+    listen 5544;
+    proxy_pass minikms_db:5432;
+  }
+  server {
+    listen 8091;
+    proxy_pass openfga:8091;
+  }
+}
+
+http {
+  server {
+    listen 80;
+    server_name keycloak.${domain};
+    location / {
+      proxy_pass http://keycloak:8080/;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+  }
+  server {
+    listen 80;
+    server_name openfga.${domain};
+    location / {
+      proxy_pass http://openfga:8090/;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+    }
+  }
+  server {
+    listen 80;
+    server_name clickstack.${domain};
+    location / {
+      proxy_pass http://clickstack:8080/;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+    }
+  }
+  server {
+    listen 80;
+    server_name rustfs.${domain};
+    location / {
+      proxy_pass http://rustfs:9001/;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+    }
+  }
+}
+`;
+}
+
 export function renderOtelAgentConfig(config: DeployConfig) {
 	return [
 		"receivers:",
@@ -700,6 +819,7 @@ export function renderStack(
 	const s3ConsoleRouterName = `${stackName}-s3-console-router`;
 	const s3ConsoleServiceName = `${stackName}-s3-console-service`;
 	const netutilsService = renderNetutilsService(config);
+	const vpnResult = renderVpnService(config, paths, runtimeEnv);
 	const apiEnvironment = {
 		...runtimeEnv,
 		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
@@ -968,7 +1088,7 @@ ${renderEnvList({
 ${apiLicenseVolume}
     networks: [envsync]
     deploy:
-      replicas: ${slotHasApiDeployment(deployment.slots.green) ? 1 : 0}` : ""}${netutilsService}
+      replicas: ${slotHasApiDeployment(deployment.slots.green) ? 1 : 0}` : ""}${netutilsService}${vpnResult?.serviceBlock ?? ""}
 
 networks:
   envsync:
@@ -985,6 +1105,8 @@ volumes:
   clickstack_data:
   clickstack_ch_data:
   clickstack_ch_logs:
+  ${vpnResult?.extraVolumes.map(v => `
+  ${v}:`).join("") ?? ""}
 
 configs:
   keycloak_realm:

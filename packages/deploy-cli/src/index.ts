@@ -92,6 +92,11 @@ interface DeployConfig {
 			protocol?: "tcp" | "udp";
 		}>;
 	};
+	vpn?: {
+		provider: "netbird" | "none";
+		internal_domain?: string;
+		nb_setup_key?: string;
+	};
 	license?: {
 		server_url?: string;
 		key?: string;
@@ -262,6 +267,7 @@ const KEYCLOAK_REALM_FILE = path.join(DEPLOY_ROOT, "keycloak-realm.envsync.json"
 const NGINX_WEB_CONF = path.join(DEPLOY_ROOT, "nginx-web.conf");
 const NGINX_LANDING_CONF = path.join(DEPLOY_ROOT, "nginx-landing.conf");
 const NGINX_API_MAINTENANCE_CONF = path.join(DEPLOY_ROOT, "nginx-api-maintenance.conf");
+const NGINX_VPN_CONF = path.join(DEPLOY_ROOT, "nginx-vpn.conf");
 const OTEL_AGENT_CONF = path.join(DEPLOY_ROOT, "otel-agent.yaml");
 const CLICKSTACK_CLICKHOUSE_CONF = path.join(DEPLOY_ROOT, "clickhouse-listen.xml");
 const INTERNAL_CONFIG_JSON = path.join(DEPLOY_ROOT, "config.json");
@@ -280,6 +286,7 @@ const DEPLOY_RENDER_PATHS = {
 	nginxLandingConf: NGINX_LANDING_CONF,
 	nginxWebConf: NGINX_WEB_CONF,
 	nginxApiMaintenanceConf: NGINX_API_MAINTENANCE_CONF,
+	nginxVpnConf: NGINX_VPN_CONF,
 } as const;
 
 const REMOVE_TARGETS = [
@@ -1300,6 +1307,11 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			keep_failed_upgrade_db_snapshot: raw.upgrade?.keep_failed_upgrade_db_snapshot ?? true,
 		},
 		netutils: normalizeNetutilsForwards(raw.netutils?.forwards, stackName, raw.netutils?.enabled ?? false),
+		vpn: {
+			provider: raw.vpn?.provider ?? "none",
+			internal_domain: raw.vpn?.internal_domain ?? "envsync.local",
+			nb_setup_key: raw.vpn?.nb_setup_key ?? "",
+		},
 		license: raw.license ? {
 			server_url: raw.license.server_url,
 			key: raw.license.key,
@@ -2402,6 +2414,9 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	writeFileMaybe(NGINX_API_MAINTENANCE_CONF, renderHelpers.renderApiMaintenanceConf());
 	writeFileMaybe(OTEL_AGENT_CONF, renderHelpers.renderOtelAgentConfig(config));
 	writeFileMaybe(CLICKSTACK_CLICKHOUSE_CONF, renderHelpers.renderClickstackClickHouseConfig());
+	if (config.vpn?.provider && config.vpn.provider !== "none") {
+		writeFileMaybe(NGINX_VPN_CONF, renderHelpers.renderNginxVpnConf(config));
+	}
 	logSuccess(currentOptions.dryRun ? "Deploy artifacts previewed" : "Deploy artifacts written");
 }
 
@@ -3767,6 +3782,13 @@ async function cmdSetup() {
 		}
 	}
 	const licenseServerUrl = await ask("Enterprise license server URL", DEFAULT_ENTERPRISE_LICENSE_SERVER_URL);
+	const vpnProvider = (await ask("VPN provider for internal service access (netbird/none)", "none")).toLowerCase() as "netbird" | "none";
+	let vpnInternalDomain = "envsync.local";
+	let vpnNbSetupKey = "";
+	if (vpnProvider !== "none") {
+		vpnInternalDomain = await ask("Internal root domain", "envsync.local");
+		vpnNbSetupKey = await ask("Netbird setup key", "");
+	}
 	const licenseKey = licenseServerUrl ? await ask("Enterprise license key", "") : "";
 	const certificateBundleFile = licenseServerUrl ? "" : await ask("Enterprise certificate bundle file (optional)", "");
 	const installFingerprint = deterministicInstallFingerprint(rootDomain, "envsync");
@@ -3847,6 +3869,11 @@ async function cmdSetup() {
 		netutils: {
 			enabled: netutilsEnabled,
 			forwards: netutilsForwards,
+		},
+		vpn: {
+			provider: vpnProvider,
+			internal_domain: vpnInternalDomain,
+			nb_setup_key: vpnNbSetupKey,
 		},
 	};
 
