@@ -7,6 +7,7 @@ import {
 	renderFrontendRuntimeConfig,
 	renderKeycloakRealm,
 	renderNginxConf,
+	renderNginxVpnConf,
 	renderOtelAgentConfig,
 	renderStack,
 	renderTraefikDynamicConfig,
@@ -108,6 +109,15 @@ const configWithNetutils: DeployConfig = {
 	},
 };
 
+const configWithNetbird: DeployConfig = {
+	...config,
+	vpn: {
+		provider: "netbird",
+		internal_domain: "infra.envsync.local",
+		nb_setup_key: "nb-test-setup-key-abc123",
+	},
+};
+
 const generated: DeployGeneratedState = {
 	openfga: {
 		store_id: "store_123",
@@ -160,17 +170,12 @@ const paths = {
 	nginxLandingConf: "/opt/envsync/deploy/nginx-landing.conf",
 	nginxWebConf: "/opt/envsync/deploy/nginx-web.conf",
 	nginxApiMaintenanceConf: "/opt/envsync/deploy/nginx-api-maintenance.conf",
+	nginxVpnConf: "/opt/envsync/deploy/nginx-vpn.conf",
 } as const;
 
-describe("deploy render helpers", () => {
-	test("render enterprise runtime and stack artifacts with expected hostnames and mounted outputs", () => {
+describe("buildRuntimeEnv", () => {
+	test("populates enterprise license and standard fields", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
-		const stackBase = renderStack(config, runtimeEnv, generated, "base", paths);
-		const stackFull = renderStack(configWithNetutils, runtimeEnv, generated, "full", paths);
-		const traefik = renderTraefikDynamicConfig(config, generated);
-		const keycloakRealm = renderKeycloakRealm(config, runtimeEnv);
-		const frontendRuntime = renderFrontendRuntimeConfig(config, generated);
-
 		expect(runtimeEnv.KEYCLOAK_WEB_CLIENT_SECRET).toBe("web-client-secret");
 		expect(runtimeEnv.OPENFGA_STORE_ID).toBe("store_123");
 		expect(runtimeEnv.DASHBOARD_URL).toBe("https://app.enterprise.example.com");
@@ -184,10 +189,20 @@ describe("deploy render helpers", () => {
 		expect(runtimeEnv.ENVSYNC_LICENSE_CERT_PATH).toBe("/etc/envsync/license/enterprise-cert.pem");
 		expect(runtimeEnv.ENVSYNC_LICENSE_KEY_PATH).toBe("/etc/envsync/license/enterprise-key.pem");
 		expect(runtimeEnv.ENVSYNC_LICENSE_ROOT_CA_CERT_PATH).toBe("/etc/envsync/license/root-ca.pem");
+	});
+});
 
+describe("renderStack", () => {
+	test("base mode omits landing and api services", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const stackBase = renderStack(config, runtimeEnv, generated, "base", paths);
 		expect(stackBase).not.toContain("landing_nginx");
 		expect(stackBase).not.toContain("envsync_api_blue");
+	});
 
+	test("full mode includes web, api, and netutils", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const stackFull = renderStack(configWithNetutils, runtimeEnv, generated, "full", paths);
 		expect(stackFull).toContain("landing_nginx");
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
@@ -204,28 +219,99 @@ describe("deploy render helpers", () => {
 		expect(stackFull).toContain("socat TCP-LISTEN:18080");
 		expect(stackFull).toContain("target: 15432");
 		expect(stackFull).toContain("target: 18080");
+	});
+});
 
+describe("renderTraefikDynamicConfig", () => {
+	test("sets up traefik routers and hosts correctly", () => {
+		const traefik = renderTraefikDynamicConfig(config, generated);
 		expect(traefik).toContain("Host(`app.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`api.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`manage-api.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`enterprise.example.com`)");
 		expect(traefik).toContain("obs.enterprise.example.com");
+	});
+});
 
+describe("renderKeycloakRealm", () => {
+	test("configures realm clients, uris, and attributes", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const keycloakRealm = renderKeycloakRealm(config, runtimeEnv);
 		expect(keycloakRealm).toContain("\"clientId\": \"envsync-web\"");
 		expect(keycloakRealm).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(keycloakRealm).toContain("https://app.enterprise.example.com/auth/callback");
+	});
+});
 
+describe("renderFrontendRuntimeConfig", () => {
+	test("sets correct runtime URLs and release metadata", () => {
+		const frontendRuntime = renderFrontendRuntimeConfig(config, generated);
 		expect(frontendRuntime).toContain("https://api.enterprise.example.com");
 		expect(frontendRuntime).toContain("\"managementApiUrl\": \"https://manage-api.enterprise.example.com\"");
 		expect(frontendRuntime).toContain("\"activeApiSlot\": \"blue\"");
 		expect(frontendRuntime).toContain("\"releaseVersion\": \"0.8.7\"");
 	});
+});
 
-	test("render supporting nginx and otel artifacts", () => {
+describe("render helpers for supporting artifacts", () => {
+	test("renderNginxConf renders for both web and landing", () => {
 		expect(renderNginxConf("web")).toContain("root /srv/web;");
 		expect(renderNginxConf("landing")).toContain("root /srv/landing;");
+	});
+
+	test("renderApiMaintenanceConf renders 503 error", () => {
 		expect(renderApiMaintenanceConf()).toContain("Upgrade in progress. Please retry shortly.");
+	});
+
+	test("renderOtelAgentConfig sets correct endpoint", () => {
 		expect(renderOtelAgentConfig(config)).toContain("endpoint: http://clickstack:4318");
+	});
+
+	test("renderClickstackClickHouseConfig exposes listen host", () => {
 		expect(renderClickstackClickHouseConfig()).toContain("<listen_host>0.0.0.0</listen_host>");
+	});
+});
+
+describe("VPN Configuration (Netbird)", () => {
+	test("default config does not include netbird vpn service", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const stack = renderStack(config, runtimeEnv, generated, "full", paths);
+		expect(stack).not.toContain("netbird_nginx");
+		expect(stack).not.toContain("netbird_client");
+	});
+
+	test("netbird vpn injects service, volume, and mounts nginx-vpn.conf", () => {
+		const runtimeEnv = buildRuntimeEnv(configWithNetbird, generated);
+		const stack = renderStack(configWithNetbird, runtimeEnv, generated, "full", paths);
+		expect(stack).toContain("netbird_nginx:");
+		expect(stack).toContain("image: ghcr.io/envsync-cloud/netbird-nginx");
+		expect(stack).toContain("NET_ADMIN");
+		expect(stack).toContain("SYS_ADMIN");
+		expect(stack).toContain("SYS_RESOURCE");
+		expect(stack).toContain("netbird_client:/var/lib/netbird");
+		expect(stack).toContain("/opt/envsync/deploy/nginx-vpn.conf:/etc/nginx/nginx.conf:ro");
+		expect(stack).toContain("NB_SETUP_KEY=");
+		expect(stack).toContain("  netbird_client:");
+	});
+
+	test("renderNginxVpnConf uses configured internal domain", () => {
+		const vpnConf = renderNginxVpnConf(configWithNetbird);
+		expect(vpnConf).toContain("server_name keycloak.infra.envsync.local;");
+		expect(vpnConf).toContain("server_name openfga.infra.envsync.local;");
+		expect(vpnConf).toContain("server_name clickstack.infra.envsync.local;");
+		expect(vpnConf).toContain("server_name rustfs.infra.envsync.local;");
+		expect(vpnConf).toContain("proxy_pass postgres:5432;");
+		expect(vpnConf).toContain("proxy_pass redis:6379;");
+		expect(vpnConf).toContain("proxy_pass minikms:50051;");
+		expect(vpnConf).toContain("proxy_pass minikms_db:5432;");
+		expect(vpnConf).toContain("proxy_pass openfga:8091;");
+	});
+
+	test("renderNginxVpnConf defaults to envsync.local", () => {
+		const vpnConf = renderNginxVpnConf(config);
+		expect(vpnConf).toContain("server_name keycloak.envsync.local;");
+		expect(vpnConf).toContain("server_name openfga.envsync.local;");
+		expect(vpnConf).toContain("server_name clickstack.envsync.local;");
+		expect(vpnConf).toContain("server_name rustfs.envsync.local;");
 	});
 });
