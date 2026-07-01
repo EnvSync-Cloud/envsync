@@ -1,6 +1,6 @@
 {
   "name": "envsync-management-api",
-  "version": "0.8.16",
+  "version": "0.9.0",
   "type": "module",
   "module": "index.ts",
   "scripts": {
