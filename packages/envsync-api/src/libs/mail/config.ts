@@ -10,6 +10,9 @@ const transporter = nodemailer.createTransport({
 		config.SMTP_USER && config.SMTP_PASS
 			? { user: config.SMTP_USER, pass: config.SMTP_PASS }
 			: undefined,
+	connectionTimeout: 10_000,
+	greetingTimeout: 10_000,
+	socketTimeout: 30_000,
 });
 
 export const sendMail = ({
@@ -25,3 +28,5 @@ export const sendMail = ({
 	text: string;
 	html: string;
 }) => transporter.sendMail({ from, to, subject, text, html });
+
+export const verifyMailConnection = () => transporter.verify();

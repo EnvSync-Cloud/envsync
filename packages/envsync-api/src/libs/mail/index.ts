@@ -47,8 +47,12 @@ export const onOrgOnboardingInvite = async (
 		.then(() => {
 			infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
 		})
-		.catch(() => {
-			infoLogs(`Error sending email to ${email}`, LogTypes.ERROR, "MAIL:INVITE");
+		.catch((err) => {
+			infoLogs(
+				`Error sending email to ${email}: ${err?.message || err}`,
+				LogTypes.ERROR,
+				"MAIL:INVITE",
+			);
 		});
 };
 
@@ -73,7 +77,11 @@ export const onUserOnboardingInvite = async (
 		.then(() => {
 			infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
 		})
-		.catch(() => {
-			infoLogs(`Error sending email to ${email}`, LogTypes.ERROR, "MAIL:INVITE");
+		.catch((err) => {
+			infoLogs(
+				`Error sending email to ${email}: ${err?.message || err}`,
+				LogTypes.ERROR,
+				"MAIL:INVITE",
+			);
 		});
 };

@@ -197,6 +197,17 @@ export async function createApiApp(surface: ApiSurface) {
 
 	app.get("/health", ctx => ctx.json({ status: "ok!", surface }));
 
+	app.get("/health/mail", async ctx => {
+		try {
+			const { verifyMailConnection } = await import("@/libs/mail/config");
+			await verifyMailConnection();
+			return ctx.json({ status: "ok", smtp: { host: "connected" } });
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			return ctx.json({ status: "error", smtp: { error: message } }, 502);
+		}
+	});
+
 	app.get("/favicon.ico", async ctx => ctx.redirect("https://hono.dev/images/logo-small.png"));
 
 	app.route("/api", await createApiRoutes(surface));
