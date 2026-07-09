@@ -12,7 +12,30 @@ export type EnterpriseProvider =
   | "gitlab"
   | "aws-ssm"
   | "vercel"
-  | "google-secret-manager";
+  | "google-secret-manager"
+  | "circleci"
+  | "jenkins"
+  | "azure-devops"
+  | "bitbucket"
+  | "travisci"
+  | "netlify"
+  | "railway"
+  | "fly-io"
+  | "render"
+  | "supabase"
+  | "digitalocean-app-platform"
+  | "azure-key-vault"
+  | "aws-secrets-manager"
+  | "cloudflare-workers"
+  | "azure-app-service"
+  | "codefresh"
+  | "deno-deploy"
+  | "harness"
+  | "hasura-cloud"
+  | "heroku"
+  | "laravel-forge"
+  | "qovery"
+  | "terraform-cloud";
 
 export type {
   EnvTypeMapping,
