@@ -29,4 +29,29 @@ export const managementApiModules: ApiModule[] = [
 		mountPath: "/system",
 		createRouter: async () => (await import("@/routes/system.route")).default,
 	},
+	{
+		name: "oidc",
+		mountPath: "/oidc",
+		createRouter: async () => (await import("@/routes/oidc.route")).default,
+	},
+	{
+		name: "saml",
+		mountPath: "/saml",
+		createRouter: async () => (await import("@/routes/saml.route")).default,
+	},
+	{
+		name: "rotation",
+		mountPath: "/rotation",
+		createRouter: async () => (await import("@/routes/rotation.route")).default,
+	},
+	{
+		name: "dynamic_secret",
+		mountPath: "/dynamic_secret",
+		createRouter: async () => (await import("@/routes/dynamic_secret.route")).default,
+	},
+	{
+		name: "log_forwarding",
+		mountPath: "/log_forwarding",
+		createRouter: async () => (await import("@/routes/log-forwarding.route")).default,
+	},
 ];
