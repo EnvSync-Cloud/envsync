@@ -540,6 +540,18 @@ export const ManageEnvironment = () => {
                 <Edit3 className="size-3.5" />
               </Button>
               <Button
+                onClick={() => {
+                  setSelectedEnvironment(envType);
+                  setShowDeleteDialog(true);
+                }}
+                variant="ghost"
+                size="icon"
+                data-testid={`env-type-delete-${envType.id}`}
+                className="size-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+              <Button
                 onClick={() => navigate(`${appDetailPath(appId ?? "")}?env=${envType.id}&selected=${envType.id}`)}
                 variant="ghost"
                 size="icon"
