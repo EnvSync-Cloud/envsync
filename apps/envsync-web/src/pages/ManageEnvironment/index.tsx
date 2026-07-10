@@ -384,6 +384,7 @@ export const ManageEnvironment = () => {
             onCheckedChange={(checked) =>
               handleInputChange("is_protected", checked)
             }
+            data-testid="env-type-protected-checkbox"
           />
         </div>
       </div>
