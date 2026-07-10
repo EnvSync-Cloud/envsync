@@ -57,12 +57,12 @@ describe("Dynamic Secret Engine E2E", () => {
 				engine_type: "postgres",
 				name: "e2e-postgres-engine",
 				config: {
-					host: "db.example.com",
-					port: 5432,
-					database: "e2e_db",
+					host: process.env.DYNAMIC_SECRET_PG_HOST ?? "localhost",
+					port: parseInt(process.env.DYNAMIC_SECRET_PG_PORT ?? "5433"),
+					database: process.env.DYNAMIC_SECRET_PG_DATABASE ?? "dynamic_secrets",
 					superuser: {
-						username: "admin",
-						password: "supersecret",
+						username: process.env.DYNAMIC_SECRET_PG_USER ?? "dynroot",
+						password: process.env.DYNAMIC_SECRET_PG_PASSWORD ?? "dynrootpass",
 					},
 					creation_statements: [
 						'CREATE ROLE "{{name}}" WITH LOGIN PASSWORD \'{{password}}\' VALID UNTIL \'{{expiration}}\';',

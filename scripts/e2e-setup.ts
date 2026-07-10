@@ -113,6 +113,7 @@ function dockerComposeUp(): void {
 		"-d",
 		"postgres",
 		"redis",
+		"dynamic_secret_db",
 		"openfga_db",
 		"openfga_migrate",
 		"openfga",
@@ -389,6 +390,11 @@ async function init(): Promise<void> {
 		OTEL_EXPORTER_OTLP_ENDPOINT:
 			process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? `http://localhost:${process.env.OTEL_AGENT_OTLP_HTTP_PORT ?? "14318"}`,
 		OTEL_SERVICE_NAME: "envsync-api",
+		DYNAMIC_SECRET_PG_HOST: process.env.DYNAMIC_SECRET_PG_HOST ?? "localhost",
+		DYNAMIC_SECRET_PG_PORT: process.env.DYNAMIC_SECRET_PG_PORT ?? "5433",
+		DYNAMIC_SECRET_PG_USER: process.env.DYNAMIC_SECRET_PG_USER ?? "dynroot",
+		DYNAMIC_SECRET_PG_PASSWORD: process.env.DYNAMIC_SECRET_PG_PASSWORD ?? "dynrootpass",
+		DYNAMIC_SECRET_PG_DATABASE: process.env.DYNAMIC_SECRET_PG_DATABASE ?? "dynamic_secrets",
 	};
 
 	updateEnvFile(envE2EPath, e2eEnv);
