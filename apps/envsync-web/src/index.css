@@ -168,3 +168,34 @@ img {
     transform: translateY(0);
   }
 }
+
+/* Cloudflare-inspired smooth transitions */
+.transition-smooth {
+  transition-property: color, background-color, border-color, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* List row hover effect */
+.list-row-hover {
+  transition: background-color 150ms ease;
+}
+.list-row-hover:hover {
+  background-color: hsl(240 4% 16% / 0.5);
+}
+
+/* Card hover with subtle glow */
+.card-glow {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.card-glow:hover {
+  border-color: hsl(160 84% 39% / 0.3);
+  box-shadow: 0 0 20px hsl(160 84% 39% / 0.05);
+}
+
+/* Smooth focus styles */
+*:focus-visible {
+  outline: 2px solid hsl(160 84% 39% / 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

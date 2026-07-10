@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 import { PageShell } from "@/components/PageShell";
+import { PageError } from "@/components/ui/page-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ const Teams = () => {
   const canManage = Boolean(user?.role?.is_admin || user?.role?.is_master);
   const authEnabled = !isAuthLoading && isAuthenticated;
 
-  const { data: teams = [] } = api.teams.getTeams({ enabled: authEnabled });
+  const { data: teams = [], isLoading: teamsLoading, error: teamsError, refetch: refetchTeams } = api.teams.getTeams({ enabled: authEnabled });
   const { data: roles = [] } = api.roles.getAllRoles({ enabled: authEnabled });
   const { data: users = [] } = api.users.getAllUsers({ enabled: authEnabled });
 
@@ -139,12 +140,23 @@ const Teams = () => {
     setEditorOpen(false);
   };
 
+  if (teamsError) {
+    return (
+      <PageError
+        title="Failed to load teams"
+        message={teamsError instanceof Error ? teamsError.message : "An unexpected error occurred"}
+        onRetry={() => refetchTeams()}
+      />
+    );
+  }
+
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Teams"
         description="Create role-bearing teams, manage membership, and make inherited access easier to understand."
         icon={Users}
+        isLoading={teamsLoading}
         stickyActions
         actions={
           canManage ? (

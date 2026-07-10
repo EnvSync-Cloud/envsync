@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Eye, Edit, Trash2, Key } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash2, ChevronRight, Database } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,98 +48,73 @@ export const ApplicationCard = ({
   };
 
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl hover:border-emerald-500/50 transition-all duration-200 group cursor-pointer hover:shadow-glow-md hover:-translate-y-1">
-      <CardHeader className="pb-3">
-        <div
-          onClick={() => navigate(appDetailPath(app.id))}
-          className="flex items-start justify-between"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-semibold text-emerald-400">
-                {app.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <div>
-              <CardTitle className="text-zinc-100 text-base font-semibold group-hover:text-white group-hover:translate-x-0.5 transition-all duration-200">
-                {app.name}
-              </CardTitle>
-            </div>
-          </div>
+    <div
+      className="flex items-center justify-between px-4 py-3 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/50 cursor-pointer group"
+      onClick={() => navigate(appDetailPath(app.id))}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="size-9 rounded-lg bg-zinc-800 border border-zinc-700/50 flex items-center justify-center flex-shrink-0">
+          <Database className="size-4 text-emerald-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors truncate">
+            {app.name}
+          </p>
+          <p className="text-xs text-zinc-500 truncate">
+            {app.description || "No description"} · {configItemCount} config items · Updated {getRelativeTime(app.updated_at)}
+          </p>
+        </div>
+      </div>
 
-          {canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-all h-8 w-8"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="bg-zinc-900 border-zinc-800"
-                align="end"
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {canEdit && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-all h-8 w-8"
+                onClick={(e) => e.stopPropagation()}
               >
-                <DropdownMenuItem
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onView(app);
-                  }}
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(app);
-                  }}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Project
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(app);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Project
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent
-        className="pt-0"
-        onClick={() => navigate(appDetailPath(app.id))}
-      >
-        <p className="text-zinc-500 text-sm mb-4 line-clamp-2">
-          {app.description || "No description provided"}
-        </p>
-
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-1.5 text-zinc-400">
-              <Key className="w-3 h-3" />
-              <span data-testid={`application-card-${app.id}-config-count`}>{configItemCount} vars / secrets</span>
-            </div>
-          </div>
-
-          <span className="text-zinc-500">
-            {getRelativeTime(app.updated_at)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
+              <DropdownMenuItem
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView(app);
+                }}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(app);
+                }}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Project
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(app);
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Project
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <ChevronRight className="size-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+      </div>
+    </div>
   );
 };

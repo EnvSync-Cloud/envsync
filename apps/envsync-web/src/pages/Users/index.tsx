@@ -3,6 +3,7 @@ import { User, UserPlus2, ShieldCheck } from "lucide-react";
 import { useAuthContext } from "@/contexts/auth";
 import { useState, useCallback, useMemo } from "react";
 import { PageShell } from "@/components/PageShell";
+import { PageError } from "@/components/ui/page-error";
 import { InviteUserModal } from "@/components/users/InviteUserModal";
 import { EditRoleModal } from "@/components/users/EditRoleModal";
 import { DeleteUserModal } from "@/components/users/DeleteUserModal";
@@ -29,6 +30,8 @@ export const Users = () => {
     users,
     roles,
     isLoading,
+    error: usersError,
+    refetch: refetchUsers,
     selectedUserId,
     selectedUserName,
     emailAddress,
@@ -147,6 +150,16 @@ export const Users = () => {
       users.filter((member) => member.role.toLowerCase().includes("admin") || member.role.toLowerCase().includes("master")).length,
     [users]
   );
+
+  if (usersError) {
+    return (
+      <PageError
+        title="Failed to load users"
+        message={usersError instanceof Error ? usersError.message : "An unexpected error occurred"}
+        onRetry={() => refetchUsers()}
+      />
+    );
+  }
 
   return (
     <div className="animate-page-enter space-y-6">
