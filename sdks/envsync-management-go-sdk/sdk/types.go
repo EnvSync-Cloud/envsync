@@ -55,11 +55,19 @@ func (e *ErrorResponse) String() string {
 }
 
 type LicenseState struct {
-	Status           LicenseStateStatus `json:"status" url:"status"`
-	LeaseExpiresAt   *string            `json:"lease_expires_at,omitempty" url:"lease_expires_at,omitempty"`
-	LastVerifiedAt   *string            `json:"last_verified_at,omitempty" url:"last_verified_at,omitempty"`
-	LastErrorCode    *string            `json:"last_error_code,omitempty" url:"last_error_code,omitempty"`
-	LastErrorMessage *string            `json:"last_error_message,omitempty" url:"last_error_message,omitempty"`
+	Status                       LicenseStateStatus `json:"status" url:"status"`
+	LeaseExpiresAt               *string            `json:"lease_expires_at,omitempty" url:"lease_expires_at,omitempty"`
+	LastVerifiedAt               *string            `json:"last_verified_at,omitempty" url:"last_verified_at,omitempty"`
+	LastErrorCode                *string            `json:"last_error_code,omitempty" url:"last_error_code,omitempty"`
+	LastErrorMessage             *string            `json:"last_error_message,omitempty" url:"last_error_message,omitempty"`
+	ValidationMode               *string            `json:"validation_mode,omitempty" url:"validation_mode,omitempty"`
+	CertificateSerialHex         *string            `json:"certificate_serial_hex,omitempty" url:"certificate_serial_hex,omitempty"`
+	CertificateFingerprintSha256 *string            `json:"certificate_fingerprint_sha256,omitempty" url:"certificate_fingerprint_sha256,omitempty"`
+	CertificateSubject           *string            `json:"certificate_subject,omitempty" url:"certificate_subject,omitempty"`
+	CertificateIssuer            *string            `json:"certificate_issuer,omitempty" url:"certificate_issuer,omitempty"`
+	CertificateExpiresAt         *string            `json:"certificate_expires_at,omitempty" url:"certificate_expires_at,omitempty"`
+	RootCaFingerprintSha256      *string            `json:"root_ca_fingerprint_sha256,omitempty" url:"root_ca_fingerprint_sha256,omitempty"`
+	ValidatedAt                  *string            `json:"validated_at,omitempty" url:"validated_at,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -98,6 +106,62 @@ func (l *LicenseState) GetLastErrorMessage() *string {
 		return nil
 	}
 	return l.LastErrorMessage
+}
+
+func (l *LicenseState) GetValidationMode() *string {
+	if l == nil {
+		return nil
+	}
+	return l.ValidationMode
+}
+
+func (l *LicenseState) GetCertificateSerialHex() *string {
+	if l == nil {
+		return nil
+	}
+	return l.CertificateSerialHex
+}
+
+func (l *LicenseState) GetCertificateFingerprintSha256() *string {
+	if l == nil {
+		return nil
+	}
+	return l.CertificateFingerprintSha256
+}
+
+func (l *LicenseState) GetCertificateSubject() *string {
+	if l == nil {
+		return nil
+	}
+	return l.CertificateSubject
+}
+
+func (l *LicenseState) GetCertificateIssuer() *string {
+	if l == nil {
+		return nil
+	}
+	return l.CertificateIssuer
+}
+
+func (l *LicenseState) GetCertificateExpiresAt() *string {
+	if l == nil {
+		return nil
+	}
+	return l.CertificateExpiresAt
+}
+
+func (l *LicenseState) GetRootCaFingerprintSha256() *string {
+	if l == nil {
+		return nil
+	}
+	return l.RootCaFingerprintSha256
+}
+
+func (l *LicenseState) GetValidatedAt() *string {
+	if l == nil {
+		return nil
+	}
+	return l.ValidatedAt
 }
 
 func (l *LicenseState) GetExtraProperties() map[string]interface{} {

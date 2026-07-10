@@ -26,6 +26,8 @@ import (
 	secrets "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secrets"
 	secretspointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretspointintime"
 	secretsrollback "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretsrollback"
+	servicetokens "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/servicetokens"
+	system "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/system"
 	teams "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/teams"
 	users "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/users"
 	webhooks "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/webhooks"
@@ -47,8 +49,8 @@ type Client struct {
 	EnvironmentVariablesPointInTime *environmentvariablespointintime.Client
 	EnvironmentVariablesRollback    *environmentvariablesrollback.Client
 	Roles                           *roles.Client
-	Onboarding                      *onboarding.Client
 	Organizations                   *organizations.Client
+	Onboarding                      *onboarding.Client
 	Secrets                         *secrets.Client
 	SecretsPointInTime              *secretspointintime.Client
 	SecretsRollback                 *secretsrollback.Client
@@ -60,6 +62,8 @@ type Client struct {
 	GpgKeys                         *gpgkeys.Client
 	Certificates                    *certificates.Client
 	ChangeRequests                  *changerequests.Client
+	ServiceTokens                   *servicetokens.Client
+	System                          *system.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -83,8 +87,8 @@ func NewClient(opts ...option.RequestOption) *Client {
 		EnvironmentVariablesPointInTime: environmentvariablespointintime.NewClient(opts...),
 		EnvironmentVariablesRollback:    environmentvariablesrollback.NewClient(opts...),
 		Roles:                           roles.NewClient(opts...),
-		Onboarding:                      onboarding.NewClient(opts...),
 		Organizations:                   organizations.NewClient(opts...),
+		Onboarding:                      onboarding.NewClient(opts...),
 		Secrets:                         secrets.NewClient(opts...),
 		SecretsPointInTime:              secretspointintime.NewClient(opts...),
 		SecretsRollback:                 secretsrollback.NewClient(opts...),
@@ -96,5 +100,7 @@ func NewClient(opts ...option.RequestOption) *Client {
 		GpgKeys:                         gpgkeys.NewClient(opts...),
 		Certificates:                    certificates.NewClient(opts...),
 		ChangeRequests:                  changerequests.NewClient(opts...),
+		ServiceTokens:                   servicetokens.NewClient(opts...),
+		System:                          system.NewClient(opts...),
 	}
 }

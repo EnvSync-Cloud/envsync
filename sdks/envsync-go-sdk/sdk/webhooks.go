@@ -184,9 +184,16 @@ func (w WebhookResponseLinkedTo) Ptr() *WebhookResponseLinkedTo {
 type WebhookResponseWebhookType string
 
 const (
-	WebhookResponseWebhookTypeDiscord WebhookResponseWebhookType = "DISCORD"
-	WebhookResponseWebhookTypeSlack   WebhookResponseWebhookType = "SLACK"
-	WebhookResponseWebhookTypeCustom  WebhookResponseWebhookType = "CUSTOM"
+	WebhookResponseWebhookTypeDiscord         WebhookResponseWebhookType = "DISCORD"
+	WebhookResponseWebhookTypeSlack           WebhookResponseWebhookType = "SLACK"
+	WebhookResponseWebhookTypeCustom          WebhookResponseWebhookType = "CUSTOM"
+	WebhookResponseWebhookTypeGithubActions   WebhookResponseWebhookType = "GITHUB_ACTIONS"
+	WebhookResponseWebhookTypeGitlabPipeline  WebhookResponseWebhookType = "GITLAB_PIPELINE"
+	WebhookResponseWebhookTypeAwsCodepipeline WebhookResponseWebhookType = "AWS_CODEPIPELINE"
+	WebhookResponseWebhookTypeGcpCloudBuild   WebhookResponseWebhookType = "GCP_CLOUD_BUILD"
+	WebhookResponseWebhookTypeCircleci        WebhookResponseWebhookType = "CIRCLECI"
+	WebhookResponseWebhookTypeTravisCi        WebhookResponseWebhookType = "TRAVIS_CI"
+	WebhookResponseWebhookTypeJenkins         WebhookResponseWebhookType = "JENKINS"
 )
 
 func NewWebhookResponseWebhookTypeFromString(s string) (WebhookResponseWebhookType, error) {
@@ -197,6 +204,20 @@ func NewWebhookResponseWebhookTypeFromString(s string) (WebhookResponseWebhookTy
 		return WebhookResponseWebhookTypeSlack, nil
 	case "CUSTOM":
 		return WebhookResponseWebhookTypeCustom, nil
+	case "GITHUB_ACTIONS":
+		return WebhookResponseWebhookTypeGithubActions, nil
+	case "GITLAB_PIPELINE":
+		return WebhookResponseWebhookTypeGitlabPipeline, nil
+	case "AWS_CODEPIPELINE":
+		return WebhookResponseWebhookTypeAwsCodepipeline, nil
+	case "GCP_CLOUD_BUILD":
+		return WebhookResponseWebhookTypeGcpCloudBuild, nil
+	case "CIRCLECI":
+		return WebhookResponseWebhookTypeCircleci, nil
+	case "TRAVIS_CI":
+		return WebhookResponseWebhookTypeTravisCi, nil
+	case "JENKINS":
+		return WebhookResponseWebhookTypeJenkins, nil
 	}
 	var t WebhookResponseWebhookType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -233,9 +254,16 @@ func (c CreateWebhookRequestLinkedTo) Ptr() *CreateWebhookRequestLinkedTo {
 type CreateWebhookRequestWebhookType string
 
 const (
-	CreateWebhookRequestWebhookTypeDiscord CreateWebhookRequestWebhookType = "DISCORD"
-	CreateWebhookRequestWebhookTypeSlack   CreateWebhookRequestWebhookType = "SLACK"
-	CreateWebhookRequestWebhookTypeCustom  CreateWebhookRequestWebhookType = "CUSTOM"
+	CreateWebhookRequestWebhookTypeDiscord         CreateWebhookRequestWebhookType = "DISCORD"
+	CreateWebhookRequestWebhookTypeSlack           CreateWebhookRequestWebhookType = "SLACK"
+	CreateWebhookRequestWebhookTypeCustom          CreateWebhookRequestWebhookType = "CUSTOM"
+	CreateWebhookRequestWebhookTypeGithubActions   CreateWebhookRequestWebhookType = "GITHUB_ACTIONS"
+	CreateWebhookRequestWebhookTypeGitlabPipeline  CreateWebhookRequestWebhookType = "GITLAB_PIPELINE"
+	CreateWebhookRequestWebhookTypeAwsCodepipeline CreateWebhookRequestWebhookType = "AWS_CODEPIPELINE"
+	CreateWebhookRequestWebhookTypeGcpCloudBuild   CreateWebhookRequestWebhookType = "GCP_CLOUD_BUILD"
+	CreateWebhookRequestWebhookTypeCircleci        CreateWebhookRequestWebhookType = "CIRCLECI"
+	CreateWebhookRequestWebhookTypeTravisCi        CreateWebhookRequestWebhookType = "TRAVIS_CI"
+	CreateWebhookRequestWebhookTypeJenkins         CreateWebhookRequestWebhookType = "JENKINS"
 )
 
 func NewCreateWebhookRequestWebhookTypeFromString(s string) (CreateWebhookRequestWebhookType, error) {
@@ -246,6 +274,20 @@ func NewCreateWebhookRequestWebhookTypeFromString(s string) (CreateWebhookReques
 		return CreateWebhookRequestWebhookTypeSlack, nil
 	case "CUSTOM":
 		return CreateWebhookRequestWebhookTypeCustom, nil
+	case "GITHUB_ACTIONS":
+		return CreateWebhookRequestWebhookTypeGithubActions, nil
+	case "GITLAB_PIPELINE":
+		return CreateWebhookRequestWebhookTypeGitlabPipeline, nil
+	case "AWS_CODEPIPELINE":
+		return CreateWebhookRequestWebhookTypeAwsCodepipeline, nil
+	case "GCP_CLOUD_BUILD":
+		return CreateWebhookRequestWebhookTypeGcpCloudBuild, nil
+	case "CIRCLECI":
+		return CreateWebhookRequestWebhookTypeCircleci, nil
+	case "TRAVIS_CI":
+		return CreateWebhookRequestWebhookTypeTravisCi, nil
+	case "JENKINS":
+		return CreateWebhookRequestWebhookTypeJenkins, nil
 	}
 	var t CreateWebhookRequestWebhookType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -280,9 +322,16 @@ func (u UpdateWebhookRequestLinkedTo) Ptr() *UpdateWebhookRequestLinkedTo {
 type UpdateWebhookRequestWebhookType string
 
 const (
-	UpdateWebhookRequestWebhookTypeDiscord UpdateWebhookRequestWebhookType = "DISCORD"
-	UpdateWebhookRequestWebhookTypeSlack   UpdateWebhookRequestWebhookType = "SLACK"
-	UpdateWebhookRequestWebhookTypeCustom  UpdateWebhookRequestWebhookType = "CUSTOM"
+	UpdateWebhookRequestWebhookTypeDiscord         UpdateWebhookRequestWebhookType = "DISCORD"
+	UpdateWebhookRequestWebhookTypeSlack           UpdateWebhookRequestWebhookType = "SLACK"
+	UpdateWebhookRequestWebhookTypeCustom          UpdateWebhookRequestWebhookType = "CUSTOM"
+	UpdateWebhookRequestWebhookTypeGithubActions   UpdateWebhookRequestWebhookType = "GITHUB_ACTIONS"
+	UpdateWebhookRequestWebhookTypeGitlabPipeline  UpdateWebhookRequestWebhookType = "GITLAB_PIPELINE"
+	UpdateWebhookRequestWebhookTypeAwsCodepipeline UpdateWebhookRequestWebhookType = "AWS_CODEPIPELINE"
+	UpdateWebhookRequestWebhookTypeGcpCloudBuild   UpdateWebhookRequestWebhookType = "GCP_CLOUD_BUILD"
+	UpdateWebhookRequestWebhookTypeCircleci        UpdateWebhookRequestWebhookType = "CIRCLECI"
+	UpdateWebhookRequestWebhookTypeTravisCi        UpdateWebhookRequestWebhookType = "TRAVIS_CI"
+	UpdateWebhookRequestWebhookTypeJenkins         UpdateWebhookRequestWebhookType = "JENKINS"
 )
 
 func NewUpdateWebhookRequestWebhookTypeFromString(s string) (UpdateWebhookRequestWebhookType, error) {
@@ -293,6 +342,20 @@ func NewUpdateWebhookRequestWebhookTypeFromString(s string) (UpdateWebhookReques
 		return UpdateWebhookRequestWebhookTypeSlack, nil
 	case "CUSTOM":
 		return UpdateWebhookRequestWebhookTypeCustom, nil
+	case "GITHUB_ACTIONS":
+		return UpdateWebhookRequestWebhookTypeGithubActions, nil
+	case "GITLAB_PIPELINE":
+		return UpdateWebhookRequestWebhookTypeGitlabPipeline, nil
+	case "AWS_CODEPIPELINE":
+		return UpdateWebhookRequestWebhookTypeAwsCodepipeline, nil
+	case "GCP_CLOUD_BUILD":
+		return UpdateWebhookRequestWebhookTypeGcpCloudBuild, nil
+	case "CIRCLECI":
+		return UpdateWebhookRequestWebhookTypeCircleci, nil
+	case "TRAVIS_CI":
+		return UpdateWebhookRequestWebhookTypeTravisCi, nil
+	case "JENKINS":
+		return UpdateWebhookRequestWebhookTypeJenkins, nil
 	}
 	var t UpdateWebhookRequestWebhookType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

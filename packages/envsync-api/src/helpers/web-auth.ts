@@ -42,11 +42,13 @@ function sharedCookieDomain() {
 }
 
 function cookieBaseOptions(path = "/api") {
+	const domain = sharedCookieDomain();
 	return {
 		httpOnly: true,
 		secure: shouldUseSecureCookies(),
 		sameSite: "Lax" as SameSitePolicy,
 		path,
+		...(domain ? { domain } : {}),
 	};
 }
 

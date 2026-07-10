@@ -39,6 +39,12 @@ export class BusinessRuleError extends AppError {
 	}
 }
 
+export class ForbiddenError extends AppError {
+	constructor(msg: string, code = "FORBIDDEN") {
+		super(msg, 403, code);
+	}
+}
+
 /**
  * Wraps executeTakeFirstOrThrow, converting NoResultError → NotFoundError
  */

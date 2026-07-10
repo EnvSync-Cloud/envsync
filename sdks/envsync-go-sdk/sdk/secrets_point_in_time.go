@@ -16,11 +16,68 @@ type SecretDiffRequest struct {
 	ToPitId   string `json:"to_pit_id" url:"-"`
 }
 
+type SecretTimestampRangeDiffRequest struct {
+	AppId         string    `json:"app_id" url:"-"`
+	EnvTypeId     string    `json:"env_type_id" url:"-"`
+	FromTimestamp time.Time `json:"from_timestamp" url:"-"`
+	ToTimestamp   time.Time `json:"to_timestamp" url:"-"`
+}
+
+func (s *SecretTimestampRangeDiffRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler SecretTimestampRangeDiffRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*s = SecretTimestampRangeDiffRequest(body)
+	return nil
+}
+
+func (s *SecretTimestampRangeDiffRequest) MarshalJSON() ([]byte, error) {
+	type embed SecretTimestampRangeDiffRequest
+	var marshaler = struct {
+		embed
+		FromTimestamp *internal.DateTime `json:"from_timestamp"`
+		ToTimestamp   *internal.DateTime `json:"to_timestamp"`
+	}{
+		embed:         embed(*s),
+		FromTimestamp: internal.NewDateTime(s.FromTimestamp),
+		ToTimestamp:   internal.NewDateTime(s.ToTimestamp),
+	}
+	return json.Marshal(marshaler)
+}
+
 type SecretHistoryRequest struct {
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
-	Page      *int   `json:"page,omitempty" url:"-"`
-	PerPage   *int   `json:"per_page,omitempty" url:"-"`
+	AppId         string     `json:"app_id" url:"-"`
+	EnvTypeId     string     `json:"env_type_id" url:"-"`
+	Page          *int       `json:"page,omitempty" url:"-"`
+	PerPage       *int       `json:"per_page,omitempty" url:"-"`
+	FromCreatedAt *time.Time `json:"from_created_at,omitempty" url:"-"`
+	ToCreatedAt   *time.Time `json:"to_created_at,omitempty" url:"-"`
+}
+
+func (s *SecretHistoryRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler SecretHistoryRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*s = SecretHistoryRequest(body)
+	return nil
+}
+
+func (s *SecretHistoryRequest) MarshalJSON() ([]byte, error) {
+	type embed SecretHistoryRequest
+	var marshaler = struct {
+		embed
+		FromCreatedAt *internal.DateTime `json:"from_created_at,omitempty"`
+		ToCreatedAt   *internal.DateTime `json:"to_created_at,omitempty"`
+	}{
+		embed:         embed(*s),
+		FromCreatedAt: internal.NewOptionalDateTime(s.FromCreatedAt),
+		ToCreatedAt:   internal.NewOptionalDateTime(s.ToCreatedAt),
+	}
+	return json.Marshal(marshaler)
 }
 
 type SecretVariableTimelineRequest struct {
@@ -359,6 +416,7 @@ type SecretHistoryResponsePitsItem struct {
 	UserId               string `json:"user_id" url:"user_id"`
 	CreatedAt            string `json:"created_at" url:"created_at"`
 	UpdatedAt            string `json:"updated_at" url:"updated_at"`
+	ChangesCount         int    `json:"changes_count" url:"changes_count"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -420,6 +478,13 @@ func (s *SecretHistoryResponsePitsItem) GetUpdatedAt() string {
 	return s.UpdatedAt
 }
 
+func (s *SecretHistoryResponsePitsItem) GetChangesCount() int {
+	if s == nil {
+		return 0
+	}
+	return s.ChangesCount
+}
+
 func (s *SecretHistoryResponsePitsItem) GetExtraProperties() map[string]interface{} {
 	return s.extraProperties
 }
@@ -455,9 +520,10 @@ func (s *SecretHistoryResponsePitsItem) String() string {
 type SecretPitStateResponse = []*SecretPitStateResponseItem
 
 type SecretPitStateResponseItem struct {
-	Key         string `json:"key" url:"key"`
-	Value       string `json:"value" url:"value"`
-	LastUpdated string `json:"last_updated" url:"last_updated"`
+	Key         string                              `json:"key" url:"key"`
+	Value       string                              `json:"value" url:"value"`
+	LastUpdated string                              `json:"last_updated" url:"last_updated"`
+	Operation   SecretPitStateResponseItemOperation `json:"operation" url:"operation"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -482,6 +548,13 @@ func (s *SecretPitStateResponseItem) GetLastUpdated() string {
 		return ""
 	}
 	return s.LastUpdated
+}
+
+func (s *SecretPitStateResponseItem) GetOperation() SecretPitStateResponseItemOperation {
+	if s == nil {
+		return ""
+	}
+	return s.Operation
 }
 
 func (s *SecretPitStateResponseItem) GetExtraProperties() map[string]interface{} {
@@ -514,6 +587,31 @@ func (s *SecretPitStateResponseItem) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", s)
+}
+
+type SecretPitStateResponseItemOperation string
+
+const (
+	SecretPitStateResponseItemOperationCreate SecretPitStateResponseItemOperation = "CREATE"
+	SecretPitStateResponseItemOperationUpdate SecretPitStateResponseItemOperation = "UPDATE"
+	SecretPitStateResponseItemOperationDelete SecretPitStateResponseItemOperation = "DELETE"
+)
+
+func NewSecretPitStateResponseItemOperationFromString(s string) (SecretPitStateResponseItemOperation, error) {
+	switch s {
+	case "CREATE":
+		return SecretPitStateResponseItemOperationCreate, nil
+	case "UPDATE":
+		return SecretPitStateResponseItemOperationUpdate, nil
+	case "DELETE":
+		return SecretPitStateResponseItemOperationDelete, nil
+	}
+	var t SecretPitStateResponseItemOperation
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (s SecretPitStateResponseItemOperation) Ptr() *SecretPitStateResponseItemOperation {
+	return &s
 }
 
 type SecretVariableTimelineResponse = []*SecretVariableTimelineResponseItem

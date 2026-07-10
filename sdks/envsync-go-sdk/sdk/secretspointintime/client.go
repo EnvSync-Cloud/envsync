@@ -219,6 +219,53 @@ func (c *Client) GetSecretDiff(
 	return response, nil
 }
 
+// Compare secrets between two timestamps
+func (c *Client) GetSecretDiffByTimestampRange(
+	ctx context.Context,
+	request *sdk.SecretTimestampRangeDiffRequest,
+	opts ...option.RequestOption,
+) (*sdk.SecretDiffResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/secret/diff/timestamp-range"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+	errorCodes := internal.ErrorCodes{
+		500: func(apiError *core.APIError) error {
+			return &sdk.InternalServerError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	var response *sdk.SecretDiffResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 // Get timeline of changes for a specific secret variable
 func (c *Client) GetSecretVariableTimeline(
 	ctx context.Context,
