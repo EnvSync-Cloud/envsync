@@ -9,6 +9,10 @@ import { config } from "@/utils/env";
 import { JsonValue } from "@/libs/db";
 import infoLogs, { LogTypes } from "@/libs/logger";
 
+export type WebhookType = "DISCORD" | "SLACK" | "CUSTOM"
+    | "GITHUB_ACTIONS" | "GITLAB_PIPELINE" | "AWS_CODEPIPELINE"
+    | "GCP_CLOUD_BUILD" | "CIRCLECI" | "TRAVIS_CI" | "JENKINS";
+
 const urlSetMap = {
     apps: config.DASHBOARD_URL + "/applications",
     org: config.DASHBOARD_URL + "/organisation",
@@ -38,7 +42,7 @@ export class WebhookService {
         user_id: string,
         url: string,
         event_types: AuditActions[],
-        webhook_type: "DISCORD" | "SLACK" | "CUSTOM",
+        webhook_type: WebhookType,
         app_id?: string,
         linked_to: "org" | "app"
     }): Promise<string> => {
@@ -136,7 +140,7 @@ export class WebhookService {
             url?: string;
             event_types?: AuditActions[];
             is_active?: boolean;
-            webhook_type?: "DISCORD" | "SLACK" | "CUSTOM";
+            webhook_type?: WebhookType;
             app_id?: string | null;
             linked_to?: "org" | "app";
         }
