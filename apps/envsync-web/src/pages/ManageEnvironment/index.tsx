@@ -521,6 +521,7 @@ export const ManageEnvironment = () => {
               {envType.is_protected && (
                 <Badge
                   variant="secondary"
+                  data-testid={`env-type-protected-badge-${envType.id}`}
                   className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0"
                 >
                   Protected
