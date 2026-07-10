@@ -662,6 +662,7 @@ export const ManageEnvironment = () => {
               This will remove all variables in this environment.
             </div>
             <Input
+              id="delete-confirm-text"
               value={deleteConfirmText}
               onChange={(event) => setDeleteConfirmText(event.target.value)}
               placeholder={selectedEnvironment?.name}
