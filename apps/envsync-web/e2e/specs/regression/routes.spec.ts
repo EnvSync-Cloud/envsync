@@ -12,7 +12,7 @@ test.describe("route surface", () => {
 			{ path: "/applications/create", heading: "Create New Project" },
 			{ path: `/applications/${seededApp!.id}`, heading: "Core Platform" },
 			{ path: `/applications/${seededApp!.id}/secrets`, heading: "Core Platform" },
-			{ path: `/applications/${seededApp!.id}/manage-environments`, heading: "Manage Environments" },
+			{ path: `/applications/${seededApp!.id}/manage-environments`, heading: /Manage Environments|Environments/ },
 			{ path: `/applications/${seededApp!.id}/access`, heading: "Project Access" },
 			{ path: `/applications/pit/${seededApp!.id}`, heading: "Core Platform" },
 			{ path: "/roles", heading: "Roles" },

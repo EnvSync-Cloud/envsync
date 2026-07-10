@@ -481,6 +481,7 @@ export const ManageEnvironment = () => {
         {environmentTypes.map((envType) => (
           <div
             key={envType.id}
+            data-testid={`env-type-card-${envType.id}`}
             className="grid grid-cols-[1fr_120px_120px_100px_80px] gap-4 px-4 py-3 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors group"
           >
             <div className="flex items-center gap-3 min-w-0">
