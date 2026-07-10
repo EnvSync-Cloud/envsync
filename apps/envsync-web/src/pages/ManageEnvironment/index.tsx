@@ -532,6 +532,7 @@ export const ManageEnvironment = () => {
                 onClick={() => openEditSheet(envType)}
                 variant="ghost"
                 size="icon"
+                data-testid={`env-type-edit-${envType.id}`}
                 className="size-7 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
               >
                 <Edit3 className="size-3.5" />

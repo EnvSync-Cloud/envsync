@@ -252,7 +252,7 @@ export async function createProject(page: Page, projectName: string) {
 }
 
 export async function openProjectCardActions(page: Page, projectName: string) {
-	const card = page.locator('[class*="group cursor-pointer"]').filter({ hasText: projectName }).first();
+	const card = page.locator('[class*="cursor-pointer"][class*="group"]').filter({ hasText: projectName }).first();
 	await card.waitFor({ state: "visible" });
 	await card.hover();
 	const actionButton = card.getByRole("button").last();
