@@ -469,8 +469,8 @@ export const ManageEnvironment = () => {
 
       {/* Stats */}
       <div className="flex items-center gap-4 text-sm text-zinc-400">
-        <span data-testid="manage-env-stat-types">{environmentTypes.length} environment{environmentTypes.length !== 1 ? 's' : ''}</span>
-        <span data-testid="manage-env-stat-protected">{environmentTypes.filter(e => e.is_protected).length} protected</span>
+        <span><span data-testid="manage-env-stat-types">{environmentTypes.length}</span> environment{environmentTypes.length !== 1 ? 's' : ''}</span>
+        <span><span data-testid="manage-env-stat-protected">{environmentTypes.filter(e => e.is_protected).length}</span> protected</span>
       </div>
 
       {/* Environment list */}
