@@ -1,27 +1,25 @@
 package app
 
 import (
+	"bufio"
 	"context"
-	"errors"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 type deleteAppUseCase struct {
 	appService services.ApplicationService
-	tui        *factory.AppFactory
 }
 
 func NewDeleteAppUseCase() DeleteAppUseCase {
 	service := services.NewAppService()
-	tui := factory.NewAppFactory()
 	return &deleteAppUseCase{
 		appService: service,
-		tui:        tui,
 	}
 }
 
@@ -29,7 +27,6 @@ func (uc *deleteAppUseCase) Execute(ctx context.Context) ([]domain.Application, 
 	ctx, span := telemetry.Tracer().Start(ctx, "app.delete")
 	defer span.End()
 
-	// Retrieve application context values with safe type assertions
 	appID, _ := ctx.Value("appID").(string)
 	appName, _ := ctx.Value("appName").(string)
 
@@ -38,7 +35,7 @@ func (uc *deleteAppUseCase) Execute(ctx context.Context) ([]domain.Application, 
 
 	switch {
 	case appID == "" && appName == "":
-		deletedApps, err = uc.deleteAppsViaUI(ctx)
+		deletedApps, err = uc.deleteAppsInteractive(ctx)
 	case appID != "":
 		deletedApps, err = uc.deleteAppByID(ctx, appID)
 	case appName != "":
@@ -52,93 +49,83 @@ func (uc *deleteAppUseCase) Execute(ctx context.Context) ([]domain.Application, 
 	return deletedApps, nil
 }
 
-func (uc *deleteAppUseCase) deleteAppsViaUI(ctx context.Context) ([]domain.Application, error) {
-	apps, err := uc.findAllApplications(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	selectedApps, err := uc.tui.DeleteAppsTUI(apps)
-	if err != nil {
-		if !errors.Is(err, tea.ErrProgramKilled) {
-			return nil, NewTUIError("failed to select applications for deletion", err)
-		}
-		return nil, nil // User cancelled
-	}
-
-	for _, app := range selectedApps {
-		if err := uc.appService.DeleteApp(ctx, app); err != nil {
-			return nil, NewServiceError("failed to delete application", err)
-		}
-	}
-
-	return selectedApps, nil
-}
-
-func (uc *deleteAppUseCase) deleteAppByID(ctx context.Context, appID string) ([]domain.Application, error) {
-	app, err := uc.findApplicationByID(ctx, appID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := uc.deleteApplication(ctx, *app); err != nil {
-		return nil, err
-	}
-
-	return []domain.Application{*app}, nil
-}
-
-func (uc *deleteAppUseCase) deleteAppByName(ctx context.Context, appName string) ([]domain.Application, error) {
-	app, err := uc.findApplicationByName(ctx, appName)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := uc.deleteApplication(ctx, *app); err != nil {
-		return nil, err
-	}
-
-	return []domain.Application{*app}, nil
-}
-
-func (uc *deleteAppUseCase) findAllApplications(ctx context.Context) ([]domain.Application, error) {
-	// Retrieve all applications from the service
+func (uc *deleteAppUseCase) deleteAppsInteractive(ctx context.Context) ([]domain.Application, error) {
 	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to retrieve applications", err)
 	}
-	return apps, nil
+
+	if len(apps) == 0 {
+		return nil, NewNotFoundError("no applications found", nil)
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Println("\n🗑️  Available Applications:")
+	fmt.Println(strings.Repeat("-", 60))
+	for i, app := range apps {
+		fmt.Printf("  %d) %s (ID: %s)\n", i+1, app.Name, app.ID)
+	}
+	fmt.Println(strings.Repeat("-", 60))
+
+	fmt.Print("\nSelect application to delete (enter number or ID): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	var selectedApp *domain.Application
+	for i, app := range apps {
+		if input == fmt.Sprintf("%d", i+1) || input == app.ID || strings.EqualFold(input, app.Name) {
+			selectedApp = &apps[i]
+			break
+		}
+	}
+
+	if selectedApp == nil {
+		return nil, NewNotFoundError("application not found: "+input, nil)
+	}
+
+	fmt.Printf("\n⚠️  Are you sure you want to delete '%s'? (y/N): ", selectedApp.Name)
+	confirm, _ := reader.ReadString('\n')
+	confirm = strings.TrimSpace(strings.ToLower(confirm))
+
+	if confirm != "y" && confirm != "yes" {
+		return nil, NewCancelledError("deletion cancelled by user", nil)
+	}
+
+	if err := uc.appService.DeleteApp(ctx, *selectedApp); err != nil {
+		return nil, NewServiceError("failed to delete application", err)
+	}
+
+	return []domain.Application{*selectedApp}, nil
 }
 
-func (uc *deleteAppUseCase) findApplicationByID(ctx context.Context, appID string) (*domain.Application, error) {
-	// Retrieve application by ID from the service
+func (uc *deleteAppUseCase) deleteAppByID(ctx context.Context, appID string) ([]domain.Application, error) {
 	app, err := uc.appService.GetAppByID(ctx, appID)
 	if err != nil {
 		return nil, NewServiceError("failed to retrieve application by ID", err)
 	}
-	return &app, nil
+
+	if err := uc.appService.DeleteApp(ctx, app); err != nil {
+		return nil, NewServiceError("failed to delete application", err)
+	}
+
+	return []domain.Application{app}, nil
 }
 
-func (uc *deleteAppUseCase) findApplicationByName(ctx context.Context, appName string) (*domain.Application, error) {
-	// Retrieve application by name from the service
+func (uc *deleteAppUseCase) deleteAppByName(ctx context.Context, appName string) ([]domain.Application, error) {
 	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {
-		return nil, NewServiceError("failed to retrieve application by name", err)
+		return nil, NewServiceError("failed to retrieve applications", err)
 	}
 
 	for _, app := range apps {
 		if app.Name == appName {
-			return &app, nil
+			if err := uc.appService.DeleteApp(ctx, app); err != nil {
+				return nil, NewServiceError("failed to delete application", err)
+			}
+			return []domain.Application{app}, nil
 		}
 	}
 
-	return nil, errors.New("application not found by name: " + appName)
-}
-
-func (uc *deleteAppUseCase) deleteApplication(ctx context.Context, app domain.Application) error {
-	// Delete application via service
-	if err := uc.appService.DeleteApp(ctx, app); err != nil {
-		return NewServiceError("failed to delete application", err)
-	}
-	return nil
+	return nil, NewNotFoundError("application not found by name: "+appName, nil)
 }

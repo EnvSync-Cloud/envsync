@@ -4,11 +4,17 @@ package client
 
 import (
 	core "github.com/envsync-cloud/envsync-management-go-sdk/sdk/core"
+	dynamicsecrets "github.com/envsync-cloud/envsync-management-go-sdk/sdk/dynamicsecrets"
 	enterprise "github.com/envsync-cloud/envsync-management-go-sdk/sdk/enterprise"
 	internal "github.com/envsync-cloud/envsync-management-go-sdk/sdk/internal"
 	license "github.com/envsync-cloud/envsync-management-go-sdk/sdk/license"
+	logforwarding "github.com/envsync-cloud/envsync-management-go-sdk/sdk/logforwarding"
+	oidcproviders "github.com/envsync-cloud/envsync-management-go-sdk/sdk/oidcproviders"
 	onboarding "github.com/envsync-cloud/envsync-management-go-sdk/sdk/onboarding"
 	option "github.com/envsync-cloud/envsync-management-go-sdk/sdk/option"
+	rotation "github.com/envsync-cloud/envsync-management-go-sdk/sdk/rotation"
+	samlproviders "github.com/envsync-cloud/envsync-management-go-sdk/sdk/samlproviders"
+	samlsso "github.com/envsync-cloud/envsync-management-go-sdk/sdk/samlsso"
 	system "github.com/envsync-cloud/envsync-management-go-sdk/sdk/system"
 	http "net/http"
 )
@@ -18,10 +24,16 @@ type Client struct {
 	caller  *internal.Caller
 	header  http.Header
 
-	Onboarding *onboarding.Client
-	License    *license.Client
-	Enterprise *enterprise.Client
-	System     *system.Client
+	Onboarding     *onboarding.Client
+	License        *license.Client
+	Enterprise     *enterprise.Client
+	System         *system.Client
+	OidcProviders  *oidcproviders.Client
+	SamlProviders  *samlproviders.Client
+	SamlSso        *samlsso.Client
+	Rotation       *rotation.Client
+	DynamicSecrets *dynamicsecrets.Client
+	LogForwarding  *logforwarding.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -34,10 +46,16 @@ func NewClient(opts ...option.RequestOption) *Client {
 				MaxAttempts: options.MaxAttempts,
 			},
 		),
-		header:     options.ToHeader(),
-		Onboarding: onboarding.NewClient(opts...),
-		License:    license.NewClient(opts...),
-		Enterprise: enterprise.NewClient(opts...),
-		System:     system.NewClient(opts...),
+		header:         options.ToHeader(),
+		Onboarding:     onboarding.NewClient(opts...),
+		License:        license.NewClient(opts...),
+		Enterprise:     enterprise.NewClient(opts...),
+		System:         system.NewClient(opts...),
+		OidcProviders:  oidcproviders.NewClient(opts...),
+		SamlProviders:  samlproviders.NewClient(opts...),
+		SamlSso:        samlsso.NewClient(opts...),
+		Rotation:       rotation.NewClient(opts...),
+		DynamicSecrets: dynamicsecrets.NewClient(opts...),
+		LogForwarding:  logforwarding.NewClient(opts...),
 	}
 }

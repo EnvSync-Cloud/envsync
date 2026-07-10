@@ -2,11 +2,9 @@ package handlers
 
 import (
 	"context"
-	"errors"
 
 	inituc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/init"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v3"
 )
 
@@ -23,7 +21,10 @@ func NewInitHandler(initUseCase inituc.InitUseCase, formatter *formatters.InitFo
 }
 
 func (h *InitHandler) Init(ctx context.Context, cmd *cli.Command) error {
-	if err := h.initUseCase.Execute(ctx, cmd.String("config")); !errors.Is(err, tea.ErrProgramKilled) && err != nil {
+	appID := cmd.String("app-id")
+	envTypeID := cmd.String("env-type-id")
+
+	if err := h.initUseCase.ExecuteWithOptions(ctx, cmd.String("config"), appID, envTypeID); err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 	return nil
@@ -31,14 +32,12 @@ func (h *InitHandler) Init(ctx context.Context, cmd *cli.Command) error {
 
 func (h *InitHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		// If JSON output is requested, format the error as JSON
 		jsonOutput := map[string]any{
 			"error": err.Error(),
 		}
 		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
 	}
 
-	// Handle different types of use case errors
 	switch e := err.(type) {
 	case *inituc.InitError:
 		switch e.Code {

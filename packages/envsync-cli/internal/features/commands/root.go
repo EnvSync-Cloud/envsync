@@ -24,20 +24,26 @@ const (
 )
 
 type CommandRegistry struct {
-	appHandler         *handlers.AppHandler
-	authHandler        *handlers.AuthHandler
-	configHandler      *handlers.ConfigHandler
-	environmentHandler *handlers.EnvironmentHandler
-	syncHandler        *handlers.SyncHandler
-	exportHandler      *handlers.ExportHandler
-	initHandler        *handlers.InitHandler
-	runHandler         *handlers.RunHandler
-	genPEMKeyHandler   *handlers.GenPEMKeyHandler
-	gpgKeyHandler      *handlers.GpgKeyHandler
-	certificateHandler *handlers.CertificateHandler
-	teamHandler        *handlers.TeamHandler
-	accessHandler      *handlers.AccessHandler
-	requestHandler     *handlers.RequestHandler
+	appHandler            *handlers.AppHandler
+	authHandler           *handlers.AuthHandler
+	configHandler         *handlers.ConfigHandler
+	environmentHandler    *handlers.EnvironmentHandler
+	syncHandler           *handlers.SyncHandler
+	exportHandler         *handlers.ExportHandler
+	initHandler           *handlers.InitHandler
+	runHandler            *handlers.RunHandler
+	genPEMKeyHandler      *handlers.GenPEMKeyHandler
+	gpgKeyHandler         *handlers.GpgKeyHandler
+	certificateHandler    *handlers.CertificateHandler
+	teamHandler           *handlers.TeamHandler
+	accessHandler         *handlers.AccessHandler
+	requestHandler        *handlers.RequestHandler
+	serviceTokenHandler   *handlers.ServiceTokenHandler
+	oidcHandler           *handlers.OidcHandler
+	samlHandler           *handlers.SamlHandler
+	rotationHandler       *handlers.RotationHandler
+	dynamicSecretHandler  *handlers.DynamicSecretHandler
+	logForwardingHandler  *handlers.LogForwardingHandler
 }
 
 func NewCommandRegistry(
@@ -55,22 +61,34 @@ func NewCommandRegistry(
 	teamHandler *handlers.TeamHandler,
 	accessHandler *handlers.AccessHandler,
 	requestHandler *handlers.RequestHandler,
+	serviceTokenHandler *handlers.ServiceTokenHandler,
+	oidcHandler *handlers.OidcHandler,
+	samlHandler *handlers.SamlHandler,
+	rotationHandler *handlers.RotationHandler,
+	dynamicSecretHandler *handlers.DynamicSecretHandler,
+	logForwardingHandler *handlers.LogForwardingHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
-		appHandler:         appHandler,
-		authHandler:        authHandler,
-		configHandler:      configHandler,
-		environmentHandler: environmentHandler,
-		syncHandler:        syncHandler,
-		exportHandler:      exportHandler,
-		initHandler:        initHandler,
-		runHandler:         runHandler,
-		genPEMKeyHandler:   genPEMKeyHandler,
-		gpgKeyHandler:      gpgKeyHandler,
-		certificateHandler: certificateHandler,
-		teamHandler:        teamHandler,
-		accessHandler:      accessHandler,
-		requestHandler:     requestHandler,
+		appHandler:            appHandler,
+		authHandler:           authHandler,
+		configHandler:         configHandler,
+		environmentHandler:    environmentHandler,
+		syncHandler:           syncHandler,
+		exportHandler:         exportHandler,
+		initHandler:           initHandler,
+		runHandler:            runHandler,
+		genPEMKeyHandler:      genPEMKeyHandler,
+		gpgKeyHandler:         gpgKeyHandler,
+		certificateHandler:    certificateHandler,
+		teamHandler:           teamHandler,
+		accessHandler:         accessHandler,
+		requestHandler:        requestHandler,
+		serviceTokenHandler:   serviceTokenHandler,
+		oidcHandler:           oidcHandler,
+		samlHandler:           samlHandler,
+		rotationHandler:       rotationHandler,
+		dynamicSecretHandler:  dynamicSecretHandler,
+		logForwardingHandler:  logForwardingHandler,
 	}
 }
 
@@ -107,6 +125,12 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 			TeamCommands(r.teamHandler),
 			AccessCommands(r.accessHandler),
 			RequestCommands(r.requestHandler),
+			ServiceTokenCommands(r.serviceTokenHandler),
+			OidcCommands(r.oidcHandler),
+			SamlCommands(r.samlHandler),
+			RotationCommands(r.rotationHandler),
+			DynamicSecretCommands(r.dynamicSecretHandler),
+			LogForwardingCommands(r.logForwardingHandler),
 		},
 	}
 }

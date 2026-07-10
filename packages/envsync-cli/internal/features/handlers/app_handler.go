@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
@@ -50,7 +49,6 @@ func (h *AppHandler) Create(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
-	// Extract values from command flags
 	setDefaultEnv := cmd.Bool("default-types")
 	enableSecret := cmd.Bool("enable-secret")
 	publicKey := cmd.String("public-key")
@@ -64,31 +62,26 @@ func (h *AppHandler) Create(ctx context.Context, cmd *cli.Command) error {
 		application.IsManagedSecret = false
 	}
 
-	// Set values in context
 	ctx = context.WithValue(ctx, "setDefaultEnv", setDefaultEnv)
 
-	app, err := h.createUseCase.Execute(ctx, application)
+	createdApp, err := h.createUseCase.Execute(ctx, application)
 	if err != nil {
-		if !errors.Is(err, tea.ErrProgramKilled) {
-			return h.formatUseCaseError(cmd, err)
-		}
+		return h.formatUseCaseError(cmd, err)
 	}
 
 	if cmd.Bool("json") {
-		if application.EnableSecrets && app.PublicKey == "" {
+		if application.EnableSecrets && createdApp.PublicKey == "" {
 			return h.formatter.FormatWarningJSON(cmd.Writer, "secrets are enabled but no public key was provided. A self managed key will be generated!!!")
 		}
 
-		// If JSON output is requested, format the application as JSON
-		return h.formatter.FormatJSON(cmd.Writer, app)
+		return h.formatter.FormatJSON(cmd.Writer, createdApp)
 	}
 
 	if application.EnableSecrets && application.PublicKey == "" {
 		h.formatter.FormatWarning(cmd.Writer, "Secrets are enabled but no public key was provided. A self managed key will be generated!!!")
 	}
 
-	// Display success message
-	return h.formatter.FormatCreateSuccessMessage(cmd.Writer, *app)
+	return h.formatter.FormatCreateSuccessMessage(cmd.Writer, *createdApp)
 }
 
 func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
@@ -98,7 +91,6 @@ func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 
 	jsonOutput := cmd.Bool("json")
 
-	// Set both appID, appName and json to context
 	ctx = context.WithValue(ctx, "appID", cmd.String("id"))
 	ctx = context.WithValue(ctx, "appName", cmd.String("name"))
 
@@ -140,18 +132,16 @@ func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
 		return h.formatter.FormatJSON(cmd.Writer, apps)
 	}
 
+	h.formatter.FormatListTable(cmd.Writer, apps)
+
 	return nil
 }
 
-// Helper methods
-
 func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {
-	// If JSON output is requested, use FormatJSONError
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 
-	// Handle different types of use case errors
 	switch e := err.(type) {
 	case *app.AppError:
 		switch e.Code {
@@ -165,6 +155,8 @@ func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 			return h.formatter.FormatError(cmd.Writer, "Access denied: "+e.Message)
 		case app.AppErrorCodeInUse:
 			return h.formatter.FormatWarning(cmd.Writer, "Cannot complete operation: "+e.Message)
+		case app.AppErrorCodeCancelled:
+			return h.formatter.FormatWarning(cmd.Writer, "Operation cancelled: "+e.Message)
 		case app.AppErrorTUI:
 			return h.formatter.FormatError(cmd.Writer, "TUI error: "+e.Message)
 		default:

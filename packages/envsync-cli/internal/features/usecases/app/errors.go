@@ -64,6 +64,7 @@ const (
 	AppErrorCodeAccessDenied  = "ACCESS_DENIED"
 	AppErrorCodeInUse         = "APP_IN_USE"
 	AppErrorCodeServiceError  = "SERVICE_ERROR"
+	AppErrorCodeCancelled     = "CANCELLED"
 	AppErrorTUI               = "TUI_ERROR"
 )
 
@@ -119,6 +120,14 @@ func NewInUseError(message string, cause error) *AppError {
 func NewServiceError(message string, cause error) *AppError {
 	return &AppError{
 		Code:    AppErrorCodeServiceError,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
+func NewCancelledError(message string, cause error) *AppError {
+	return &AppError{
+		Code:    AppErrorCodeCancelled,
 		Message: message,
 		Cause:   cause,
 	}
