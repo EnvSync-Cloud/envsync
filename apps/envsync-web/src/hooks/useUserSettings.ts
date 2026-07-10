@@ -186,7 +186,6 @@ export const useUserSettings = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
       setHasUnsavedChanges(false);
-      console.log("User settings updated successfully");
     },
     onError: (error) => {
       console.error("Failed to update user settings:", error);
@@ -200,7 +199,6 @@ export const useUserSettings = () => {
       return await sdk.users.updatePassword(userData.id);
     },
     onSuccess: () => {
-      console.log("Password reset successfully");
       setIsPasswordResetDialogOpen(false);
     },
     onError: (error) => {
@@ -215,7 +213,6 @@ export const useUserSettings = () => {
       return await sdk.users.deleteUser(userData.id);
     },
     onSuccess: () => {
-      console.log("Organization membership deleted successfully");
       window.location.href = "/login";
     },
     onError: (error) => {

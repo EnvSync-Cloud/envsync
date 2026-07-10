@@ -115,7 +115,6 @@ export const useInvitations = () => {
       queryClient.invalidateQueries({ queryKey: ["invitationsData"] });
       queryClient.invalidateQueries({ queryKey: [API_KEYS.ALL_USERS] });
       setActionLoading(inviteId, false);
-      console.log("Invitation deleted successfully");
     },
     onError: (error, inviteId) => {
       console.error("Error deleting invitation:", error);
@@ -135,7 +134,6 @@ export const useInvitations = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invitationsData"] });
-      console.log("Invitation role updated successfully");
     },
     onError: (error) => {
       console.error("Error updating invitation role:", error);

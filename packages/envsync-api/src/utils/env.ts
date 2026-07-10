@@ -93,6 +93,10 @@ export const BaseEnvSchema = z.object({
 	OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default("http://localhost:14318"),
 	OTEL_SERVICE_NAME: z.string().default("envsync-api"),
 	OTEL_SDK_DISABLED: z.string().default("false"),
+	// SAML SSO configuration (optional — derived from Keycloak config if absent)
+	SAML_SESSION_SECRET: z.string().optional(),
+	SAML_SP_CERT: z.string().optional(),
+	SAML_SP_KEY: z.string().optional(),
 });
 
 export function composeEnvSchema(extensions: ZodRawShape[] = []): ZodObject<ZodRawShape> {

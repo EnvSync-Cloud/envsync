@@ -97,6 +97,11 @@ export const coreApiModules: ApiModule[] = [
 		createRouter: async () => (await import("@/routes/change_request.route")).default,
 	},
 	{
+		name: "service_token",
+		mountPath: "/service_token",
+		createRouter: async () => (await import("@/routes/service_token.route")).default,
+	},
+	{
 		name: "system",
 		mountPath: "/system",
 		createRouter: async () => (await import("@/routes/system.route")).default,

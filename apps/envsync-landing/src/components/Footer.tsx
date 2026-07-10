@@ -1,4 +1,5 @@
 import { Github } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { runtimeConfig } from "@/utils/runtime-config";
 
@@ -46,8 +47,8 @@ const Footer = () => {
             <div className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-6 md:mt-0">
               <h3 className="mb-4 font-semibold text-foreground">Workflow</h3>
               <ul className="space-y-2">
-                <li><a href="/integrations" className="text-muted-foreground transition-colors hover:text-foreground">Integrations</a></li>
-                <li><a href="/onboarding" className="text-muted-foreground transition-colors hover:text-foreground">Get Started</a></li>
+                <li><Link to="/integrations" className="text-muted-foreground transition-colors hover:text-foreground">Integrations</Link></li>
+                <li><Link to="/onboarding" className="text-muted-foreground transition-colors hover:text-foreground">Get Started</Link></li>
               </ul>
             </div>
 

@@ -5,6 +5,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { EnterpriseController } from "@/controllers/enterprise.controller";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
+import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import { errorResponseSchema } from "@/validators/common";
 import {
@@ -36,6 +37,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
+app.use(enterpriseGuard());
 
 app.get(
 	"/providers",

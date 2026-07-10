@@ -248,9 +248,9 @@ export const AccessVisual = () => (
           <div className="rounded-xl border border-border bg-background/45 px-3 py-2 text-xs font-medium text-foreground">
             {row.role}
           </div>
-          {row.values.map((value) => (
+          {row.values.map((value, index) => (
             <div
-              key={`${row.role}-${value}`}
+              key={`${row.role}-${value}-${index}`}
               className={`flex items-center justify-center rounded-xl border px-2 py-2 text-xs font-semibold ${
                 value === "none"
                   ? "border-red-400/20 bg-red-400/10 text-red-200/90"
