@@ -10,6 +10,35 @@ export enum LogTypes {
 	CUSTOMOBJ = "customObj",
 }
 
+const SENSITIVE_KEYS = new Set([
+	"apiKey", "api_key", "apikey",
+	"password", "passwd", "pwd",
+	"secret", "secretKey", "secret_key",
+	"token", "accessToken", "access_token",
+	"refreshToken", "refresh_token",
+	"authorization", "Authorization",
+	"privateKey", "private_key",
+	"superuser",
+]);
+
+function redactSensitive(obj: unknown): unknown {
+	if (obj === null || obj === undefined) return obj;
+	if (typeof obj !== "object") return obj;
+	if (Array.isArray(obj)) return obj.map(redactSensitive);
+
+	const redacted: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+		if (SENSITIVE_KEYS.has(key)) {
+			redacted[key] = "[REDACTED]";
+		} else if (typeof value === "object" && value !== null) {
+			redacted[key] = redactSensitive(value);
+		} else {
+			redacted[key] = value;
+		}
+	}
+	return redacted;
+}
+
 const LOGS_DIR = join(resolve(import.meta.dir, "../../../../.."), "logs");
 
 function createFileDestination(fileName: string) {
@@ -109,9 +138,9 @@ const infoLogs = (msg: string | Bindings, logType: LogTypes, generated_by: strin
 		if (typeof msg === "string") {
 			return logger.info({ generated_by }, msg);
 		}
-		return logger.info(generated_by ? { generated_by, ...msg } : msg);
+		return logger.info(generated_by ? { generated_by, ...(redactSensitive(msg) as object) } : redactSensitive(msg));
 	}
-	return logger.info(generated_by ? { generated_by, payload: msg } : { payload: msg });
+	return logger.info(generated_by ? { generated_by, payload: redactSensitive(msg) } : { payload: redactSensitive(msg) });
 };
 
 export default infoLogs;
