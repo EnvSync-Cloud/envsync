@@ -8,10 +8,20 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
+type CreateWorkspaceRequest struct {
+	Name string `json:"name" url:"-"`
+}
+
+type SwitchOrgRequest struct {
+	OrgId string `json:"org_id" url:"-"`
+}
+
 type WhoAmIResponse struct {
-	User *WhoAmIResponseUser `json:"user" url:"user"`
-	Org  *WhoAmIResponseOrg  `json:"org" url:"org"`
-	Role *RoleResponse       `json:"role" url:"role"`
+	User                   *WhoAmIResponseUser              `json:"user" url:"user"`
+	Org                    *WhoAmIResponseOrg               `json:"org" url:"org"`
+	Role                   *RoleResponse                    `json:"role" url:"role"`
+	Memberships            []*WhoAmIResponseMembershipsItem `json:"memberships" url:"memberships"`
+	ActiveMembershipUserId string                           `json:"active_membership_user_id" url:"active_membership_user_id"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -38,6 +48,20 @@ func (w *WhoAmIResponse) GetRole() *RoleResponse {
 	return w.Role
 }
 
+func (w *WhoAmIResponse) GetMemberships() []*WhoAmIResponseMembershipsItem {
+	if w == nil {
+		return nil
+	}
+	return w.Memberships
+}
+
+func (w *WhoAmIResponse) GetActiveMembershipUserId() string {
+	if w == nil {
+		return ""
+	}
+	return w.ActiveMembershipUserId
+}
+
 func (w *WhoAmIResponse) GetExtraProperties() map[string]interface{} {
 	return w.extraProperties
 }
@@ -59,6 +83,116 @@ func (w *WhoAmIResponse) UnmarshalJSON(data []byte) error {
 }
 
 func (w *WhoAmIResponse) String() string {
+	if len(w.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(w.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(w); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", w)
+}
+
+type WhoAmIResponseMembershipsItem struct {
+	UserId   string `json:"user_id" url:"user_id"`
+	OrgId    string `json:"org_id" url:"org_id"`
+	OrgName  string `json:"org_name" url:"org_name"`
+	OrgSlug  string `json:"org_slug" url:"org_slug"`
+	RoleId   string `json:"role_id" url:"role_id"`
+	RoleName string `json:"role_name" url:"role_name"`
+	IsAdmin  bool   `json:"is_admin" url:"is_admin"`
+	IsMaster bool   `json:"is_master" url:"is_master"`
+	IsActive bool   `json:"is_active" url:"is_active"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetUserId() string {
+	if w == nil {
+		return ""
+	}
+	return w.UserId
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetOrgId() string {
+	if w == nil {
+		return ""
+	}
+	return w.OrgId
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetOrgName() string {
+	if w == nil {
+		return ""
+	}
+	return w.OrgName
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetOrgSlug() string {
+	if w == nil {
+		return ""
+	}
+	return w.OrgSlug
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetRoleId() string {
+	if w == nil {
+		return ""
+	}
+	return w.RoleId
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetRoleName() string {
+	if w == nil {
+		return ""
+	}
+	return w.RoleName
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetIsAdmin() bool {
+	if w == nil {
+		return false
+	}
+	return w.IsAdmin
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetIsMaster() bool {
+	if w == nil {
+		return false
+	}
+	return w.IsMaster
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetIsActive() bool {
+	if w == nil {
+		return false
+	}
+	return w.IsActive
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetExtraProperties() map[string]interface{} {
+	return w.extraProperties
+}
+
+func (w *WhoAmIResponseMembershipsItem) UnmarshalJSON(data []byte) error {
+	type unmarshaler WhoAmIResponseMembershipsItem
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*w = WhoAmIResponseMembershipsItem(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *w)
+	if err != nil {
+		return err
+	}
+	w.extraProperties = extraProperties
+	w.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (w *WhoAmIResponseMembershipsItem) String() string {
 	if len(w.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(w.rawJSON); err == nil {
 			return value

@@ -3,6 +3,7 @@ package formatters
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
@@ -29,9 +30,34 @@ func (f *AppFormatter) FormatCreateSuccessMessage(writer io.Writer, app domain.A
 
 	successMsg = style.BoxStyle.Render(successMsg)
 
-	// TODO: Print metadata
-
 	_, err := writer.Write([]byte(successMsg))
 
+	return err
+}
+
+func (f *AppFormatter) FormatListTable(writer io.Writer, apps []domain.Application) error {
+	if len(apps) == 0 {
+		_, err := writer.Write([]byte("📭 No applications found.\n"))
+		return err
+	}
+
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("\n📋 Applications (%d)\n", len(apps)))
+	sb.WriteString(strings.Repeat("─", 80) + "\n")
+	sb.WriteString(fmt.Sprintf("%-36s %-20s %-20s\n", "ID", "NAME", "ENVIRONMENTS"))
+	sb.WriteString(strings.Repeat("─", 80) + "\n")
+
+	for _, app := range apps {
+		envCount := fmt.Sprintf("%d", len(app.EnvTypes))
+		if app.EnvCount != "" {
+			envCount = app.EnvCount
+		}
+		sb.WriteString(fmt.Sprintf("%-36s %-20s %-20s\n", app.ID, truncate(app.Name, 18), envCount))
+	}
+
+	sb.WriteString(strings.Repeat("─", 80) + "\n")
+
+	_, err := writer.Write([]byte(sb.String()))
 	return err
 }

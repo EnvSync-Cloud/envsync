@@ -108,7 +108,8 @@ async function ensureEnvironmentTypeExists(page: Page, appId: string, envName: s
 		await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
 		await expect(
 			page.getByRole("heading", { name: "Manage Environment Types" })
-				.or(page.getByRole("heading", { name: "Manage Environments" })),
+				.or(page.getByRole("heading", { name: "Manage Environments" }))
+				.or(page.getByRole("heading", { name: "Environments" })),
 		).toBeVisible();
 		await expect(page.getByTestId(`env-type-card-${matchingEnvTypes[0]!.id}`)).toBeVisible();
 		return;
@@ -117,14 +118,15 @@ async function ensureEnvironmentTypeExists(page: Page, appId: string, envName: s
 	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
 	await expect(
 		page.getByRole("heading", { name: "Manage Environment Types" })
-			.or(page.getByRole("heading", { name: "Manage Environments" })),
+			.or(page.getByRole("heading", { name: "Manage Environments" }))
+			.or(page.getByRole("heading", { name: "Environments" })),
 	).toBeVisible();
 
-	await page.getByRole("button", { name: "Add Environment Type" }).click();
+	await page.getByRole("button", { name: /Add Environment|Add Environment Type/ }).click();
 	const dialog = page.getByRole("dialog").last();
-	await expect(dialog.getByRole("heading", { name: "Create Environment Type" })).toBeVisible();
+	await expect(dialog.getByRole("heading", { name: /Create Environment|Add Environment|Create Environment Type/ })).toBeVisible();
 	await dialog.locator("#create-env-name").fill(envName);
-	await dialog.getByRole("button", { name: "Create Environment Type" }).click();
+	await dialog.getByRole("button", { name: /Create|Create Environment Type/ }).click();
 	const envTypeId = await waitForEnvironmentTypeId(page, appId, envName);
 	await expect(page.getByTestId(`env-type-card-${envTypeId}`)).toBeVisible();
 }
@@ -250,7 +252,7 @@ export async function createProject(page: Page, projectName: string) {
 }
 
 export async function openProjectCardActions(page: Page, projectName: string) {
-	const card = page.locator('[class*="group cursor-pointer"]').filter({ hasText: projectName }).first();
+	const card = page.locator('[class*="cursor-pointer"][class*="group"]').filter({ hasText: projectName }).first();
 	await card.waitFor({ state: "visible" });
 	await card.hover();
 	const actionButton = card.getByRole("button").last();
@@ -291,7 +293,7 @@ export async function setEnvironmentProtected(page: Page, appId: string, envName
 	await page.getByTestId(`env-type-edit-${envType!.id}`).click();
 
 	const dialog = page.getByRole("dialog").last();
-	await expect(dialog.getByRole("heading", { name: "Edit Environment Type" })).toBeVisible();
+	await expect(dialog.getByRole("heading", { name: /Edit Environment|Edit Environment Type/ })).toBeVisible();
 	const checkbox = dialog.getByTestId("env-type-protected-checkbox");
 	const checked = await checkbox.isChecked();
 	const updateResponse = waitForTrackedResponse(page, {
@@ -303,7 +305,7 @@ export async function setEnvironmentProtected(page: Page, appId: string, envName
 	if (checked !== isProtected) {
 		await checkbox.click();
 	}
-	await dialog.getByRole("button", { name: "Update Environment Type" }).click();
+	await dialog.getByRole("button", { name: /Update|Save|Update Environment Type/ }).click();
 	const trackedResponse = await updateResponse;
 	expectObjectBody(trackedResponse.requestBody, "Update environment type");
 	expect(trackedResponse.requestBody.id).toBeTruthy();
@@ -329,11 +331,11 @@ export async function setEnvironmentProtected(page: Page, appId: string, envName
 
 export async function createEnvironmentType(page: Page, appId: string, envName: string) {
 	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
-	await page.getByRole("button", { name: "Add Environment Type" }).click();
+	await page.getByRole("button", { name: /Add Environment|Add Environment Type/ }).click();
 	const dialog = page.getByRole("dialog").last();
-	await expect(dialog.getByRole("heading", { name: "Create Environment Type" })).toBeVisible();
+	await expect(dialog.getByRole("heading", { name: /Create Environment|Add Environment|Create Environment Type/ })).toBeVisible();
 	await dialog.locator("#create-env-name").fill(envName);
-	await dialog.getByRole("button", { name: "Create Environment Type" }).click();
+	await dialog.getByRole("button", { name: /Create|Create Environment Type/ }).click();
 	const envTypeId = await waitForEnvironmentTypeId(page, appId, envName);
 	await expect(page.getByTestId(`env-type-card-${envTypeId}`)).toBeVisible();
 }
@@ -346,9 +348,9 @@ export async function deleteEnvironmentType(page: Page, appId: string, envName: 
 	await page.getByTestId(`env-type-card-${envType!.id}`).waitFor({ state: "visible" });
 	await page.getByTestId(`env-type-delete-${envType!.id}`).click();
 	const dialog = page.getByRole("dialog").last();
-	await expect(dialog.getByRole("heading", { name: "Delete Environment Type" })).toBeVisible();
+	await expect(dialog.getByRole("heading", { name: /Delete Environment|Delete Environment Type/ })).toBeVisible();
 	await dialog.locator("#delete-confirm-text").fill(envName);
-	await dialog.getByRole("button", { name: "Delete Environment Type" }).click();
+	await dialog.getByRole("button", { name: /Delete|Delete Environment Type/ }).click();
 	await expect(page.getByText(envName)).toHaveCount(0);
 }
 

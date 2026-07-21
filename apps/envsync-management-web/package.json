@@ -1,7 +1,7 @@
 {
   "name": "envsync-management-web",
   "private": true,
-  "version": "0.8.7",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

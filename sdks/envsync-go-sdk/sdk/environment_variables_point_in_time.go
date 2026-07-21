@@ -16,11 +16,68 @@ type EnvDiffRequest struct {
 	ToPitId   string `json:"to_pit_id" url:"-"`
 }
 
+type EnvTimestampRangeDiffRequest struct {
+	AppId         string    `json:"app_id" url:"-"`
+	EnvTypeId     string    `json:"env_type_id" url:"-"`
+	FromTimestamp time.Time `json:"from_timestamp" url:"-"`
+	ToTimestamp   time.Time `json:"to_timestamp" url:"-"`
+}
+
+func (e *EnvTimestampRangeDiffRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler EnvTimestampRangeDiffRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*e = EnvTimestampRangeDiffRequest(body)
+	return nil
+}
+
+func (e *EnvTimestampRangeDiffRequest) MarshalJSON() ([]byte, error) {
+	type embed EnvTimestampRangeDiffRequest
+	var marshaler = struct {
+		embed
+		FromTimestamp *internal.DateTime `json:"from_timestamp"`
+		ToTimestamp   *internal.DateTime `json:"to_timestamp"`
+	}{
+		embed:         embed(*e),
+		FromTimestamp: internal.NewDateTime(e.FromTimestamp),
+		ToTimestamp:   internal.NewDateTime(e.ToTimestamp),
+	}
+	return json.Marshal(marshaler)
+}
+
 type EnvHistoryRequest struct {
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
-	Page      *int   `json:"page,omitempty" url:"-"`
-	PerPage   *int   `json:"per_page,omitempty" url:"-"`
+	AppId         string     `json:"app_id" url:"-"`
+	EnvTypeId     string     `json:"env_type_id" url:"-"`
+	Page          *int       `json:"page,omitempty" url:"-"`
+	PerPage       *int       `json:"per_page,omitempty" url:"-"`
+	FromCreatedAt *time.Time `json:"from_created_at,omitempty" url:"-"`
+	ToCreatedAt   *time.Time `json:"to_created_at,omitempty" url:"-"`
+}
+
+func (e *EnvHistoryRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler EnvHistoryRequest
+	var body unmarshaler
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	*e = EnvHistoryRequest(body)
+	return nil
+}
+
+func (e *EnvHistoryRequest) MarshalJSON() ([]byte, error) {
+	type embed EnvHistoryRequest
+	var marshaler = struct {
+		embed
+		FromCreatedAt *internal.DateTime `json:"from_created_at,omitempty"`
+		ToCreatedAt   *internal.DateTime `json:"to_created_at,omitempty"`
+	}{
+		embed:         embed(*e),
+		FromCreatedAt: internal.NewOptionalDateTime(e.FromCreatedAt),
+		ToCreatedAt:   internal.NewOptionalDateTime(e.ToCreatedAt),
+	}
+	return json.Marshal(marshaler)
 }
 
 type EnvPitRequest struct {
@@ -359,6 +416,7 @@ type EnvHistoryResponsePitsItem struct {
 	UserId               string `json:"user_id" url:"user_id"`
 	CreatedAt            string `json:"created_at" url:"created_at"`
 	UpdatedAt            string `json:"updated_at" url:"updated_at"`
+	ChangesCount         int    `json:"changes_count" url:"changes_count"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -418,6 +476,13 @@ func (e *EnvHistoryResponsePitsItem) GetUpdatedAt() string {
 		return ""
 	}
 	return e.UpdatedAt
+}
+
+func (e *EnvHistoryResponsePitsItem) GetChangesCount() int {
+	if e == nil {
+		return 0
+	}
+	return e.ChangesCount
 }
 
 func (e *EnvHistoryResponsePitsItem) GetExtraProperties() map[string]interface{} {

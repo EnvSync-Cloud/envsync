@@ -74,3 +74,122 @@ func (c *Client) Whoami(
 	}
 	return response, nil
 }
+
+// Create a new workspace for the current enterprise web session and switch into it
+func (c *Client) CreateWorkspace(
+	ctx context.Context,
+	request *sdk.CreateWorkspaceRequest,
+	opts ...option.RequestOption,
+) (*sdk.WhoAmIResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/auth/create-workspace"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+	errorCodes := internal.ErrorCodes{
+		400: func(apiError *core.APIError) error {
+			return &sdk.BadRequestError{
+				APIError: apiError,
+			}
+		},
+		401: func(apiError *core.APIError) error {
+			return &sdk.UnauthorizedError{
+				APIError: apiError,
+			}
+		},
+		403: func(apiError *core.APIError) error {
+			return &sdk.ForbiddenError{
+				APIError: apiError,
+			}
+		},
+		409: func(apiError *core.APIError) error {
+			return &sdk.ConflictError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	var response *sdk.WhoAmIResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// Switch the active organization membership for the current web session
+func (c *Client) SwitchOrg(
+	ctx context.Context,
+	request *sdk.SwitchOrgRequest,
+	opts ...option.RequestOption,
+) (*sdk.WhoAmIResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/auth/switch-org"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+	errorCodes := internal.ErrorCodes{
+		400: func(apiError *core.APIError) error {
+			return &sdk.BadRequestError{
+				APIError: apiError,
+			}
+		},
+		401: func(apiError *core.APIError) error {
+			return &sdk.UnauthorizedError{
+				APIError: apiError,
+			}
+		},
+		403: func(apiError *core.APIError) error {
+			return &sdk.ForbiddenError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	var response *sdk.WhoAmIResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}

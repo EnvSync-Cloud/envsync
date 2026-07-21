@@ -1,4 +1,4 @@
-import type { ColumnType } from "kysely";
+import type { ColumnType, JsonValue } from "kysely";
 
 export interface BaseTable {
 	id: ColumnType<string>;
@@ -156,7 +156,7 @@ export interface WebhookStore extends BaseTable {
 	url: ColumnType<string>;
 	event_types: ColumnType<string[]>;
 	is_active: ColumnType<boolean>;
-	webhook_type: ColumnType<"CUSTOM" | "DISCORD" | "SLACK">
+	webhook_type: ColumnType<"CUSTOM" | "DISCORD" | "SLACK" | "GITHUB_ACTIONS" | "GITLAB_PIPELINE" | "AWS_CODEPIPELINE" | "GCP_CLOUD_BUILD" | "CIRCLECI" | "TRAVIS_CI" | "JENKINS">
 	app_id?: ColumnType<string | null>;
 	linked_to: ColumnType<"org" | "app">;
 	last_triggered_at?: ColumnType<Date | null>;
@@ -339,6 +339,87 @@ export interface SyncAuditEvent extends BaseTable {
 	details: ColumnType<Record<string, unknown>>;
 }
 
+export interface ServiceToken extends BaseTable {
+	org_id: ColumnType<string>;
+	created_by_user_id: ColumnType<string>;
+	name: ColumnType<string>;
+	token_hash: ColumnType<string>;
+	app_id?: ColumnType<string | null>;
+	env_type_id?: ColumnType<string | null>;
+	permissions: ColumnType<Record<string, boolean>>;
+	expires_at: ColumnType<Date>;
+	last_used_at?: ColumnType<Date | null>;
+}
+
+export interface OidcProvider extends BaseTable {
+	org_id: ColumnType<string>;
+	provider_type: ColumnType<"github_actions" | "gitlab_ci" | "kubernetes" | "generic">;
+	issuer_url: ColumnType<string>;
+	audience: ColumnType<string>;
+	enabled: ColumnType<boolean>;
+	allowed_subjects: ColumnType<JsonValue>;
+	machine_user_id?: ColumnType<string | null>;
+}
+
+export interface SamlProvider extends BaseTable {
+	org_id: ColumnType<string>;
+	provider_type: ColumnType<"okta" | "onelogin" | "azure-ad" | "google-workspace" | "duo" | "rippling" | "oracle" | "ping-identity">;
+	name: ColumnType<string>;
+	entity_id: ColumnType<string>;
+	sso_url: ColumnType<string>;
+	certificate: ColumnType<string>;
+	enabled: ColumnType<boolean>;
+}
+
+export interface RotationPolicy extends BaseTable {
+	org_id: ColumnType<string>;
+	app_id: ColumnType<string>;
+	env_type_id: ColumnType<string>;
+	variable_key: ColumnType<string>;
+	engine_type: ColumnType<"postgres" | "mysql" | "aws-iam" | "azure-sp" | "gcp-service-account" | "cloudflare-pages" | "sendgrid" | "twilio">;
+	schedule_cron: ColumnType<string>;
+	dual_window_minutes: ColumnType<number>;
+	enabled: ColumnType<boolean>;
+	last_rotated_at?: ColumnType<Date | null>;
+	next_rotation_at?: ColumnType<Date | null>;
+}
+
+export interface RotationState extends BaseTable {
+	rotation_policy_id: ColumnType<string>;
+	old_credential_encrypted?: ColumnType<string | null>;
+	new_credential_encrypted: ColumnType<string>;
+	rotated_at: ColumnType<Date>;
+	old_credential_expires_at: ColumnType<Date>;
+	old_credential_revoked: ColumnType<boolean>;
+	revoked_at?: ColumnType<Date | null>;
+}
+
+export interface DynamicSecretEngine extends BaseTable {
+	org_id: ColumnType<string>;
+	engine_type: ColumnType<"postgres" | "mysql" | "aws-iam" | "azure-sp">;
+	name: ColumnType<string>;
+	config: ColumnType<Record<string, unknown>>;
+	enabled: ColumnType<boolean>;
+}
+
+export interface DynamicSecretLease extends BaseTable {
+	engine_id: ColumnType<string>;
+	app_id: ColumnType<string>;
+	env_type_id: ColumnType<string>;
+	variable_key: ColumnType<string>;
+	credential_data: ColumnType<Record<string, unknown>>;
+	expires_at: ColumnType<Date>;
+	revoked_at?: ColumnType<Date | null>;
+}
+
+export interface LogForwardingConfig extends BaseTable {
+	org_id: ColumnType<string>;
+	provider_type: ColumnType<"datadog" | "splunk" | "sumo-logic">;
+	name: ColumnType<string>;
+	config: ColumnType<Record<string, unknown>>;
+	enabled: ColumnType<boolean>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -370,6 +451,14 @@ export interface BaseDatabase {
 	env_type_mapping: EnvTypeMapping;
 	sync_run: SyncRun;
 	sync_audit_event: SyncAuditEvent;
+	service_tokens: ServiceToken;
+	oidc_providers: OidcProvider;
+	saml_providers: SamlProvider;
+	dynamic_secret_engines: DynamicSecretEngine;
+	dynamic_secret_leases: DynamicSecretLease;
+	rotation_policies: RotationPolicy;
+	rotation_state: RotationState;
+	log_forwarding_configs: LogForwardingConfig;
 }
 
 /**

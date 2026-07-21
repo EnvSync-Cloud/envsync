@@ -1,19 +1,110 @@
-# EnvSync Monorepo
+<p align="center">
+  <img src="apps/envsync-landing/public/EnvSync.svg" alt="EnvSync Logo" width="120" height="120" />
+</p>
 
-EnvSync is an environment variable and secrets management platform with:
-- a Bun API
-- a Go CLI
-- a React dashboard
-- generated SDKs
+<h1 align="center">EnvSync</h1>
 
-## What Changed
+<p align="center">
+  <strong>Ship environment variables without the drift.</strong>
+</p>
 
-The repo now uses:
-- Keycloak instead of Zitadel
-- ClickStack / HyperDX instead of the old Grafana/Loki/Tempo stack
-- miniKMS for secret storage flows
-- a local bootstrap flow that seeds ClickStack sources and dashboards automatically
-- a locally built Keycloak image from `packages/envsync-keycloak-theme` for dev and E2E
+<p align="center">
+  CLI-first secrets and config delivery for dev, staging, CI, and production.
+</p>
+
+<p align="center">
+  <a href="https://github.com/EnvSync-Cloud/envsync/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/EnvSync-Cloud/envsync/ci.yaml?branch=main&label=CI" alt="CI Status" />
+  </a>
+  <a href="https://github.com/EnvSync-Cloud/envsync/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/EnvSync-Cloud/envsync" alt="License" />
+  </a>
+  <a href="https://github.com/EnvSync-Cloud/envsync/releases">
+    <img src="https://img.shields.io/github/v/release/EnvSync-Cloud/envsync" alt="Version" />
+  </a>
+  <a href="https://github.com/EnvSync-Cloud/envsync/stargazers">
+    <img src="https://img.shields.io/github/stars/EnvSync-Cloud/envsync" alt="Stars" />
+  </a>
+</p>
+
+---
+
+## Why EnvSync?
+
+**The problem:** `.env` files are the #1 source of credential leaks. Teams share secrets via Slack DMs, email threads, and Google Docs. Each copy is a potential breach.
+
+**The solution:** EnvSync provides a single source of truth for environment variables and secrets, with:
+- 🔄 **Point-in-time rollback** — Undo any secret change to any previous state
+- ✅ **Approval workflows** — Require review before production changes
+- 🔐 **End-to-end encryption** — AES-256 at rest, TLS in transit
+- 🚀 **CLI-first workflow** — `envsync pull` and `envsync push` in your terminal
+- 🌐 **28+ integrations** — GitHub, GitLab, Vercel, AWS, and more
+
+---
+
+## Quick Start
+
+```bash
+# Install CLI
+curl -fsSL https://cli.envsync.cloud/install.sh | sh
+
+# Login
+envsync login
+
+# Pull secrets
+envsync pull --env development
+
+# Push changes
+envsync push --env staging
+```
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EnvSync Platform                         │
+├─────────────────────────────────────────────────────────────┤
+│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs              │
+│  (React + Vite)   │  (Go)          │  (TypeScript, Go)     │
+└─────────┬─────────┴───────┬────────┴──────────┬────────────┘
+          │                 │                   │
+          ▼                 ▼                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Core API                              │
+│              (Bun + Hono + PostgreSQL)                      │
+├─────────────────────────────────────────────────────────────┤
+│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations        │
+│  📋 Variables  │  ⏰ Dynamic    │  📊 Audit Logs          │
+│  🔑 OIDC/SAML  │  📤 Log Fwd    │  🪝 Webhooks            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Features
+
+### Core
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Secrets Management** | Store, sync, and manage secrets across teams |
+| 📋 **Environment Variables** | Version-controlled config with rollback |
+| 👥 **Team Management** | Users, teams, roles, and permissions |
+| 📊 **Audit Logs** | Track every change with full history |
+| 🔄 **Change Requests** | Approval workflows for production |
+
+### Enterprise
+| Feature | Description |
+|---------|-------------|
+| 🔑 **OIDC Auth** | GitHub Actions, GitLab CI, K8s service accounts |
+| 🛡️ **SAML SSO** | Okta, OneLogin, Azure AD, Google, Duo, Rippling |
+| 🔄 **Secret Rotation** | Auto-rotate DB creds, AWS IAM, Azure SP |
+| ⏰ **Dynamic Secrets** | Short-lived credentials with auto-expiry |
+| 📤 **Log Forwarding** | Datadog, Splunk, Sumo Logic |
+| 🌐 **28 Integrations** | GitHub, GitLab, Vercel, AWS, Azure, and more |
+
+---
 
 ## Monorepo Layout
 
@@ -23,160 +114,120 @@ The repo now uses:
 | `packages/envsync-cli` | Go CLI |
 | `apps/envsync-web` | React dashboard |
 | `apps/envsync-landing` | Landing page |
-| `packages/deploy-cli` | self-hosted deployment CLI |
-| `packages/envsync-keycloak-theme` | custom Keycloak theme |
-| `sdks/` | generated TypeScript and Go SDKs |
-| `scripts/` | local bootstrap and helper scripts |
+| `packages/deploy-cli` | Self-hosted deployment CLI |
+| `packages/envsync-keycloak-theme` | Custom Keycloak theme |
+| `sdks/` | Generated TypeScript and Go SDKs |
+| `scripts/` | Local bootstrap and helper scripts |
+
+---
 
 ## Local Development
 
-Use this from the repo root:
-
 ```bash
+# 1. Clone and setup
+git clone https://github.com/EnvSync-Cloud/envsync.git
+cd envsync
 cp .env.example .env
 bun install
+
+# 2. Start infrastructure
 docker compose up -d
+
+# 3. Initialize
 bun run cli:init
 bun run cli:create-dev-user --seed
 bun run clickstack:sync
+
+# 4. Start development
 bun run dev
 ```
 
-If you previously tried local auth on `localhost`, clear browser site data for both `localhost` and `*.lvh.me` before retrying login on `app.lvh.me`.
-
-What that does:
-- creates local `.env` from `.env.example`
-- starts local infra with Docker Compose
-- runs DB migrations
-- bootstraps RustFS and Keycloak clients
-- builds the local Keycloak image from repo source when needed
-- seeds a local dev user, org, apps, envs, secrets, and sample data
-- seeds local ClickStack / HyperDX sources and dashboards
-- starts the apps with Turbo
-
-`lvh.me` is a wildcard hostname that resolves to `127.0.0.1`, so `app.lvh.me`, `auth.lvh.me`, and `api.lvh.me` all point to your machine without editing `/etc/hosts`.
-
-Use `lvh.me` for browser-facing local auth. `localhost` is not the supported browser login path because Keycloak 26 treats `localhost` as a secure context and can break local auth cookies.
-
-## Local Services
-
-Main local endpoints:
+### Local Services
 
 | Service | URL |
 |---------|-----|
-| Dashboard | `http://app.lvh.me:8001` |
-| API | `http://api.lvh.me:4000` |
-| Keycloak | `http://auth.lvh.me:8080` |
-| ClickStack / HyperDX | `http://localhost:8800` |
-| Mailpit | `http://localhost:8025` |
-| RustFS S3 API | `http://localhost:19000` |
-| RustFS Console | `http://localhost:19001` |
-| OpenFGA | `http://localhost:8090` |
+| 🖥️ Dashboard | `http://app.lvh.me:8001` |
+| ⚡ API | `http://api.lvh.me:4000` |
+| 🔐 Keycloak | `http://auth.lvh.me:8080` |
+| 📊 HyperDX | `http://localhost:8800` |
+| 📧 Mailpit | `http://localhost:8025` |
+| 🗄️ RustFS | `http://localhost:19000` |
+| 🔑 OpenFGA | `http://localhost:8090` |
 
-## Local HyperDX Login
+---
 
-For local dev, `bun run clickstack:sync` seeds a default HyperDX user and dashboards.
-
-UI login:
-- email: `local-operator@envsync.local`
-- password: `EnvsyncLocal!123`
-
-Notes:
-- the script also writes `.env.local` for the frontend telemetry config
-- rerun `bun run clickstack:sync` after recreating the ClickStack container or volumes
-
-## Root Commands
-
-| Command | Description |
-|--------|-------------|
-| `bun run dev` | run API, web, and landing locally via Turbo |
-| `bun run build` | build the workspace |
-| `bun run cli:init` | local infra bootstrap, migrations, RustFS bucket, Keycloak client setup |
-| `bun run cli:create-dev-user --seed` | create the local dev user and seed sample data |
-| `bun run cli services up` | start Docker Compose services |
-| `bun run cli services down` | stop Docker Compose services |
-| `bun run cli services status` | inspect Docker Compose services |
-| `bun run clickstack:sync` | sync local ClickStack OTLP config and seed sources/dashboards |
-| `bun run clickstack:bootstrap` | reseed local ClickStack dashboards only |
-| `bun run test:mock` | run mock tests |
-| `bun run test:e2e` | run E2E tests from the repo root; it runs `e2e-setup init` first |
-
-## Sim Test
-
-Run the API simulation load test from the API package:
+## CLI Usage
 
 ```bash
-cd packages/envsync-api
-bun run scripts/sim.ts
+# Authentication
+envsync login
+envsync whoami
+
+# Project management
+envsync init
+envsync app list
+
+# Secrets
+envsync pull --env development
+envsync push --env staging
+envsync push --env production --strict
+
+# Export
+envsync export --format dotenv
+envsync export --format json
+
+# Run with secrets
+envsync run -- npm start
 ```
 
-Useful variants:
+---
 
-```bash
-SIM_WORKERS=50 bun run scripts/sim.ts
-SIM_WORKERS=200 SIM_DELAY_MS=0 bun run scripts/sim.ts
+## SDKs
+
+### TypeScript
+```typescript
+import { EnvSyncAPISDK } from '@envsync-cloud/envsync-ts-sdk';
+
+const sdk = new EnvSyncAPISDK({ BASE: 'https://api.envsync.cloud' });
+const secrets = await sdk.secrets.getSecrets({ app_id: 'my-app' });
 ```
 
-## Auth
+### Go
+```go
+import "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 
-Keycloak is the only supported identity provider in the current stack.
-
-Canonical local browser auth flow:
-- app: `http://app.lvh.me:8001`
-- api callback: `http://api.lvh.me:4000/api/access/web/callback`
-- auth: `http://auth.lvh.me:8080`
-
-Canonical local env vars:
-- `KEYCLOAK_URL`
-- `KEYCLOAK_REALM`
-- `KEYCLOAK_ADMIN_USER`
-- `KEYCLOAK_ADMIN_PASSWORD`
-- `KEYCLOAK_WEB_CLIENT_ID`
-- `KEYCLOAK_WEB_CLIENT_SECRET`
-- `KEYCLOAK_CLI_CLIENT_ID`
-- `KEYCLOAK_API_CLIENT_ID`
-- `KEYCLOAK_API_CLIENT_SECRET`
-
-The local realm import lives under [docker/keycloak/realm-import](./docker/keycloak/realm-import). Self-hosted deploys generate a derived realm config during setup.
-The local and E2E Keycloak container image is built from [packages/envsync-keycloak-theme](./packages/envsync-keycloak-theme), not pulled from GHCR.
-
-## Observability
-
-Local observability is ClickStack / HyperDX plus one OTEL collector:
-- API, CLI, and browser telemetry flow into OTLP
-- ClickStack stores traces, logs, and metrics
-- local dashboards are seeded automatically
-
-If you recreate ClickStack state:
-
-```bash
-bun run clickstack:sync
+client := sdk.NewClient("https://api.envsync.cloud")
+secrets, err := client.Secrets.GetSecrets(ctx, "my-app")
 ```
+
+---
 
 ## Self-Hosting
 
-Self-hosted deployment now targets:
+EnvSync supports self-hosted deployment with:
 - Docker Swarm
 - Traefik
 - Keycloak
 - ClickStack / HyperDX
-- single-host Ubuntu/Debian in v1
 
-See [SELFHOSTING.md](./SELFHOSTING.md).
+See [SELFHOSTING.md](./SELFHOSTING.md) for details.
 
-## SDKs
-
-- [sdks/envsync-ts-sdk/README.md](./sdks/envsync-ts-sdk/README.md)
-- [sdks/envsync-go-sdk/sdk/README.md](./sdks/envsync-go-sdk/sdk/README.md)
+---
 
 ## Contributing
 
-1. Create a branch.
-2. Make changes.
-3. Run relevant tests.
-4. Open a PR.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+---
 
 ## Support
 
-- Docs: [docs.envsync.cloud](https://docs.envsync.cloud)
-- Issues: [GitHub Issues](https://github.com/EnvSync-Cloud/envsync/issues)
+- 📖 Docs: [docs.envsync.cloud](https://docs.envsync.cloud)
+- 🐛 Issues: [GitHub Issues](https://github.com/EnvSync-Cloud/envsync/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/EnvSync-Cloud/envsync/discussions)
+
+---
+
+<p align="center">
+  Made with ❤️ by the EnvSync team
+</p>

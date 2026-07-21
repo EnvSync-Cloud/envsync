@@ -1,27 +1,29 @@
-
 import Header from "@/components/Header";
-import Hero from "@/components/Hero";
-import HowItWorks from "@/components/HowItWorks";
-import Features from "@/components/Features";
-import CLIShowcase from "@/components/CLIShowcase";
-import Compare from "@/components/Compare";
-import SocialProof from "@/components/SocialProof";
-import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
-import IntegrationWorkflowStrip from "@/components/IntegrationWorkflowStrip";
+import NewHero from "@/components/NewHero";
+import NewFeatures from "@/components/NewFeatures";
+import NewHowItWorks from "@/components/NewHowItWorks";
+import NewIntegrations from "@/components/NewIntegrations";
+import NewTestimonial from "@/components/NewTestimonial";
+import NewCompare from "@/components/NewCompare";
+import NewCTA from "@/components/NewCTA";
 
 const Index = () => {
   return (
-    <div className="h-fit" onLoad={() => window.scrollTo(0, 0)}>
+    <div className="min-h-screen bg-background">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-background">
+        Skip to main content
+      </a>
       <Header />
-      <Hero />
-      <SocialProof />
-      <Features />
-      <HowItWorks />
-      <CLIShowcase />
-      <IntegrationWorkflowStrip />
-      <Compare />
-      <CTA />
+      <main id="main-content">
+        <NewHero />
+        <NewFeatures />
+        <NewHowItWorks />
+        <NewIntegrations />
+        <NewTestimonial />
+        <NewCompare />
+        <NewCTA />
+      </main>
       <Footer />
     </div>
   );

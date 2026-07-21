@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
@@ -43,8 +42,8 @@ func (h *EnvironmentHandler) SwitchEnvironment(ctx context.Context, cmd *cli.Com
 		ID:    cmd.String("env-id"),
 	}
 
-	if err := h.switchEnvUseCase.Execute(ctx, env); !errors.Is(err, tea.ErrProgramKilled) && err != nil {
-		return err
+	if err := h.switchEnvUseCase.Execute(ctx, env); err != nil {
+		return h.formatUseCaseError(cmd, err)
 	}
 
 	return nil
@@ -55,7 +54,6 @@ func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Co
 		return h.formatUseCaseError(cmd, errors.New("app-id must be provided with json flag"))
 	}
 
-	// TODO: Implement the logic to get all environments for an application
 	panic("Handler is not implemented yet!!!")
 }
 
@@ -93,14 +91,12 @@ func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Com
 
 func (h *EnvironmentHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		// If JSON output is requested, format the error as JSON
 		jsonOutput := map[string]any{
 			"error": err.Error(),
 		}
 		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
 	}
 
-	// Handle different types of use case errors
 	switch e := err.(type) {
 	case *environment.EnvError:
 		switch e.Code {

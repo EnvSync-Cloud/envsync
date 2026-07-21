@@ -162,7 +162,6 @@ export const ProjectEnvironments = ({
 
   // Set initial selected environment when project data loads
   useEffect(() => {
-    console.log("Project data loaded:", projectData);
     if (projectData?.environments.length > 0 && !selectedEnv) {
       setSelectedEnv(projectData.environments[0].id);
     }

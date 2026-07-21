@@ -1,5 +1,4 @@
 import { GitPullRequestArrow, ShieldCheck, Terminal, Workflow } from "lucide-react";
-import { motion } from "framer-motion";
 
 const steps = [
   {
@@ -34,15 +33,9 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="container mx-auto border-x border-t border-border px-0 py-0">
+    <section className="container mx-auto px-4 md:px-8 py-16 md:py-24">
       <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.35 }}
-          className="border border-border bg-[hsl(var(--surface-1))] p-6 md:p-8"
-        >
+        <div className="border border-border bg-[hsl(var(--surface-1))] p-6 md:p-8">
           <div className="mb-4 inline-flex items-center gap-2 border border-border bg-[hsl(var(--surface-2))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Workflow
           </div>
@@ -52,15 +45,9 @@ const HowItWorks = () => {
           <p className="mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">
             Connect, push, approve, and inject without inventing a new team ritual.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.35, delay: 0.05 }}
-          className="relative overflow-hidden border border-border bg-[linear-gradient(180deg,hsl(var(--surface-1)),#0a0f15)] p-5 md:p-6"
-        >
+        <div className="relative overflow-hidden border border-border bg-[linear-gradient(180deg,hsl(var(--surface-1)),#0a0f15)] p-5 md:p-6">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 opacity-35"
@@ -93,7 +80,7 @@ const HowItWorks = () => {
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

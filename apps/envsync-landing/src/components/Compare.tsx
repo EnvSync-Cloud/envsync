@@ -1,6 +1,5 @@
 import { Check, Minus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
 import {
   Table,
   TableBody,
@@ -24,11 +23,7 @@ const rows: ComparisonRow[] = [
   { feature: "Environment promotion flow", envsync: "check", doppler: "minus", vault: "minus", dotenv: "x" },
   { feature: "Approval gates before prod", envsync: "check", doppler: "minus", vault: "minus", dotenv: "x" },
   { feature: "Versioned rollback context", envsync: "check", doppler: "check", vault: "minus", dotenv: "x" },
-  { feature: "CLI-first workflow", envsync: "check", doppler: "check", vault: "check", dotenv: "minus" },
-  { feature: "CI injection path", envsync: "check", doppler: "check", vault: "minus", dotenv: "x" },
   { feature: "Self-host option", envsync: "check", doppler: "x", vault: "check", dotenv: "check" },
-  { feature: "Certificates and key ops", envsync: "check", doppler: "x", vault: "minus", dotenv: "x" },
-  { feature: "Team-scoped access control", envsync: "check", doppler: "check", vault: "check", dotenv: "x" },
   { feature: "Audit history on changes", envsync: "check", doppler: "check", vault: "check", dotenv: "x" },
 ];
 
@@ -45,15 +40,9 @@ const CellIcon = ({ value }: { value: CellValue }) => {
 
 const Compare = () => {
   return (
-    <section className="container mx-auto border-x border-t border-border p-0">
+    <section className="container mx-auto px-4 md:px-8 py-16 md:py-24">
       <div className="grid gap-0 lg:grid-cols-[0.74fr_1.26fr]">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.35 }}
-          className="border border-border bg-[hsl(var(--surface-1))] p-6 md:p-8"
-        >
+        <div className="border border-border bg-[hsl(var(--surface-1))] p-6 md:p-8">
           <div className="mb-4 inline-flex items-center gap-2 border border-border bg-[hsl(var(--surface-2))] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Compare
           </div>
@@ -63,15 +52,9 @@ const Compare = () => {
           <p className="mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">
             The difference shows up when config moves through approvals, CI, and rollback.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45, delay: 0.1 }}
-          className="w-full overflow-x-auto border border-border bg-[hsl(var(--surface-1))]"
-        >
+        <div className="w-full overflow-x-auto border border-border bg-[hsl(var(--surface-1))]">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
@@ -109,7 +92,7 @@ const Compare = () => {
               ))}
             </TableBody>
           </Table>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -7,7 +7,7 @@ import (
 	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
 )
 
-// Invalid export request
+// Invalid request
 type BadRequestError struct {
 	*core.APIError
 	Body *ErrorResponse
@@ -29,6 +29,54 @@ func (b *BadRequestError) MarshalJSON() ([]byte, error) {
 
 func (b *BadRequestError) Unwrap() error {
 	return b.APIError
+}
+
+// Workspace slug conflict
+type ConflictError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (c *ConflictError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	c.StatusCode = 409
+	c.Body = body
+	return nil
+}
+
+func (c *ConflictError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Body)
+}
+
+func (c *ConflictError) Unwrap() error {
+	return c.APIError
+}
+
+// Enterprise edition required
+type ForbiddenError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (f *ForbiddenError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	f.StatusCode = 403
+	f.Body = body
+	return nil
+}
+
+func (f *ForbiddenError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.Body)
+}
+
+func (f *ForbiddenError) Unwrap() error {
+	return f.APIError
 }
 
 // Internal server error
@@ -77,6 +125,30 @@ func (n *NotFoundError) MarshalJSON() ([]byte, error) {
 
 func (n *NotFoundError) Unwrap() error {
 	return n.APIError
+}
+
+// Cookie session required
+type UnauthorizedError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (u *UnauthorizedError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	u.StatusCode = 401
+	u.Body = body
+	return nil
+}
+
+func (u *UnauthorizedError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.Body)
+}
+
+func (u *UnauthorizedError) Unwrap() error {
+	return u.APIError
 }
 
 // Validation error

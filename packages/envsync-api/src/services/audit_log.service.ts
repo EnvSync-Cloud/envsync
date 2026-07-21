@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import { DB } from "@/libs/db";
 import { WebhookService } from "./webhook.service";
+import { LogForwardingService } from "./log-forwarding.service";
 import { z } from "zod";
 
 export const ActionCategories = z.enum([
@@ -21,6 +22,7 @@ export const ActionCategories = z.enum([
 	'gpg_key*',
 	'cert*',
 	'enterprise*',
+	'service_token*',
 ]);
 
 export type ActionCtgs = z.infer<typeof ActionCategories>;
@@ -129,6 +131,14 @@ export class AuditLogService {
 			org_id: org_id || "",
 			user_id: user_id || "",
 			message: JSON.stringify(details || {}),
+		}).catch(() => {});
+
+		LogForwardingService.forwardAuditLog({
+			action,
+			org_id,
+			user_id,
+			details,
+			message,
 		}).catch(() => {});
 	};
 

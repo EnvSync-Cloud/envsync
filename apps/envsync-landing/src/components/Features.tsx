@@ -57,7 +57,7 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="container mx-auto border-x border-t border-border px-0 py-0">
+    <section id="features" className="container mx-auto px-4 md:px-8 py-16 md:py-24">
       <div className="grid gap-0 lg:grid-cols-[0.76fr_1.24fr]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

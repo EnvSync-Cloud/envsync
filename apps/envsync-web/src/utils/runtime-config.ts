@@ -45,7 +45,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       apiBaseUrl: defaultApiBaseUrl,
       appBaseUrl: "http://app.lvh.me:8001",
       authBaseUrl: "http://auth.lvh.me:8080",
-      managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || "http://localhost:4001",
+      managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || "http://manage-api.lvh.me:4001",
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
       apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,

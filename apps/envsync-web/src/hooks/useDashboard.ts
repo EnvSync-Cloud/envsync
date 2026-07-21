@@ -9,6 +9,7 @@ export function useDashboard() {
   const {
     data: apps = [],
     isLoading: appsLoading,
+    error: appsError,
   } = Api.applications.allApplications({ enabled: authEnabled });
 
   const {
@@ -64,6 +65,7 @@ export function useDashboard() {
   };
 
   const isLoading = appsLoading || usersLoading || apiKeysLoading;
+  const error = appsError ?? null;
 
   const recentProjects = [...apps]
     .sort(
@@ -79,5 +81,6 @@ export function useDashboard() {
     isLoading,
     auditLoading,
     apps,
+    error,
   };
 }

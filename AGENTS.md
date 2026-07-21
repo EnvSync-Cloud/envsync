@@ -6,15 +6,23 @@ Environment variable management platform — store, sync, and manage secrets acr
 
 - `packages/envsync-api/` — Backend API (Hono + Bun)
 - `packages/envsync-cli/` — CLI client (Go)
+- `packages/envsync-management-api/` — Enterprise management API (wraps envsync-api)
+- `packages/envsync-keycloak-theme/` — Custom Keycloak login theme (Docker-bundled)
+- `packages/deploy-cli/` — Self-hosted deployment CLI (TypeScript, published to npm)
+- `packages/deploy-core/` — Shared deployment primitives (TypeScript)
+- `packages/deploy/` — OSS deploy package (TypeScript)
 - `apps/envsync-web/` — Web dashboard (React + Vite)
 - `apps/envsync-landing/` — Marketing landing page (React + Vite)
+- `apps/envsync-management-web/` — Enterprise management dashboard (React + Vite)
 - `sdks/envsync-ts-sdk/` — TypeScript SDK (auto-generated)
 - `sdks/envsync-go-sdk/` — Go SDK (auto-generated)
+- `sdks/envsync-management-ts-sdk/` — Management API TypeScript SDK (auto-generated)
+- `sdks/envsync-management-go-sdk/` — Management API Go SDK (auto-generated)
 
 ## Runtimes
 
 - Bun 1.3+ (TS packages, package manager)
-- Go 1.21+ (CLI)
+- Go 1.24+ (CLI)
 - Node 18+ (compatibility)
 
 ## Package manager
@@ -63,6 +71,7 @@ Single `.env` file at the repo root. All TS packages read from it via the `load-
 - `.github/workflows/ci.yaml` — build + mock tests + e2e tests
 - `.github/workflows/deploy-fe.yaml` — frontend deployment
 - `.github/workflows/release.yml` — release workflow
+- `.github/workflows/scan.yaml` — SonarQube static analysis (push to main)
 
 ## Cross-cutting conventions
 

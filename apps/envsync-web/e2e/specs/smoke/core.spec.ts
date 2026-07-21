@@ -14,8 +14,8 @@ test.describe("UI smoke", () => {
 	test("covers dashboard, project create, variable CRUD, secret CRUD, certificates and settings", async ({ page, makeName }) => {
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-		await expect(page.getByText("Quick Actions")).toBeVisible();
-		await expect(page.getByTestId("dashboard-stat-config-items")).toBeVisible();
+		await expect(page.getByText("Projects").first()).toBeVisible();
+		await expect(page.getByText("Security").first()).toBeVisible();
 
 		const projectName = makeName("UI_SMOKE_APP");
 		const { appId } = await createProject(page, projectName);

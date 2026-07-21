@@ -14,7 +14,7 @@ import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
 import { SystemCertificateProvisioningService } from "@/services/system-certificate-provisioning.service";
 import { UserService } from "@/services/user.service";
-import { validateAccess } from "@/helpers/access";
+import { validateAccess, detectAuthType } from "@/helpers/access";
 import { keycloakRefreshToken } from "@/helpers/keycloak";
 
 function isQueryCredentialAttempt(ctx: Context) {
@@ -45,9 +45,12 @@ export const authMiddleware = (): MiddlewareHandler => {
 			return ctx.json({ error: "No token provided", code: "AUTH_MISSING" }, 401);
 		}
 
+		// Determine if this is an OIDC token or a Keycloak JWT
+		const authType = usesBearerToken && token ? detectAuthType(token) : "JWT";
+
 		const resolveJwt = async (jwtToken: string) => validateAccess({
 			token: jwtToken.replace("Bearer ", ""),
-			type: "JWT",
+			type: authType,
 		});
 
 		try {
@@ -56,6 +59,17 @@ export const authMiddleware = (): MiddlewareHandler => {
 				try {
 					access_info = await resolveJwt(token);
 				} catch (jwtError) {
+					// OIDC tokens don't support refresh — fail immediately
+					if (authType === "OIDC") {
+						return ctx.json(
+							{
+								error: jwtError instanceof Error ? jwtError.message : "OIDC authentication failed",
+								code: "AUTH_OIDC_INVALID",
+							},
+							401,
+						);
+					}
+
 					if (!usesCookieSession || !refreshToken) {
 						throw jwtError;
 					}
@@ -133,7 +147,6 @@ export const authMiddleware = (): MiddlewareHandler => {
 				user.role_id,
 			);
 
-			// Enrich active OTEL span with user context
 			const span = getActiveSpan();
 			if (span) {
 				span.setAttributes({
@@ -141,6 +154,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 					"envsync.org_id": user.org_id,
 					"envsync.org_name": org.name,
 					"envsync.role_name": role.name,
+					"envsync.auth_type": access_info.auth_type,
 					"enduser.id": access_info.auth_service_id ?? access_info.user_id,
 				});
 			}

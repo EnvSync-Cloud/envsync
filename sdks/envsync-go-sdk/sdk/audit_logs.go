@@ -179,20 +179,22 @@ func (g *GetAuditLogsResponseWrapper) String() string {
 type GetAuditLogsRequestFilterByCategory string
 
 const (
-	GetAuditLogsRequestFilterByCategoryApp         GetAuditLogsRequestFilterByCategory = "app*"
-	GetAuditLogsRequestFilterByCategoryAuditLog    GetAuditLogsRequestFilterByCategory = "audit_log*"
-	GetAuditLogsRequestFilterByCategoryEnv         GetAuditLogsRequestFilterByCategory = "env*"
-	GetAuditLogsRequestFilterByCategoryEnvStore    GetAuditLogsRequestFilterByCategory = "env_store*"
-	GetAuditLogsRequestFilterByCategorySecretStore GetAuditLogsRequestFilterByCategory = "secret_store*"
-	GetAuditLogsRequestFilterByCategoryOnboarding  GetAuditLogsRequestFilterByCategory = "onboarding*"
-	GetAuditLogsRequestFilterByCategoryOrg         GetAuditLogsRequestFilterByCategory = "org*"
-	GetAuditLogsRequestFilterByCategoryRole        GetAuditLogsRequestFilterByCategory = "role*"
-	GetAuditLogsRequestFilterByCategoryUser        GetAuditLogsRequestFilterByCategory = "user*"
-	GetAuditLogsRequestFilterByCategoryApiKey      GetAuditLogsRequestFilterByCategory = "api_key*"
-	GetAuditLogsRequestFilterByCategoryWebhook     GetAuditLogsRequestFilterByCategory = "webhook*"
-	GetAuditLogsRequestFilterByCategoryCli         GetAuditLogsRequestFilterByCategory = "cli*"
-	GetAuditLogsRequestFilterByCategoryGpgKey      GetAuditLogsRequestFilterByCategory = "gpg_key*"
-	GetAuditLogsRequestFilterByCategoryCert        GetAuditLogsRequestFilterByCategory = "cert*"
+	GetAuditLogsRequestFilterByCategoryApp          GetAuditLogsRequestFilterByCategory = "app*"
+	GetAuditLogsRequestFilterByCategoryAuditLog     GetAuditLogsRequestFilterByCategory = "audit_log*"
+	GetAuditLogsRequestFilterByCategoryEnv          GetAuditLogsRequestFilterByCategory = "env*"
+	GetAuditLogsRequestFilterByCategoryEnvStore     GetAuditLogsRequestFilterByCategory = "env_store*"
+	GetAuditLogsRequestFilterByCategorySecretStore  GetAuditLogsRequestFilterByCategory = "secret_store*"
+	GetAuditLogsRequestFilterByCategoryOnboarding   GetAuditLogsRequestFilterByCategory = "onboarding*"
+	GetAuditLogsRequestFilterByCategoryOrg          GetAuditLogsRequestFilterByCategory = "org*"
+	GetAuditLogsRequestFilterByCategoryRole         GetAuditLogsRequestFilterByCategory = "role*"
+	GetAuditLogsRequestFilterByCategoryUser         GetAuditLogsRequestFilterByCategory = "user*"
+	GetAuditLogsRequestFilterByCategoryApiKey       GetAuditLogsRequestFilterByCategory = "api_key*"
+	GetAuditLogsRequestFilterByCategoryWebhook      GetAuditLogsRequestFilterByCategory = "webhook*"
+	GetAuditLogsRequestFilterByCategoryCli          GetAuditLogsRequestFilterByCategory = "cli*"
+	GetAuditLogsRequestFilterByCategoryGpgKey       GetAuditLogsRequestFilterByCategory = "gpg_key*"
+	GetAuditLogsRequestFilterByCategoryCert         GetAuditLogsRequestFilterByCategory = "cert*"
+	GetAuditLogsRequestFilterByCategoryEnterprise   GetAuditLogsRequestFilterByCategory = "enterprise*"
+	GetAuditLogsRequestFilterByCategoryServiceToken GetAuditLogsRequestFilterByCategory = "service_token*"
 )
 
 func NewGetAuditLogsRequestFilterByCategoryFromString(s string) (GetAuditLogsRequestFilterByCategory, error) {
@@ -225,6 +227,10 @@ func NewGetAuditLogsRequestFilterByCategoryFromString(s string) (GetAuditLogsReq
 		return GetAuditLogsRequestFilterByCategoryGpgKey, nil
 	case "cert*":
 		return GetAuditLogsRequestFilterByCategoryCert, nil
+	case "enterprise*":
+		return GetAuditLogsRequestFilterByCategoryEnterprise, nil
+	case "service_token*":
+		return GetAuditLogsRequestFilterByCategoryServiceToken, nil
 	}
 	var t GetAuditLogsRequestFilterByCategory
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { runtimeConfig } from "@/utils/runtime-config";
-import { ArrowRight, Github, ShieldCheck, Terminal } from "lucide-react";
+import { ArrowRight, Github, Terminal } from "lucide-react";
 import { Link } from "react-router-dom";
 import HeroWorkflowCanvas from "./HeroWorkflowCanvas";
 
@@ -47,27 +47,11 @@ const Hero = () => {
                   View GitHub
                 </Button>
               </a>
-              <a href={runtimeConfig.apiDocsUrl} className="w-full sm:w-auto">
-                <span className="inline-flex h-11 items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                  API Reference
-                </span>
-              </a>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                { icon: Terminal, title: "pull and push" },
-                { icon: ShieldCheck, title: "approve before prod" },
-                { icon: Github, title: "inject in CI" },
-              ].map((item) => (
-                <div key={item.title} className="border border-border bg-[hsl(var(--surface-2))/0.8] px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <item.icon className="h-4 w-4 text-primary" />
-                    {item.title}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <a href={runtimeConfig.apiDocsUrl} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              View API Reference →
+            </a>
           </div>
         </div>
 

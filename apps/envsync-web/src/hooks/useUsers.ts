@@ -132,7 +132,6 @@ export const useUsers = () => {
         queryClient.invalidateQueries({ queryKey: [API_KEYS.USERS_PAGE] }),
       ]);
       resetInviteForm();
-      console.log("User invited successfully");
       trackAction("user_invited", {
         "envsync.event_name": "user_invited",
         "envsync.event_category": "team",
@@ -158,7 +157,6 @@ export const useUsers = () => {
         queryClient.invalidateQueries({ queryKey: [API_KEYS.USERS_PAGE] }),
       ]);
       setActionLoading(userId, false);
-      console.log("User deleted successfully");
     },
     onError: (error, userId) => {
       console.error("Error deleting user:", error);
@@ -183,7 +181,6 @@ export const useUsers = () => {
         queryClient.invalidateQueries({ queryKey: [API_KEYS.USERS_PAGE] }),
       ]);
       setActionLoading(userId, false);
-      console.log("User role updated successfully");
     },
     onError: (error, { userId }) => {
       console.error("Error editing user role:", error);

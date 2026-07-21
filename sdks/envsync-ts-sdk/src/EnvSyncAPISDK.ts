@@ -25,6 +25,8 @@ import { RolesService } from './services/RolesService';
 import { SecretsService } from './services/SecretsService';
 import { SecretsPointInTimeService } from './services/SecretsPointInTimeService';
 import { SecretsRollbackService } from './services/SecretsRollbackService';
+import { ServiceTokensService } from './services/ServiceTokensService';
+import { SystemService } from './services/SystemService';
 import { TeamsService } from './services/TeamsService';
 import { UsersService } from './services/UsersService';
 import { WebhooksService } from './services/WebhooksService';
@@ -50,6 +52,8 @@ export class EnvSyncAPISDK {
     public readonly secrets: SecretsService;
     public readonly secretsPointInTime: SecretsPointInTimeService;
     public readonly secretsRollback: SecretsRollbackService;
+    public readonly serviceTokens: ServiceTokensService;
+    public readonly system: SystemService;
     public readonly teams: TeamsService;
     public readonly users: UsersService;
     public readonly webhooks: WebhooksService;
@@ -57,7 +61,7 @@ export class EnvSyncAPISDK {
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
             BASE: config?.BASE ?? 'http://localhost:4000',
-            VERSION: config?.VERSION ?? '0.7.7',
+            VERSION: config?.VERSION ?? '0.10.0',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
             TOKEN: config?.TOKEN,
@@ -86,6 +90,8 @@ export class EnvSyncAPISDK {
         this.secrets = new SecretsService(this.request);
         this.secretsPointInTime = new SecretsPointInTimeService(this.request);
         this.secretsRollback = new SecretsRollbackService(this.request);
+        this.serviceTokens = new ServiceTokensService(this.request);
+        this.system = new SystemService(this.request);
         this.teams = new TeamsService(this.request);
         this.users = new UsersService(this.request);
         this.webhooks = new WebhooksService(this.request);

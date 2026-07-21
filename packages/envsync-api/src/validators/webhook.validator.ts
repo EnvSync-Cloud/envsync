@@ -1,12 +1,18 @@
 import z from "zod";
 import "zod-openapi/extend";
 
+const webhookTypeEnum = z.enum([
+    "DISCORD", "SLACK", "CUSTOM",
+    "GITHUB_ACTIONS", "GITLAB_PIPELINE", "AWS_CODEPIPELINE",
+    "GCP_CLOUD_BUILD", "CIRCLECI", "TRAVIS_CI", "JENKINS",
+]);
+
 export const createWebhookRequestSchema = z
     .object({
         name: z.string().openapi({ example: "My Webhook" }),
-        url: z.string().url().openapi({ example: "https://hooks.example.com/webhook" }),
+        url: z.string().openapi({ example: "https://hooks.example.com/webhook" }),
         event_types: z.array(z.string()).openapi({ example: ["env_created", "env_updated"] }),
-        webhook_type: z.enum(["DISCORD", "SLACK", "CUSTOM"]).openapi({ example: "CUSTOM" }),
+        webhook_type: webhookTypeEnum.openapi({ example: "CUSTOM" }),
         linked_to: z.enum(["org", "app"]).default("org").openapi({ example: "org" }),
         app_id: z.string().optional().nullable().openapi({ example: "app_123" }),
     })
@@ -21,7 +27,7 @@ export const webhookResponseSchema = z
         url: z.string().openapi({ example: "https://hooks.example.com/webhook" }),
         event_types: z.array(z.string()).openapi({ example: ["env_created", "env_updated"] }),
         is_active: z.boolean().openapi({ example: true }),
-        webhook_type: z.enum(["DISCORD", "SLACK", "CUSTOM"]).openapi({ example: "CUSTOM" }),
+        webhook_type: webhookTypeEnum.openapi({ example: "CUSTOM" }),
         app_id: z.string().nullable().openapi({ example: "app_123" }),
         linked_to: z.enum(["org", "app"]).openapi({ example: "org" }),
         created_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
@@ -37,10 +43,10 @@ export const webhooksResponseSchema = z
 export const updateWebhookRequestSchema = z
     .object({
         name: z.string().optional().openapi({ example: "Updated Webhook" }),
-        url: z.string().url().optional().openapi({ example: "https://hooks.example.com/webhook" }),
+        url: z.string().optional().openapi({ example: "https://hooks.example.com/webhook" }),
         event_types: z.array(z.string()).optional().openapi({ example: ["env_created"] }),
         is_active: z.boolean().optional().openapi({ example: false }),
-        webhook_type: z.enum(["DISCORD", "SLACK", "CUSTOM"]).optional().openapi({ example: "CUSTOM" }),
+        webhook_type: webhookTypeEnum.optional().openapi({ example: "CUSTOM" }),
         app_id: z.string().optional().openapi({ example: "app_123" }),
         linked_to: z.enum(["org", "app"]).optional().openapi({ example: "org" }),
     })

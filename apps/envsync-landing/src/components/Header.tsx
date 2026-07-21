@@ -1,13 +1,39 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Menu, Moon, Sun, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const headerRef = useRef<HTMLElement>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window !== "undefined") {
+      return document.documentElement.classList.contains("dark") ? "dark" : "light";
+    }
+    return "dark";
+  });
+
+  // Close mobile menu when clicking outside the header
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
   const navLinks = [
     { label: "Integrations", href: "/integrations", external: false },
@@ -16,7 +42,7 @@ const Header = () => {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl">
+    <header ref={headerRef} className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl">
       <div className="container mx-auto border-x border-border px-0">
         <div className="flex h-16 items-center justify-between">
           <Link to="/" className="ml-4 flex items-center space-x-2">
@@ -51,6 +77,13 @@ const Header = () => {
                 </Link>
               ),
             )}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
             <a href={runtimeConfig.appBaseUrl} className="h-full">
               <Button
                 variant="outline"
@@ -70,6 +103,8 @@ const Header = () => {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-muted-foreground hover:text-foreground"
+              aria-expanded={isMenuOpen}
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -104,6 +139,14 @@ const Header = () => {
                 ),
               )}
               <div className="flex flex-col space-y-2 pt-4">
+                <button
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="flex items-center gap-2 rounded-md px-4 py-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Toggle theme"
+                >
+                  {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                  <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+                </button>
                 <a href={runtimeConfig.appBaseUrl}>
                   <Button variant="outline" className="w-full justify-start border-border bg-card text-foreground hover:bg-accent">
                     Sign In

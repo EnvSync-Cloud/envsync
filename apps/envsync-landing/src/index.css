@@ -8,6 +8,54 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 63% 39%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 142 71% 45%;
+
+    --radius: 0.125rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 95%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 142 71% 45%;
+
+    --surface-1: 0 0% 98%;
+    --surface-2: 0 0% 96%;
+    --surface-3: 0 0% 94%;
+    --border-strong: 0 0% 85%;
+
+    --cta-color: "#1DB954";
+  }
+
+  .dark {
     --background: 220 22% 6%;
     --foreground: 210 20% 96%;
 
@@ -94,4 +142,15 @@ body {
 
 .hero-workflow-dot {
   animation: hero-workflow-glide 2.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

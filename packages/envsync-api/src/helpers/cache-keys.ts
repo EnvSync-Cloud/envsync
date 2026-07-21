@@ -47,6 +47,16 @@ export const CacheKeys = {
 	// Certificate
 	certsByOrg: (orgId: string) => `es:org:${orgId}:certs`,
 
+	// Service Token
+	serviceTokenByHash: (hash: string) => `es:servicetoken:hash:${hash}`,
+	serviceTokensByOrg: (orgId: string) => `es:org:${orgId}:servicetokens`,
+
+	// OIDC Providers
+	oidcProvidersByOrg: (orgId: string) => `es:org:${orgId}:oidc_providers`,
+
+	// SAML Providers
+	samlProvidersByOrg: (orgId: string) => `es:org:${orgId}:saml_providers`,
+
 	// Glob patterns for cascade invalidation
 	allForUser: (userId: string) => `es:user:${userId}*`,
 	allForOrg: (orgId: string) => `es:org:${orgId}:*`,

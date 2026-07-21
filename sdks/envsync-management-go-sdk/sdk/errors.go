@@ -7,6 +7,78 @@ import (
 	core "github.com/envsync-cloud/envsync-management-go-sdk/sdk/core"
 )
 
+// Bad request
+type BadRequestError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (b *BadRequestError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	b.StatusCode = 400
+	b.Body = body
+	return nil
+}
+
+func (b *BadRequestError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.Body)
+}
+
+func (b *BadRequestError) Unwrap() error {
+	return b.APIError
+}
+
+// Conflict - policy already exists
+type ConflictError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (c *ConflictError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	c.StatusCode = 409
+	c.Body = body
+	return nil
+}
+
+func (c *ConflictError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Body)
+}
+
+func (c *ConflictError) Unwrap() error {
+	return c.APIError
+}
+
+// Forbidden
+type ForbiddenError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (f *ForbiddenError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	f.StatusCode = 403
+	f.Body = body
+	return nil
+}
+
+func (f *ForbiddenError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.Body)
+}
+
+func (f *ForbiddenError) Unwrap() error {
+	return f.APIError
+}
+
 // Internal server error
 type InternalServerError struct {
 	*core.APIError
@@ -29,4 +101,52 @@ func (i *InternalServerError) MarshalJSON() ([]byte, error) {
 
 func (i *InternalServerError) Unwrap() error {
 	return i.APIError
+}
+
+// Not found
+type NotFoundError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (n *NotFoundError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	n.StatusCode = 404
+	n.Body = body
+	return nil
+}
+
+func (n *NotFoundError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(n.Body)
+}
+
+func (n *NotFoundError) Unwrap() error {
+	return n.APIError
+}
+
+// Authentication failed
+type UnauthorizedError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (u *UnauthorizedError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	u.StatusCode = 401
+	u.Body = body
+	return nil
+}
+
+func (u *UnauthorizedError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.Body)
+}
+
+func (u *UnauthorizedError) Unwrap() error {
+	return u.APIError
 }

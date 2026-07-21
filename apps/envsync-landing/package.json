@@ -1,7 +1,7 @@
 {
   "name": "envsync-landing",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -70,7 +70,6 @@
     "framer-motion": "^12.35.1",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
-    "motion": "^12.35.1",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",

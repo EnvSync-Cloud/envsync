@@ -27,5 +27,17 @@ export type WhoAmIResponse = {
         updated_at: string;
     };
     role: RoleResponse;
+    memberships: Array<{
+        user_id: string;
+        org_id: string;
+        org_name: string;
+        org_slug: string;
+        role_id: string;
+        role_name: string;
+        is_admin: boolean;
+        is_master: boolean;
+        is_active: boolean;
+    }>;
+    active_membership_user_id: string;
 };
 

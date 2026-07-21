@@ -148,6 +148,36 @@ type CertificateAuditActions =
 
 type CliAuditActions = "cli_command_executed";
 
+type ServiceTokenAuditActions =
+	| "service_token_created"
+	| "service_token_deleted"
+	| "service_tokens_viewed";
+
+type OidcAuditActions =
+	| "oidc_provider_created"
+	| "oidc_provider_updated"
+	| "oidc_provider_deleted";
+
+type SamlAuditActions =
+	| "saml_provider_created"
+	| "saml_provider_updated"
+	| "saml_provider_deleted"
+	| "saml_sso_success";
+
+type RotationAuditActions =
+	| "rotation_policy_created"
+	| "rotation_policy_updated"
+	| "rotation_policy_deleted"
+	| "rotation_triggered"
+	| "rotation_expired_credentials_revoked";
+
+type DynamicSecretAuditActions =
+	| "dynamic_secret_engine_created"
+	| "dynamic_secret_engine_updated"
+	| "dynamic_secret_engine_deleted"
+	| "dynamic_secret_lease_created"
+	| "dynamic_secret_lease_revoked";
+
 type EnterpriseAuditActions =
 	| "enterprise_provider_connection_created"
 	| "enterprise_provider_connection_updated"
@@ -177,4 +207,9 @@ type AuditActions =
 	| GpgKeyAuditActions
 	| CertificateAuditActions
 	| CliAuditActions
-	| EnterpriseAuditActions;
+	| EnterpriseAuditActions
+	| ServiceTokenAuditActions
+	| OidcAuditActions
+	| SamlAuditActions
+	| RotationAuditActions
+	| DynamicSecretAuditActions;

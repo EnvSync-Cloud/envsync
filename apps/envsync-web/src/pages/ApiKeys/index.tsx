@@ -19,6 +19,8 @@ import { useCopy } from "@/hooks/useClipboard";
 import { Count } from "@/components/ui/count";
 import { ApiKeyRow } from "@/components/api-keys/row";
 import { EmptyApiKeys } from "./empty";
+import { PageShell } from "@/components/PageShell";
+import { PageError } from "@/components/ui/page-error";
 
 export const ApiKeys = () => {
   const copy = useCopy();
@@ -36,7 +38,7 @@ export const ApiKeys = () => {
     setActionLoadingStates((prev) => ({ ...prev, [keyId]: loading }));
   }, []);
 
-  const { data: apiKeys, isLoading } = api.apiKeys.getApiKeys();
+  const { data: apiKeys, isLoading, error: apiKeysError, refetch: refetchApiKeys } = api.apiKeys.getApiKeys();
 
   const createApiKey = api.apiKeys.createApiKey({
     onSuccess: ({ data }) => {
@@ -133,23 +135,25 @@ export const ApiKeys = () => {
     [actionLoadingStates, updateApiKey]
   );
 
-  const isEmpty = !isLoading && apiKeys.length === 0;
+  const isEmpty = !isLoading && !apiKeysError && apiKeys.length === 0;
+
+  if (apiKeysError) {
+    return (
+      <PageError
+        title="Failed to load API keys"
+        message={apiKeysError instanceof Error ? apiKeysError.message : "An unexpected error occurred"}
+        onRetry={() => refetchApiKeys()}
+      />
+    );
+  }
 
   return (
     <div className="animate-page-enter space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-            <Key className="size-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">API Keys</h1>
-            <p className="text-sm text-zinc-400 mt-0.5">
-              Manage your API keys for accessing EnvSync services
-            </p>
-          </div>
-        </div>
-
+      <PageShell
+        title="API Keys"
+        description="Manage your API keys for accessing EnvSync services"
+        icon={Key}
+      >
         {/* Created Key Modal */}
         <Dialog
           open={showCreatedKeyModalOpen}
@@ -265,7 +269,6 @@ export const ApiKeys = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
 
       <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
         <CardHeader>
@@ -357,6 +360,7 @@ export const ApiKeys = () => {
           )}
         </CardContent>
       </Card>
+      </PageShell>
     </div>
   );
 };

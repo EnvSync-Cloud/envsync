@@ -16,7 +16,17 @@ describe("API module surface boundaries", () => {
 	test("management surface exposes only management modules", () => {
 		const moduleNames = loadApiModules("management").map(module => module.name);
 
-		expect(moduleNames).toEqual(["onboarding", "license", "enterprise", "system"]);
+		expect(moduleNames).toEqual([
+			"onboarding",
+			"license",
+			"enterprise",
+			"system",
+			"oidc",
+			"saml",
+			"rotation",
+			"dynamic_secret",
+			"log_forwarding",
+		]);
 		expect(moduleNames).not.toContain("app");
 		expect(moduleNames).not.toContain("auth");
 		expect(moduleNames).not.toContain("secret");

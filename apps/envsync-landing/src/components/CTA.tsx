@@ -1,20 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Github } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 const CTA = () => {
   return (
-    <section className="container mx-auto border-x border-t border-border p-0">
+    <section className="container mx-auto px-4 md:px-8 py-16 md:py-24">
       <div className="relative container mx-auto z-10 px-0">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.35 }}
-          className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-7 text-left md:p-10"
-        >
+        <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-7 text-left md:p-10">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 opacity-45"
@@ -54,7 +47,7 @@ const CTA = () => {
               </a>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

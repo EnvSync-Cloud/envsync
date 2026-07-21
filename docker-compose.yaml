@@ -12,6 +12,16 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks: [envsync_network]
 
+  dynamic_secret_db:
+    image: postgres:17
+    ports:
+      - "${DYNAMIC_SECRET_PG_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: ${DYNAMIC_SECRET_PG_USER:-dynroot}
+      POSTGRES_PASSWORD: ${DYNAMIC_SECRET_PG_PASSWORD:-dynrootpass}
+      POSTGRES_DB: ${DYNAMIC_SECRET_PG_DATABASE:-dynamic_secrets}
+    networks: [envsync_network]
+
   redis:
     image: redis:7
     ports:

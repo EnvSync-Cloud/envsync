@@ -1,30 +1,28 @@
 package environment
 
 import (
+	"bufio"
 	"context"
-
-	tea "github.com/charmbracelet/bubbletea"
+	"fmt"
+	"os"
+	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
-	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 type switchEnvUseCase struct {
 	envTypeService services.EnvTypeService
 	syncService    services.SyncService
-	tui            *factory.EnvFactory
 }
 
 func NewSwitchEnvUseCase() SwitchEnvUseCase {
 	envTypeService := services.NewEnvTypeService()
 	syncService := services.NewSyncService()
-	tui := factory.NewEnvFactory()
 
 	return &switchEnvUseCase{
 		envTypeService: envTypeService,
 		syncService:    syncService,
-		tui:            tui,
 	}
 }
 
@@ -39,16 +37,21 @@ func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType)
 		return err
 	}
 
-	selectedEnv, err := uc.selectEnvironment(envs)
+	if envType.ID != "" {
+		for _, env := range envs {
+			if env.ID == envType.ID {
+				return uc.updateSyncConfigWithEnv(syncConfig, env.ID)
+			}
+		}
+		return NewNotFoundError("environment type not found: "+envType.ID, nil)
+	}
+
+	selectedEnv, err := uc.selectEnvironmentInteractive(envs)
 	if err != nil {
 		return err
 	}
 
-	if err := uc.updateSyncConfigWithEnv(syncConfig, selectedEnv.ID); err != nil {
-		return err
-	}
-
-	return nil
+	return uc.updateSyncConfigWithEnv(syncConfig, selectedEnv.ID)
 }
 
 func (uc *switchEnvUseCase) readSyncConfig() (*domain.SyncConfig, error) {
@@ -70,15 +73,27 @@ func (uc *switchEnvUseCase) fetchAvailableEnvs(ctx context.Context, appID string
 	return envs, nil
 }
 
-func (uc *switchEnvUseCase) selectEnvironment(envs []domain.EnvType) (*domain.EnvType, error) {
-	selectedEnv, err := uc.tui.SelectEnvironmentTUI(envs)
-	if err != nil {
-		if err == tea.ErrProgramKilled {
-			return nil, nil // User cancelled the selection
-		}
-		return nil, NewServiceError("failed to select environment type", err)
+func (uc *switchEnvUseCase) selectEnvironmentInteractive(envs []domain.EnvType) (*domain.EnvType, error) {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Println("\n🌍 Available Environments:")
+	fmt.Println(strings.Repeat("-", 60))
+	for i, env := range envs {
+		fmt.Printf("  %d) %s (ID: %s)\n", i+1, env.Name, env.ID)
 	}
-	return &selectedEnv, nil
+	fmt.Println(strings.Repeat("-", 60))
+
+	fmt.Print("\nSelect environment (enter number or ID): ")
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+
+	for i, env := range envs {
+		if input == fmt.Sprintf("%d", i+1) || input == env.ID || strings.EqualFold(input, env.Name) {
+			return &envs[i], nil
+		}
+	}
+
+	return nil, NewNotFoundError("environment not found: "+input, nil)
 }
 
 func (uc *switchEnvUseCase) updateSyncConfigWithEnv(syncConfig *domain.SyncConfig, envTypeID string) error {
