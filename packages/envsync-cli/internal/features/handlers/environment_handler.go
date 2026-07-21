@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 
@@ -50,11 +51,21 @@ func (h *EnvironmentHandler) SwitchEnvironment(ctx context.Context, cmd *cli.Com
 }
 
 func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Command) error {
-	if cmd.Bool("json") && !cmd.IsSet("app-id") {
-		return h.formatUseCaseError(cmd, errors.New("app-id must be provided with json flag"))
+	appID := strings.TrimSpace(cmd.String("app-id"))
+	if appID == "" {
+		return h.formatUseCaseError(cmd, errors.New("app-id is required to list environments"))
 	}
 
-	panic("Handler is not implemented yet!!!")
+	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, appID)
+	if err != nil {
+		return h.formatUseCaseError(cmd, err)
+	}
+
+	if cmd.Bool("json") {
+		return h.formatter.FormatJSON(cmd.Writer, envs)
+	}
+
+	return h.formatter.FormatListTable(cmd.Writer, envs)
 }
 
 func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Command) error {

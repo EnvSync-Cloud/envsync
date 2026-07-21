@@ -1696,6 +1696,63 @@ func TestTruncateSaml(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// EnvFormatter tests
+// ---------------------------------------------------------------------------
+
+func TestEnvFormatter_FormatListTable(t *testing.T) {
+	f := NewEnvFormatter()
+
+	tests := []struct {
+		name     string
+		envs     []domain.EnvType
+		wantText []string
+	}{
+		{
+			name:     "empty list",
+			envs:     nil,
+			wantText: []string{"No environments found"},
+		},
+		{
+			name: "single environment",
+			envs: []domain.EnvType{
+				{
+					ID:          "env-1",
+					Name:        "Development",
+					IsDefault:   true,
+					IsProtected: false,
+					Color:       "#00ff00",
+				},
+			},
+			wantText: []string{"env-1", "Development", "yes", "no", "#00ff00", "Environments (1)"},
+		},
+		{
+			name: "multiple environments",
+			envs: []domain.EnvType{
+				{ID: "e1", Name: "Dev", IsDefault: true, IsProtected: false, Color: "green"},
+				{ID: "e2", Name: "Production", IsDefault: false, IsProtected: true, Color: "red"},
+			},
+			wantText: []string{"e1", "Dev", "e2", "Production", "yes", "no", "Environments (2)"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			err := f.FormatListTable(&buf, tt.envs)
+			if err != nil {
+				t.Fatalf("FormatListTable() error = %v", err)
+			}
+			output := buf.String()
+			for _, text := range tt.wantText {
+				if !strings.Contains(output, text) {
+					t.Errorf("output = %q, want it to contain %q", output, text)
+				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
 
