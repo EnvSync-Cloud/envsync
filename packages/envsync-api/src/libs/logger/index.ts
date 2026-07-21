@@ -21,6 +21,23 @@ const SENSITIVE_KEYS = new Set([
 	"superuser",
 ]);
 
+const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+	// Connection strings: postgres://user:pass@host
+	{ pattern: /(\w+:\/\/[^:]+:)[^@]+(@)/g, replacement: "$1[REDACTED]$2" },
+	// Key=value pairs: apiKey=xxx, password=xxx, api_key=xxx
+	{ pattern: /(api[_-]?key|password|secret|token|authorization)\s*[=:]\s*\S+/gi, replacement: "$1=[REDACTED]" },
+	// Bearer tokens
+	{ pattern: /Bearer\s+\S+/gi, replacement: "Bearer [REDACTED]" },
+];
+
+function redactString(str: string): string {
+	let result = str;
+	for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
+		result = result.replace(pattern, replacement);
+	}
+	return result;
+}
+
 function redactSensitive(obj: unknown): unknown {
 	if (obj === null || obj === undefined) return obj;
 	if (typeof obj !== "object") return obj;
@@ -127,12 +144,14 @@ const infoLogs = (msg: unknown, logType: LogTypes, generated_by: string) => {
 		msg = `[${generated_by}] ` + msg;
 	}
 	if (logType === LogTypes.LOGS && typeof msg === "string") {
-		emitOtelLog(msg, SeverityNumber.INFO, "INFO", generated_by);
-		return logger.info(msg);
+		const safe = redactString(msg);
+		emitOtelLog(safe, SeverityNumber.INFO, "INFO", generated_by);
+		return logger.info(safe);
 	}
 	if (logType === LogTypes.ERROR && typeof msg === "string") {
-		emitOtelLog(msg, SeverityNumber.ERROR, "ERROR", generated_by);
-		return logger.error(msg);
+		const safe = redactString(msg);
+		emitOtelLog(safe, SeverityNumber.ERROR, "ERROR", generated_by);
+		return logger.error(safe);
 	}
 	const safe = redactSensitive(msg);
 	if (logType === LogTypes.CUSTOMOBJ) {
