@@ -63,21 +63,21 @@ envsync push --env staging
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    EnvSync Platform                         │
-├─────────────────────────────────────────────────────────────┤
-│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs              │
-│  (React + Vite)   │  (Go)          │  (TypeScript, Go)     │
-└─────────┬─────────┴───────┬────────┴──────────┬────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    EnvSync Platform                          │
+├──────────────────────────────────────────────────────────────┤
+│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs                │
+│  (React + Vite)   │  (Go)          │  (TypeScript, Go)       │
+└─────────┬─────────┴───────┬────────┴──────────┬──────────────┘
           │                 │                   │
           ▼                 ▼                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      Core API                              │
+│                      Core API                               │
 │              (Bun + Hono + PostgreSQL)                      │
 ├─────────────────────────────────────────────────────────────┤
-│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations        │
-│  📋 Variables  │  ⏰ Dynamic    │  📊 Audit Logs          │
-│  🔑 OIDC/SAML  │  📤 Log Fwd    │  🪝 Webhooks            │
+│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations           │
+│  📋 Variables  │  ⏰ Dynamic    │  📊 Audit Logs             │
+│  🔑 OIDC/SAML  │  📤 Log Fwd    │  🪝 Webhooks               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
