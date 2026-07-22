@@ -36,6 +36,18 @@ Examples:
   envsync auth login
   envsync auth login --no-browser
   envsync auth login --no-wait --json`,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "no-browser",
+				Usage: "Skip opening browser automatically",
+				Value: false,
+			},
+			&cli.BoolFlag{
+				Name:  "no-wait",
+				Usage: "Print device code and exit (for CI/headless)",
+				Value: false,
+			},
+		},
 	}
 }
 
