@@ -15,6 +15,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 )
 
 var version = "dev"
@@ -31,6 +33,10 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
 		endpoint = os.Getenv("ENVSYNC_TELEMETRY_ENDPOINT")
+	}
+	if endpoint == "" {
+		cfg := config.New()
+		endpoint = cfg.TelemetryURL
 	}
 	if endpoint == "" {
 		return noop, nil, nil

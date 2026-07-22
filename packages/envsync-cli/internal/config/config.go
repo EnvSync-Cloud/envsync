@@ -8,13 +8,16 @@ import (
 )
 
 type AppConfig struct {
-	AccessToken string `json:"access_token"`
-	BackendURL  string `json:"backend_url"`
+	AccessToken    string `json:"access_token"`
+	BackendURL     string `json:"backend_url"`
+	TelemetryURL   string `json:"telemetry_url,omitempty"`
+	TelemetryToken string `json:"telemetry_token,omitempty"`
 }
 
 var cfg AppConfig
 var once sync.Once
 var backendURL string
+var telemetryURL string
 
 func New() AppConfig {
 	once.Do(func() {
@@ -50,6 +53,14 @@ func New() AppConfig {
 			cfg.BackendURL = envBackendURL
 		} else if cfg.BackendURL == "" {
 			cfg.BackendURL = backendURL
+		}
+
+		if envTelemetryURL := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); envTelemetryURL != "" {
+			cfg.TelemetryURL = envTelemetryURL
+		} else if envTelemetryURL := os.Getenv("ENVSYNC_TELEMETRY_ENDPOINT"); envTelemetryURL != "" {
+			cfg.TelemetryURL = envTelemetryURL
+		} else if cfg.TelemetryURL == "" {
+			cfg.TelemetryURL = telemetryURL
 		}
 	})
 

@@ -1,6 +1,7 @@
 MAIN_PACKAGE := ./cmd/cli/main.go
 BINARY_NAME := envsync
 BACKEND_URL ?= http://localhost:8600
+TELEMETRY_URL ?= https://obs.envsync.cloud
 VERSION ?= dev
 
 # ==================================================================================== #
@@ -11,7 +12,7 @@ VERSION ?= dev
 .PHONY: build
 build:
 	@echo "Building binary"
-	@go build -ldflags="-X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=$(BACKEND_URL) -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version=$(VERSION)" -o bin/$(BINARY_NAME) $(MAIN_PACKAGE)
+	@go build -ldflags="-X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=$(BACKEND_URL) -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.telemetryURL=$(TELEMETRY_URL) -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version=$(VERSION)" -o bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 
 ## install: install the binary
 .PHONY: install
