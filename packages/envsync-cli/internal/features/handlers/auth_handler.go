@@ -35,10 +35,15 @@ func NewAuthHandler(
 func (h *AuthHandler) Login(ctx context.Context, cmd *cli.Command) error {
 	noBrowser := cmd.Bool("no-browser")
 	noWait := cmd.Bool("no-wait")
+	jsonOutput := cmd.Bool("json")
 
 	response, err := h.loginUseCase.ExecuteWithOptions(ctx, noBrowser, noWait)
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
+	}
+
+	if jsonOutput {
+		return h.formatter.FormatJSON(cmd.Writer, response)
 	}
 
 	if response.Success {
@@ -48,7 +53,6 @@ func (h *AuthHandler) Login(ctx context.Context, cmd *cli.Command) error {
 		if response.UserInfo != nil {
 			return h.formatUserInfo(cmd, response.UserInfo)
 		}
-
 	}
 
 	return nil

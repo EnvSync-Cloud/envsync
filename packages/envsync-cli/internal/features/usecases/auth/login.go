@@ -47,14 +47,20 @@ func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, noBrowser bool, 
 		return nil, NewLoginFailedError("failed to initiate login process", err)
 	}
 
-	if err := uc.displayLoginInstructions(credentials); err != nil {
-	}
-
 	if noWait {
 		return &LoginResponse{
 			Success: true,
 			Message: "Device code generated. Complete authentication in your browser, then run 'envsync auth whoami' to verify.",
+			DeviceInfo: &DeviceCodeInfo{
+				VerificationURL: credentials.GetVerificationUri(),
+				DeviceCode:      credentials.DeviceCode,
+				UserCode:        credentials.GetUserCode(),
+				ExpiresIn:       credentials.ExpiresIn,
+			},
 		}, nil
+	}
+
+	if err := uc.displayLoginInstructions(credentials); err != nil {
 	}
 
 	if !noBrowser {

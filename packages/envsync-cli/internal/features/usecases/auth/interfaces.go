@@ -27,9 +27,17 @@ type WhoamiUseCase interface {
 type LoginRequest struct{}
 
 type LoginResponse struct {
-	Success  bool             `json:"success"`
-	Message  string           `json:"message"`
-	UserInfo *domain.UserInfo `json:"user_info,omitempty"`
+	Success    bool             `json:"success"`
+	Message    string           `json:"message"`
+	UserInfo   *domain.UserInfo `json:"user_info,omitempty"`
+	DeviceInfo *DeviceCodeInfo  `json:"device_info,omitempty"`
+}
+
+type DeviceCodeInfo struct {
+	VerificationURL string `json:"verification_url"`
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `json:"user_code"`
+	ExpiresIn       int    `json:"expires_in"`
 }
 
 type LogoutRequest struct{}
