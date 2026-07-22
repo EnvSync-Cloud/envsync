@@ -26,13 +26,15 @@ func NewLoginUseCase() LoginUseCase {
 }
 
 func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
+	return uc.ExecuteWithOptions(ctx, false, false)
+}
+
+func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, noBrowser bool, noWait bool) (*LoginResponse, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "auth.login")
 	defer span.End()
 
-	// Check if user is already logged in
 	userInfo, err := uc.checkCurrentLoginStatus(ctx)
 	if err == nil && userInfo != nil {
-		// If we can get user info, assume already logged in
 		return &LoginResponse{
 			Success:  true,
 			Message:  "Already logged in",
@@ -40,26 +42,31 @@ func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
 		}, nil
 	}
 
-	// Step 1: Initiate the login process
 	credentials, err := uc.authService.InitiateLogin(ctx)
 	if err != nil {
 		return nil, NewLoginFailedError("failed to initiate login process", err)
 	}
 
-	// Print login instructions
 	if err := uc.displayLoginInstructions(credentials); err != nil {
 	}
 
-	if err := uc.openBrowserForLogin(credentials.GetVerificationUri()); err != nil {
+	if noWait {
+		return &LoginResponse{
+			Success: true,
+			Message: "Device code generated. Complete authentication in your browser, then run 'envsync auth whoami' to verify.",
+		}, nil
 	}
 
-	// Step 2: Poll for token completion
+	if !noBrowser {
+		if err := uc.openBrowserForLogin(credentials.GetVerificationUri()); err != nil {
+		}
+	}
+
 	token, err := uc.authService.PollForToken(ctx, credentials)
 	if err != nil {
 		return nil, uc.handlePollingError(err)
 	}
 
-	// Step 3: Save the token
 	if err := uc.authService.SaveToken(token); err != nil {
 		return nil, NewServiceError("failed to save authentication token", err)
 	}

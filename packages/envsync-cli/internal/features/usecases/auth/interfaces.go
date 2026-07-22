@@ -9,6 +9,7 @@ import (
 // LoginUseCase defines the interface for user authentication
 type LoginUseCase interface {
 	Execute(context.Context) (*LoginResponse, error)
+	ExecuteWithOptions(ctx context.Context, noBrowser bool, noWait bool) (*LoginResponse, error)
 }
 
 // LogoutUseCase defines the interface for user logout

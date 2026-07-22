@@ -33,8 +33,10 @@ func NewAuthHandler(
 }
 
 func (h *AuthHandler) Login(ctx context.Context, cmd *cli.Command) error {
-	// Execute use case to get credentials
-	response, err := h.loginUseCase.Execute(ctx)
+	noBrowser := cmd.Bool("no-browser")
+	noWait := cmd.Bool("no-wait")
+
+	response, err := h.loginUseCase.ExecuteWithOptions(ctx, noBrowser, noWait)
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
@@ -43,7 +45,6 @@ func (h *AuthHandler) Login(ctx context.Context, cmd *cli.Command) error {
 		if err := h.formatter.FormatSuccess(cmd.Writer, response.Message); err != nil {
 		}
 
-		// Display user info if available
 		if response.UserInfo != nil {
 			return h.formatUserInfo(cmd, response.UserInfo)
 		}
