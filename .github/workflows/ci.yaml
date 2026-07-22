@@ -32,7 +32,7 @@ jobs:
           go-version: "1.24"
           cache-dependency-path: packages/envsync-cli/go.sum
       - name: Build CLI binary
-        run: go build -ldflags="-s -w" -o /dev/null ./cmd/cli/main.go
+        run: go build -ldflags="-s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=https://api.envsync.cloud -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.telemetryURL=https://obs.envsync.cloud -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version=ci" -o /dev/null ./cmd/cli/main.go
         working-directory: packages/envsync-cli
         env:
           CGO_ENABLED: "0"
