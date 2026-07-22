@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"net/url"
 	"os"
 
 	"go.opentelemetry.io/otel"
@@ -16,16 +17,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// version is set via ldflags at build time.
 var version = "dev"
 
 const tracerName = "envsync-cli"
 
-// Init initialises OpenTelemetry tracing and logging.
-// It returns a shutdown function, the LoggerProvider (for otelzap bridge),
-// and any error encountered.
-// On failure the returned shutdown is a no-op and lp is nil so callers
-// can proceed without telemetry.
 func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog.LoggerProvider, err error) {
 	noop := func(context.Context) error { return nil }
 
@@ -56,11 +51,15 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 		return noop, nil, err
 	}
 
-	// Trace exporter
-	traceExp, err := otlptracehttp.New(ctx,
-		otlptracehttp.WithEndpoint(stripScheme(endpoint)),
-		otlptracehttp.WithInsecure(),
-	)
+	host, useHTTP := parseEndpoint(endpoint)
+
+	traceOpts := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(host),
+	}
+	if useHTTP {
+		traceOpts = append(traceOpts, otlptracehttp.WithInsecure())
+	}
+	traceExp, err := otlptracehttp.New(ctx, traceOpts...)
 	if err != nil {
 		return noop, nil, err
 	}
@@ -75,13 +74,14 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 		propagation.Baggage{},
 	))
 
-	// Log exporter
-	logExp, err := otlploghttp.New(ctx,
-		otlploghttp.WithEndpoint(stripScheme(endpoint)),
-		otlploghttp.WithInsecure(),
-	)
+	logOpts := []otlploghttp.Option{
+		otlploghttp.WithEndpoint(host),
+	}
+	if useHTTP {
+		logOpts = append(logOpts, otlploghttp.WithInsecure())
+	}
+	logExp, err := otlploghttp.New(ctx, logOpts...)
 	if err != nil {
-		// Tracing is usable, logs are not — still return tp shutdown.
 		return tp.Shutdown, nil, nil
 	}
 
@@ -98,12 +98,10 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 	return shutdown, lp, nil
 }
 
-// Tracer returns the package-level tracer.
 func Tracer() trace.Tracer {
 	return otel.Tracer(tracerName)
 }
 
-// RecordError records an error on the current span (if any).
 func RecordError(ctx context.Context, err error) {
 	if err == nil {
 		return
@@ -113,13 +111,34 @@ func RecordError(ctx context.Context, err error) {
 	span.SetStatus(codes.Error, err.Error())
 }
 
-// stripScheme removes the http:// or https:// prefix for the OTLP HTTP client
-// which expects host:port only.
-func stripScheme(endpoint string) string {
-	for _, prefix := range []string{"https://", "http://"} {
-		if len(endpoint) > len(prefix) && endpoint[:len(prefix)] == prefix {
-			return endpoint[len(prefix):]
-		}
+func parseEndpoint(endpoint string) (host string, insecure bool) {
+	if endpoint == "" {
+		return "", true
 	}
-	return endpoint
+
+	if len(endpoint) > 8 && endpoint[:8] == "https://" {
+		u, err := url.Parse(endpoint)
+		if err != nil {
+			return endpoint, false
+		}
+		h := u.Host
+		if u.Port() == "" {
+			h = h + ":443"
+		}
+		return h, false
+	}
+
+	if len(endpoint) > 7 && endpoint[:7] == "http://" {
+		u, err := url.Parse(endpoint)
+		if err != nil {
+			return endpoint, true
+		}
+		h := u.Host
+		if u.Port() == "" {
+			h = h + ":80"
+		}
+		return h, true
+	}
+
+	return endpoint, true
 }
