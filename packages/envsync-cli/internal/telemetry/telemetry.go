@@ -35,7 +35,10 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 
 	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 	if endpoint == "" {
-		endpoint = "http://localhost:14318"
+		endpoint = os.Getenv("ENVSYNC_TELEMETRY_ENDPOINT")
+	}
+	if endpoint == "" {
+		return noop, nil, nil
 	}
 
 	serviceName := os.Getenv("OTEL_SERVICE_NAME")
