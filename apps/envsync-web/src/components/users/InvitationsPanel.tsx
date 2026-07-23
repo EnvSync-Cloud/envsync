@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Clock, Edit3, Mail, Trash2 } from "lucide-react";
+import { Check, Clock, Copy, Edit3, Mail, Trash2 } from "lucide-react";
 
 import { useInvitations } from "@/hooks/useInvitations";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -16,6 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+import { runtimeConfig } from "@/utils/runtime-config";
 
 export const InvitationsPanel = () => {
   const {
@@ -39,6 +41,29 @@ export const InvitationsPanel = () => {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
+
+  const handleCopyInviteUrl = useCallback(async (inviteToken: string, inviteId: string) => {
+    const { protocol, hostname, port } = window.location;
+    const host = port ? `${hostname}:${port}` : hostname;
+    const rootHost = host.startsWith("app.") ? host.slice(4) : host;
+    const landingUrl = `${protocol}//${rootHost}`;
+    const inviteUrl = `${landingUrl}/onboarding/accept-user-invite/${inviteToken}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedInviteId(inviteId);
+      setTimeout(() => setCopiedInviteId(null), 2000);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = inviteUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopiedInviteId(inviteId);
+      setTimeout(() => setCopiedInviteId(null), 2000);
+    }
+  }, []);
 
   const handleDeleteInvitation = useCallback(() => {
     if (!selectedInviteId || deleteInvitationMutation.isPending) return;
@@ -174,6 +199,20 @@ export const InvitationsPanel = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          {!invitation.isAccepted && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCopyInviteUrl(invitation.inviteToken, invitation.id)}
+                              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                            >
+                              {copiedInviteId === invitation.id ? (
+                                <><Check className="mr-1 h-3 w-3" /> Copied</>
+                              ) : (
+                                <><Copy className="mr-1 h-3 w-3" /> Copy Link</>
+                              )}
+                            </Button>
+                          )}
                           {!invitation.isAccepted && (
                             <Button
                               size="sm"
