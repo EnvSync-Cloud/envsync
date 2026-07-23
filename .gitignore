@@ -43,6 +43,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 .tmp
 integrations
+!apps/envsync-landing/public/images/integrations
 packages/minikms
 packages/license-server
 test-results
