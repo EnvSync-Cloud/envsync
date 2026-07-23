@@ -111,8 +111,14 @@ func (r ResetConfigRequest) Validate() error {
 // Helper functions for validation
 func isValidConfigKey(key string) bool {
 	validKeys := map[string]bool{
-		"backend_url": true,
-		"backendurl":  true,
+		"backend_url":     true,
+		"backendurl":      true,
+		"telemetry_url":   true,
+		"telemetryurl":    true,
+		"access_token":    true,
+		"accesstoken":     true,
+		"telemetry_token": true,
+		"telemetrytoken":  true,
 	}
 
 	return validKeys[key]
