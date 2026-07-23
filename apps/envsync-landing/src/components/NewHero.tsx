@@ -49,7 +49,7 @@ const NewHero = () => {
               <div className="mt-2 text-primary">✓ Synced 12 values from staging</div>
               <div className="mt-4 text-muted-foreground">$ envsync push --env production --strict</div>
               <div className="mt-2 text-yellow-400">⏳ Approval required before prod sync</div>
-              <div className="mt-4 text-muted-foreground">$ envsync approve --change-set cs_abc123</div>
+              <div className="mt-4 text-muted-foreground">$ envsync request approve --id cr_abc123</div>
               <div className="mt-2 text-primary">✓ Approved and deployed to production</div>
             </div>
           </div>

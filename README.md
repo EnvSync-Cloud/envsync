@@ -49,7 +49,7 @@
 curl -fsSL https://cli.envsync.cloud/install.sh | sh
 
 # Login
-envsync login
+envsync auth login
 
 # Pull secrets
 envsync pull --env development
@@ -160,8 +160,8 @@ bun run dev
 
 ```bash
 # Authentication
-envsync login
-envsync whoami
+envsync auth login
+envsync auth whoami
 
 # Project management
 envsync init

@@ -5,7 +5,7 @@ const steps = [
     number: "01",
     icon: Terminal,
     title: "Connect",
-    command: "envsync login && envsync init",
+    command: "envsync auth login && envsync init",
     result: "Bind repo and app",
   },
   {

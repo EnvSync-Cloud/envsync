@@ -2,7 +2,7 @@ const steps = [
   {
     number: "01",
     title: "Connect",
-    command: "envsync login && envsync init",
+    command: "envsync auth login && envsync init",
     description: "Link your repo to EnvSync. One command to set up your project.",
   },
   {
