@@ -56,6 +56,7 @@ const Footer = () => {
               <h3 className="mb-4 font-semibold text-foreground">Company</h3>
               <ul className="space-y-2">
                 <li><a href="/about" className="text-muted-foreground transition-colors hover:text-foreground">About</a></li>
+                <li><a href="https://envsync.notion.site" target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-foreground">Roadmap</a></li>
                 <li><a href="mailto:team@envsync.cloud" className="text-muted-foreground transition-colors hover:text-foreground">Contact</a></li>
               </ul>
             </div>

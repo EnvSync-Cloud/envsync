@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { runtimeConfig } from "@/utils/runtime-config";
@@ -9,16 +9,7 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const headerRef = useRef<HTMLElement>(null);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("theme");
-      if (saved === "light" || saved === "dark") return saved;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    return "dark";
-  });
 
-  // Close mobile menu when clicking outside the header
   useEffect(() => {
     if (!isMenuOpen) return;
 
@@ -31,11 +22,6 @@ const Header = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("theme", theme);
-  }, [theme]);
 
   const navLinks = [
     { label: "Integrations", href: "/integrations", external: false },
@@ -79,13 +65,6 @@ const Header = () => {
                 </Link>
               ),
             )}
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
             <a href={runtimeConfig.appBaseUrl} className="h-full">
               <Button
                 variant="outline"
@@ -141,14 +120,6 @@ const Header = () => {
                 ),
               )}
               <div className="flex flex-col space-y-2 pt-4">
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="flex items-center gap-2 rounded-md px-4 py-2 text-muted-foreground hover:text-foreground"
-                  aria-label="Toggle theme"
-                >
-                  {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                  <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-                </button>
                 <a href={runtimeConfig.appBaseUrl}>
                   <Button variant="outline" className="w-full justify-start border-border bg-card text-foreground hover:bg-accent">
                     Sign In

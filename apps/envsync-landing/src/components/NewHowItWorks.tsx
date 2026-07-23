@@ -35,7 +35,7 @@ const NewHowItWorks = () => {
         <div className="mx-auto mt-16 grid max-w-4xl gap-8 md:grid-cols-3">
           {steps.map((step) => (
             <div key={step.number} className="relative">
-              <div className="text-6xl font-bold text-primary/10">{step.number}</div>
+              <div className="text-6xl font-bold text-primary/60">{step.number}</div>
               <h3 className="mt-2 text-xl font-semibold text-foreground">{step.title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{step.description}</p>
               <div className="mt-4 rounded-lg border border-border bg-background p-3 font-mono text-sm">
