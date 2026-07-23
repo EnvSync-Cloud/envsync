@@ -4,9 +4,10 @@ import NewHero from "@/components/NewHero";
 import NewFeatures from "@/components/NewFeatures";
 import NewHowItWorks from "@/components/NewHowItWorks";
 import NewIntegrations from "@/components/NewIntegrations";
-import NewTestimonial from "@/components/NewTestimonial";
+// import NewTestimonial from "@/components/NewTestimonial";
 import NewCompare from "@/components/NewCompare";
 import NewCTA from "@/components/NewCTA";
+import { ActivityStream } from "@/components/activity/ActivityStream";
 
 const Index = () => {
   return (
@@ -18,9 +19,10 @@ const Index = () => {
       <main id="main-content">
         <NewHero />
         <NewFeatures />
+        <ActivityStream />
         <NewHowItWorks />
         <NewIntegrations />
-        <NewTestimonial />
+        {/*<NewTestimonial />*/}
         <NewCompare />
         <NewCTA />
       </main>

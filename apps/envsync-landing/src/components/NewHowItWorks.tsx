@@ -1,3 +1,6 @@
+import { SectionHeading } from "@/components/primitives/SectionHeading"
+import { CropMarkFrame } from "@/components/primitives/CropMarkFrame"
+
 const steps = [
   {
     number: "01",
@@ -17,36 +20,45 @@ const steps = [
     command: "envsync pull --env production",
     description: "Pull approved config into CI or runtime. Safe, audited, instant.",
   },
-];
+]
 
 const NewHowItWorks = () => {
   return (
-    <section className="border-b border-border bg-background">
-      <div className="container mx-auto px-4 py-24 md:px-8 md:py-32">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-            Three commands. Zero drift.
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            From local dev to production in three steps. No GUI required.
-          </p>
-        </div>
+    <section className="border-t border-border bg-background bg-grid-box">
+      <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-8 md:py-24">
+        <SectionHeading
+          align="center"
+          eyebrow="CLI"
+          title="Three commands. Zero drift."
+          description="From local dev to production in three steps. No GUI required."
+        />
 
-        <div className="mx-auto mt-16 grid max-w-4xl gap-8 md:grid-cols-3">
+        <div className="mt-16 grid gap-8 md:grid-cols-3">
           {steps.map((step) => (
-            <div key={step.number} className="relative">
-              <div className="text-6xl font-bold text-primary/60">{step.number}</div>
-              <h3 className="mt-2 text-xl font-semibold text-foreground">{step.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{step.description}</p>
-              <div className="mt-4 rounded-lg border border-border bg-background p-3 font-mono text-sm">
-                <span className="text-primary">$</span> {step.command}
+            <div key={step.number}>
+              <span className="font-mono text-h2 font-medium text-accent-ink">
+                {step.number}
+              </span>
+              <h3 className="mt-2 text-h3 font-medium text-foreground">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {step.description}
+              </p>
+              <div className="mt-4">
+                <CropMarkFrame>
+                  <div className="rounded-lg border border-border bg-card p-3 font-mono text-sm">
+                    <span className="text-accent-ink">$</span>{" "}
+                    <span className="text-foreground">{step.command}</span>
+                  </div>
+                </CropMarkFrame>
               </div>
             </div>
           ))}
         </div>
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default NewHowItWorks;
+export default NewHowItWorks

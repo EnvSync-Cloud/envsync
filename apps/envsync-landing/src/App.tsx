@@ -17,6 +17,7 @@ import Integrations from "./pages/Integrations";
 import NotFound from "./pages/NotFound";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite";
 import AcceptUserInvite from "./pages/AcceptUserInvite";
+import Showcase from "./pages/Showcase";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const router = createBrowserRouter(
       <Route path="/onboarding/accept-org-invite/:invite_code" element={<AcceptOrgInvite />} />
       <Route path="/onboarding/accept-user-invite/:invite_code" element={<AcceptUserInvite />} />
       <Route path="/integrations" element={<Integrations />} />
+      {import.meta.env.DEV && <Route path="/__showcase" element={<Showcase />} />}
       <Route path="*" element={<NotFound />} />
     </Route>
   )
