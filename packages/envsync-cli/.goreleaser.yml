@@ -19,7 +19,7 @@ builds:
     env:
       - CGO_ENABLED=0
     ldflags:
-      - -s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL={{ .Env.ENVSYNC_API_URL | default "https://api.envsync.cloud" }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.telemetryURL={{ .Env.ENVSYNC_TELEMETRY_URL | default "https://obs.envsync.cloud" }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version={{ .Version }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/commands.version={{ .Version }}
+      - -s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL={{ .Env.ENVSYNC_API_URL }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.telemetryURL={{ .Env.ENVSYNC_TELEMETRY_URL }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version={{ .Version }} -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/commands.version={{ .Version }}
     hooks:
       post:
         - cmd: scripts/generate-completions.sh "{{ .Path }}"
