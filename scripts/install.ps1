@@ -51,6 +51,9 @@ function Main {
     Write-Host ""
     Write-Host "Installed ${Binary} to ${InstallDir}\${Binary}.exe"
     Write-Host ""
+
+    & "${InstallDir}\${Binary}.exe" --version 2>$null | ForEach-Object { Write-Host "Version: $_" }
+
     Write-Host "Run 'envsync --help' to get started."
 }
 

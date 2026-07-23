@@ -63,6 +63,11 @@ main() {
   echo ""
   echo "Installed ${BINARY} to ${INSTALL_DIR}/${BINARY}"
   echo ""
+
+  if command -v envsync >/dev/null 2>&1; then
+    echo "Version: $(envsync --version 2>/dev/null || echo 'unknown')"
+  fi
+
   echo "Run 'envsync --help' to get started."
 }
 
