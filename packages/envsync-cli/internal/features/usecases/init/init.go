@@ -51,6 +51,20 @@ func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, ap
 	if appID != "" {
 		selectedAppID = appID
 		selectedEnvID = envTypeID
+
+		if envTypeID == "" {
+			for _, app := range apps {
+				if app.ID == appID {
+					if len(app.EnvTypes) > 0 {
+						selectedEnvID, err = uc.selectEnvType(app)
+						if err != nil {
+							return err
+						}
+					}
+					break
+				}
+			}
+		}
 	} else {
 		selectedAppID, selectedEnvID, err = uc.selectAppAndEnv(ctx, apps)
 		if err != nil {
@@ -114,6 +128,29 @@ func (uc *initCaseUse) selectAppAndEnv(ctx context.Context, apps []domain.Applic
 	}
 
 	return "", "", NewNotFoundError("environment not found: "+envInput, nil)
+}
+
+func (uc *initCaseUse) selectEnvType(app domain.Application) (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Printf("\n🌍 Available Environments for %s:\n", app.Name)
+	fmt.Println(strings.Repeat("-", 60))
+	for i, env := range app.EnvTypes {
+		fmt.Printf("  %d) %s (ID: %s)\n", i+1, env.Name, env.ID)
+	}
+	fmt.Println(strings.Repeat("-", 60))
+
+	fmt.Print("\nSelect environment (enter number or ID): ")
+	envInput, _ := reader.ReadString('\n')
+	envInput = strings.TrimSpace(envInput)
+
+	for i, env := range app.EnvTypes {
+		if envInput == fmt.Sprintf("%d", i+1) || envInput == env.ID || strings.EqualFold(envInput, env.Name) {
+			return env.ID, nil
+		}
+	}
+
+	return "", NewNotFoundError("environment not found: "+envInput, nil)
 }
 
 func (uc *initCaseUse) checkConfigExists(configPath string) error {

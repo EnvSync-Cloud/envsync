@@ -102,6 +102,44 @@
 
     --cta-color: "#1DB954";
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --background: 220 22% 6%;
+      --foreground: 210 20% 96%;
+      --card: 220 22% 8%;
+      --card-foreground: 210 20% 96%;
+      --popover: 220 22% 8%;
+      --popover-foreground: 210 20% 96%;
+      --primary: 153 74% 44%;
+      --primary-foreground: 220 24% 7%;
+      --secondary: 217 17% 16%;
+      --secondary-foreground: 210 20% 96%;
+      --muted: 217 17% 14%;
+      --muted-foreground: 214 11% 66%;
+      --accent: 217 17% 14%;
+      --accent-foreground: 210 20% 96%;
+      --destructive: 0 63% 39%;
+      --destructive-foreground: 210 20% 96%;
+      --border: 217 18% 22%;
+      --input: 217 18% 22%;
+      --ring: 153 74% 44%;
+      --radius: 0.125rem;
+      --sidebar-background: 220 22% 6%;
+      --sidebar-foreground: 210 20% 96%;
+      --sidebar-primary: 153 74% 44%;
+      --sidebar-primary-foreground: 220 24% 7%;
+      --sidebar-accent: 217 17% 14%;
+      --sidebar-accent-foreground: 210 20% 96%;
+      --sidebar-border: 217 18% 22%;
+      --sidebar-ring: 153 74% 44%;
+      --surface-1: 220 22% 8%;
+      --surface-2: 220 18% 10%;
+      --surface-3: 220 16% 13%;
+      --border-strong: 214 15% 32%;
+      --cta-color: "#1DB954";
+    }
+  }
 }
 
 @layer base {

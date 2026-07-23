@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -14,16 +15,29 @@ type AppConfig struct {
 	TelemetryToken string `json:"telemetry_token,omitempty"`
 }
 
-var cfg AppConfig
-var once sync.Once
-var backendURL string
-var telemetryURL string
+var (
+	cfg       AppConfig
+	once      sync.Once
+	initErr   error
+	backendURL string = "https://api.envsync.cloud"
+	telemetryURL string
+)
 
 func New() AppConfig {
+	cfg, err := NewWithError()
+	if err != nil {
+		// Log to stderr but return partial config for backward compatibility.
+		fmt.Fprintf(os.Stderr, "warning: config initialization failed: %v\n", err)
+	}
+	return cfg
+}
+
+func NewWithError() (AppConfig, error) {
 	once.Do(func() {
 		configDir, err := os.UserConfigDir()
 		if err != nil {
-			panic(err)
+			initErr = fmt.Errorf("failed to get user config directory: %w", err)
+			return
 		}
 
 		filePath := filepath.Join(configDir, "envsync", "config.json")
@@ -31,22 +45,23 @@ func New() AppConfig {
 		// Ensure directory exists
 		dirPath := filepath.Dir(filePath)
 		if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-			panic(err)
+			initErr = fmt.Errorf("failed to create config directory: %w", err)
+			return
 		}
 
 		// Create a file if it doesn't exist
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			file, err := os.Create(filePath)
 			if err != nil {
-				panic(err)
+				initErr = fmt.Errorf("failed to create config file: %w", err)
+				return
 			}
 			file.Close()
 		}
 
-		cfg, err = ReadConfigFile()
-
-		if err != nil {
-			panic(err)
+		cfg, initErr = ReadConfigFile()
+		if initErr != nil {
+			return
 		}
 
 		if envBackendURL := os.Getenv("ENVSYNC_API_URL"); envBackendURL != "" {
@@ -64,7 +79,7 @@ func New() AppConfig {
 		}
 	})
 
-	return cfg
+	return cfg, initErr
 }
 
 func (c *AppConfig) WriteConfigFile() error {
@@ -75,7 +90,7 @@ func (c *AppConfig) WriteConfigFile() error {
 
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to get user config directory: %w", err)
 	}
 
 	filePath := filepath.Join(configDir, "envsync", "config.json")
@@ -86,7 +101,7 @@ func (c *AppConfig) WriteConfigFile() error {
 func ReadConfigFile() (AppConfig, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		panic(err)
+		return AppConfig{}, fmt.Errorf("failed to get user config directory: %w", err)
 	}
 
 	filePath := filepath.Join(configDir, "envsync", "config.json")

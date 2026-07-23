@@ -9,10 +9,7 @@ import (
 func AppResponseToDomain(res responses.AppResponse) domain.Application {
 	envTypes := make([]domain.EnvType, len(res.EnvTypes))
 	for i, envType := range res.EnvTypes {
-		envTypes[i] = domain.EnvType{
-			ID:   envType.ID,
-			Name: envType.Name,
-		}
+		envTypes[i] = EnvTypeResponseToDomain(envType)
 	}
 
 	return domain.Application{

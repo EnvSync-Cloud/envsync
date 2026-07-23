@@ -54,7 +54,18 @@ func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Co
 		return h.formatUseCaseError(cmd, errors.New("app-id must be provided with json flag"))
 	}
 
-	panic("Handler is not implemented yet!!!")
+	appID := cmd.String("app-id")
+
+	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, appID)
+	if err != nil {
+		return h.formatUseCaseError(cmd, err)
+	}
+
+	if cmd.Bool("json") {
+		return h.formatter.FormatJSON(cmd.Writer, envs)
+	}
+
+	return h.formatter.FormatEnvList(cmd.Writer, envs)
 }
 
 func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Command) error {
