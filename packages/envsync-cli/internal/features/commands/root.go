@@ -92,10 +92,13 @@ func NewCommandRegistry(
 	}
 }
 
+var version = "dev"
+
 func (r *CommandRegistry) RegisterCLI() *cli.Command {
 	return &cli.Command{
 		Name:                  "envsync",
 		Usage:                 "EnvSync CLI for managing applications and configurations",
+		Version:               version,
 		Suggest:               true,
 		EnableShellCompletion: true,
 		Flags: []cli.Flag{
