@@ -75,17 +75,17 @@ export const EditRoleModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-800 border-zinc-700">
+      <DialogContent className="bg-muted border-border">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit User Role</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogTitle className="text-foreground">Edit User Role</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Change the role for{" "}
-            <strong className="text-white">{selectedUserName}</strong>.
+            <strong className="text-foreground">{selectedUserName}</strong>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-role" className="text-white">
+            <Label htmlFor="edit-role" className="text-foreground">
               Role *
             </Label>
             <Select
@@ -94,18 +94,18 @@ export const EditRoleModal = ({
               disabled={isLoading}
             >
               <SelectTrigger
-                className={`bg-zinc-900 border-zinc-700 text-white ${
+                className={`bg-card border-border text-foreground ${
                   formErrors.role ? "border-red-500" : ""
                 }`}
               >
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700">
+              <SelectContent className="bg-muted border-border">
                 {roles.map((role) => (
                   <SelectItem
                     key={role.id}
                     value={role.id}
-                    className="text-white hover:bg-zinc-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center space-x-2">
                       {getRoleIcon(role.name)}
@@ -124,14 +124,14 @@ export const EditRoleModal = ({
           <Button
             variant="outline"
             onClick={onClose}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             onClick={onSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isLoading}
           >
             {isLoading ? (

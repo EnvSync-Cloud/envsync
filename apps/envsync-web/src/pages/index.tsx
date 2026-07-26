@@ -6,11 +6,13 @@ import { getWebRoutes } from "@/modules/load-modules";
 import RootLayout from "@/layout/root";
 import type { WebRouteDefinition } from "@/modules/types";
 
+const Showcase = lazy(() => import("./Showcase"));
+
 const webRoutes = getWebRoutes();
 
 function RouteFallback() {
   return (
-    <div className="flex min-h-[240px] items-center justify-center text-sm text-zinc-400">
+    <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
       Loading…
     </div>
   );
@@ -46,6 +48,16 @@ export const AppRoutes = () => {
           {rootRoutes.map(renderRoute)}
         </Route>
         {standaloneRoutes.map(renderRoute)}
+        {import.meta.env.DEV && (
+          <Route
+            path="/__showcase"
+            element={
+              <Suspense fallback={<RouteFallback />}>
+                <Showcase />
+              </Suspense>
+            }
+          />
+        )}
       </Routes>
     </BrowserRouter>
   );

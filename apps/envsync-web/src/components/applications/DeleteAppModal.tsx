@@ -37,15 +37,15 @@ export const DeleteAppModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800">
+      <DialogContent className="bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Delete Project
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             Are you sure you want to delete{" "}
-            <strong className="text-white">{app.name}</strong>? This action
+            <strong className="text-foreground">{app.name}</strong>? This action
             cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -70,9 +70,9 @@ export const DeleteAppModal = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="delete-confirm" className="text-white">
+            <Label htmlFor="delete-confirm" className="text-foreground">
               Type{" "}
-              <code className="bg-zinc-800 px-1 rounded text-red-400">
+              <code className="bg-muted px-1 rounded text-red-400">
                 {app.name}
               </code>{" "}
               to confirm:
@@ -81,7 +81,7 @@ export const DeleteAppModal = ({
               id="delete-confirm"
               value={confirmText}
               onChange={(e) => onConfirmTextChange(e.target.value)}
-              className="bg-zinc-900 border-zinc-800 text-white"
+              className="bg-card border-border text-foreground"
               placeholder="Enter project name"
               disabled={isDeleting}
             />
@@ -92,7 +92,7 @@ export const DeleteAppModal = ({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isDeleting}
           >
             Cancel
@@ -101,7 +101,7 @@ export const DeleteAppModal = ({
             variant="destructive"
             onClick={onDelete}
             disabled={!isConfirmValid || isDeleting}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-foreground"
           >
             {isDeleting ? (
               <>

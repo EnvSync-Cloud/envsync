@@ -8,7 +8,7 @@ interface PageLoaderProps {
 }
 
 export const PageLoader = ({
-  color = "border-t-emerald-500",
+  color = "border-t-primary",
   message = "Loading...",
   fullScreen = false,
   className,
@@ -17,18 +17,18 @@ export const PageLoader = ({
     <div
       className={cn(
         "flex items-center justify-center",
-        fullScreen ? "h-screen bg-zinc-950" : "min-h-[60vh]",
+        fullScreen ? "h-screen bg-background" : "min-h-[60vh]",
         className
       )}
     >
       <div className="flex flex-col items-center space-y-4">
         <div
           className={cn(
-            "size-12 border-4 border-zinc-700 rounded-full animate-spin",
+            "size-12 border-4 border-muted rounded-full animate-spin",
             color
           )}
         />
-        <p className="text-zinc-400">{message}</p>
+        <p className="text-muted-foreground">{message}</p>
       </div>
     </div>
   );

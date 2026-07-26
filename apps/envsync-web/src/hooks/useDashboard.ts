@@ -2,6 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { api as Api, sdk } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 
+export interface DashboardStats {
+  projectsCount: number | null;
+  variablesCount: number | null;
+  teamMembersCount: number | null;
+  apiKeysCount: number | null;
+}
+
 export function useDashboard() {
   const { isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
   const authEnabled = !isAuthLoading && isAuthenticated;
@@ -15,6 +22,7 @@ export function useDashboard() {
   const {
     data: usersData,
     isLoading: usersLoading,
+    error: usersError,
   } = useQuery({
     queryKey: ["dashboard-users"],
     queryFn: async () => {
@@ -29,6 +37,7 @@ export function useDashboard() {
   const {
     data: apiKeysData,
     isLoading: apiKeysLoading,
+    error: apiKeysError,
   } = useQuery({
     queryKey: ["dashboard-api-keys"],
     queryFn: async () => {
@@ -54,14 +63,16 @@ export function useDashboard() {
     retry: 2,
   });
 
-  const stats = {
-    projectsCount: apps.length,
-    variablesCount: apps.reduce(
-      (sum, app) => sum + (app.env_count ?? 0) + (app.secret_count ?? 0),
-      0
-    ),
-    teamMembersCount: usersData?.length ?? 0,
-    apiKeysCount: apiKeysData?.length ?? 0,
+  const stats: DashboardStats = {
+    projectsCount: appsError ? null : apps.length,
+    variablesCount: appsError
+      ? null
+      : apps.reduce(
+          (sum, app) => sum + (app.env_count ?? 0) + (app.secret_count ?? 0),
+          0
+        ),
+    teamMembersCount: usersError ? null : (usersData?.length ?? 0),
+    apiKeysCount: apiKeysError ? null : (apiKeysData?.length ?? 0),
   };
 
   const isLoading = appsLoading || usersLoading || apiKeysLoading;

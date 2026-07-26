@@ -29,7 +29,7 @@ type FieldState = Record<string, string>;
 
 function FieldHint({ text }: { text?: string }) {
   if (!text) return null;
-  return <p className="text-xs text-zinc-500">{text}</p>;
+  return <p className="text-xs text-tertiary">{text}</p>;
 }
 
 function ProviderFieldEditor({
@@ -43,12 +43,12 @@ function ProviderFieldEditor({
   onChange: (value: string) => void;
   secretOptions?: string[];
 }) {
-  const commonClassName = "flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white";
+  const commonClassName = "flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground";
   const listId = `${field.key}-secret-options`;
 
   return (
     <label className="space-y-2">
-      <span className="text-sm text-zinc-400">{field.label}</span>
+      <span className="text-sm text-muted-foreground">{field.label}</span>
       {field.kind === "select" ? (
         <select
           value={value}
@@ -153,11 +153,11 @@ export function CreateProviderConnectionModal({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full border-zinc-800 bg-zinc-950 sm:max-w-lg overflow-y-auto"
+        className="w-full border-border bg-card sm:max-w-lg overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle className="text-zinc-100">Create Provider Connection</SheetTitle>
-          <SheetDescription className="text-zinc-500">
+          <SheetTitle className="text-foreground">Create Provider Connection</SheetTitle>
+          <SheetDescription className="text-tertiary">
             {providerConfig.providerHeadline}
           </SheetDescription>
         </SheetHeader>
@@ -165,7 +165,7 @@ export function CreateProviderConnectionModal({
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {!providerFilter && (
             <label className="space-y-2">
-              <span className="text-sm text-zinc-400">Provider</span>
+              <span className="text-sm text-muted-foreground">Provider</span>
               <select
                 value={form.provider_type}
                 onChange={(event) =>
@@ -179,7 +179,7 @@ export function CreateProviderConnectionModal({
                     metadataRaw: "{}",
                   })
                 }
-                className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
               >
                 {Object.values(enterpriseProviderUi).map((provider) => (
                   <option key={provider.id} value={provider.id}>
@@ -191,21 +191,21 @@ export function CreateProviderConnectionModal({
           )}
 
           <label className="space-y-2">
-            <span className="text-sm text-zinc-400">Connection name</span>
+            <span className="text-sm text-muted-foreground">Connection name</span>
             <Input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
               placeholder={`${providerConfig.name} production`}
-              className="border-zinc-700 bg-zinc-900 text-zinc-100"
+              className="border-border bg-card text-foreground"
             />
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm text-zinc-400">Status</span>
+            <span className="text-sm text-muted-foreground">Status</span>
             <select
               value={form.status}
               onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as "active" | "inactive" | "error" }))}
-              className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
             >
               <option value="active">active</option>
               <option value="inactive">inactive</option>
@@ -214,7 +214,7 @@ export function CreateProviderConnectionModal({
           </label>
 
           <div className="space-y-3">
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Auth fields</p>
+            <p className="text-xs font-medium text-tertiary uppercase tracking-wider">Auth fields</p>
             {providerConfig.connectionAuthFields.map((field) => (
               <ProviderFieldEditor
                 key={field.key}
@@ -232,7 +232,7 @@ export function CreateProviderConnectionModal({
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Metadata fields</p>
+            <p className="text-xs font-medium text-tertiary uppercase tracking-wider">Metadata fields</p>
             {providerConfig.connectionMetadataFields.map((field) => (
               <ProviderFieldEditor
                 key={field.key}
@@ -248,23 +248,23 @@ export function CreateProviderConnectionModal({
             ))}
           </div>
 
-          <details className="rounded-lg border border-zinc-800 p-3">
-            <summary className="cursor-pointer text-xs font-medium text-zinc-400">Advanced JSON</summary>
+          <details className="rounded-lg border border-border p-3">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Advanced JSON</summary>
             <div className="mt-3 grid gap-3">
               <label className="space-y-1.5">
-                <span className="text-xs text-zinc-500">Additional auth config</span>
+                <span className="text-xs text-tertiary">Additional auth config</span>
                 <Textarea
                   value={form.authRaw}
                   onChange={(event) => setForm((prev) => ({ ...prev, authRaw: event.target.value }))}
-                  className="min-h-[80px] border-zinc-700 bg-zinc-900 text-zinc-100 font-mono text-xs"
+                  className="min-h-[80px] border-border bg-card text-foreground font-mono text-xs"
                 />
               </label>
               <label className="space-y-1.5">
-                <span className="text-xs text-zinc-500">Additional metadata</span>
+                <span className="text-xs text-tertiary">Additional metadata</span>
                 <Textarea
                   value={form.metadataRaw}
                   onChange={(event) => setForm((prev) => ({ ...prev, metadataRaw: event.target.value }))}
-                  className="min-h-[80px] border-zinc-700 bg-zinc-900 text-zinc-100 font-mono text-xs"
+                  className="min-h-[80px] border-border bg-card text-foreground font-mono text-xs"
                 />
               </label>
             </div>
@@ -275,14 +275,14 @@ export function CreateProviderConnectionModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={createProviderConnection.isPending}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {createProviderConnection.isPending ? "Creating..." : "Create"}
             </Button>

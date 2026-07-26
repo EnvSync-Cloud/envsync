@@ -15,8 +15,8 @@ export const NoResultsState = ({
   return (
     <div className="text-center py-12">
       <Search className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-white mb-2">No projects found</h3>
-      <p className="text-zinc-400 mb-4">
+      <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>
+      <p className="text-muted-foreground mb-4">
         {searchQuery && filterStatus !== 'all' 
           ? `No projects match "${searchQuery}" with status "${filterStatus}"`
           : searchQuery 
@@ -27,7 +27,7 @@ export const NoResultsState = ({
       <Button
         onClick={onResetFilters}
         variant="outline"
-        className="text-white border-zinc-700 hover:bg-zinc-800"
+        className="text-foreground border-border hover:bg-muted"
       >
         Clear Filters
       </Button>

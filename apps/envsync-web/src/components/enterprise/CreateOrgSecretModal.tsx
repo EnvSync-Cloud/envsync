@@ -77,61 +77,61 @@ export function CreateOrgSecretModal({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full border-zinc-800 bg-zinc-950 sm:max-w-lg overflow-y-auto"
+        className="w-full border-border bg-card sm:max-w-lg overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle className="text-zinc-100">Create Org Secret</SheetTitle>
-          <SheetDescription className="text-zinc-500">
+          <SheetTitle className="text-foreground">Create Org Secret</SheetTitle>
+          <SheetDescription className="text-tertiary">
             Create reusable secret material once, then reference it from provider connections and project mappings.
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="space-y-2">
-            <span className="text-sm text-zinc-400">Key</span>
+            <span className="text-sm text-muted-foreground">Key</span>
             <Input
               value={form.key}
               onChange={(event) => setForm((prev) => ({ ...prev, key: event.target.value }))}
               placeholder="github-app-private-key"
-              className="border-zinc-700 bg-zinc-900 text-zinc-100"
+              className="border-border bg-card text-foreground"
             />
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm text-zinc-400">Value</span>
+            <span className="text-sm text-muted-foreground">Value</span>
             <Textarea
               value={form.value}
               onChange={(event) => setForm((prev) => ({ ...prev, value: event.target.value }))}
-              className="min-h-[100px] border-zinc-700 bg-zinc-900 text-zinc-100 font-mono text-xs"
+              className="min-h-[100px] border-border bg-card text-foreground font-mono text-xs"
             />
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm text-zinc-400">Description</span>
+            <span className="text-sm text-muted-foreground">Description</span>
             <Input
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
               placeholder="Used by enterprise sync flows"
-              className="border-zinc-700 bg-zinc-900 text-zinc-100"
+              className="border-border bg-card text-foreground"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-2">
-              <span className="text-sm text-zinc-400">Provider refs</span>
+              <span className="text-sm text-muted-foreground">Provider refs</span>
               <Input
                 value={form.providerRefs}
                 onChange={(event) => setForm((prev) => ({ ...prev, providerRefs: event.target.value }))}
                 placeholder="github,vercel"
-                className="border-zinc-700 bg-zinc-900 text-zinc-100"
+                className="border-border bg-card text-foreground"
               />
             </label>
             <label className="space-y-2">
-              <span className="text-sm text-zinc-400">Rotation policy</span>
+              <span className="text-sm text-muted-foreground">Rotation policy</span>
               <select
                 value={form.rotationPolicy}
                 onChange={(event) => setForm((prev) => ({ ...prev, rotationPolicy: event.target.value }))}
-                className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
               >
                 <option value="manual">manual</option>
                 <option value="scheduled">scheduled</option>
@@ -140,13 +140,13 @@ export function CreateOrgSecretModal({
             </label>
           </div>
 
-          <details className="rounded-lg border border-zinc-800 p-3">
-            <summary className="cursor-pointer text-xs font-medium text-zinc-400">Advanced metadata JSON</summary>
+          <details className="rounded-lg border border-border p-3">
+            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Advanced metadata JSON</summary>
             <div className="mt-3">
               <Textarea
                 value={form.metadataRaw}
                 onChange={(event) => setForm((prev) => ({ ...prev, metadataRaw: event.target.value }))}
-                className="min-h-[80px] border-zinc-700 bg-zinc-900 text-zinc-100 font-mono text-xs"
+                className="min-h-[80px] border-border bg-card text-foreground font-mono text-xs"
               />
             </div>
           </details>
@@ -156,14 +156,14 @@ export function CreateOrgSecretModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={createOrgSecret.isPending}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {createOrgSecret.isPending ? "Creating..." : "Create"}
             </Button>

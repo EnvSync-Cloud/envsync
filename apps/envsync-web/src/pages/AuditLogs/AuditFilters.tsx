@@ -43,23 +43,23 @@ export function AuditFilters({
     filterOptions.user !== "all";
 
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
       <CardContent className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search */}
           <div className="lg:col-span-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary w-4 h-4" />
               <Input
                 placeholder="Search audit logs..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 bg-zinc-800 border-zinc-700 text-zinc-200 placeholder:text-zinc-500 h-9"
+                className="pl-10 bg-muted border-border text-foreground placeholder:text-tertiary h-9"
               />
               {searchQuery && (
                 <button
                   onClick={onClearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-muted-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -72,16 +72,16 @@ export function AuditFilters({
             value={filterOptions.timeRange}
             onValueChange={(value) => onFilterChange("timeRange", value)}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-300 h-9">
-              <Clock className="w-3.5 h-3.5 mr-2 text-zinc-500" />
+            <SelectTrigger className="bg-muted border-border text-muted-foreground h-9">
+              <Clock className="w-3.5 h-3.5 mr-2 text-tertiary" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectContent className="bg-card border-border">
               {TIME_RANGE_OPTIONS.map((opt) => (
                 <SelectItem
                   key={opt.value}
                   value={opt.value}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                  className="text-muted-foreground focus:bg-muted focus:text-foreground"
                 >
                   {opt.label}
                 </SelectItem>
@@ -94,16 +94,16 @@ export function AuditFilters({
             value={filterOptions.resourceType}
             onValueChange={(value) => onFilterChange("resourceType", value)}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-300 h-9">
-              <Filter className="w-3.5 h-3.5 mr-2 text-zinc-500" />
+            <SelectTrigger className="bg-muted border-border text-muted-foreground h-9">
+              <Filter className="w-3.5 h-3.5 mr-2 text-tertiary" />
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectContent className="bg-card border-border">
               {RESOURCE_TYPE_OPTIONS.map((opt) => (
                 <SelectItem
                   key={opt.value}
                   value={opt.value}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                  className="text-muted-foreground focus:bg-muted focus:text-foreground"
                 >
                   {opt.label}
                 </SelectItem>
@@ -116,14 +116,14 @@ export function AuditFilters({
             value={filterOptions.user}
             onValueChange={(value) => onFilterChange("user", value)}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-zinc-300 h-9">
-              <User className="w-3.5 h-3.5 mr-2 text-zinc-500" />
+            <SelectTrigger className="bg-muted border-border text-muted-foreground h-9">
+              <User className="w-3.5 h-3.5 mr-2 text-tertiary" />
               <SelectValue placeholder="All Users" />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectContent className="bg-card border-border">
               <SelectItem
                 value="all"
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                className="text-muted-foreground focus:bg-muted focus:text-foreground"
               >
                 All Users
               </SelectItem>
@@ -131,7 +131,7 @@ export function AuditFilters({
                 <SelectItem
                   key={user.id}
                   value={user.id}
-                  className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100"
+                  className="text-muted-foreground focus:bg-muted focus:text-foreground"
                 >
                   {user.full_name}
                 </SelectItem>
@@ -141,13 +141,13 @@ export function AuditFilters({
         </div>
 
         {hasActiveFilters && (
-          <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
+          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-              <span className="text-xs text-zinc-500">Filters:</span>
+              <span className="text-xs text-tertiary">Filters:</span>
               {searchQuery && (
                 <Badge
                   variant="secondary"
-                  className="bg-zinc-800 text-zinc-400 text-xs"
+                  className="bg-muted text-muted-foreground text-xs"
                 >
                   "{searchQuery}"
                 </Badge>
@@ -155,7 +155,7 @@ export function AuditFilters({
               {filterOptions.timeRange !== "all_time" && (
                 <Badge
                   variant="secondary"
-                  className="bg-zinc-800 text-zinc-400 text-xs"
+                  className="bg-muted text-muted-foreground text-xs"
                 >
                   {TIME_RANGE_OPTIONS.find(
                     (o) => o.value === filterOptions.timeRange
@@ -165,7 +165,7 @@ export function AuditFilters({
               {filterOptions.resourceType !== "all" && (
                 <Badge
                   variant="secondary"
-                  className="bg-zinc-800 text-zinc-400 text-xs"
+                  className="bg-muted text-muted-foreground text-xs"
                 >
                   {RESOURCE_TYPE_OPTIONS.find(
                     (o) => o.value === filterOptions.resourceType
@@ -177,7 +177,7 @@ export function AuditFilters({
               onClick={onResetFilters}
               variant="ghost"
               size="sm"
-              className="text-zinc-500 hover:text-zinc-300 h-7 text-xs"
+              className="text-tertiary hover:text-muted-foreground h-7 text-xs"
             >
               Reset
             </Button>

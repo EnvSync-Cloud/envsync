@@ -114,66 +114,66 @@ export const ViewPitChangesModal = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[90vh] max-w-5xl flex-col border-zinc-800 bg-zinc-900 text-white">
+			<DialogContent className="flex max-h-[90vh] max-w-5xl flex-col border-border bg-card text-foreground">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-xl">
 						<History className="size-5 text-emerald-400" />
 						{kindLabel} Snapshot Details
 					</DialogTitle>
-					<DialogDescription className="text-zinc-400">
+					<DialogDescription className="text-muted-foreground">
 						Review the recorded snapshot metadata and the {itemLabel} state stored at this point in
 						time.
 					</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-4">
-					<Card className="border-zinc-800 bg-zinc-950">
+					<Card className="border-border bg-card">
 						<CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-5">
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 									<GitBranch className="size-3.5" />
 									PIT ID
 								</p>
-								<p className="font-mono text-sm text-white">{pitData.id}</p>
+								<p className="font-mono text-sm text-foreground">{pitData.id}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 									<Clock3 className="size-3.5" />
 									Created at
 								</p>
-								<p className="text-sm text-zinc-200">{formatDateTime(pitData.created_at)}</p>
+								<p className="text-sm text-foreground">{formatDateTime(pitData.created_at)}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 									<User className="size-3.5" />
 									Created by
 								</p>
-								<p className="text-sm text-zinc-200">{getUserDisplayName(pitData.user_id)}</p>
+								<p className="text-sm text-foreground">{getUserDisplayName(pitData.user_id)}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 									<KeyRound className="size-3.5" />
 									Items in snapshot
 								</p>
-								<p className="text-sm text-zinc-200">{pitStateData.length}</p>
+								<p className="text-sm text-foreground">{pitStateData.length}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="text-xs uppercase tracking-wide text-zinc-500">Recorded changes</p>
-								<p className="text-sm text-zinc-200">{pitData.changes_count}</p>
+								<p className="text-xs uppercase tracking-wide text-tertiary">Recorded changes</p>
+								<p className="text-sm text-foreground">{pitData.changes_count}</p>
 							</div>
 						</CardContent>
 					</Card>
 
-					<Card className="border-zinc-800 bg-zinc-950">
+					<Card className="border-border bg-card">
 						<CardContent className="space-y-4 p-4">
 							<div className="space-y-2">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 									<MessageSquare className="size-3.5" />
 									Message
 								</p>
-								<p className="text-sm text-zinc-200">{pitData.change_request_message}</p>
+								<p className="text-sm text-foreground">{pitData.change_request_message}</p>
 							</div>
-							<Separator className="bg-zinc-800" />
+							<Separator className="bg-muted" />
 							<div className="flex flex-wrap items-center gap-2">
 								<Badge className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
 									Current items: {pitStateData.length}
@@ -199,49 +199,49 @@ export const ViewPitChangesModal = ({
 						</Alert>
 					)}
 
-					<Card className="flex-1 border-zinc-800 bg-zinc-950">
+					<Card className="flex-1 border-border bg-card">
 						<CardHeader className="pb-3">
-							<CardTitle className="text-base text-white">
+							<CardTitle className="text-base text-foreground">
 								Snapshot state
 							</CardTitle>
 						</CardHeader>
 						<CardContent className="px-0 pt-0">
 							<ScrollArea className="max-h-[42vh]">
 								{isLoading ? (
-									<div className="flex items-center justify-center gap-3 px-6 py-16 text-sm text-zinc-400">
+									<div className="flex items-center justify-center gap-3 px-6 py-16 text-sm text-muted-foreground">
 										<Loader2 className="size-4 animate-spin" />
 										Loading snapshot state...
 									</div>
 								) : pitStateData.length === 0 ? (
-									<div className="px-6 py-16 text-center text-sm text-zinc-500">
+									<div className="px-6 py-16 text-center text-sm text-tertiary">
 										No {itemLabel}s were present in this snapshot.
 									</div>
 								) : (
 									<Table>
 										<TableHeader>
-											<TableRow className="border-zinc-800 hover:bg-transparent">
-												<TableHead className="text-zinc-500">Key</TableHead>
-												<TableHead className="text-zinc-500">Value</TableHead>
-												<TableHead className="text-zinc-500">Operation</TableHead>
-												<TableHead className="text-zinc-500">Last updated</TableHead>
+											<TableRow className="border-border hover:bg-transparent">
+												<TableHead className="text-tertiary">Key</TableHead>
+												<TableHead className="text-tertiary">Value</TableHead>
+												<TableHead className="text-tertiary">Operation</TableHead>
+												<TableHead className="text-tertiary">Last updated</TableHead>
 											</TableRow>
 										</TableHeader>
 										<TableBody>
 											{pitStateData.map((change) => (
 												<TableRow
 													key={`${pitData.id}-${change.key}`}
-													className="border-zinc-800 hover:bg-zinc-800/60"
+													className="border-border hover:bg-muted/60"
 												>
-													<TableCell className="font-mono text-sm text-white">
+													<TableCell className="font-mono text-sm text-foreground">
 														{change.key}
 													</TableCell>
-													<TableCell className="text-zinc-300">
+													<TableCell className="text-muted-foreground">
 														{maskPitValue(change.value, kind)}
 													</TableCell>
-													<TableCell className="text-zinc-300">
+													<TableCell className="text-muted-foreground">
 														{change.operation ?? "Recorded"}
 													</TableCell>
-													<TableCell className="text-zinc-400">
+													<TableCell className="text-muted-foreground">
 														{formatDateTime(change.last_updated)}
 													</TableCell>
 												</TableRow>

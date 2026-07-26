@@ -43,7 +43,7 @@ export const ApplicationsGrid = ({
   }
 
   return (
-    <div className="border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="border border-border rounded-xl overflow-hidden">
       {apps.map((app) => (
         <ApplicationCard
           key={app.id}

@@ -68,8 +68,8 @@ export const UserSettings = () => {
           <Settings className="size-5 text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">Account Settings</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">Account Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Manage your account configuration and preferences
           </p>
         </div>

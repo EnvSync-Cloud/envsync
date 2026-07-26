@@ -28,14 +28,14 @@ export const DeleteUserModal = ({
 }: DeleteUserModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-800 border-zinc-700">
+      <DialogContent className="bg-muted border-border">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Remove Team Member
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
-            Are you sure you want to remove <strong className="text-white">{selectedUserName}</strong> from your team?
+          <DialogDescription className="text-muted-foreground">
+            Are you sure you want to remove <strong className="text-foreground">{selectedUserName}</strong> from your team?
             This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -59,7 +59,7 @@ export const DeleteUserModal = ({
           <Button
             variant="outline"
             onClick={onClose}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isLoading}
           >
             Cancel
@@ -67,7 +67,7 @@ export const DeleteUserModal = ({
           <Button
             variant="destructive"
             onClick={onDelete}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-foreground"
             disabled={isLoading}
           >
             {isLoading ? (

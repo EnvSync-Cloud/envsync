@@ -55,6 +55,7 @@ interface BulkImportModalProps {
   onImport: (data: BulkEnvVarData) => void;
   isImporting: boolean;
   isSecret?: boolean; // Optional prop to force secret mode
+  defaultEnvironment?: string; // Pre-fill environment from page context
 }
 
 export const BulkImportModal = ({
@@ -64,6 +65,7 @@ export const BulkImportModal = ({
   onImport,
   isImporting,
   isSecret,
+  defaultEnvironment,
 }: BulkImportModalProps) => {
   const location = useLocation();
 
@@ -78,12 +80,15 @@ export const BulkImportModal = ({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (open) {
-      setSelectedEnvType("");
+      const prefilledEnvId = defaultEnvironment && environmentTypes.some(et => et.id === defaultEnvironment)
+        ? defaultEnvironment
+        : "";
+      setSelectedEnvType(prefilledEnvId);
       setImportText("");
       setParsedVariables([]);
       setActiveTab("input");
     }
-  }, [open]);
+  }, [open, defaultEnvironment, environmentTypes]);
 
   // Parse variables when import text changes
   useEffect(() => {
@@ -235,9 +240,9 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="bg-card border-border max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             {isSecretsPage ? (
               <Shield className="w-5 h-5 text-red-500 mr-2" />
             ) : (
@@ -245,7 +250,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
             )}
             {modalTitle}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             {modalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -271,7 +276,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
 
           {/* Environment Type Selection */}
           <div className="space-y-2">
-            <Label htmlFor="bulk-env-type" className="text-white">
+            <Label htmlFor="bulk-env-type" className="text-foreground">
               Target Environment *
             </Label>
             <Select
@@ -279,15 +284,15 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
               onValueChange={setSelectedEnvType}
               disabled={isImporting}
             >
-              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white">
+              <SelectTrigger className="bg-card border-border text-foreground">
                 <SelectValue placeholder="Select environment type" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectContent className="bg-card border-border">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
                     value={envType.id}
-                    className="text-white hover:bg-zinc-800"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center space-x-2">
                       <div
@@ -308,16 +313,16 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-zinc-900">
+            <TabsList className="grid w-full grid-cols-2 bg-card">
               <TabsTrigger
                 value="input"
-                className="text-zinc-400 data-[state=active]:text-white"
+                className="text-muted-foreground data-[state=active]:text-foreground"
               >
                 Input
               </TabsTrigger>
               <TabsTrigger
                 value="preview"
-                className="text-zinc-400 data-[state=active]:text-white"
+                className="text-muted-foreground data-[state=active]:text-foreground"
               >
                 Preview ({parsedVariables.length})
               </TabsTrigger>
@@ -326,7 +331,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
             <TabsContent value="input" className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="import-text" className="text-white">
+                  <Label htmlFor="import-text" className="text-foreground">
                     {isSecretsPage
                       ? "Secret Variables"
                       : "Variables"}
@@ -345,7 +350,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
                   id="import-text"
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
-                  className="bg-zinc-900 border-zinc-800 text-white font-mono min-h-[300px]"
+                  className="bg-card border-border text-foreground font-mono min-h-[300px]"
                   placeholder={
                     isSecretsPage
                       ? `# Enter your secret variables in KEY=value format
@@ -365,22 +370,22 @@ PORT=3000`
                   }
                   disabled={isImporting}
                 />
-                <div className="flex justify-between text-xs text-zinc-400">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Use KEY=value format, one per line</span>
                   <span>{importText.split("\n").length} lines</span>
                 </div>
               </div>
 
               {/* Format Help */}
-              <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
+              <div className="bg-card rounded-lg p-4 border border-border">
                 <div className="flex items-start space-x-3">
                   <Info className="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-zinc-300">
+                  <div className="text-sm text-muted-foreground">
                     <p className="font-medium mb-2">Format Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                       <li>
                         Use{" "}
-                        <code className="bg-zinc-800 px-1 rounded font-mono">
+                        <code className="bg-muted px-1 rounded font-mono">
                           KEY=value
                         </code>{" "}
                         format
@@ -391,7 +396,7 @@ PORT=3000`
                       <li>Lines starting with # are treated as comments</li>
                       <li>
                         Values with spaces can be quoted:{" "}
-                        <code className="bg-zinc-800 px-1 rounded font-mono">
+                        <code className="bg-muted px-1 rounded font-mono">
                           KEY="value with spaces"
                         </code>
                       </li>
@@ -416,8 +421,8 @@ PORT=3000`
               {parsedVariables.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-                  <p className="text-zinc-400">No variables to preview</p>
-                  <p className="text-zinc-500 text-sm">
+                  <p className="text-muted-foreground">No variables to preview</p>
+                  <p className="text-tertiary text-sm">
                     Enter variables in the Input tab to see the preview
                   </p>
                 </div>
@@ -451,23 +456,23 @@ PORT=3000`
                   </div>
 
                   {/* Variables List */}
-                  <div className="max-h-[300px] overflow-y-auto border border-zinc-800 rounded-lg">
+                  <div className="max-h-[300px] overflow-y-auto border border-border rounded-lg">
                     <table className="w-full">
-                      <thead className="bg-zinc-900 sticky top-0">
+                      <thead className="bg-card sticky top-0">
                         <tr>
-                          <th className="text-left py-2 px-3 text-zinc-400 text-sm">
+                          <th className="text-left py-2 px-3 text-muted-foreground text-sm">
                             Status
                           </th>
-                          <th className="text-left py-2 px-3 text-zinc-400 text-sm">
+                          <th className="text-left py-2 px-3 text-muted-foreground text-sm">
                             Key
                           </th>
-                          <th className="text-left py-2 px-3 text-zinc-400 text-sm">
+                          <th className="text-left py-2 px-3 text-muted-foreground text-sm">
                             Value
                           </th>
-                          <th className="text-left py-2 px-3 text-zinc-400 text-sm">
+                          <th className="text-left py-2 px-3 text-muted-foreground text-sm">
                             Type
                           </th>
-                          <th className="text-left py-2 px-3 text-zinc-400 text-sm">
+                          <th className="text-left py-2 px-3 text-muted-foreground text-sm">
                             Line
                           </th>
                         </tr>
@@ -476,7 +481,7 @@ PORT=3000`
                         {parsedVariables.map((variable, index) => (
                           <tr
                             key={index}
-                            className="border-b border-zinc-800 hover:bg-zinc-800"
+                            className="border-b border-border hover:bg-muted"
                           >
                             <td className="py-2 px-3">
                               {variable.valid ? (
@@ -489,7 +494,7 @@ PORT=3000`
                               <code
                                 className={`text-sm font-mono px-2 py-1 rounded ${
                                   variable.valid
-                                    ? "text-emerald-400 bg-zinc-900"
+                                    ? "text-emerald-400 bg-card"
                                     : "text-red-400 bg-red-900/20"
                                 }`}
                               >
@@ -497,7 +502,7 @@ PORT=3000`
                               </code>
                             </td>
                             <td className="py-2 px-3">
-                              <code className="text-sm font-mono text-zinc-300 bg-zinc-900 px-2 py-1 rounded max-w-xs truncate block">
+                              <code className="text-sm font-mono text-muted-foreground bg-card px-2 py-1 rounded max-w-xs truncate block">
                                 {variable.sensitive || isSecretsPage
                                   ? "••••••••"
                                   : variable.value || "MISSING"}
@@ -508,7 +513,7 @@ PORT=3000`
                                 className={`flex items-center space-x-1 text-xs px-2 py-1 rounded w-fit ${
                                   variable.sensitive || isSecretsPage
                                     ? "bg-red-900/20 text-red-400"
-                                    : "bg-zinc-800 text-zinc-300"
+                                    : "bg-muted text-muted-foreground"
                                 }`}
                               >
                                 {variable.sensitive || isSecretsPage ? (
@@ -524,7 +529,7 @@ PORT=3000`
                               </div>
                             </td>
                             <td className="py-2 px-3">
-                              <span className="text-sm text-zinc-400">
+                              <span className="text-sm text-muted-foreground">
                                 {variable.line}
                               </span>
                               {variable.error && (
@@ -641,14 +646,14 @@ PORT=3000`
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isImporting}
           >
             Cancel
           </Button>
           <Button
             onClick={handleImport}
-            className={`text-white ${buttonColor}`}
+            className={`text-foreground ${buttonColor}`}
             disabled={!canImport || isImporting}
           >
             {isImporting ? (

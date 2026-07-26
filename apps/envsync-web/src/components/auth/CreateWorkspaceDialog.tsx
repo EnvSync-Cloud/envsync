@@ -64,19 +64,19 @@ export const CreateWorkspaceDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-md"
+        className="border-border bg-card text-foreground sm:max-w-md"
         data-testid="create-workspace-dialog"
       >
         <DialogHeader>
           <DialogTitle>Create new workspace</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             Set up a new workspace and switch into it immediately.
           </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="workspace-name" className="text-zinc-200">
+            <Label htmlFor="workspace-name" className="text-foreground">
               Workspace name
             </Label>
             <Input
@@ -88,7 +88,7 @@ export const CreateWorkspaceDialog = ({
               autoFocus
               maxLength={120}
               disabled={isCreatingWorkspace}
-              className="border-zinc-800 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500"
+              className="border-border bg-card text-foreground placeholder:text-tertiary"
             />
           </div>
 
@@ -107,7 +107,7 @@ export const CreateWorkspaceDialog = ({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isCreatingWorkspace}
-              className="border-zinc-800 bg-transparent text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+              className="border-border bg-transparent text-muted-foreground hover:bg-card hover:text-foreground"
             >
               Cancel
             </Button>

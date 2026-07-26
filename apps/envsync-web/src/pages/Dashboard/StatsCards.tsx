@@ -63,8 +63,8 @@ export function BentoStatCard({
   return (
     <div data-testid={testId} className="flex h-full items-start justify-between gap-4">
       <div className="flex min-w-0 flex-col">
-        <p className="text-sm text-zinc-400">{label}</p>
-        <p className="mt-2 text-3xl font-bold text-zinc-100 tabular-nums">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="mt-2 text-3xl font-bold text-foreground tabular-nums">
           {value}
         </p>
       </div>
@@ -86,13 +86,13 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <Card
             key={card.key}
             data-testid={card.testId}
-            className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl hover:border-zinc-700 transition-colors"
+            className="bg-card text-card-foreground border-border shadow-xl rounded-xl hover:border-border transition-colors"
           >
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-zinc-400">{card.label}</p>
-                  <p className="text-2xl font-bold text-zinc-100 mt-1 tabular-nums">
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  <p className="text-2xl font-bold text-foreground mt-1 tabular-nums">
                     {stats[card.key]}
                   </p>
                 </div>

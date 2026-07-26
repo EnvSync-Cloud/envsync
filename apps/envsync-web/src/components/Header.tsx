@@ -31,6 +31,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { CreateWorkspaceDialog } from "@/components/auth/CreateWorkspaceDialog";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const Header = () => {
   const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingWorkspace } = useAuthContext();
@@ -46,7 +47,6 @@ export const Header = () => {
     [activeMembershipUserId, memberships],
   );
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
-  const activeOrgSlug = activeMembership?.org_slug || user?.org?.slug || "";
   const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
   const canSwitchOrganizations = runtimeConfig.edition === "enterprise";
 
@@ -62,7 +62,7 @@ export const Header = () => {
 
   return (
     <>
-      <header className="border-b border-white/10 bg-zinc-950/70 px-6 py-3 backdrop-blur-xl">
+      <header className="border-b border-border bg-background/70 px-6 py-3 backdrop-blur-xl">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -71,36 +71,33 @@ export const Header = () => {
                 <PopoverTrigger asChild>
                   <button
                     data-testid="workspace-switcher-trigger"
-                    className="inline-flex items-center gap-3 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-left text-emerald-50 transition-colors hover:border-emerald-400/30 hover:bg-emerald-500/14"
+                    className="inline-flex items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-left text-primary-foreground transition-colors hover:border-primary/30 hover:bg-primary/14"
                   >
-                    <span className="inline-flex size-6 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-500/15">
-                      <Sparkles className="size-3 text-emerald-200" />
+                    <span className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-primary/15">
+                      <Sparkles className="size-3 text-primary" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[11px] uppercase tracking-[0.22em] text-emerald-200">
+                      <span className="block truncate text-sm font-medium text-primary">
                         {activeOrgName}
-                      </span>
-                      <span className="block truncate text-[11px] text-emerald-100/70">
-                        {activeRole}
                       </span>
                     </span>
                     {isSwitchingOrg || isCreatingWorkspace ? (
-                      <Loader2 className="size-4 animate-spin text-emerald-100/70" />
+                      <Loader2 className="size-4 animate-spin text-primary/70" />
                     ) : (
-                      <ChevronsUpDown className="size-4 text-emerald-100/70" />
+                      <ChevronsUpDown className="size-4 text-primary/70" />
                     )}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-[340px] border-zinc-800 bg-zinc-950 p-0">
-                  <Command className="bg-transparent text-zinc-100">
-                    <div className="border-b border-zinc-900 px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Active workspace</p>
-                      <p className="mt-1 truncate text-sm font-medium text-zinc-100">{activeOrgName}</p>
-                      <p className="truncate text-xs text-zinc-500">{activeRole}</p>
+                <PopoverContent align="start" className="w-[340px] border-border bg-popover p-0">
+                  <Command className="bg-transparent text-foreground">
+                    <div className="border-b border-border px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active workspace</p>
+                      <p className="mt-1 truncate text-sm font-medium text-foreground">{activeOrgName}</p>
+                      <p className="truncate text-xs text-tertiary">{activeRole}</p>
                     </div>
-                    <CommandInput placeholder="Search workspaces..." className="text-zinc-100 placeholder:text-zinc-500" />
+                    <CommandInput placeholder="Search workspaces..." className="text-foreground placeholder:text-tertiary" />
                     <CommandList className="max-h-[320px]">
-                      <CommandEmpty className="text-zinc-500">No workspaces found.</CommandEmpty>
+                      <CommandEmpty className="text-tertiary">No workspaces found.</CommandEmpty>
                       <CommandGroup heading="Your workspaces">
                         {memberships.map((membership) => {
                           const isActive = membership.user_id === activeMembershipUserId || membership.is_active;
@@ -114,25 +111,25 @@ export const Header = () => {
                                 void switchOrg(membership.org_id);
                               }}
                               disabled={isSwitchingOrg || isCreatingWorkspace}
-                              className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-zinc-900"
+                              className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-muted"
                             >
-                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-200">
+                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                                 <Globe className="size-4" />
                               </span>
                               <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium text-zinc-100">
+                                <span className="block truncate text-sm font-medium text-foreground">
                                   {membership.org_name}
                                 </span>
-                                <span className="block truncate text-xs text-zinc-500">
+                                <span className="block truncate text-xs text-tertiary">
                                   {membership.org_slug} · {membership.role_name}
                                 </span>
                               </span>
-                              {isActive && <Check className="size-4 text-emerald-300" />}
+                              {isActive && <Check className="size-4 text-primary" />}
                             </CommandItem>
                           );
                         })}
                       </CommandGroup>
-                      <CommandSeparator className="bg-zinc-900" />
+                      <CommandSeparator className="bg-border" />
                       <CommandGroup heading="Workspace">
                         <CommandItem
                           data-testid="create-workspace-action"
@@ -142,9 +139,9 @@ export const Header = () => {
                             setCreateWorkspaceOpen(true);
                           }}
                           disabled={isSwitchingOrg || isCreatingWorkspace}
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-emerald-200 data-[selected=true]:bg-zinc-900"
+                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
                         >
-                          <span className="inline-flex size-9 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-200">
+                          <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                             <Plus className="size-4" />
                           </span>
                           <span className="text-sm font-medium">+ Create new Workspace</span>
@@ -155,17 +152,9 @@ export const Header = () => {
                 </PopoverContent>
               </Popover>
             ) : (
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-emerald-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
                 <Sparkles className="size-3" />
                 {activeOrgName}
-              </span>
-            )}
-            <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-zinc-400">
-              {activeRole}
-            </span>
-            {activeOrgSlug && (
-              <span className="inline-flex items-center rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-zinc-500">
-                {activeOrgSlug}
               </span>
             )}
           </div>
@@ -173,20 +162,20 @@ export const Header = () => {
           <Breadcrumb>
             <BreadcrumbList>
               {breadcrumbs.map((crumb, index) => (
-                <Fragment key={crumb.href}>
+                <Fragment key={`${crumb.href}-${crumb.label}`}>
                   {index > 0 && (
-                    <BreadcrumbSeparator className="text-zinc-600" />
+                    <BreadcrumbSeparator className="text-muted-foreground/60" />
                   )}
                   <BreadcrumbItem>
                     {index === breadcrumbs.length - 1 ? (
-                      <BreadcrumbPage className="text-sm font-medium text-zinc-100">
+                      <BreadcrumbPage className="text-sm font-medium text-foreground">
                         {crumb.label}
                       </BreadcrumbPage>
                     ) : (
                       <BreadcrumbLink asChild>
                         <Link
                           to={crumb.href}
-                          className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                         >
                           {crumb.label}
                         </Link>
@@ -204,11 +193,11 @@ export const Header = () => {
             onClick={() =>
               window.dispatchEvent(new CustomEvent("open-command-palette"))
             }
-            className="group flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-zinc-500 transition-all hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-300 md:flex-none"
+            className="group flex min-w-[240px] flex-1 items-center gap-3 rounded-xl border border-border bg-secondary px-4 py-2 text-tertiary transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary md:flex-none"
           >
             <Search className="size-4" />
-            <span className="text-sm">Search, jump to a page, or run an action…</span>
-            <kbd className="ml-auto rounded border border-zinc-700 bg-zinc-800/70 px-1.5 py-0.5 text-[10px] text-zinc-500 transition-colors group-hover:text-zinc-300">
+            <span className="text-sm">Search…</span>
+            <kbd className="ml-auto rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-tertiary transition-colors group-hover:text-foreground">
               {isMac ? "⌘" : "Ctrl+"}K
             </kbd>
           </button>
@@ -219,24 +208,23 @@ export const Header = () => {
                 new CustomEvent("toggle-notification-center")
               )
             }
-            className="relative rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-zinc-400 transition-colors hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-200"
+            className="relative rounded-xl border border-border bg-secondary p-2.5 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
             title="Notifications"
           >
             <Bell className="size-4" />
           </button>
 
+          <ThemeToggle />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 transition-colors hover:border-emerald-500/30 hover:bg-white/[0.06]">
+              <button className="flex items-center gap-3 rounded-2xl border border-border bg-secondary px-3 py-2 transition-colors hover:border-primary/30 hover:bg-secondary/80">
                 <div className="flex min-w-0 flex-col text-right">
-                  <span className="truncate text-sm font-medium text-zinc-100">
+                  <span className="truncate text-sm font-medium text-foreground">
                     {user?.user?.full_name ?? "User"}
                   </span>
-                  <span className="text-xs text-zinc-500">
-                    {activeRole}
-                  </span>
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 transition-colors hover:border-emerald-500/50">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted transition-colors hover:border-primary/50">
                   {user?.user?.profile_picture_url ? (
                     <img
                       src={user.user.profile_picture_url}
@@ -244,7 +232,7 @@ export const Header = () => {
                       className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-zinc-200 font-medium text-xs">
+                    <span className="text-foreground font-medium text-xs">
                       {user?.user?.full_name?.charAt(0)?.toUpperCase() || "U"}
                     </span>
                   )}
@@ -253,38 +241,38 @@ export const Header = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-48 bg-zinc-900 border-zinc-800"
+              className="w-48 bg-popover border-border"
             >
               <div className="px-2 py-1.5">
-                <p className="text-sm font-medium text-zinc-200 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {user?.user?.full_name ?? "User"}
                 </p>
-                <p className="hdx-mask text-xs text-zinc-500 truncate">
+                <p className="hdx-mask text-xs text-tertiary truncate">
                   {user?.user?.email ?? ""}
                 </p>
                 {runtimeConfig.releaseVersion && (
-                  <p className="text-[11px] text-zinc-600">
+                  <p className="text-[11px] text-muted-foreground/60">
                     {`v${runtimeConfig.releaseVersion}`}
                     {runtimeConfig.activeApiSlot ? ` · slot ${runtimeConfig.activeApiSlot}` : ""}
                   </p>
                 )}
               </div>
-              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={() => navigate("/settings")}
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-200 cursor-pointer"
+                className="text-foreground focus:bg-muted focus:text-foreground cursor-pointer"
               >
                 <Settings className="size-4 mr-2" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => navigate("/organisation")}
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-200 cursor-pointer"
+                className="text-foreground focus:bg-muted focus:text-foreground cursor-pointer"
               >
                 <Globe className="size-4 mr-2" />
                 Organisation
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={handleLogout}
                 className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer"

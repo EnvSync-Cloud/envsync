@@ -199,24 +199,46 @@ export const useProjectEnvironments = (appId?: string) => {
     },
   });
 
-  // Bulk import environment variables
+  // Bulk import environment variables (routes sensitive to secrets API)
   const bulkImportVariables = useMutation({
     mutationFn: async (data: BulkEnvVarData) => {
       if (!appId) throw new Error("Project ID not found");
-      return await sdk.environmentVariables.batchCreateEnvs({
-        app_id: appId,
-        env_type_id: data.env_type_id,
-        envs: data.variables.map((variable) => ({
-          key: variable.key,
-          value: variable.value,
-        })),
-      });
+
+      const regularVars = data.variables.filter((v) => !v.sensitive);
+      const sensitiveVars = data.variables.filter((v) => v.sensitive);
+
+      const promises: Promise<unknown>[] = [];
+
+      if (regularVars.length > 0) {
+        promises.push(
+          sdk.environmentVariables.batchCreateEnvs({
+            app_id: appId,
+            env_type_id: data.env_type_id,
+            envs: regularVars.map((v) => ({ key: v.key, value: v.value })),
+          })
+        );
+      }
+
+      if (sensitiveVars.length > 0) {
+        promises.push(
+          sdk.secrets.batchCreateSecrets({
+            app_id: appId,
+            env_type_id: data.env_type_id,
+            envs: sensitiveVars.map((v) => ({ key: v.key, value: v.value })),
+          })
+        );
+      }
+
+      return Promise.all(promises);
     },
     onSuccess: async (_, variables) => {
       await refetchProjectEnvironments();
-      toast.success(
-        `Successfully imported ${variables.variables.length} variables`
-      );
+      const secretCount = variables.variables.filter((v) => v.sensitive).length;
+      const varCount = variables.variables.filter((v) => !v.sensitive).length;
+      const parts: string[] = [];
+      if (varCount > 0) parts.push(`${varCount} variable${varCount > 1 ? "s" : ""}`);
+      if (secretCount > 0) parts.push(`${secretCount} secret${secretCount > 1 ? "s" : ""}`);
+      toast.success(`Successfully imported ${parts.join(" and ")}`);
     },
     onError: (error) => {
       console.error("Failed to import variables:", error);

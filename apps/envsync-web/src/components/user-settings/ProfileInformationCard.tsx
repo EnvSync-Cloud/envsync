@@ -45,12 +45,12 @@ export const ProfileInformationCard = ({
   isLoading,
 }: ProfileInformationCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <User className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
-            <CardTitle className="text-white">Profile Information</CardTitle>
+            <User className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
+            <CardTitle className="text-foreground">Profile Information</CardTitle>
           </div>
           {hasUnsavedChanges && (
             <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
@@ -61,14 +61,14 @@ export const ProfileInformationCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="full-name" className="text-white">
+          <Label htmlFor="full-name" className="text-foreground">
             Full Name *
           </Label>
           <Input
             id="full-name"
             value={formData.name}
             onChange={(e) => onInputChange("name", e.target.value)}
-            className={`bg-zinc-900 border-zinc-700 text-white ${
+            className={`bg-card border-border text-foreground ${
               formErrors.name ? "border-red-500" : ""
             }`}
             placeholder="Enter your full name"
@@ -79,7 +79,7 @@ export const ProfileInformationCard = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-white">
+          <Label htmlFor="email" className="text-foreground">
             Email Address *
           </Label>
           <Input
@@ -87,7 +87,7 @@ export const ProfileInformationCard = ({
             type="email"
             value={formData.email}
             onChange={(e) => onInputChange("email", e.target.value)}
-            className={`bg-zinc-900 border-zinc-700 text-white ${
+            className={`bg-card border-border text-foreground ${
               formErrors.email ? "border-red-500" : ""
             }`}
             placeholder="Enter your email address"
@@ -108,7 +108,7 @@ export const ProfileInformationCard = ({
 
         <div className="flex gap-2">
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             onClick={onSaveChanges}
             disabled={isLoading || !hasUnsavedChanges}
           >
@@ -123,7 +123,7 @@ export const ProfileInformationCard = ({
           </Button>
           {hasUnsavedChanges && (
             <Button
-              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-white/80"
+              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-foreground/80"
               onClick={onResetChanges}
             >
               Cancel Changes

@@ -121,12 +121,12 @@ export function AuditTable({
   getResourceTypeFromAction,
 }: AuditTableProps) {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium text-zinc-300 flex items-center justify-between">
+        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
           <span>Activity Log</span>
           {pagination.total > 0 && (
-            <span className="text-xs text-zinc-500 font-normal">
+            <span className="text-xs text-tertiary font-normal">
               {paginationInfo.startItem}-{paginationInfo.endItem} of{" "}
               {pagination.total}
             </span>
@@ -137,10 +137,10 @@ export function AuditTable({
         {isEmpty ? (
           <div className="text-center py-12">
             <Activity className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
-            <h3 className="text-sm font-medium text-zinc-300 mb-1">
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">
               No audit logs found
             </h3>
-            <p className="text-xs text-zinc-500 mb-4">
+            <p className="text-xs text-tertiary mb-4">
               {debouncedSearchQuery ||
               Object.values(filterOptions).some(
                 (v) => v !== "all" && v !== "all_time"
@@ -156,7 +156,7 @@ export function AuditTable({
                 onClick={onResetFilters}
                 variant="outline"
                 size="sm"
-                className="text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                className="text-muted-foreground border-border hover:bg-muted"
               >
                 Clear Filters
               </Button>
@@ -167,17 +167,17 @@ export function AuditTable({
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left py-2.5 px-4 text-xs text-zinc-500 font-medium">
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2.5 px-4 text-xs text-tertiary font-medium">
                       User
                     </th>
-                    <th className="text-left py-2.5 px-4 text-xs text-zinc-500 font-medium">
+                    <th className="text-left py-2.5 px-4 text-xs text-tertiary font-medium">
                       Resource
                     </th>
-                    <th className="text-left py-2.5 px-4 text-xs text-zinc-500 font-medium">
+                    <th className="text-left py-2.5 px-4 text-xs text-tertiary font-medium">
                       Time
                     </th>
-                    <th className="text-left py-2.5 px-4 text-xs text-zinc-500 font-medium">
+                    <th className="text-left py-2.5 px-4 text-xs text-tertiary font-medium">
                       Details
                     </th>
                   </tr>
@@ -211,29 +211,29 @@ export function AuditTable({
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="mt-4 pt-4 border-t border-zinc-800 flex items-center justify-between">
+              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-zinc-500">Show</span>
+                  <span className="text-xs text-tertiary">Show</span>
                   <Select
                     value={pagination.pageSize.toString()}
                     onValueChange={onPageSizeChange}
                   >
-                    <SelectTrigger className="w-16 bg-zinc-800 border-zinc-700 text-zinc-300 h-7 text-xs">
+                    <SelectTrigger className="w-16 bg-muted border-border text-muted-foreground h-7 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                    <SelectContent className="bg-card border-border">
                       {PAGE_SIZE_OPTIONS.map((size) => (
                         <SelectItem
                           key={size}
                           value={size.toString()}
-                          className="text-zinc-300 focus:bg-zinc-800 text-xs"
+                          className="text-muted-foreground focus:bg-muted text-xs"
                         >
                           {size}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-zinc-500">per page</span>
+                  <span className="text-xs text-tertiary">per page</span>
                 </div>
 
                 <div className="flex items-center space-x-1">
@@ -242,7 +242,7 @@ export function AuditTable({
                     disabled={!paginationInfo.hasPrevPage}
                     variant="outline"
                     size="sm"
-                    className="text-zinc-400 border-zinc-700 hover:bg-zinc-800 h-7 w-7 p-0"
+                    className="text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0"
                   >
                     <ChevronsLeft className="w-3.5 h-3.5" />
                   </Button>
@@ -251,7 +251,7 @@ export function AuditTable({
                     disabled={!paginationInfo.hasPrevPage}
                     variant="outline"
                     size="sm"
-                    className="text-zinc-400 border-zinc-700 hover:bg-zinc-800 h-7 w-7 p-0"
+                    className="text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </Button>
@@ -259,7 +259,7 @@ export function AuditTable({
                   {paginationInfo.pageNumbers.map((pageNum, index) => (
                     <div key={index}>
                       {pageNum === "..." ? (
-                        <span className="px-2 text-xs text-zinc-500">...</span>
+                        <span className="px-2 text-xs text-tertiary">...</span>
                       ) : (
                         <Button
                           onClick={() => onPageChange(pageNum as number)}
@@ -269,8 +269,8 @@ export function AuditTable({
                           size="sm"
                           className={
                             pageNum === pagination.page
-                              ? "bg-emerald-500 text-white h-7 w-7 p-0 text-xs"
-                              : "text-zinc-400 border-zinc-700 hover:bg-zinc-800 h-7 w-7 p-0 text-xs"
+                              ? "bg-emerald-500 text-foreground h-7 w-7 p-0 text-xs"
+                              : "text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0 text-xs"
                           }
                         >
                           {pageNum}
@@ -284,7 +284,7 @@ export function AuditTable({
                     disabled={!paginationInfo.hasNextPage}
                     variant="outline"
                     size="sm"
-                    className="text-zinc-400 border-zinc-700 hover:bg-zinc-800 h-7 w-7 p-0"
+                    className="text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </Button>
@@ -293,7 +293,7 @@ export function AuditTable({
                     disabled={!paginationInfo.hasNextPage}
                     variant="outline"
                     size="sm"
-                    className="text-zinc-400 border-zinc-700 hover:bg-zinc-800 h-7 w-7 p-0"
+                    className="text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0"
                   >
                     <ChevronsRight className="w-3.5 h-3.5" />
                   </Button>

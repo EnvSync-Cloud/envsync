@@ -2,12 +2,13 @@ import { SectionHeading } from "@/components/primitives/SectionHeading"
 import { CropMarkFrame } from "@/components/primitives/CropMarkFrame"
 
 const features = [
-  { name: "Environment promotion", envsync: true, dotenv: false, vault: "partial" as const },
-  { name: "Approval gates", envsync: true, dotenv: false, vault: "partial" as const },
-  { name: "Version history", envsync: true, dotenv: false, vault: true },
-  { name: "CLI-first workflow", envsync: true, dotenv: true, vault: true },
-  { name: "Self-host option", envsync: true, dotenv: true, vault: true },
-  { name: "Zero-knowledge encryption", envsync: true, dotenv: false, vault: true },
+  { name: "Environment promotion", envsync: true, doppler: true, vault: "partial" as const },
+  { name: "Approval workflows", envsync: true, doppler: "partial" as const, vault: "partial" as const },
+  { name: "Point-in-time recovery", envsync: true, doppler: false, vault: true },
+  { name: "Version history", envsync: true, doppler: true, vault: true },
+  { name: "CLI-first workflow", envsync: true, doppler: true, vault: true },
+  { name: "Self-host option", envsync: true, doppler: false, vault: true },
+  { name: "Zero-knowledge encryption", envsync: true, doppler: false, vault: true },
 ]
 
 function StatusGlyph({ value }: { value: boolean | "partial" }) {
@@ -40,7 +41,7 @@ const NewCompare = () => {
                       EnvSync
                     </th>
                     <th className="px-6 py-3 text-center font-mono text-mono-label text-muted-foreground">
-                      .env files
+                      Doppler
                     </th>
                     <th className="px-6 py-3 text-center font-mono text-mono-label text-muted-foreground">
                       Vault
@@ -60,7 +61,7 @@ const NewCompare = () => {
                         <StatusGlyph value={feature.envsync} />
                       </td>
                       <td className="px-6 py-3.5 text-center">
-                        <StatusGlyph value={feature.dotenv} />
+                        <StatusGlyph value={feature.doppler} />
                       </td>
                       <td className="px-6 py-3.5 text-center">
                         <StatusGlyph value={feature.vault} />

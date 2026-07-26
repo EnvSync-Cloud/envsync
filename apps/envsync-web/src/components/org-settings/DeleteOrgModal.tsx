@@ -34,15 +34,15 @@ export const DeleteOrgModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-800 border-zinc-700">
+      <DialogContent className="bg-muted border-border">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
             Delete Organization
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             This action cannot be undone. This will permanently delete the{" "}
-            <strong className="text-white">{orgName}</strong> organization and all associated data.
+            <strong className="text-foreground">{orgName}</strong> organization and all associated data.
           </DialogDescription>
         </DialogHeader>
         
@@ -65,14 +65,14 @@ export const DeleteOrgModal = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="delete-confirm" className="text-white">
-              Type <code className="bg-zinc-700 px-1 rounded text-red-400">{orgName}</code> to confirm:
+            <Label htmlFor="delete-confirm" className="text-foreground">
+              Type <code className="bg-muted px-1 rounded text-red-400">{orgName}</code> to confirm:
             </Label>
             <Input
               id="delete-confirm"
               value={confirmText}
               onChange={(e) => onConfirmTextChange(e.target.value)}
-              className="bg-zinc-900 border-zinc-700 text-white"
+              className="bg-card border-border text-foreground"
               placeholder="Enter organization name"
               disabled={isDeleting}
             />
@@ -83,7 +83,7 @@ export const DeleteOrgModal = ({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isDeleting}
           >
             Cancel
@@ -92,7 +92,7 @@ export const DeleteOrgModal = ({
             variant="destructive"
             onClick={onDelete}
             disabled={!isConfirmValid || isDeleting}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-foreground"
           >
             {isDeleting ? (
               <>

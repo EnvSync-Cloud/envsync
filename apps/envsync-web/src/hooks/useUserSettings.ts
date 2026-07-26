@@ -3,6 +3,7 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { sdk } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 import { UpdateUserRequest } from "@envsync-cloud/envsync-ts-sdk";
+import { toast } from "sonner";
 
 interface FormData {
   name: string;
@@ -186,9 +187,11 @@ export const useUserSettings = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userInfo"] });
       setHasUnsavedChanges(false);
+      toast.success("Profile updated successfully");
     },
     onError: (error) => {
       console.error("Failed to update user settings:", error);
+      toast.error("Failed to update profile. Please try again.");
     },
   });
 
@@ -227,8 +230,11 @@ export const useUserSettings = () => {
     const updateData: UpdateUserRequest = {
       full_name: formData.name.trim(),
       email: formData.email.trim(),
-      profile_picture_url: formData.profile_picture_url,
     };
+
+    if (formData.profile_picture_url) {
+      updateData.profile_picture_url = formData.profile_picture_url;
+    }
 
     updateUserSettings.mutate(updateData);
   }, [formData, validateForm, updateUserSettings]);

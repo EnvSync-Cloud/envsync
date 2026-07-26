@@ -280,8 +280,8 @@ export const WebHooks = () => {
             <Webhook className="size-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">Webhooks</h1>
-            <p className="text-sm text-zinc-400 mt-0.5">
+            <h1 className="text-xl font-semibold text-foreground tracking-tight">Webhooks</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Manage webhooks to receive real-time notifications about events in
               your EnvSync projects
             </p>
@@ -289,7 +289,7 @@ export const WebHooks = () => {
         </div>
 
         <Button
-          className="bg-emerald-500 hover:bg-emerald-600 text-white"
+          className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
           disabled={createWebhook.isPending}
           onClick={() => setIsCreateModalOpen(true)}
         >
@@ -313,10 +313,10 @@ export const WebHooks = () => {
         />
       </div>
 
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
-            <Webhook className="size-8 mr-3 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
+          <CardTitle className="text-foreground flex items-center">
+            <Webhook className="size-8 mr-3 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
             Webhooks
             <Count
               className="ml-2"
@@ -328,19 +328,19 @@ export const WebHooks = () => {
         </CardHeader>
         <CardContent>
           {isEmpty ? (
-            <div className="text-center py-12 rounded-xl bg-zinc-900/40 border border-dashed border-zinc-700">
-              <Webhook className="w-16 h-16 text-zinc-600 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-white mb-2">
+            <div className="text-center py-12 rounded-xl bg-card/40 border border-dashed border-border">
+              <Webhook className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-medium text-foreground mb-2">
                 No Webhooks
               </h3>
-              <p className="text-zinc-400 mb-6 max-w-md mx-auto">
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 Create your first webhook to receive real-time notifications
                 about events in your EnvSync projects. Webhooks allow you to
                 integrate with external services and automate your workflows.
               </p>
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
                 disabled={createWebhook.isPending}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -351,7 +351,7 @@ export const WebHooks = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
+                  <tr className="border-b border-border">
                     {[
                       "Name",
                       "URL",
@@ -364,12 +364,12 @@ export const WebHooks = () => {
                     ].map((header) => (
                       <th
                         key={header}
-                        className="text-left text-nowrap py-3 px-4 text-zinc-400 font-medium"
+                        className="text-left text-nowrap py-3 px-4 text-muted-foreground font-medium"
                       >
                         {header}
                       </th>
                     ))}
-                    <th className="text-right py-3 px-4 text-zinc-400 font-medium">
+                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">
                       Actions
                     </th>
                   </tr>
@@ -377,46 +377,46 @@ export const WebHooks = () => {
                 <tbody>
                   {isLoading
                     ? Array.from({ length: 6 }, (_, index) => (
-                        <tr key={index} className="border-b border-zinc-800">
+                        <tr key={index} className="border-b border-border">
                           <td className="py-4 px-4">
                             <div className="flex flex-col gap-2">
-                              <Skeleton className="h-5 w-36 bg-zinc-700" />
-                              <Skeleton className="h-3 w-24 bg-zinc-700/70" />
+                              <Skeleton className="h-5 w-36 bg-muted" />
+                              <Skeleton className="h-3 w-24 bg-muted/70" />
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center">
-                              <Skeleton className="h-8 w-32 bg-zinc-700 rounded" />
+                              <Skeleton className="h-8 w-32 bg-muted rounded" />
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            <Skeleton className="h-6 w-24 bg-zinc-700 rounded-full" />
+                            <Skeleton className="h-6 w-24 bg-muted rounded-full" />
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex gap-1">
-                              <Skeleton className="h-5 w-16 bg-zinc-700 rounded-full" />
-                              <Skeleton className="h-5 w-16 bg-zinc-700 rounded-full" />
+                              <Skeleton className="h-5 w-16 bg-muted rounded-full" />
+                              <Skeleton className="h-5 w-16 bg-muted rounded-full" />
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            <Skeleton className="h-6 w-16 bg-zinc-700 rounded-full" />
+                            <Skeleton className="h-6 w-16 bg-muted rounded-full" />
                           </td>
                           <td className="py-4 px-4">
-                            <Skeleton className="h-5 w-28 bg-zinc-700" />
+                            <Skeleton className="h-5 w-28 bg-muted" />
                           </td>
                           <td className="py-4 px-4">
-                            <Skeleton className="h-5 w-28 bg-zinc-700" />
+                            <Skeleton className="h-5 w-28 bg-muted" />
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex flex-col gap-1">
-                              <Skeleton className="h-5 w-24 bg-zinc-700" />
-                              <Skeleton className="h-3 w-36 bg-zinc-700/70" />
+                              <Skeleton className="h-5 w-24 bg-muted" />
+                              <Skeleton className="h-3 w-36 bg-muted/70" />
                             </div>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center justify-end space-x-2">
-                              <Skeleton className="h-8 w-8 bg-zinc-700 rounded-md" />
-                              <Skeleton className="h-8 w-8 bg-zinc-700 rounded-md" />
+                              <Skeleton className="h-8 w-8 bg-muted rounded-md" />
+                              <Skeleton className="h-8 w-8 bg-muted rounded-md" />
                             </div>
                           </td>
                         </tr>
@@ -424,17 +424,17 @@ export const WebHooks = () => {
                     : webhooks?.map((webhook) => (
                         <tr
                           key={webhook.id}
-                          className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
+                          className="border-b border-border hover:bg-muted/50 transition-colors"
                         >
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
-                              <span className="font-medium text-white">
+                              <span className="font-medium text-foreground">
                                 {webhook.name || "Untitled"}
                               </span>
-                              <span className="text-xs text-zinc-400 font-mono">
+                              <span className="text-xs text-muted-foreground font-mono">
                                 ID: {webhook.id}
                               </span>
-                              <span className="text-xs text-zinc-500 mt-1">
+                              <span className="text-xs text-tertiary mt-1">
                                 Linked to: {webhook.linked_to}
                                 {webhook.app_id && (
                                   <>
@@ -450,7 +450,7 @@ export const WebHooks = () => {
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center space-x-2">
-                              <code className="text-sm font-mono text-zinc-300 bg-zinc-900 px-2 py-1 rounded max-w-xs truncate">
+                              <code className="text-sm font-mono text-muted-foreground bg-card px-2 py-1 rounded max-w-xs truncate">
                                 {webhook.url.slice(0, 5) +
                                   "....." +
                                   webhook.url.slice(-5)}
@@ -461,7 +461,7 @@ export const WebHooks = () => {
                             <Badge
                               variant="secondary"
                               className={cn(
-                                "text-xs flex items-center gap-1 w-fit bg-emerald-900/20 text-white/60",
+                                "text-xs flex items-center gap-1 w-fit bg-emerald-900/20 text-foreground/60",
                                 WEBHOOK_TYPES.find(
                                   (t) => t.value === webhook.webhook_type
                                 )?.color
@@ -479,7 +479,7 @@ export const WebHooks = () => {
                                 <Badge
                                   key={event}
                                   variant="secondary"
-                                  className="text-xs bg-zinc-700 text-zinc-300"
+                                  className="text-xs bg-muted text-muted-foreground"
                                 >
                                   <div
                                     className={cn(
@@ -492,7 +492,7 @@ export const WebHooks = () => {
                                         ? "bg-amber-500"
                                         : event.includes("delete")
                                         ? "bg-rose-500"
-                                        : "bg-zinc-500"
+                                        : "bg-muted"
                                     )}
                                   />
                                   {WEBHOOK_EVENTS.find(
@@ -503,7 +503,7 @@ export const WebHooks = () => {
                               {webhook.event_types?.length > 2 && (
                                 <Badge
                                   variant="secondary"
-                                  className="text-xs bg-zinc-700 text-zinc-300"
+                                  className="text-xs bg-muted text-muted-foreground"
                                 >
                                   +{webhook.event_types.length - 2} more
                                 </Badge>
@@ -516,7 +516,7 @@ export const WebHooks = () => {
                                 className={`${
                                   webhook.is_active
                                     ? "bg-green-900 text-green-300 border-green-800"
-                                    : "bg-zinc-700 text-zinc-300 border-zinc-600"
+                                    : "bg-muted text-muted-foreground border-border"
                                 } border`}
                               >
                                 {webhook.is_active ? "Active" : "Inactive"}
@@ -524,21 +524,21 @@ export const WebHooks = () => {
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            <span className="text-sm text-zinc-400">
+                            <span className="text-sm text-muted-foreground">
                               {formatLastUsed(webhook.last_triggered_at)}
                             </span>
                           </td>
                           <td className="py-4 px-4">
-                            <span className="text-sm text-nowrap text-zinc-400">
+                            <span className="text-sm text-nowrap text-muted-foreground">
                               {formatDate(webhook.created_at)}
                             </span>
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex flex-col">
-                              <span className="font-medium text-white">
+                              <span className="font-medium text-foreground">
                                 {webhook.created_by?.name || "Unknown"}
                               </span>
-                              <span className="hdx-mask text-xs text-zinc-400">
+                              <span className="hdx-mask text-xs text-muted-foreground">
                                 {webhook.created_by?.email}
                               </span>
                             </div>
@@ -558,7 +558,7 @@ export const WebHooks = () => {
                                   actionLoadingStates[webhook.id] ||
                                   updateWebhook.isPending
                                 }
-                                className="text-white border-zinc-600 hover:bg-zinc-700"
+                                className="text-foreground border-border hover:bg-muted"
                                 title={
                                   webhook.is_active
                                     ? "Disable Webhook"

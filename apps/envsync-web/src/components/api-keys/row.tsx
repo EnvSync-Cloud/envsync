@@ -27,18 +27,18 @@ export const ApiKeyRow = ({
   handleDeleteApiKey,
 }: ApiKeyRowProps) => {
   return (
-    <tr key={apiKey.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+    <tr key={apiKey.id} className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="py-4 px-4">
         <div className="flex flex-col">
-          <span className="font-medium text-white">
+          <span className="font-medium text-foreground">
             {apiKey.description || "Untitled"}
           </span>
-          <span className="text-xs text-zinc-400 font-mono">ID: {apiKey.id}</span>
+          <span className="text-xs text-muted-foreground font-mono">ID: {apiKey.id}</span>
         </div>
       </td>
       <td className="py-4 px-4">
         <div className="flex items-center space-x-2">
-          <code className="hdx-mask text-sm font-mono text-zinc-300 bg-zinc-900 px-2 py-1 rounded">
+          <code className="hdx-mask text-sm font-mono text-muted-foreground bg-card px-2 py-1 rounded">
             {`${apiKey.key.substring(0, 8)}...${apiKey.key.substring(
               apiKey.key.length - 8
             )}`}
@@ -46,7 +46,7 @@ export const ApiKeyRow = ({
           {/* <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
             onClick={() => copy.mutate(apiKey.key)}
           >
             <Copy className="h-3 w-3" />
@@ -58,28 +58,28 @@ export const ApiKeyRow = ({
           className={`${
             apiKey.is_active
               ? "bg-green-900 text-green-300 border-green-800"
-              : "bg-zinc-700 text-zinc-300 border-zinc-600"
+              : "bg-muted text-muted-foreground border-border"
           } border`}
         >
           {apiKey.is_active ? "Active" : "Inactive"}
         </Badge>
       </td>
       <td className="py-4 px-4">
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-muted-foreground">
           {formatLastUsed(apiKey.last_used_at)}
         </span>
       </td>
       <td className="py-4 px-4">
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-muted-foreground">
           {formatDate(apiKey.created_at)}
         </span>
       </td>
       <td className="py-4 px-4">
         <div className="flex flex-col">
-          <span className="font-medium text-white">
+          <span className="font-medium text-foreground">
             {apiKey.created_by?.name || "Unknown"}
           </span>
-          <span className="hdx-mask text-xs text-zinc-400">
+          <span className="hdx-mask text-xs text-muted-foreground">
             {apiKey.created_by?.email}
           </span>
         </div>
@@ -91,7 +91,7 @@ export const ApiKeyRow = ({
             size="sm"
             onClick={() => handleRegenerateKey(apiKey.id)}
             disabled={isLoading || isRegenerating}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             title="Regenerate API Key"
           >
             {isLoading ? (
@@ -106,7 +106,7 @@ export const ApiKeyRow = ({
             size="sm"
             onClick={() => handleToggleApiKey(apiKey.id, apiKey.is_active)}
             disabled={isLoading || isUpdating}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             title={apiKey.is_active ? "Disable API Key" : "Enable API Key"}
           >
             {isLoading ? (

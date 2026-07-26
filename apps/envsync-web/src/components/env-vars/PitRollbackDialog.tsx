@@ -59,13 +59,13 @@ export const PitRollbackDialog = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="border-zinc-800 bg-zinc-900 text-white sm:max-w-xl">
+			<DialogContent className="border-border bg-card text-foreground sm:max-w-xl">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						<RotateCcw className="size-5 text-amber-300" />
 						Confirm {kindLabel} Snapshot Rollback
 					</DialogTitle>
-					<DialogDescription className="text-zinc-400">
+					<DialogDescription className="text-muted-foreground">
 						This restores the selected environment&apos;s {itemLabel}s to the exact state captured by
 						the chosen point-in-time snapshot.
 					</DialogDescription>
@@ -84,17 +84,17 @@ export const PitRollbackDialog = ({
 					</div>
 
 					<div className="flex flex-wrap items-center gap-2">
-						<Badge className="border border-zinc-700 bg-zinc-950 text-zinc-200">
+						<Badge className="border border-border bg-card text-foreground">
 							<GitBranch className="mr-2 size-3.5" />
 							{pit.id}
 						</Badge>
-						<Badge className="border border-zinc-700 bg-zinc-950 text-zinc-300">
+						<Badge className="border border-border bg-card text-muted-foreground">
 							{pit.changes_count} changes
 						</Badge>
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="pit-rollback-confirm-id" className="text-zinc-200">
+						<Label htmlFor="pit-rollback-confirm-id" className="text-foreground">
 							Type the exact PIT ID
 						</Label>
 						<Input
@@ -103,12 +103,12 @@ export const PitRollbackDialog = ({
 							onChange={(event) => onTypedPitIdChange(event.target.value)}
 							placeholder={pit.id}
 							autoComplete="off"
-							className="border-zinc-800 bg-zinc-950 text-white"
+							className="border-border bg-card text-foreground"
 						/>
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="pit-rollback-message" className="text-zinc-200">
+						<Label htmlFor="pit-rollback-message" className="text-foreground">
 							Rollback message
 						</Label>
 						<Textarea
@@ -116,7 +116,7 @@ export const PitRollbackDialog = ({
 							value={rollbackMessage}
 							onChange={(event) => onRollbackMessageChange(event.target.value)}
 							placeholder={`Rollback ${itemLabel}s to snapshot ${pit.id}`}
-							className="min-h-24 border-zinc-800 bg-zinc-950 text-white"
+							className="min-h-24 border-border bg-card text-foreground"
 						/>
 					</div>
 				</div>
@@ -126,7 +126,7 @@ export const PitRollbackDialog = ({
 						type="button"
 						variant="outline"
 						onClick={() => onOpenChange(false)}
-						className="border-zinc-800 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+						className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 					>
 						Cancel
 					</Button>
@@ -134,7 +134,7 @@ export const PitRollbackDialog = ({
 						type="button"
 						onClick={onConfirm}
 						disabled={!canSubmit || isSubmitting}
-						className="bg-amber-600 text-white hover:bg-amber-500"
+						className="bg-amber-600 text-foreground hover:bg-amber-500"
 					>
 						{isSubmitting ? "Rolling back..." : `Rollback ${kindLabel}`}
 					</Button>

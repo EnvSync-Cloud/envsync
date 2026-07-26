@@ -64,15 +64,15 @@ export const OrgSettings = () => {
             <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/8 p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/80">Enterprise Integrations</p>
-                  <h2 className="mt-2 text-xl font-semibold text-white">Shared provider connections and org secrets</h2>
-                  <p className="mt-2 max-w-3xl text-sm text-zinc-300/80">
+                  <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-200/80">Enterprise Integrations</p>
+                  <h2 className="mt-2 text-xl font-semibold text-foreground">Shared provider connections and org secrets</h2>
+                  <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
                     Review shared integration assets, edit provider credentials, and see which projects are using each connection.
                   </p>
                 </div>
                 <Link
                   to="/organisation/integrations"
-                  className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                  className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
                 >
                   Open integrations
                 </Link>

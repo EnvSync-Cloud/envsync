@@ -156,11 +156,11 @@ export function EnterpriseOrgAssetsPanel({
 
   return (
     <div className={`grid gap-6 ${compact ? "xl:grid-cols-2" : "2xl:grid-cols-2"}`}>
-      <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="rounded-xl border border-border bg-card/50 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-medium text-zinc-200">Provider Connections</h3>
-            <p className="mt-1 text-xs text-zinc-500">
+            <h3 className="text-sm font-medium text-foreground">Provider Connections</h3>
+            <p className="mt-1 text-xs text-tertiary">
               {providerFilter ? `${enterpriseProviderUi[providerFilter].name} connections.` : "Org-level credentials."}
             </p>
           </div>
@@ -173,31 +173,31 @@ export function EnterpriseOrgAssetsPanel({
             const usage = connectionUsage.get(connection.id) ?? [];
 
             return (
-              <div key={connection.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+              <div key={connection.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
                 <div className="min-w-0">
-                  <p className="text-sm text-zinc-200 truncate">{connection.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm text-foreground truncate">{connection.name}</p>
+                  <p className="text-xs text-tertiary">
                     {connection.provider_type} · {draft.status}
                     {showUsage && usage.length > 0 && ` · Used by ${usage.map((entry) => entry.name).join(", ")}`}
                   </p>
                 </div>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-tertiary">
                   {new Date(connection.updated_at).toLocaleDateString()}
                 </span>
               </div>
             );
           })}
           {filteredConnections.length === 0 && (
-            <p className="text-xs text-zinc-500 py-4 text-center">No connections yet.</p>
+            <p className="text-xs text-tertiary py-4 text-center">No connections yet.</p>
           )}
         </div>
       </section>
 
-      <section className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="rounded-xl border border-border bg-card/50 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-medium text-zinc-200">Org Secrets</h3>
-            <p className="mt-1 text-xs text-zinc-500">
+            <h3 className="text-sm font-medium text-foreground">Org Secrets</h3>
+            <p className="mt-1 text-xs text-tertiary">
               Reusable secret references for sync flows.
             </p>
           </div>
@@ -208,20 +208,20 @@ export function EnterpriseOrgAssetsPanel({
             const draft = secretDrafts[secret.id];
             if (!draft) return null;
             return (
-              <div key={secret.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+              <div key={secret.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
                 <div className="min-w-0">
-                  <p className="text-sm text-zinc-200 truncate">{secret.key}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm text-foreground truncate">{secret.key}</p>
+                  <p className="text-xs text-tertiary">
                     {draft.description || "No description"}
                     {draft.providerRefs && ` · ${draft.providerRefs}`}
                   </p>
                 </div>
-                <span className="text-xs text-zinc-500">{draft.rotationPolicy}</span>
+                <span className="text-xs text-tertiary">{draft.rotationPolicy}</span>
               </div>
             );
           })}
           {filteredSecrets.length === 0 && (
-            <p className="text-xs text-zinc-500 py-4 text-center">No secrets yet.</p>
+            <p className="text-xs text-tertiary py-4 text-center">No secrets yet.</p>
           )}
         </div>
       </section>

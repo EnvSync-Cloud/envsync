@@ -366,7 +366,7 @@ const PointInTime = () => {
 	}
 
 	return (
-		<div className="min-h-full bg-zinc-950 p-6">
+		<div className="min-h-full bg-card p-6">
 			<div className="mx-auto flex max-w-7xl flex-col gap-6">
 				<PointInTimeHeader
 					projectName={project?.name || appId || ""}
@@ -374,7 +374,6 @@ const PointInTime = () => {
 					selectedEnvironmentId={selectedEnvironment.id}
 					isRefetching={snapshotHistoryQuery.isRefetching || rangeHistoryQuery.isRefetching}
 					enableSecrets={enableSecrets}
-					onBack={() => navigate(-1)}
 					onRefresh={() => {
 						snapshotHistoryQuery.refetch();
 						if (activeMode === "time-range") {
@@ -417,79 +416,79 @@ const PointInTime = () => {
 					)}
 				</div>
 
-				<Card className="border-zinc-800 bg-zinc-900">
+				<Card className="border-border bg-card">
 					<CardHeader>
-						<CardTitle className="text-base text-white">Selected context</CardTitle>
+						<CardTitle className="text-base text-foreground">Selected context</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{activeMode === "snapshots" ? selectedSnapshotPit ? (
 							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<GitBranch className="size-3.5" />
 										PIT ID
 									</p>
-									<p className="font-mono text-sm text-white">{selectedSnapshotPit.id}</p>
+									<p className="font-mono text-sm text-foreground">{selectedSnapshotPit.id}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<Clock3 className="size-3.5" />
 										Created at
 									</p>
-									<p className="text-sm text-zinc-200">{formatDateTime(selectedSnapshotPit.created_at)}</p>
+									<p className="text-sm text-foreground">{formatDateTime(selectedSnapshotPit.created_at)}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<User className="size-3.5" />
 										Created by
 									</p>
-									<p className="text-sm text-zinc-200">{getUserLabel(selectedSnapshotPit.user_id)}</p>
+									<p className="text-sm text-foreground">{getUserLabel(selectedSnapshotPit.user_id)}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<MessageSquare className="size-3.5" />
 										Message
 									</p>
-									<p className="text-sm text-zinc-200">{selectedSnapshotPit.change_request_message}</p>
+									<p className="text-sm text-foreground">{selectedSnapshotPit.change_request_message}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="text-xs uppercase tracking-wide text-zinc-500">{kindLabel} changes</p>
-									<p className="text-sm text-zinc-200">{selectedSnapshotPit.changes_count}</p>
+									<p className="text-xs uppercase tracking-wide text-tertiary">{kindLabel} changes</p>
+									<p className="text-sm text-foreground">{selectedSnapshotPit.changes_count}</p>
 								</div>
 							</div>
 						) : (
-							<p className="text-sm text-zinc-400">
+							<p className="text-sm text-muted-foreground">
 								No snapshots are available yet for this environment&apos;s {itemLabel}s.
 							</p>
 						) : (
 							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<CalendarRange className="size-3.5" />
 										Range start
 									</p>
-									<p className="text-sm text-zinc-200">{formatDateTime(timeRange.start)}</p>
+									<p className="text-sm text-foreground">{formatDateTime(timeRange.start)}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-zinc-500">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
 										<CalendarRange className="size-3.5" />
 										Range end
 									</p>
-									<p className="text-sm text-zinc-200">{formatDateTime(timeRange.end)}</p>
+									<p className="text-sm text-foreground">{formatDateTime(timeRange.end)}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="text-xs uppercase tracking-wide text-zinc-500">Total PiTs found</p>
-									<p className="text-sm text-zinc-200">{rangeSummary.total}</p>
+									<p className="text-xs uppercase tracking-wide text-tertiary">Total PiTs found</p>
+									<p className="text-sm text-foreground">{rangeSummary.total}</p>
 								</div>
 								<div className="space-y-1">
-									<p className="text-xs uppercase tracking-wide text-zinc-500">Earliest PiT</p>
-									<p className="text-sm text-zinc-200">
+									<p className="text-xs uppercase tracking-wide text-tertiary">Earliest PiT</p>
+									<p className="text-sm text-foreground">
 										{rangeSummary.earliest ? formatDateTime(rangeSummary.earliest.created_at) : "None"}
 									</p>
 								</div>
 								<div className="space-y-1">
-									<p className="text-xs uppercase tracking-wide text-zinc-500">Latest PiT</p>
-									<p className="text-sm text-zinc-200">
+									<p className="text-xs uppercase tracking-wide text-tertiary">Latest PiT</p>
+									<p className="text-sm text-foreground">
 										{rangeSummary.latest ? formatDateTime(rangeSummary.latest.created_at) : "None"}
 									</p>
 								</div>

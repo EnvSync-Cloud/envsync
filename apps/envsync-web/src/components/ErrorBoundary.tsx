@@ -47,10 +47,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError && this.state.error) {
       return (
-        <div className="min-h-screen bg-[#0a0f1a] text-white flex flex-col items-center justify-center px-4">
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center px-4">
           <div className="max-w-md w-full space-y-4 text-center">
-            <h1 className="text-xl font-bold text-white">Something went wrong</h1>
-            <p className="text-zinc-400 text-sm font-mono break-all">
+            <h1 className="text-xl font-bold text-foreground">Something went wrong</h1>
+            <p className="text-muted-foreground text-sm font-mono break-all">
               {this.state.error.message}
             </p>
             <button

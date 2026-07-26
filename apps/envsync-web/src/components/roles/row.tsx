@@ -72,7 +72,7 @@ const getLogo = (role: Role) => {
         borderStyle: "solid",
         borderColor: (isLight ? dark : light) + "66",
       }}
-      className="size-8 rounded-md shadow bg-zinc-700 flex items-center justify-center"
+      className="size-8 rounded-md shadow bg-muted flex items-center justify-center"
     >
       {<Icon className="size-4 text-inherit" />}
     </div>
@@ -87,10 +87,10 @@ export const RoleRow = ({ role }: RoleRowProps) => {
   const deleteRole = api.roles.deleteRole();
 
   return (
-    <tr key={role.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+    <tr key={role.id} className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="p-4">
         <div className="flex items-center justify-between">
-          <span className="font-medium flex gap-2 items-center text-white">
+          <span className="font-medium flex gap-2 items-center text-foreground">
             {getLogo(role)}
             {role.name || "Untitled"}
             {role.isMaster && (
@@ -107,7 +107,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
         </div>
       </td>
       <td className="p-4">
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-muted-foreground">
           {accessLevelIcon[role.accessLevel]}
           {role.accessLevel.toUpperCase()}
         </span>
@@ -125,7 +125,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
                     ? "bg-emerald-300 text-emerald-900"
                     : feature === "api"
                     ? "bg-yellow-900 text-yellow-300"
-                    : "bg-zinc-700 text-zinc-300"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {featuresIcons[feature] || null}
@@ -133,7 +133,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
               </span>
             ))
           ) : (
-            <span className="text-sm text-zinc-400">No features assigned</span>
+            <span className="text-sm text-muted-foreground">No features assigned</span>
           )}
         </div>
       </td>
@@ -149,7 +149,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
               className="max-w-[200px]"
             />
           ) : (
-            <span className="text-sm text-zinc-400">No users assigned</span>
+            <span className="text-sm text-muted-foreground">No users assigned</span>
           )}
           {role.teamCount > 0 && (
             <span className="inline-flex rounded-full bg-blue-500/10 px-2 py-1 text-xs text-blue-300">
@@ -159,7 +159,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
         </div>
       </td>
       <td className="p-4">
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-muted-foreground">
           {formatLastUsed(new Date(role.createdAt))}
         </span>
       </td>
@@ -169,7 +169,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
             <Button
               variant="outline"
               size="sm"
-              className="text-white border-zinc-600 hover:bg-zinc-700"
+              className="text-foreground border-border hover:bg-muted"
             >
               <Pencil className="size-3" />
             </Button>
@@ -178,7 +178,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
           {/* <Button
                           variant="outline"
                           size="sm"
-                          className="text-white border-zinc-600 hover:bg-zinc-700"
+                          className="text-foreground border-border hover:bg-muted"
                         >
                           <UserPlus2 className="size-3" />
                         </Button> */}
@@ -193,22 +193,22 @@ export const RoleRow = ({ role }: RoleRowProps) => {
                 <X className="size-3" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-800 border-zinc-700">
+            <DialogContent className="bg-muted border-border">
               <DialogHeader>
-                <DialogTitle className="text-white flex items-center gap-2">
+                <DialogTitle className="text-foreground flex items-center gap-2">
                   <AlertTriangle className="text-red-400" size={20} /> Delete
                   Role
                 </DialogTitle>
-                <DialogDescription className="text-zinc-400">
+                <DialogDescription className="text-muted-foreground">
                   Are you sure you want to delete the role{" "}
-                  <span className="font-semibold">
+                  <span className="font-medium">
                     {role.name || "Untitled"}
                   </span>
                   ? This action cannot be undone.
                 </DialogDescription>
               </DialogHeader>
               {(role.users.length > 0 || role.teamCount > 0) && (
-                <p className="text-red-400 bg-zinc-900 p-2 border border-red-400/40 rounded-md text-sm">
+                <p className="text-red-400 bg-card p-2 border border-red-400/40 rounded-md text-sm">
                   Note: This role cannot be deleted while it is assigned to{" "}
                   {role.users.length} user(s) and {role.teamCount} team(s).
                 </p>
@@ -217,7 +217,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
                 <DialogClose asChild>
                   <Button
                     variant="outline"
-                    className="text-white border-zinc-600 hover:bg-zinc-700"
+                    className="text-foreground border-border hover:bg-muted"
                   >
                     Cancel
                   </Button>

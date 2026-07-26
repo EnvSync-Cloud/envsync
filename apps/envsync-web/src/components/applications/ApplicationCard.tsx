@@ -49,18 +49,18 @@ export const ApplicationCard = ({
 
   return (
     <div
-      className="flex items-center justify-between px-4 py-3 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/50 cursor-pointer group"
+      className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors border-b border-border cursor-pointer group"
       onClick={() => navigate(appDetailPath(app.id))}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <div className="size-9 rounded-lg bg-zinc-800 border border-zinc-700/50 flex items-center justify-center flex-shrink-0">
+        <div className="size-9 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
           <Database className="size-4 text-emerald-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors truncate">
+          <p className="text-sm font-medium text-foreground group-hover:text-foreground transition-colors truncate">
             {app.name}
           </p>
-          <p className="text-xs text-zinc-500 truncate">
+          <p className="text-xs text-muted-foreground truncate">
             {app.description || "No description"} · {configItemCount} config items · Updated {getRelativeTime(app.updated_at)}
           </p>
         </div>
@@ -73,15 +73,16 @@ export const ApplicationCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 opacity-0 group-hover:opacity-100 transition-all h-8 w-8"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-all h-8 w-8"
                 onClick={(e) => e.stopPropagation()}
+                aria-label="Application actions"
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+                className="cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   onView(app);
@@ -91,7 +92,7 @@ export const ApplicationCard = ({
                 View Details
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="text-zinc-300 focus:bg-zinc-800 focus:text-zinc-100 cursor-pointer"
+                className="cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(app);
@@ -113,7 +114,7 @@ export const ApplicationCard = ({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <ChevronRight className="size-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+        <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </div>
     </div>
   );

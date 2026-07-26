@@ -34,12 +34,12 @@ export const OrgInfoCard = ({
   logoPreview,
 }: OrgInfoCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border/80 shadow-xl rounded-xl">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Globe className="size-8 mr-1 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
-            <CardTitle className="text-white">
+            <Globe className="size-8 mr-1 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
+            <CardTitle className="text-foreground">
               Organization Information
             </CardTitle>
           </div>
@@ -52,14 +52,14 @@ export const OrgInfoCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="org-name" className="text-white">
+          <Label htmlFor="org-name" className="text-foreground">
             Organization Name *
           </Label>
           <Input
             id="org-name"
             value={formData.name}
             onChange={(e) => onInputChange("name", e.target.value)}
-            className={`bg-zinc-900 border-zinc-700 text-white ${
+            className={`bg-card border-border text-foreground ${
               formErrors.name ? "border-red-500" : ""
             }`}
             placeholder="Enter organization name"
@@ -70,23 +70,23 @@ export const OrgInfoCard = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="slug" className="text-white">
+          <Label htmlFor="slug" className="text-foreground">
             Slug
           </Label>
           <Input
             id="slug"
             value={orgSlug || ""}
-            className="bg-zinc-900 border-zinc-700 text-zinc-400"
+            className="bg-card border-border text-muted-foreground"
             disabled
             readOnly
           />
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Organization slug cannot be changed
           </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="contact-email" className="text-white">
+          <Label htmlFor="contact-email" className="text-foreground">
             Contact Email
           </Label>
           <Input
@@ -94,7 +94,7 @@ export const OrgInfoCard = ({
             type="email"
             value={formData.contact_email}
             onChange={(e) => onInputChange("contact_email", e.target.value)}
-            className={`bg-zinc-900 border-zinc-700 text-white ${
+            className={`bg-card border-border text-foreground ${
               formErrors.contact_email ? "border-red-500" : ""
             }`}
             placeholder="contact@yourorg.com"
@@ -105,7 +105,7 @@ export const OrgInfoCard = ({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="website" className="text-white">
+          <Label htmlFor="website" className="text-foreground">
             Website
           </Label>
           <Input
@@ -113,7 +113,7 @@ export const OrgInfoCard = ({
             type="url"
             value={formData.website}
             onChange={(e) => onInputChange("website", e.target.value)}
-            className={`bg-zinc-900 border-zinc-700 text-white ${
+            className={`bg-card border-border text-foreground ${
               formErrors.website ? "border-red-500" : ""
             }`}
             placeholder="https://yourorg.com"
@@ -133,7 +133,7 @@ export const OrgInfoCard = ({
 
         <div className="flex gap-2">
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             onClick={onSaveChanges}
             disabled={isSaving || !hasUnsavedChanges}
           >
@@ -148,7 +148,7 @@ export const OrgInfoCard = ({
           </Button>
           {hasUnsavedChanges && (
             <Button
-              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-white/80"
+              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-foreground/80"
               onClick={onResetChanges}
             >
               Cancel Changes

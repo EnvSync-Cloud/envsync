@@ -40,9 +40,9 @@ export const PitTimeRangePanel = ({
 	const kindLabel = getPitKindLabel(kind);
 
 	return (
-		<Card className="border-zinc-800 bg-zinc-900">
+		<Card className="border-border bg-card">
 			<CardHeader className="pb-4">
-				<CardTitle className="flex items-center gap-2 text-base text-white">
+				<CardTitle className="flex items-center gap-2 text-base text-foreground">
 					<CalendarRange className="size-4 text-cyan-400" />
 					{kindLabel} time-range compare
 				</CardTitle>
@@ -59,7 +59,7 @@ export const PitTimeRangePanel = ({
 							className={
 								range.preset === preset
 									? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
-									: "border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+									: "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
 							}
 						>
 							{preset === "all" ? "All" : preset}
@@ -69,7 +69,7 @@ export const PitTimeRangePanel = ({
 
 				<div className="grid gap-4 lg:grid-cols-2">
 					<div className="space-y-2">
-						<Label className="text-zinc-300">Range start</Label>
+						<Label className="text-muted-foreground">Range start</Label>
 						<Input
 							type="datetime-local"
 							value={toLocalDateTimeInputValue(range.start)}
@@ -79,11 +79,11 @@ export const PitTimeRangePanel = ({
 									end: range.end,
 								})
 							}
-							className="border-zinc-800 bg-zinc-950 text-white"
+							className="border-border bg-card text-foreground"
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label className="text-zinc-300">Range end</Label>
+						<Label className="text-muted-foreground">Range end</Label>
 						<Input
 							type="datetime-local"
 							value={toLocalDateTimeInputValue(range.end)}
@@ -93,13 +93,13 @@ export const PitTimeRangePanel = ({
 									end: toIsoFromLocalDateTime(event.target.value),
 								})
 							}
-							className="border-zinc-800 bg-zinc-950 text-white"
+							className="border-border bg-card text-foreground"
 						/>
 					</div>
 				</div>
 
 				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-					<div className="space-y-1 text-sm text-zinc-400">
+					<div className="space-y-1 text-sm text-muted-foreground">
 						<p>{getPresetLabel(range.preset)}</p>
 						<p className="inline-flex items-center gap-2">
 							<Clock3 className="size-4 text-cyan-400" />
@@ -109,7 +109,7 @@ export const PitTimeRangePanel = ({
 					<Button
 						onClick={onPreview}
 						disabled={!range.start || !range.end || isPreviewPending}
-						className="bg-cyan-600 text-white hover:bg-cyan-500"
+						className="bg-cyan-600 text-foreground hover:bg-cyan-500"
 					>
 						<CalendarRange className="mr-2 size-4" />
 						{isPreviewPending ? "Loading..." : "Preview range diff"}

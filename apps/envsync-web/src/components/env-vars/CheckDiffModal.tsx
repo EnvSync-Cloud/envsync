@@ -168,15 +168,15 @@ export const CheckDiffModal = ({
         onOpenChange(open);
       }}
     >
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="bg-card border-border text-foreground max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="py-4 fixed top-0 bg-inherit w-full">
-          <DialogTitle className="text-white text-2xl flex items-center gap-3">
+          <DialogTitle className="text-foreground text-2xl flex items-center gap-3">
             <div className="p-2 bg-teal-500/20 rounded-lg">
               <GitCompare className="w-6 h-6 text-teal-400" />
             </div>
             Compare Point-in-Time Snapshots
           </DialogTitle>
-          <DialogDescription className="text-zinc-300 text-base">
+          <DialogDescription className="text-muted-foreground text-base">
             Compare changes between two point-in-time snapshots to see what has
             been added, modified, or removed.
           </DialogDescription>
@@ -184,18 +184,18 @@ export const CheckDiffModal = ({
 
         <div className="space-y-6 flex-1 mt-24 overflow-auto hide-scrollbar flex flex-col">
           {/* Selection Controls */}
-          <Card className="bg-zinc-800/30 border-zinc-700">
+          <Card className="bg-muted/30 border-border">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-6">
                 <div className="space-y-3">
-                  <Label className="text-zinc-300 font-medium">
+                  <Label className="text-muted-foreground font-medium">
                     Before (Source)
                   </Label>
                   <Select value={fromPitId} onValueChange={setFromPitId}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-400 h-12">
+                    <SelectTrigger className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-12">
                       <SelectValue placeholder="Select Before PIT ID" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                       {pitIdList.map((pitId) => (
                         <SelectItem key={pitId} value={pitId} className="py-3">
                           <code className="font-mono">
@@ -208,20 +208,20 @@ export const CheckDiffModal = ({
                 </div>
 
                 <div className="flex justify-center items-end pb-2">
-                  <div className="p-3 bg-zinc-700 rounded-full">
-                    <ArrowRight className="w-5 h-5 text-zinc-300" />
+                  <div className="p-3 bg-muted rounded-full">
+                    <ArrowRight className="w-5 h-5 text-muted-foreground" />
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-zinc-300 font-medium">
+                  <Label className="text-muted-foreground font-medium">
                     After (Target)
                   </Label>
                   <Select value={toPitId} onValueChange={setToPitId}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-400 h-12">
+                    <SelectTrigger className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-12">
                       <SelectValue placeholder="Select After PIT ID" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                       {pitIdList
                         .filter((id) => id !== fromPitId)
                         .map((pitId) => (
@@ -246,7 +246,7 @@ export const CheckDiffModal = ({
                   disabled={
                     isLoading || !fromPitId || !toPitId || fromPitId === toPitId
                   }
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 h-auto font-medium shadow-lg"
+                  className="bg-teal-600 hover:bg-teal-700 text-foreground px-8 py-3 h-auto font-medium shadow-lg"
                 >
                   {isLoading ? (
                     <>
@@ -282,13 +282,13 @@ export const CheckDiffModal = ({
 
           {/* No Diff Message */}
           {showNoDiffMessage && (
-            <Card className="bg-zinc-800/30 border-zinc-700">
+            <Card className="bg-muted/30 border-border">
               <CardContent className="p-12 text-center">
-                <GitCompare className="w-16 h-16 text-zinc-500 mx-auto mb-4" />
-                <p className="text-zinc-400 text-lg font-medium mb-2">
+                <GitCompare className="w-16 h-16 text-tertiary mx-auto mb-4" />
+                <p className="text-muted-foreground text-lg font-medium mb-2">
                   Ready to Compare
                 </p>
-                <p className="text-zinc-500">
+                <p className="text-tertiary">
                   Select different PIT IDs to see the changes between them
                 </p>
               </CardContent>
@@ -299,13 +299,13 @@ export const CheckDiffModal = ({
           {diffResults && (
             <div className="flex-1 flex flex-col space-y-4">
               {/* Summary */}
-              <Card className="bg-zinc-800/30 border-zinc-700">
+              <Card className="bg-muted/30 border-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white flex items-center justify-between">
+                  <CardTitle className="text-lg text-foreground flex items-center justify-between">
                     <span>Comparison Summary</span>
                     <Badge
                       variant="outline"
-                      className="text-zinc-300 border-zinc-500"
+                      className="text-muted-foreground border-zinc-500"
                     >
                       {totalChanges} total changes
                     </Badge>
@@ -338,27 +338,27 @@ export const CheckDiffModal = ({
               </Card>
 
               {/* Changes Table */}
-              <Card className="flex-1 overflow-hidden border-zinc-700">
+              <Card className="flex-1 overflow-hidden border-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg text-white">
+                  <CardTitle className="text-lg text-foreground">
                     Detailed Changes
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 flex-1">
                   <div className="overflow-auto">
                     <Table>
-                      <TableHeader className="sticky top-0 bg-zinc-900 z-10">
-                        <TableRow className="border-zinc-700 hover:bg-zinc-800">
-                          <TableHead className="text-zinc-300 font-semibold w-32">
+                      <TableHeader className="sticky top-0 bg-card z-10">
+                        <TableRow className="border-border hover:bg-muted">
+                          <TableHead className="text-muted-foreground font-medium w-32">
                             Change Type
                           </TableHead>
-                          <TableHead className="text-zinc-300 font-semibold w-48">
+                          <TableHead className="text-muted-foreground font-medium w-48">
                             Variable Key
                           </TableHead>
-                          <TableHead className="text-zinc-300 font-semibold">
+                          <TableHead className="text-muted-foreground font-medium">
                             Before Value
                           </TableHead>
-                          <TableHead className="text-zinc-300 font-semibold">
+                          <TableHead className="text-muted-foreground font-medium">
                             After Value
                           </TableHead>
                         </TableRow>
@@ -367,13 +367,13 @@ export const CheckDiffModal = ({
                         {allChanges.map((change, index) => (
                           <TableRow
                             key={index}
-                            className="border-zinc-700 hover:bg-zinc-800/50 transition-colors"
+                            className="border-border hover:bg-muted/50 transition-colors"
                           >
                             <TableCell className="py-4">
                               {getChangeBadge(change.type)}
                             </TableCell>
                             <TableCell className="py-4">
-                              <code className="text-white font-mono text-sm bg-zinc-800/50 px-2 py-1 rounded">
+                              <code className="text-foreground font-mono text-sm bg-muted/50 px-2 py-1 rounded">
                                 {change.key}
                               </code>
                             </TableCell>
@@ -385,7 +385,7 @@ export const CheckDiffModal = ({
                                   </code>
                                 </div>
                               ) : (
-                                <span className="text-zinc-500 italic">—</span>
+                                <span className="text-tertiary italic">—</span>
                               )}
                             </TableCell>
                             <TableCell className="py-4 max-w-xs">
@@ -396,19 +396,19 @@ export const CheckDiffModal = ({
                                   </code>
                                 </div>
                               ) : (
-                                <span className="text-zinc-500 italic">—</span>
+                                <span className="text-tertiary italic">—</span>
                               )}
                             </TableCell>
                           </TableRow>
                         ))}
                         {allChanges.length === 0 && (
-                          <TableRow className="border-zinc-700">
+                          <TableRow className="border-border">
                             <TableCell
                               colSpan={4}
-                              className="text-center text-zinc-400 py-12"
+                              className="text-center text-muted-foreground py-12"
                             >
                               <div className="flex flex-col items-center gap-3">
-                                <GitCompare className="w-12 h-12 text-zinc-500" />
+                                <GitCompare className="w-12 h-12 text-tertiary" />
                                 <div>
                                   <p className="font-medium">
                                     No Changes Found

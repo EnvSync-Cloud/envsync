@@ -19,6 +19,18 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['"Inter"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      fontSize: {
+        'display': ['3.5rem', { lineHeight: '1', letterSpacing: '-1.4px' }],
+        'h1': ['3rem', { lineHeight: '1', letterSpacing: '-1.2px' }],
+        'h2': ['2rem', { lineHeight: '1.1', letterSpacing: '-0.8px' }],
+        'h3': ['1.125rem', { lineHeight: '1.2', letterSpacing: '-0.45px' }],
+        'lead': ['1.2rem', { lineHeight: '1.2', letterSpacing: '-0.48px' }],
+        'mono-label': ['0.8125rem', { lineHeight: '1', letterSpacing: '0' }],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -26,8 +38,9 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -45,6 +58,17 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "accent-ink": "hsl(var(--accent-ink))",
+        tertiary: "hsl(var(--text-tertiary))",
+        "accent-tint": "hsl(var(--accent-tint) / <alpha-value>)",
+        "accent-surface": "hsl(var(--accent-surface))",
+        "accent-outline": "hsl(var(--accent-tint) / <alpha-value>)",
+        "hero-text": "hsl(var(--hero-text))",
+        "status-warning": {
+          DEFAULT: "hsl(var(--status-warning) / <alpha-value>)",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        "status-error": "hsl(var(--destructive) / <alpha-value>)",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -63,20 +87,12 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        gray: {
-          750: "rgb(55 65 81 / 0.8)",
-          850: "#1a202c",
-          925: "#0d1117",
-          950: "#0a0a0a",
-        },
       },
-      boxShadow: {
-        "glow-sm": "0 0 12px rgba(16, 185, 129, 0.18)",
-        "glow-md": "0 0 24px rgba(16, 185, 129, 0.24)",
-      },
-      fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+      borderRadius: {
+        xs: "3px",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
         "accordion-down": {

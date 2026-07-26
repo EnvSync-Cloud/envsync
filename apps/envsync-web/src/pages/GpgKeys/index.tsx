@@ -184,7 +184,7 @@ const GpgKeys = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -198,8 +198,8 @@ const GpgKeys = () => {
             <KeyRound className="size-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">GPG Keys</h1>
-            <p className="text-sm text-zinc-400 mt-0.5">
+            <h1 className="text-xl font-semibold text-foreground tracking-tight">GPG Keys</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Manage GPG keys for signing and verification
             </p>
           </div>
@@ -208,65 +208,65 @@ const GpgKeys = () => {
           {/* Sign Dialog */}
           <Dialog open={isSignOpen} onOpenChange={setIsSignOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-zinc-600 text-zinc-300 hover:bg-zinc-700">
+              <Button variant="outline" className="border-border text-muted-foreground hover:bg-muted">
                 <PenLine className="w-4 h-4 mr-2" /> Sign
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-800 border-zinc-700 max-w-lg">
+            <DialogContent className="bg-muted border-border max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-white">Sign Data</DialogTitle>
-                <DialogDescription className="text-zinc-400">Sign data using a GPG key</DialogDescription>
+                <DialogTitle className="text-foreground">Sign Data</DialogTitle>
+                <DialogDescription className="text-muted-foreground">Sign data using a GPG key</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-zinc-300">Key</Label>
+                  <Label className="text-muted-foreground">Key</Label>
                   <Select value={signKeyId} onValueChange={setSignKeyId}>
-                    <SelectTrigger className="bg-zinc-700 border-zinc-600 text-white">
+                    <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue placeholder="Select a key" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-700 border-zinc-600">
+                    <SelectContent className="bg-muted border-border">
                       {gpgKeys?.filter((k) => !k.revoked_at).map((k) => (
-                        <SelectItem key={k.id} value={k.id} className="text-white">{k.name}</SelectItem>
+                        <SelectItem key={k.id} value={k.id} className="text-foreground">{k.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Data</Label>
+                  <Label className="text-muted-foreground">Data</Label>
                   <Textarea
                     value={signData}
                     onChange={(e) => setSignData(e.target.value)}
-                    className="bg-zinc-700 border-zinc-600 text-white min-h-[100px]"
+                    className="bg-muted border-border text-foreground min-h-[100px]"
                     placeholder="Enter data to sign..."
                   />
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <Label className="text-zinc-300">Mode</Label>
+                    <Label className="text-muted-foreground">Mode</Label>
                     <Select value={signMode} onValueChange={(v) => setSignMode(v as SignDataRequest.mode)}>
-                      <SelectTrigger className="bg-zinc-700 border-zinc-600 text-white">
+                      <SelectTrigger className="bg-muted border-border text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-zinc-700 border-zinc-600">
-                        <SelectItem value="text" className="text-white">Text</SelectItem>
-                        <SelectItem value="binary" className="text-white">Binary</SelectItem>
-                        <SelectItem value="clearsign" className="text-white">Clearsign</SelectItem>
+                      <SelectContent className="bg-muted border-border">
+                        <SelectItem value="text" className="text-foreground">Text</SelectItem>
+                        <SelectItem value="binary" className="text-foreground">Binary</SelectItem>
+                        <SelectItem value="clearsign" className="text-foreground">Clearsign</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 {signResult && (
                   <div>
-                    <Label className="text-zinc-300">Signature</Label>
+                    <Label className="text-muted-foreground">Signature</Label>
                     <Textarea
                       value={signResult}
                       readOnly
-                      className="bg-zinc-900 border-zinc-600 text-green-400 min-h-[100px] font-mono text-xs"
+                      className="bg-card border-border text-green-400 min-h-[100px] font-mono text-xs"
                     />
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="mt-1 text-zinc-400"
+                      className="mt-1 text-muted-foreground"
                       onClick={() => { navigator.clipboard.writeText(signResult); toast.success("Copied!"); }}
                     >
                       <Copy className="w-3 h-3 mr-1" /> Copy
@@ -286,43 +286,43 @@ const GpgKeys = () => {
           {/* Verify Dialog */}
           <Dialog open={isVerifyOpen} onOpenChange={(open) => { setIsVerifyOpen(open); if (!open) setVerifyResult(null); }}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-zinc-600 text-zinc-300 hover:bg-zinc-700">
+              <Button variant="outline" className="border-border text-muted-foreground hover:bg-muted">
                 <CheckCircle className="w-4 h-4 mr-2" /> Verify
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-800 border-zinc-700 max-w-lg">
+            <DialogContent className="bg-muted border-border max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-white">Verify Signature</DialogTitle>
-                <DialogDescription className="text-zinc-400">Verify a GPG signature against data</DialogDescription>
+                <DialogTitle className="text-foreground">Verify Signature</DialogTitle>
+                <DialogDescription className="text-muted-foreground">Verify a GPG signature against data</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-zinc-300">Data</Label>
+                  <Label className="text-muted-foreground">Data</Label>
                   <Textarea
                     value={verifyData}
                     onChange={(e) => setVerifyData(e.target.value)}
-                    className="bg-zinc-700 border-zinc-600 text-white min-h-[80px]"
+                    className="bg-muted border-border text-foreground min-h-[80px]"
                     placeholder="Original data..."
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Signature</Label>
+                  <Label className="text-muted-foreground">Signature</Label>
                   <Textarea
                     value={verifySignature}
                     onChange={(e) => setVerifySignature(e.target.value)}
-                    className="bg-zinc-700 border-zinc-600 text-white min-h-[80px] font-mono text-xs"
+                    className="bg-muted border-border text-foreground min-h-[80px] font-mono text-xs"
                     placeholder="-----BEGIN PGP SIGNATURE-----..."
                   />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Key (optional)</Label>
+                  <Label className="text-muted-foreground">Key (optional)</Label>
                   <Select value={verifyKeyId} onValueChange={setVerifyKeyId}>
-                    <SelectTrigger className="bg-zinc-700 border-zinc-600 text-white">
+                    <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue placeholder="Auto-detect" />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-700 border-zinc-600">
+                    <SelectContent className="bg-muted border-border">
                       {gpgKeys?.map((k) => (
-                        <SelectItem key={k.id} value={k.id} className="text-white">{k.name}</SelectItem>
+                        <SelectItem key={k.id} value={k.id} className="text-foreground">{k.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -337,7 +337,7 @@ const GpgKeys = () => {
                       )}
                     </div>
                     {verifyResult.signer_fingerprint && (
-                      <p className="text-xs text-zinc-400 mt-1">Signer: <span className="font-mono">{verifyResult.signer_fingerprint}</span></p>
+                      <p className="text-xs text-muted-foreground mt-1">Signer: <span className="font-mono">{verifyResult.signer_fingerprint}</span></p>
                     )}
                   </div>
                 )}
@@ -354,32 +354,32 @@ const GpgKeys = () => {
           {/* Import Dialog */}
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="border-zinc-600 text-zinc-300 hover:bg-zinc-700">
+              <Button variant="outline" className="border-border text-muted-foreground hover:bg-muted">
                 <Upload className="w-4 h-4 mr-2" /> Import
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-800 border-zinc-700 max-w-lg">
+            <DialogContent className="bg-muted border-border max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-white">Import GPG Key</DialogTitle>
-                <DialogDescription className="text-zinc-400">Import an existing GPG key</DialogDescription>
+                <DialogTitle className="text-foreground">Import GPG Key</DialogTitle>
+                <DialogDescription className="text-muted-foreground">Import an existing GPG key</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-zinc-300">Name</Label>
-                  <Input value={importName} onChange={(e) => setImportName(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white" placeholder="Key name" />
+                  <Label className="text-muted-foreground">Name</Label>
+                  <Input value={importName} onChange={(e) => setImportName(e.target.value)} className="bg-muted border-border text-foreground" placeholder="Key name" />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Public Key (armored)</Label>
-                  <Textarea value={importPublicKey} onChange={(e) => setImportPublicKey(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white min-h-[100px] font-mono text-xs" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----..." />
+                  <Label className="text-muted-foreground">Public Key (armored)</Label>
+                  <Textarea value={importPublicKey} onChange={(e) => setImportPublicKey(e.target.value)} className="bg-muted border-border text-foreground min-h-[100px] font-mono text-xs" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----..." />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Private Key (optional, armored)</Label>
-                  <Textarea value={importPrivateKey} onChange={(e) => setImportPrivateKey(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white min-h-[80px] font-mono text-xs" placeholder="-----BEGIN PGP PRIVATE KEY BLOCK-----..." />
+                  <Label className="text-muted-foreground">Private Key (optional, armored)</Label>
+                  <Textarea value={importPrivateKey} onChange={(e) => setImportPrivateKey(e.target.value)} className="bg-muted border-border text-foreground min-h-[80px] font-mono text-xs" placeholder="-----BEGIN PGP PRIVATE KEY BLOCK-----..." />
                 </div>
                 {importPrivateKey && (
                   <div>
-                    <Label className="text-zinc-300">Passphrase (if key is encrypted)</Label>
-                    <Input type="password" value={importPassphrase} onChange={(e) => setImportPassphrase(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white" />
+                    <Label className="text-muted-foreground">Passphrase (if key is encrypted)</Label>
+                    <Input type="password" value={importPassphrase} onChange={(e) => setImportPassphrase(e.target.value)} className="bg-muted border-border text-foreground" />
                   </div>
                 )}
               </div>
@@ -399,37 +399,37 @@ const GpgKeys = () => {
                 <Plus className="w-4 h-4 mr-2" /> Generate Key
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-zinc-800 border-zinc-700">
+            <DialogContent className="bg-muted border-border">
               <DialogHeader>
-                <DialogTitle className="text-white">Generate GPG Key</DialogTitle>
-                <DialogDescription className="text-zinc-400">Generate a new GPG key pair</DialogDescription>
+                <DialogTitle className="text-foreground">Generate GPG Key</DialogTitle>
+                <DialogDescription className="text-muted-foreground">Generate a new GPG key pair</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-zinc-300">Name</Label>
-                  <Input value={genForm.name} onChange={(e) => setGenForm((f) => ({ ...f, name: e.target.value }))} className="bg-zinc-700 border-zinc-600 text-white" placeholder="My Signing Key" />
+                  <Label className="text-muted-foreground">Name</Label>
+                  <Input value={genForm.name} onChange={(e) => setGenForm((f) => ({ ...f, name: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="My Signing Key" />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Email</Label>
-                  <Input value={genForm.email} onChange={(e) => setGenForm((f) => ({ ...f, email: e.target.value }))} className="bg-zinc-700 border-zinc-600 text-white" placeholder="dev@example.com" />
+                  <Label className="text-muted-foreground">Email</Label>
+                  <Input value={genForm.email} onChange={(e) => setGenForm((f) => ({ ...f, email: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="dev@example.com" />
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Algorithm</Label>
+                  <Label className="text-muted-foreground">Algorithm</Label>
                   <Select value={genForm.algorithm} onValueChange={(v) => setGenForm((f) => ({ ...f, algorithm: v as GenerateGpgKeyRequest.algorithm }))}>
-                    <SelectTrigger className="bg-zinc-700 border-zinc-600 text-white">
+                    <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-700 border-zinc-600">
-                      <SelectItem value="ecc-curve25519" className="text-white">ECC Curve25519</SelectItem>
-                      <SelectItem value="ecc-p256" className="text-white">ECC P-256</SelectItem>
-                      <SelectItem value="ecc-p384" className="text-white">ECC P-384</SelectItem>
-                      <SelectItem value="rsa" className="text-white">RSA 4096</SelectItem>
+                    <SelectContent className="bg-muted border-border">
+                      <SelectItem value="ecc-curve25519" className="text-foreground">ECC Curve25519</SelectItem>
+                      <SelectItem value="ecc-p256" className="text-foreground">ECC P-256</SelectItem>
+                      <SelectItem value="ecc-p384" className="text-foreground">ECC P-384</SelectItem>
+                      <SelectItem value="rsa" className="text-foreground">RSA 4096</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-zinc-300">Expires in (days)</Label>
-                  <Input type="number" value={genForm.expires_in_days || ""} onChange={(e) => setGenForm((f) => ({ ...f, expires_in_days: parseInt(e.target.value) || undefined }))} className="bg-zinc-700 border-zinc-600 text-white" placeholder="365" />
+                  <Label className="text-muted-foreground">Expires in (days)</Label>
+                  <Input type="number" value={genForm.expires_in_days || ""} onChange={(e) => setGenForm((f) => ({ ...f, expires_in_days: parseInt(e.target.value) || undefined }))} className="bg-muted border-border text-foreground" placeholder="365" />
                 </div>
               </div>
               <DialogFooter>
@@ -444,9 +444,9 @@ const GpgKeys = () => {
       </div>
 
       {/* Keys Table */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <KeyRound className="w-5 h-5 mr-2 text-emerald-400" />
             Keys
             {gpgKeys && gpgKeys.length > 0 && (
@@ -457,46 +457,46 @@ const GpgKeys = () => {
         <CardContent>
           {!gpgKeys || gpgKeys.length === 0 ? (
             <div className="text-center py-12">
-              <KeyRound className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-              <p className="text-zinc-400">No GPG keys yet</p>
-              <p className="text-zinc-500 text-sm mt-1">Generate or import a key to get started</p>
+              <KeyRound className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No GPG keys yet</p>
+              <p className="text-tertiary text-sm mt-1">Generate or import a key to get started</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Name</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Fingerprint</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Algorithm</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Usage</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Status</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Created</th>
-                    <th className="text-right text-zinc-400 text-sm font-medium py-3 px-4">Actions</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Name</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Fingerprint</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Algorithm</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Usage</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Status</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Created</th>
+                    <th className="text-right text-muted-foreground text-sm font-medium py-3 px-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {gpgKeys.map((key) => (
-                    <tr key={key.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                    <tr key={key.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="text-white font-medium">{key.name}</div>
-                        <div className="text-zinc-500 text-xs">{key.email}</div>
+                        <div className="text-foreground font-medium">{key.name}</div>
+                        <div className="text-tertiary text-xs">{key.email}</div>
                       </td>
                       <td className="py-3 px-4">
-                        <code className="text-zinc-300 text-xs bg-zinc-900 px-2 py-1 rounded font-mono">
+                        <code className="text-muted-foreground text-xs bg-card px-2 py-1 rounded font-mono">
                           {truncateFingerprint(key.fingerprint)}
                         </code>
                       </td>
-                      <td className="py-3 px-4 text-zinc-300 text-sm">{key.algorithm}</td>
+                      <td className="py-3 px-4 text-muted-foreground text-sm">{key.algorithm}</td>
                       <td className="py-3 px-4">
                         <div className="flex gap-1">
                           {(key.usage_flags || []).map((flag) => (
-                            <Badge key={flag} variant="outline" className="text-xs border-zinc-600 text-zinc-400">{flag}</Badge>
+                            <Badge key={flag} variant="outline" className="text-xs border-border text-muted-foreground">{flag}</Badge>
                           ))}
                         </div>
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(key)}</td>
-                      <td className="py-3 px-4 text-zinc-400 text-sm">
+                      <td className="py-3 px-4 text-muted-foreground text-sm">
                         {new Date(key.created_at).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
@@ -504,7 +504,7 @@ const GpgKeys = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-zinc-400 hover:text-white"
+                            className="text-muted-foreground hover:text-foreground"
                             onClick={() => {
                               navigator.clipboard.writeText(key.fingerprint);
                               toast.success("Fingerprint copied!");

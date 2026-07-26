@@ -14,7 +14,7 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
         <div className="mx-auto mb-8 w-24 h-24 relative">
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rotate-6" />
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 -rotate-6" />
-          <div className="relative w-24 h-24 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+          <div className="relative w-24 h-24 rounded-2xl bg-card border border-border flex items-center justify-center">
             <svg
               className="w-10 h-10 text-emerald-400"
               fill="none"
@@ -31,10 +31,10 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
           </div>
         </div>
 
-        <h3 className="text-lg font-semibold text-zinc-100 mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
           No projects yet
         </h3>
-        <p className="text-sm text-zinc-400 mb-8 max-w-sm mx-auto">
+        <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
           Create your first project to start managing environment variables and secrets.
         </p>
 
@@ -42,7 +42,7 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
           <div className="space-y-6">
             <Button
               onClick={onCreateProject}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6"
+              className="bg-emerald-500 hover:bg-emerald-600 text-foreground px-6"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Project
@@ -57,9 +57,9 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
               ].map((step, i) => (
                 <div
                   key={step}
-                  className="flex items-center space-x-2 text-xs text-zinc-500"
+                  className="flex items-center space-x-2 text-xs text-tertiary"
                 >
-                  <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-400 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-medium flex-shrink-0">
                     {i + 1}
                   </span>
                   <span>{step}</span>
