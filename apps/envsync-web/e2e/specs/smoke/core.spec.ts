@@ -49,6 +49,6 @@ test.describe("UI smoke", () => {
 		const seededApp = await getAppByName(page, "Core Platform");
 		expect(seededApp).toBeTruthy();
 		await page.goto(`/applications/${seededApp!.id}`, { waitUntil: "domcontentloaded" });
-		await expect(page.getByRole("heading", { name: "Core Platform" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "Core Platform" })).toBeVisible();
 	});
 });

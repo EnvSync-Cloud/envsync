@@ -389,7 +389,7 @@ export async function createVariable(page: Page, appId: string, envTypeName: str
 
 export async function updateVariable(page: Page, appId: string, envTypeId: string, key: string, nextValue: string) {
 	await openRowActions(page, key);
-	await page.getByRole("menuitem", { name: "Edit Variable" }).click();
+	await page.getByRole("menuitem", { name: "Full Edit" }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator("#edit-var-key")).toBeDisabled();
@@ -473,7 +473,7 @@ export async function createSecret(page: Page, appId: string, envTypeName: strin
 
 export async function updateSecret(page: Page, appId: string, envTypeId: string, key: string, nextValue: string) {
 	await openRowActions(page, key);
-	await page.getByRole("menuitem", { name: /Edit Secret|Edit Variable|Edit/i }).first().click();
+	await page.getByRole("menuitem", { name: "Full Edit" }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator("#edit-var-key")).toBeDisabled();
