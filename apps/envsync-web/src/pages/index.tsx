@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { RouteChangeTracker } from "@/telemetry";
 import { getWebRoutes } from "@/modules/load-modules";
 
@@ -19,7 +19,7 @@ function RouteFallback() {
 }
 
 function RouteElement({ route }: { route: WebRouteDefinition }) {
-  const Component = lazy(route.loadComponent);
+  const Component = useMemo(() => lazy(route.loadComponent), [route.loadComponent]);
 
   return (
     <Suspense fallback={<RouteFallback />}>
