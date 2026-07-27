@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 // Version synced from package.json — update manually on release.
-const VERSION = "v0.10.4";
+export const VERSION = "v0.11.0";
 
 const linkClasses =
   "rounded-sm text-sm text-muted-foreground transition-colors duration-200 " +

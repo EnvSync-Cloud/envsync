@@ -4,6 +4,7 @@ import { DotTexture } from "@/components/primitives/DotTexture"
 import { Terminal, type TerminalLine } from "@/components/primitives/Terminal"
 import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
+import { VERSION } from "./Footer"
 
 const terminalLines: TerminalLine[] = [
   { type: "cmd", text: "envsync pull --env staging" },
@@ -34,7 +35,7 @@ const NewHero = () => {
             <span className="font-mono text-mono-label" aria-hidden="true">
               ·
             </span>
-            <span className="font-mono text-mono-label">v0.10.4</span>
+            <span className="font-mono text-mono-label">{VERSION}</span>
           </div>
 
           {/* Headline */}
