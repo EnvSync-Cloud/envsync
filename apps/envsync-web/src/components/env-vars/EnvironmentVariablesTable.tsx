@@ -697,7 +697,7 @@ export const EnvironmentVariablesTable = ({
                                 )}
                                 <DropdownMenuItem
                                   className="cursor-pointer"
-                                  onSelect={() => onEdit(variable)}
+                                  onClick={() => onEdit(variable)}
                                 >
                                   <Edit className="w-4 h-4 mr-2" />
                                   Full Edit
