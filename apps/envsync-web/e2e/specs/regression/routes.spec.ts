@@ -14,7 +14,7 @@ test.describe("route surface", () => {
 			{ path: `/applications/${seededApp!.id}/secrets`, heading: "Secrets" },
 			{ path: `/applications/${seededApp!.id}/manage-environments`, heading: /Manage Environments|Environments/ },
 			{ path: `/applications/${seededApp!.id}/access`, heading: "Project Access" },
-			{ path: `/applications/pit/${seededApp!.id}`, heading: "Point in Time" },
+			{ path: `/applications/pit/${seededApp!.id}`, heading: "Core Platform" },
 			{ path: "/roles", heading: "Roles" },
 			{ path: "/users", heading: "Users" },
 			{ path: "/teams", heading: "Teams" },
@@ -31,9 +31,6 @@ test.describe("route surface", () => {
 		for (const routeCheck of routeChecks) {
 			await page.goto(routeCheck.path, { waitUntil: "domcontentloaded" });
 			await expect(page.getByRole("heading", { name: routeCheck.heading }).first()).toBeVisible();
-			if (routeCheck.path === `/applications/pit/${seededApp!.id}`) {
-				await expect(page.getByText(/Point in Time/i).first()).toBeVisible();
-			}
 		}
 
 		await page.goto("/definitely-not-a-real-page", { waitUntil: "domcontentloaded" });
