@@ -121,7 +121,7 @@ test.describe("collaboration protected environment journey", () => {
 		const memberPage = await memberContext.newPage();
 		try {
 			await memberPage.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
-			await expect(memberPage.getByRole("heading", { name: state.project.name })).toBeVisible();
+			await expect(memberPage.getByRole("link", { name: state.project.name })).toBeVisible();
 
 			const appDetail = await getAppDetail(memberPage, project.appId);
 			const productionEnv = appDetail.env_types?.find((env) => env.name.toLowerCase() === "production");

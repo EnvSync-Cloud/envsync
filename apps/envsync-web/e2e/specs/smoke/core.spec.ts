@@ -27,7 +27,7 @@ test.describe("UI smoke", () => {
 		await deleteVariable(page, appId, variableEnvTypeId, variableKey);
 
 		await page.goto(`/applications/${appId}/secrets`, { waitUntil: "domcontentloaded" });
-		await expect(page.getByRole("heading", { name: projectName })).toBeVisible();
+		await expect(page.getByRole("link", { name: projectName })).toBeVisible();
 		const secretKey = makeName("UI_SMOKE_SECRET");
 		const secretValue = makeName("SECRET");
 		const secretEnvTypeId = await createSecret(page, appId, "Development", secretKey, secretValue);

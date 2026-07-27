@@ -31,7 +31,7 @@ test.describe("nightly: destructive recovery", () => {
 		await rollbackCurrentPit(page);
 
 		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
-		await expect(page.getByRole("heading", { name: /UI_NIGHTLY_APP/i }).first()).toBeVisible();
+		await expect(page.getByRole("link", { name: /UI_NIGHTLY_APP/i }).first()).toBeVisible();
 	});
 });
 
