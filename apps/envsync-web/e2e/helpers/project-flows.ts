@@ -13,9 +13,9 @@ function expectObjectBody(body: JsonValue | null, label: string): asserts body i
 async function openRowActions(page: Page, key: string) {
 	const row = page.locator("tr").filter({ hasText: key }).first();
 	await row.waitFor({ state: "visible" });
-	const actionButton = row.getByRole("button").last();
+	const actionButton = row.getByRole("button", { name: "Row actions" });
 	await actionButton.scrollIntoViewIfNeeded();
-	await actionButton.click({ force: true });
+	await actionButton.click();
 	return row;
 }
 
