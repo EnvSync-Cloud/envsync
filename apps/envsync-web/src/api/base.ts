@@ -140,10 +140,6 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
       body,
     );
 
-    if (isReloginError(err)) {
-      void redirectToLogin();
-    }
-
     throw err;
   }
 
