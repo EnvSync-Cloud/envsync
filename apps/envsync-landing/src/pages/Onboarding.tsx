@@ -51,7 +51,7 @@ const Onboarding = () => {
       <Header />
       <main className="pt-16" id="onboarding-form">
         <section className="container mx-auto border-x border-border p-0">
-          <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
+          <div className="relative overflow-hidden border border-border bg-card p-6 text-left md:p-8 md:py-32">
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 opacity-45"
@@ -74,9 +74,9 @@ const Onboarding = () => {
         </section>
 
         <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="w-full border border-border bg-[hsl(var(--surface-1))] ">
+          <div className="w-full border border-border bg-card ">
             <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
-              <div className="border border-border bg-[hsl(var(--surface-2))] p-6 md:p-8">
+              <div className="border border-border bg-muted p-6 md:p-8">
                 {!createOrgInviteMutation.isSuccess ? (
                   <div>
                     <div className="mb-6">
@@ -165,16 +165,16 @@ const Onboarding = () => {
                 )}
               </div>
 
-              <div className="-mt-px border border-border bg-[hsl(var(--surface-1))] p-6 lg:-mt-0 lg:-ml-px md:p-8">
+              <div className="-mt-px border border-border bg-card p-6 lg:-mt-0 lg:-ml-px md:p-8">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary">What happens next</p>
                 <div className="space-y-3 text-sm md:text-base">
-                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                  <div className="border border-border bg-muted p-3 text-muted-foreground">
                     1. Receive your onboarding invite via email.
                   </div>
-                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                  <div className="border border-border bg-muted p-3 text-muted-foreground">
                     2. Create your organization and first project.
                   </div>
-                  <div className="border border-border bg-[hsl(var(--surface-2))] p-3 text-muted-foreground">
+                  <div className="border border-border bg-muted p-3 text-muted-foreground">
                     3. Sync your first environment using the CLI.
                   </div>
                 </div>
@@ -184,7 +184,7 @@ const Onboarding = () => {
         </section>
 
         <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
+          <div className="relative overflow-hidden border border-border bg-card p-6 text-left md:p-8">
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0 opacity-45"
@@ -204,8 +204,8 @@ const Onboarding = () => {
 
           <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
             {features.map((feature, index) => (
-              <div key={index} className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-7 text-left">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+              <div key={index} className="-ml-px -mt-px border border-border bg-card p-7 text-left">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center border border-border bg-muted">
                   <feature.icon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="mb-3 text-xl font-bold text-foreground">{feature.title}</h3>

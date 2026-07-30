@@ -19,7 +19,7 @@ const Callback = () => {
           alt="EnvSync"
           className="w-14 h-14 mx-auto animate-pulse"
         />
-        <p className="text-sm text-zinc-400">{message}</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
       </div>
     </div>
   );

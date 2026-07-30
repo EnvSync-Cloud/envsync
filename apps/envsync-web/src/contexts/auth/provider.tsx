@@ -19,8 +19,8 @@ export const AuthContextProvider = ({
     createWorkspace,
     isCreatingWorkspace,
   } = useAuth();
-  const registeredScopes = getRegisteredScopeIds();
-  const scopeRules = getWebScopeRuleMap();
+  const registeredScopes = useMemo(() => getRegisteredScopeIds(), []);
+  const scopeRules = useMemo(() => getWebScopeRuleMap(), []);
 
   const contextValue = useMemo(() => {
     const memberships = user?.memberships ?? [];

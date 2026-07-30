@@ -18,18 +18,18 @@ export const AccountSettingsCard = ({
   userData,
 }: AccountSettingsCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
       <CardHeader>
         <div className="flex items-center space-x-2">
-          <Bell className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
-          <CardTitle className="text-white">Account Settings</CardTitle>
+          <Bell className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
+          <CardTitle className="text-foreground">Account Settings</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-white">Email Notifications</h4>
-            <p className="text-sm text-zinc-400">
+            <h4 className="font-medium text-foreground">Email Notifications</h4>
+            <p className="text-sm text-muted-foreground">
               Receive updates and alerts via email
             </p>
           </div>
@@ -40,20 +40,20 @@ export const AccountSettingsCard = ({
               checked={emailNotifications}
               onChange={(e) => setEmailNotifications(e.target.checked)}
             />
-            <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
           </label>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-white">Change Password</h4>
-            <p className="text-sm text-zinc-400">
+            <h4 className="font-medium text-foreground">Change Password</h4>
+            <p className="text-sm text-muted-foreground">
               Update your account password for security
             </p>
           </div>
           <Button
             variant="outline"
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             onClick={onPasswordReset}
             disabled={isPasswordResetLoading}
           >
@@ -63,11 +63,11 @@ export const AccountSettingsCard = ({
         </div>
 
         {/* Account Stats */}
-        <div className="pt-4 border-t border-zinc-700">
-          <h4 className="font-medium text-white mb-3">Account Information</h4>
+        <div className="pt-4 border-t border-border">
+          <h4 className="font-medium text-foreground mb-3">Account Information</h4>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-zinc-900 p-3 rounded-lg">
-              <div className="text-lg font-bold text-white">
+            <div className="bg-card p-3 rounded-lg">
+              <div className="text-lg font-bold text-foreground">
                 {userData?.created_at
                   ? Math.floor(
                       (Date.now() - new Date(userData.created_at).getTime()) /
@@ -75,13 +75,13 @@ export const AccountSettingsCard = ({
                     )
                   : 0}
               </div>
-              <div className="text-xs text-zinc-400">Days Active</div>
+              <div className="text-xs text-muted-foreground">Days Active</div>
             </div>
-            <div className="bg-zinc-900 p-3 rounded-lg">
-              <div className="text-lg font-bold text-white">
+            <div className="bg-card p-3 rounded-lg">
+              <div className="text-lg font-bold text-foreground">
                 {userData?.id ? userData.id.substring(0, 8) : "N/A"}
               </div>
-              <div className="text-xs text-zinc-400">User ID</div>
+              <div className="text-xs text-muted-foreground">User ID</div>
             </div>
           </div>
         </div>

@@ -8,14 +8,14 @@ interface ApplicationStatsProps {
 export const ApplicationStats = ({ statistics }: ApplicationStatsProps) => {
   return (
     <div className="flex items-center space-x-2 mt-2">
-      <Badge variant="secondary" className="bg-zinc-800 text-zinc-400 text-xs">
+      <Badge variant="secondary" className="text-xs">
         {statistics.total} Total
       </Badge>
       <Badge variant="secondary" className="bg-green-500/10 text-green-400 border-green-500/20 text-xs">
         {statistics.active} Active
       </Badge>
       {statistics.inactive > 0 && (
-        <Badge variant="secondary" className="bg-zinc-800 text-zinc-500 text-xs">
+        <Badge variant="secondary" className="text-xs">
           {statistics.inactive} Inactive
         </Badge>
       )}

@@ -189,10 +189,10 @@ export const Users = () => {
         secondaryNav={
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="h-auto bg-transparent p-0">
-              <TabsTrigger value="members" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-white">
+              <TabsTrigger value="members" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-primary-foreground">
                 <span data-testid="users-tab-members">Members</span>
               </TabsTrigger>
-              <TabsTrigger value="invitations" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-white">
+              <TabsTrigger value="invitations" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-primary-foreground">
                 <span data-testid="users-tab-invitations">Invitations</span>
               </TabsTrigger>
             </TabsList>

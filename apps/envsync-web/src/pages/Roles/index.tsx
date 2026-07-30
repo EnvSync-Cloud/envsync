@@ -23,8 +23,8 @@ export const Roles = () => {
             <ShieldAlert className="size-5 text-emerald-400" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-100 tracking-tight">Roles</h1>
-            <p className="text-sm text-zinc-400 mt-0.5">
+            <h1 className="text-xl font-semibold text-foreground tracking-tight">Roles</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Manage roles and assign permissions to control what users can access
               across the platform.
             </p>
@@ -32,9 +32,9 @@ export const Roles = () => {
         </div>
         <RoleEditForm />
       </div>
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl w-full mt-2">
+      <Card className="bg-card text-card-foreground border-border shadow-xl rounded-xl w-full mt-2">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-3">
+          <CardTitle className="text-foreground flex items-center gap-3">
             <ShieldAlert className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
             Roles
             <Count size="xl" variant="subtle" count={roles?.length} />
@@ -47,7 +47,7 @@ export const Roles = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
+                  <tr className="border-b border-border">
                     {[
                       "Name",
                       "Access Level",
@@ -57,12 +57,12 @@ export const Roles = () => {
                     ].map((header) => (
                       <th
                         key={header}
-                        className="text-left py-3 px-4 text-zinc-400 font-medium"
+                        className="text-left py-3 px-4 text-muted-foreground font-medium"
                       >
                         {header}
                       </th>
                     ))}
-                    <th className="text-right py-3 px-4 text-zinc-400 font-medium">
+                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">
                       Actions
                     </th>
                   </tr>

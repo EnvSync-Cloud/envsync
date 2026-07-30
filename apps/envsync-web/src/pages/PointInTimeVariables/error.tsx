@@ -21,7 +21,7 @@ export const PointInTimeErrorPage = ({
       <Button
         onClick={onBack}
         variant="outline"
-        className="text-white border-zinc-700 hover:bg-zinc-800"
+        className="text-foreground border-border hover:bg-muted"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Point In Time

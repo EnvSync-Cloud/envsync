@@ -39,6 +39,14 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface EnvironmentType {
   id: string;
@@ -318,7 +326,7 @@ export const ManageEnvironment = () => {
   const renderEnvironmentForm = (mode: "create" | "edit") => (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor={`${mode}-env-name`} className="text-zinc-200">
+        <Label htmlFor={`${mode}-env-name`} className="text-foreground">
           Name
         </Label>
         <Input
@@ -326,7 +334,7 @@ export const ManageEnvironment = () => {
           value={formData.name}
           onChange={(event) => handleInputChange("name", event.target.value)}
           placeholder="e.g. Production"
-          className="border-zinc-700 bg-zinc-900 text-zinc-100"
+          className="border-border bg-card text-foreground"
         />
         {formErrors.name && (
           <p className="text-xs text-red-400">{formErrors.name}</p>
@@ -334,7 +342,7 @@ export const ManageEnvironment = () => {
       </div>
 
       <div className="space-y-3">
-        <Label className="text-zinc-200">Color</Label>
+        <Label className="text-foreground">Color</Label>
         <div className="flex flex-wrap gap-2">
           {PRESET_COLORS.map((color) => (
             <button
@@ -356,11 +364,11 @@ export const ManageEnvironment = () => {
         )}
       </div>
 
-      <div className="space-y-4 rounded-lg border border-zinc-800 p-4">
+      <div className="space-y-4 rounded-lg border border-border p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-zinc-200">Default</p>
-            <p className="text-xs text-zinc-500">
+            <p className="text-sm font-medium text-foreground">Default</p>
+            <p className="text-xs text-tertiary">
               New workflows land here first
             </p>
           </div>
@@ -371,11 +379,11 @@ export const ManageEnvironment = () => {
             }
           />
         </div>
-        <div className="border-t border-zinc-800" />
+        <div className="border-t border-border" />
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-zinc-200">Protected</p>
-            <p className="text-xs text-zinc-500">
+            <p className="text-sm font-medium text-foreground">Protected</p>
+            <p className="text-xs text-tertiary">
               Changes require review before apply
             </p>
           </div>
@@ -395,8 +403,8 @@ export const ManageEnvironment = () => {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="size-8 animate-spin rounded-full border-2 border-zinc-800 border-t-emerald-500" />
-          <p className="text-sm text-zinc-500">Loading...</p>
+          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-emerald-500" />
+          <p className="text-sm text-tertiary">Loading...</p>
         </div>
       </div>
     );
@@ -408,17 +416,17 @@ export const ManageEnvironment = () => {
         <div className="space-y-4 text-center">
           <AlertTriangle className="mx-auto h-10 w-10 text-zinc-600" />
           <div>
-            <h3 className="text-lg font-medium text-zinc-200">
+            <h3 className="text-lg font-medium text-foreground">
               Failed to load
             </h3>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-tertiary">
               Project not found or access denied.
             </p>
             <div className="mt-4 flex justify-center gap-2">
               <Button
                 onClick={() => refetch()}
                 size="sm"
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                className="bg-emerald-600 text-foreground hover:bg-emerald-700"
               >
                 Retry
               </Button>
@@ -426,7 +434,7 @@ export const ManageEnvironment = () => {
                 onClick={handleBack}
                 size="sm"
                 variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                 Back
@@ -444,23 +452,11 @@ export const ManageEnvironment = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={handleBack}
-            variant="ghost"
-            size="sm"
-            className="text-zinc-400 hover:text-zinc-200"
-          >
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            {project.name}
-          </Button>
-          <span className="text-zinc-600">/</span>
-          <h1 className="text-lg font-medium text-zinc-100">Environments</h1>
-        </div>
+        <h1 className="text-lg font-medium text-foreground">Environments</h1>
         <Button
           onClick={openCreateSheet}
           size="sm"
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-emerald-600 text-foreground hover:bg-emerald-700"
         >
           <Plus className="mr-1.5 h-4 w-4" />
           Add Environment
@@ -468,135 +464,157 @@ export const ManageEnvironment = () => {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-sm text-zinc-400">
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span><span data-testid="manage-env-stat-types">{environmentTypes.length}</span> environment{environmentTypes.length !== 1 ? 's' : ''}</span>
         <span><span data-testid="manage-env-stat-protected">{environmentTypes.filter(e => e.is_protected).length}</span> protected</span>
       </div>
 
       {/* Environment list */}
-      <div className="border border-zinc-800 rounded-xl overflow-hidden">
-        {/* Table header */}
-        <div className="grid grid-cols-[1fr_120px_120px_100px_80px] gap-4 px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Name</span>
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Variables</span>
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Policy</span>
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Status</span>
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider" />
-        </div>
-
-        {/* Rows */}
-        {environmentTypes.map((envType) => (
-          <div
-            key={envType.id}
-            data-testid={`env-type-card-${envType.id}`}
-            className="grid grid-cols-[1fr_120px_120px_100px_80px] gap-4 px-4 py-3 border-b border-zinc-800/50 last:border-0 hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className="size-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: envType.color }}
-              />
-              <span className="text-sm text-zinc-200 truncate font-medium">
-                {envType.name}
-              </span>
-            </div>
-
-            <div className="flex items-center">
-              <span className="text-sm text-zinc-300">
-                {envType.variable_count || 0}
-              </span>
-            </div>
-
-            <div className="flex items-center">
-              {envType.is_protected ? (
-                <span className="text-xs text-amber-400">Reviewed</span>
-              ) : (
-                <span className="text-xs text-zinc-500">Direct</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              {envType.is_default && (
-                <Badge
-                  variant="secondary"
-                  className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0"
-                >
-                  Default
-                </Badge>
-              )}
-              {envType.is_protected && (
-                <Badge
-                  variant="secondary"
-                  data-testid={`env-type-protected-badge-${envType.id}`}
-                  className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0"
-                >
-                  Protected
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                onClick={() => openEditSheet(envType)}
-                variant="ghost"
-                size="icon"
-                data-testid={`env-type-edit-${envType.id}`}
-                className="size-7 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+      <div className="border border-border rounded-xl overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead>Name</TableHead>
+              <TableHead className="w-[120px]">Variables</TableHead>
+              <TableHead className="w-[120px]">Policy</TableHead>
+              <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[120px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {environmentTypes.map((envType) => (
+              <TableRow
+                key={envType.id}
+                data-testid={`env-type-card-${envType.id}`}
+                className="border-border"
               >
-                <Edit3 className="size-3.5" />
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedEnvironment(envType);
-                  setShowDeleteDialog(true);
-                }}
-                variant="ghost"
-                size="icon"
-                data-testid={`env-type-delete-${envType.id}`}
-                className="size-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-              <Button
-                onClick={() => navigate(`${appDetailPath(appId ?? "")}?env=${envType.id}&selected=${envType.id}`)}
-                variant="ghost"
-                size="icon"
-                className="size-7 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
-              >
-                <ChevronRight className="size-3.5" />
-              </Button>
-            </div>
-          </div>
-        ))}
+                <TableCell>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="size-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: envType.color }}
+                    />
+                    <span className="text-sm text-foreground truncate font-medium">
+                      {envType.name}
+                    </span>
+                  </div>
+                </TableCell>
 
-        {environmentTypes.length === 0 && (
-          <div className="px-4 py-12 text-center">
-            <Layers3 className="mx-auto h-8 w-8 text-zinc-700 mb-3" />
-            <p className="text-sm text-zinc-500">No environments yet</p>
-            <Button
-              onClick={openCreateSheet}
-              size="sm"
-              variant="outline"
-              className="mt-4 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Create your first environment
-            </Button>
-          </div>
-        )}
+                <TableCell>
+                  <span className="text-sm text-muted-foreground">
+                    {envType.variable_count || 0}
+                  </span>
+                </TableCell>
+
+                <TableCell>
+                  {envType.is_protected ? (
+                    <span className="text-xs text-amber-400">Reviewed</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Direct</span>
+                  )}
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    {envType.is_default && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0"
+                      >
+                        Default
+                      </Badge>
+                    )}
+                    {envType.is_protected && (
+                      <Badge
+                        variant="secondary"
+                        data-testid={`env-type-protected-badge-${envType.id}`}
+                        className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] px-1.5 py-0"
+                      >
+                        Protected
+                      </Badge>
+                    )}
+                    {!envType.is_default && !envType.is_protected && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        Standard
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      onClick={() => openEditSheet(envType)}
+                      variant="ghost"
+                      size="icon"
+                      data-testid={`env-type-edit-${envType.id}`}
+                      className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      aria-label={`Edit ${envType.name}`}
+                    >
+                      <Edit3 className="size-3.5" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedEnvironment(envType);
+                        setShowDeleteDialog(true);
+                      }}
+                      variant="ghost"
+                      size="icon"
+                      data-testid={`env-type-delete-${envType.id}`}
+                      className="size-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                      aria-label={`Delete ${envType.name}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                    <Button
+                      onClick={() => navigate(`${appDetailPath(appId ?? "")}?env=${envType.id}&selected=${envType.id}`)}
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      aria-label={`Go to ${envType.name}`}
+                    >
+                      <ChevronRight className="size-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {environmentTypes.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12">
+                  <Layers3 className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">No environments yet</p>
+                  <Button
+                    onClick={openCreateSheet}
+                    size="sm"
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    Create your first environment
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Create Sheet */}
       <Sheet open={showCreateSheet} onOpenChange={setShowCreateSheet}>
         <SheetContent
           side="right"
-          className="w-full border-zinc-800 bg-zinc-950 sm:max-w-md"
+          className="w-full border-border bg-card sm:max-w-md"
         >
           <SheetHeader>
-            <SheetTitle className="text-zinc-100">
+            <SheetTitle className="text-foreground">
               Add Environment
             </SheetTitle>
-            <SheetDescription className="text-zinc-500">
+            <SheetDescription className="text-tertiary">
               Create a new environment lane for {project.name}.
             </SheetDescription>
           </SheetHeader>
@@ -605,14 +623,14 @@ export const ManageEnvironment = () => {
             <Button
               onClick={() => setShowCreateSheet(false)}
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreate}
               disabled={createEnvironmentType.isPending}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {createEnvironmentType.isPending ? "Creating..." : "Create"}
             </Button>
@@ -624,11 +642,11 @@ export const ManageEnvironment = () => {
       <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
         <SheetContent
           side="right"
-          className="w-full border-zinc-800 bg-zinc-950 sm:max-w-md"
+          className="w-full border-border bg-card sm:max-w-md"
         >
           <SheetHeader>
-            <SheetTitle className="text-zinc-100">Edit Environment</SheetTitle>
-            <SheetDescription className="text-zinc-500">
+            <SheetTitle className="text-foreground">Edit Environment</SheetTitle>
+            <SheetDescription className="text-tertiary">
               Update {selectedEnvironment?.name} settings.
             </SheetDescription>
           </SheetHeader>
@@ -637,14 +655,14 @@ export const ManageEnvironment = () => {
             <Button
               onClick={closeEditSheet}
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdate}
               disabled={updateEnvironmentType.isPending}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {updateEnvironmentType.isPending ? "Saving..." : "Save"}
             </Button>
@@ -654,13 +672,13 @@ export const ManageEnvironment = () => {
 
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="border-zinc-800 bg-zinc-950">
+        <DialogContent className="border-border bg-card">
           <DialogHeader>
-            <DialogTitle className="text-zinc-100">
+            <DialogTitle className="text-foreground">
               Delete Environment
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">
-              Type <span className="text-zinc-300 font-medium">{selectedEnvironment?.name}</span> to confirm.
+            <DialogDescription className="text-tertiary">
+              Type <span className="text-muted-foreground font-medium">{selectedEnvironment?.name}</span> to confirm.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -672,14 +690,14 @@ export const ManageEnvironment = () => {
               value={deleteConfirmText}
               onChange={(event) => setDeleteConfirmText(event.target.value)}
               placeholder={selectedEnvironment?.name}
-              className="border-zinc-700 bg-zinc-900 text-zinc-100"
+              className="border-border bg-card text-foreground"
             />
           </div>
           <DialogFooter>
             <Button
               onClick={() => setShowDeleteDialog(false)}
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
@@ -689,7 +707,7 @@ export const ManageEnvironment = () => {
                 deleteConfirmText !== selectedEnvironment?.name ||
                 deleteEnvironmentType.isPending
               }
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-600 text-foreground hover:bg-red-700"
             >
               {deleteEnvironmentType.isPending ? "Deleting..." : "Delete"}
             </Button>

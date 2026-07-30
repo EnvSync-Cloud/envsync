@@ -26,13 +26,13 @@ export const PasswordResetModal = ({
 }: PasswordResetModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-800 border-zinc-700">
+      <DialogContent className="bg-muted border-border">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <Key className="w-5 h-5 text-emerald-500 mr-2" />
             Reset Password
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             A password reset link will be sent to your email address. You'll
             need to check your email and follow the instructions to set a new
             password.
@@ -62,14 +62,14 @@ export const PasswordResetModal = ({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             onClick={onResetPassword}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isLoading}
           >
             {isLoading ? (

@@ -1,8 +1,6 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-	ArrowLeft,
 	Clock3,
-	Database,
 	RefreshCw,
 	Shield,
 } from "lucide-react";
@@ -30,7 +28,6 @@ interface PointInTimeHeaderProps {
 	selectedEnvironmentId?: string;
 	isRefetching: boolean;
 	enableSecrets?: boolean;
-	onBack: () => void;
 	onRefresh: () => void;
 	onEnvironmentChange?: (environmentId: string) => void;
 }
@@ -41,7 +38,6 @@ export const PointInTimeHeader = ({
 	selectedEnvironmentId,
 	isRefetching,
 	enableSecrets,
-	onBack,
 	onRefresh,
 	onEnvironmentChange,
 }: PointInTimeHeaderProps) => {
@@ -63,40 +59,18 @@ export const PointInTimeHeader = ({
 
 	return (
 		<div className="space-y-4">
-			<Card className="border-zinc-800 bg-zinc-900">
+			<Card className="border-border bg-card">
 				<CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-start md:justify-between">
 					<div className="space-y-3">
-						<div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={onBack}
-								className="h-8 gap-2 px-2 text-zinc-300 hover:bg-zinc-800 hover:text-white"
-							>
-								<ArrowLeft className="size-4" />
-								Back
-							</Button>
-							<span>/</span>
-							<span className="inline-flex items-center gap-2 text-zinc-300">
-								<Database className="size-4 text-emerald-400" />
-								{projectName}
-							</span>
-							<span>/</span>
-							<span className="inline-flex items-center gap-2 text-white">
-								<Clock3 className="size-4 text-emerald-400" />
-								Point in Time
-							</span>
-						</div>
-
 						<div className="space-y-1">
-							<h1 className="text-2xl font-semibold text-white">{projectName}</h1>
-							<p className="text-sm text-zinc-400">
+              <h1 className="text-2xl font-medium text-foreground">{projectName}</h1>
+							<p className="text-sm text-muted-foreground">
 								Review snapshot history, compare changes, and restore environment state.
 							</p>
 						</div>
 
 						{enableSecrets ? (
-							<div className="inline-flex items-center rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+							<div className="inline-flex items-center rounded-lg border border-border bg-card p-1">
 								<Button
 									variant="ghost"
 									size="sm"
@@ -104,8 +78,8 @@ export const PointInTimeHeader = ({
 									className={cn(
 										"h-8 gap-2 rounded-md px-3 text-sm",
 										!isSecretsPage
-											? "bg-zinc-800 text-white hover:bg-zinc-800"
-											: "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+											? "bg-muted text-foreground hover:bg-muted"
+											: "text-muted-foreground hover:bg-card hover:text-foreground"
 									)}
 								>
 									<Clock3 className="size-4 text-emerald-400" />
@@ -118,8 +92,8 @@ export const PointInTimeHeader = ({
 									className={cn(
 										"h-8 gap-2 rounded-md px-3 text-sm",
 										isSecretsPage
-											? "bg-zinc-800 text-white hover:bg-zinc-800"
-											: "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+											? "bg-muted text-foreground hover:bg-muted"
+											: "text-muted-foreground hover:bg-card hover:text-foreground"
 									)}
 								>
 									<Shield className="size-4 text-cyan-400" />
@@ -139,10 +113,10 @@ export const PointInTimeHeader = ({
 								value={selectedEnvironment.id}
 								onValueChange={onEnvironmentChange}
 							>
-								<SelectTrigger className="border-zinc-800 bg-zinc-950 text-white">
+								<SelectTrigger className="border-border bg-card text-foreground">
 									<SelectValue />
 								</SelectTrigger>
-								<SelectContent className="border-zinc-800 bg-zinc-900 text-white">
+								<SelectContent className="border-border bg-card text-foreground">
 									{environmentTypes.map((environment) => (
 										<SelectItem key={environment.id} value={environment.id}>
 											<div className="flex items-center gap-2">
@@ -154,7 +128,7 @@ export const PointInTimeHeader = ({
 												/>
 												<span>{environment.name}</span>
 												{environment.is_default && (
-													<span className="text-xs text-zinc-500">Default</span>
+													<span className="text-xs text-tertiary">Default</span>
 												)}
 											</div>
 										</SelectItem>
@@ -168,7 +142,7 @@ export const PointInTimeHeader = ({
 							size="sm"
 							onClick={onRefresh}
 							disabled={isRefetching}
-							className="border-zinc-800 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+							className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 						>
 							<RefreshCw className={cn("mr-2 size-4", isRefetching && "animate-spin")} />
 							Refresh history

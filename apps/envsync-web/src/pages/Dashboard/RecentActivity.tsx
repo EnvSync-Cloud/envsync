@@ -18,7 +18,7 @@ function getActionColor(action: string) {
   if (action.includes("created") || action.includes("create")) return "bg-green-500/10 text-green-400 border-green-500/20";
   if (action.includes("updated") || action.includes("update")) return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
   if (action.includes("deleted") || action.includes("delete")) return "bg-red-500/10 text-red-400 border-red-500/20";
-  if (action.includes("viewed") || action.includes("view")) return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
+  if (action.includes("viewed") || action.includes("view")) return "bg-zinc-500/10 text-muted-foreground border-zinc-500/20";
   return "bg-blue-500/10 text-blue-400 border-blue-500/20";
 }
 
@@ -34,15 +34,15 @@ export function RecentActivity({ auditLogs, isLoading }: RecentActivityProps) {
       {isLoading ? (
         Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-start space-x-3">
-            <Skeleton className="w-6 h-6 rounded-full bg-zinc-800" />
+            <Skeleton className="w-6 h-6 rounded-full bg-muted" />
             <div className="flex-1 space-y-1">
-              <Skeleton className="h-3 w-full bg-zinc-800" />
-              <Skeleton className="h-3 w-20 bg-zinc-800" />
+              <Skeleton className="h-3 w-full bg-muted" />
+              <Skeleton className="h-3 w-20 bg-muted" />
             </div>
           </div>
         ))
       ) : auditLogs.length === 0 ? (
-        <p className="text-sm text-zinc-500 text-center py-4">
+        <p className="text-sm text-tertiary text-center py-4">
           No recent activity
         </p>
       ) : (
@@ -52,8 +52,8 @@ export function RecentActivity({ auditLogs, isLoading }: RecentActivityProps) {
               key={log.id ?? idx}
               className="flex items-start space-x-3 py-1.5"
             >
-              <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-[10px] text-zinc-400 font-medium">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-[10px] text-muted-foreground font-medium">
                   {log.user_email?.charAt(0)?.toUpperCase() || "?"}
                 </span>
               </div>
@@ -68,7 +68,7 @@ export function RecentActivity({ auditLogs, isLoading }: RecentActivityProps) {
                     {formatAction(log.action ?? "unknown")}
                   </Badge>
                 </div>
-                <p className="hdx-mask text-[11px] text-zinc-500 mt-0.5 truncate">
+                <p className="hdx-mask text-[11px] text-tertiary mt-0.5 truncate">
                   {log.user_email}
                   {log.created_at && (
                     <span className="ml-1">

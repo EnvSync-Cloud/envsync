@@ -175,7 +175,8 @@ export const useOrgSettings = () => {
   // Mutation to update organization settings
   const updateOrgMutation = useMutation({
     mutationFn: async (updateData: Partial<FormData>) => {
-      if (!orgData?.id) throw new Error("Organization ID not found");
+      const currentOrgData = queryClient.getQueryData<Awaited<ReturnType<typeof sdk.organizations.getOrg>>>(["organization"]);
+      if (!currentOrgData?.id) throw new Error("Organization ID not found");
       return await sdk.organizations.updateOrg({
         ...updateData,
       });
@@ -194,7 +195,8 @@ export const useOrgSettings = () => {
   // Mutation for deleting organization
   const deleteOrgMutation = useMutation({
     mutationFn: async () => {
-      if (!orgData?.id) throw new Error("Organization ID not found");
+      const currentOrgData = queryClient.getQueryData<Awaited<ReturnType<typeof sdk.organizations.getOrg>>>(["organization"]);
+      if (!currentOrgData?.id) throw new Error("Organization ID not found");
       return await apiRequest("/api/org", {
         method: "DELETE",
         body: JSON.stringify({ confirm_name: deleteConfirmText }),

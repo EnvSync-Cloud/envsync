@@ -81,11 +81,11 @@ export function SyncRunsList({
   );
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/50">
+    <div className="rounded-xl border border-border bg-card/50">
       <div className="flex items-center justify-between gap-3 p-4">
         <div>
-          <h3 className="text-sm font-medium text-zinc-200">Sync Runs</h3>
-          <p className="mt-1 text-xs text-zinc-500">
+          <h3 className="text-sm font-medium text-foreground">Sync Runs</h3>
+          <p className="mt-1 text-xs text-tertiary">
             History of provider synchronization executions.
           </p>
         </div>
@@ -108,7 +108,7 @@ export function SyncRunsList({
       {sortedRuns.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 px-4 py-12">
           <RefreshCw className="size-8 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No sync runs yet.</p>
+          <p className="text-sm text-tertiary">No sync runs yet.</p>
           <p className="text-xs text-zinc-600">
             Trigger a sync to see execution history here.
           </p>
@@ -117,7 +117,7 @@ export function SyncRunsList({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-t border-zinc-800 text-xs text-zinc-500">
+              <tr className="border-t border-border text-xs text-tertiary">
                 <th className="px-4 py-3 font-medium">Provider</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Started</th>
@@ -136,10 +136,10 @@ export function SyncRunsList({
                 return (
                   <tr
                     key={run.id}
-                    className="border-t border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
+                    className="border-t border-border/50 hover:bg-muted/30 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <span className="text-zinc-200">
+                      <span className="text-foreground">
                         {formatProviderType(run.provider_type)}
                       </span>
                     </td>
@@ -151,10 +151,10 @@ export function SyncRunsList({
                         {config.label}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {formatLastUsed(run.started_at)}
                     </td>
-                    <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                       {duration}
                     </td>
                     <td className="px-4 py-3 text-right">

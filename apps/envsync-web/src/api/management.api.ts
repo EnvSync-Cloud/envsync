@@ -1,6 +1,7 @@
 import { ApiError, CreateProviderConnectionRequest, EnvSyncManagementAPISDK, type ProviderConnection, type OrgSecret, type IntegrationBinding, type EnvTypeMapping, type SyncRun, type SyncAuditEvent } from "@envsync-cloud/envsync-management-ts-sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { isReloginError, redirectToLogin } from "@/api/base";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 export type EnterpriseProvider = "github" | "gitlab" | "aws-ssm" | "vercel" | "google-secret-manager";
@@ -29,6 +30,13 @@ function managementErrorMessage(error: unknown) {
   return "Management request failed";
 }
 
+function handleManagementError(error: unknown): never {
+  if (isReloginError(error)) {
+    void redirectToLogin();
+  }
+  throw new Error(managementErrorMessage(error));
+}
+
 export function getManagementSDK() {
   if (!runtimeConfig.managementApiUrl) {
     throw new Error("Management API URL is not configured.");
@@ -55,7 +63,7 @@ export function useProviderConnections() {
       try {
         return await getManagementSDK().enterprise.listEnterpriseProviderConnections();
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl),
@@ -81,7 +89,7 @@ export function useCreateProviderConnection() {
           metadata: payload.metadata,
         });
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -97,7 +105,7 @@ export function useOrgSecrets() {
       try {
         return await getManagementSDK().enterprise.listEnterpriseOrgSecrets();
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl),
@@ -116,7 +124,7 @@ export function useCreateOrgSecret() {
       try {
         return await getManagementSDK().enterprise.createEnterpriseOrgSecret(payload);
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -136,7 +144,7 @@ export function useIntegrationBindings(appId?: string) {
       try {
         return await getManagementSDK().enterprise.listEnterpriseIntegrationBindings(appId);
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl && appId),
@@ -164,7 +172,7 @@ export function useCreateIntegrationBinding(appId?: string) {
           metadata: payload.metadata,
         });
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -191,7 +199,7 @@ export function useUpdateIntegrationBinding(appId?: string) {
           metadata: payload.metadata,
         });
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -211,7 +219,7 @@ export function useEnvTypeMappings(appId?: string) {
       try {
         return await getManagementSDK().enterprise.listEnterpriseEnvTypeMappings(appId);
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl && appId),
@@ -236,7 +244,7 @@ export function useCreateEnvTypeMapping(appId?: string) {
       try {
         return await getManagementSDK().enterprise.createEnterpriseEnvTypeMapping(appId, payload);
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -267,7 +275,7 @@ export function useUpdateEnvTypeMapping(appId?: string) {
           metadata: payload.metadata,
         });
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async () => {
@@ -284,7 +292,7 @@ export function useSyncRuns(appId?: string) {
         const runs = await getManagementSDK().enterprise.listEnterpriseSyncRuns();
         return appId ? runs.filter((run) => run.app_id === appId) : runs;
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl),
@@ -306,7 +314,7 @@ export function useCreateManualSyncRun() {
           metadata: payload.metadata,
         });
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     onSuccess: async (_data, variables) => {
@@ -329,7 +337,7 @@ export function useSyncAuditEvents(syncRunId?: string) {
       try {
         return await getManagementSDK().enterprise.listEnterpriseSyncAuditEvents(syncRunId);
       } catch (error) {
-        throw new Error(managementErrorMessage(error));
+        handleManagementError(error);
       }
     },
     enabled: Boolean(runtimeConfig.managementApiUrl && syncRunId),

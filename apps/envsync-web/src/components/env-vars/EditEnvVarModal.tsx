@@ -179,13 +179,13 @@ export const EditEnvVarModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+      <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <Edit className="w-5 h-5 text-emerald-500 mr-2" />
             Edit Variable
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             Update the variable details. Changes will be applied
             immediately.
           </DialogDescription>
@@ -194,7 +194,7 @@ export const EditEnvVarModal = ({
         <div className="space-y-6">
           {/* Environment Type Selection */}
           <div className="space-y-2">
-            <Label htmlFor="edit-env-type" className="text-white">
+            <Label htmlFor="edit-env-type" className="text-foreground">
               Environment Type *
             </Label>
             <Select
@@ -202,18 +202,18 @@ export const EditEnvVarModal = ({
               disabled
             >
               <SelectTrigger
-                className={`bg-zinc-900 border-zinc-800 text-white ${
+                className={`bg-card border-border text-foreground ${
                   formErrors.env_type_id ? "border-red-500" : ""
                 }`}
               >
                 <SelectValue placeholder="Select environment type" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectContent className="bg-card border-border">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
                     value={envType.id}
-                    className="text-white hover:bg-zinc-800"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center space-x-2">
                       <div
@@ -229,20 +229,20 @@ export const EditEnvVarModal = ({
             {formErrors.env_type_id && (
               <p className="text-red-400 text-sm">{formErrors.env_type_id}</p>
             )}
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Moving variables between environments is not supported from edit mode.
             </p>
           </div>
 
           {/* Variable Key */}
           <div className="space-y-2">
-            <Label htmlFor="edit-var-key" className="text-white">
+            <Label htmlFor="edit-var-key" className="text-foreground">
               Variable Key *
             </Label>
             <Input
               id="edit-var-key"
               value={formData.key}
-              className={`bg-zinc-900 border-zinc-800 text-white font-mono ${
+              className={`bg-card border-border text-foreground font-mono ${
                 formErrors.key ? "border-red-500" : ""
               }`}
               placeholder="DATABASE_URL"
@@ -252,7 +252,7 @@ export const EditEnvVarModal = ({
             {formErrors.key && (
               <p className="text-red-400 text-sm">{formErrors.key}</p>
             )}
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Renaming keys is not supported from edit mode.
             </p>
           </div>
@@ -260,7 +260,7 @@ export const EditEnvVarModal = ({
           {/* Variable Value */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="edit-var-value" className="text-white">
+              <Label htmlFor="edit-var-value" className="text-foreground">
                 Variable Value *
               </Label>
               {variable.sensitive && (
@@ -270,7 +270,7 @@ export const EditEnvVarModal = ({
                   size="sm"
                   onClick={showSensitiveValue ? handleHideSensitiveValue : handleRevealSensitiveValue}
                   disabled={isSaving || isValueModified}
-                  className="text-zinc-400 hover:text-white h-auto p-1"
+                  className="text-muted-foreground hover:text-foreground h-auto p-1"
                 >
                   {showSensitiveValue ? (
                     <>
@@ -288,10 +288,10 @@ export const EditEnvVarModal = ({
             </div>
             
             {isSensitiveAndHidden ? (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-md p-4 min-h-[100px] flex items-center justify-center">
+              <div className="bg-card border border-border rounded-md p-4 min-h-[100px] flex items-center justify-center">
                 <div className="text-center">
                   <Shield className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-zinc-400 text-sm mb-3">
+                  <p className="text-muted-foreground text-sm mb-3">
                     This is a sensitive value and is hidden for security
                   </p>
                   <Button
@@ -299,7 +299,7 @@ export const EditEnvVarModal = ({
                     variant="outline"
                     size="sm"
                     onClick={handleRevealSensitiveValue}
-                    className="text-zinc-300 border-zinc-700 hover:bg-zinc-800"
+                    className="text-muted-foreground border-border hover:bg-muted"
                   >
                     <Eye className="w-4 h-4 mr-2" />
                     Click to edit
@@ -312,7 +312,7 @@ export const EditEnvVarModal = ({
                   id="edit-var-value"
                   value={formData.value}
                   onChange={(e) => handleInputChange("value", e.target.value)}
-                  className={`bg-zinc-900 border-zinc-800 text-white font-mono min-h-[100px] ${
+                  className={`bg-card border-border text-foreground font-mono min-h-[100px] ${
                     formErrors.value ? "border-red-500" : ""
                   } ${variable.sensitive ? "pr-12" : ""}`}
                   placeholder={
@@ -334,7 +334,7 @@ export const EditEnvVarModal = ({
             {formErrors.value && (
               <p className="text-red-400 text-sm">{formErrors.value}</p>
             )}
-            <div className="flex justify-between text-xs text-zinc-400">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>
                 {variable.sensitive 
                   ? "Sensitive values are encrypted and hidden by default"
@@ -350,23 +350,23 @@ export const EditEnvVarModal = ({
           </div>
 
           {/* Sensitive Checkbox */}
-          <div className="flex items-center space-x-3 p-4 bg-zinc-900 rounded-lg border border-zinc-800">
+          <div className="flex items-center space-x-3 p-4 bg-card rounded-lg border border-border">
             <Checkbox
               id="edit-sensitive"
               checked={formData.sensitive}
               disabled
-              className="border-zinc-700"
+              className="border-border"
             />
             <div className="flex-1">
-              <Label htmlFor="edit-sensitive" className="text-white flex items-center">
+              <Label htmlFor="edit-sensitive" className="text-foreground flex items-center">
                 {formData.sensitive ? (
                   <Shield className="w-4 h-4 text-red-400 mr-2" />
                 ) : (
-                  <Key className="w-4 h-4 text-zinc-400 mr-2" />
+                  <Key className="w-4 h-4 text-muted-foreground mr-2" />
                 )}
                 Mark as sensitive (secret)
               </Label>
-              <p className="text-xs text-zinc-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Secret/variable type cannot be changed from edit mode.
               </p>
             </div>
@@ -388,24 +388,24 @@ export const EditEnvVarModal = ({
 
           {/* Current vs New Preview */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <h4 className="text-sm font-medium text-zinc-400 mb-2">
+            <div className="bg-card rounded-lg p-4 border border-border">
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">
                 Current
               </h4>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-zinc-500">Key:</span>
-                  <code className="text-sm font-mono text-zinc-400 bg-zinc-800 px-2 py-1 rounded">
+                  <span className="text-xs text-tertiary">Key:</span>
+                  <code className="text-sm font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
                     {variable.key}
                   </code>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-zinc-500">Type:</span>
+                  <span className="text-xs text-tertiary">Type:</span>
                   <span
                     className={`text-xs px-2 py-1 rounded ${
                       variable.sensitive
                         ? "bg-red-900/20 text-red-400"
-                        : "bg-zinc-800 text-zinc-300"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {variable.sensitive ? "Secret" : "Variable"}
@@ -413,8 +413,8 @@ export const EditEnvVarModal = ({
                 </div>
                 {variable.sensitive && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs text-zinc-500">Value:</span>
-                    <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-1 rounded font-mono">
+                    <span className="text-xs text-tertiary">Value:</span>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">
                       ••••••••
                     </span>
                   </div>
@@ -422,22 +422,22 @@ export const EditEnvVarModal = ({
               </div>
             </div>
 
-            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-              <h4 className="text-sm font-medium text-white mb-2">New</h4>
+            <div className="bg-card rounded-lg p-4 border border-border">
+              <h4 className="text-sm font-medium text-foreground mb-2">New</h4>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-zinc-500">Key:</span>
-                  <code className="text-sm font-mono text-emerald-400 bg-zinc-800 px-2 py-1 rounded">
+                  <span className="text-xs text-tertiary">Key:</span>
+                  <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
                     {formData.key || "VARIABLE_KEY"}
                   </code>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs text-zinc-500">Type:</span>
+                  <span className="text-xs text-tertiary">Type:</span>
                   <span
                     className={`text-xs px-2 py-1 rounded ${
                       formData.sensitive
                         ? "bg-red-900/20 text-red-400"
-                        : "bg-zinc-800 text-zinc-300"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
                     {formData.sensitive ? "Secret" : "Variable"}
@@ -445,8 +445,8 @@ export const EditEnvVarModal = ({
                 </div>
                 {isValueModified && formData.sensitive && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs text-zinc-500">Value:</span>
-                    <span className="text-xs text-emerald-400 bg-zinc-800 px-2 py-1 rounded font-mono">
+                    <span className="text-xs text-tertiary">Value:</span>
+                    <span className="text-xs text-emerald-400 bg-muted px-2 py-1 rounded font-mono">
                       Updated
                     </span>
                   </div>
@@ -479,14 +479,14 @@ export const EditEnvVarModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isSaving}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={
               isSaving ||
               !hasUnsavedChanges ||

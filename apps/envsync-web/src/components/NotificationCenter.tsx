@@ -38,17 +38,17 @@ export function NotificationCenter() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="bg-zinc-900/95 backdrop-blur-md border-zinc-800/50 w-[360px] sm:w-[400px]">
+      <SheetContent className="bg-popover/95 backdrop-blur-md border-border/50 w-[360px] sm:w-[400px]">
         <SheetHeader>
           <div className="flex items-center justify-between">
-            <SheetTitle className="text-zinc-100">Notifications</SheetTitle>
+            <SheetTitle className="text-foreground">Notifications</SheetTitle>
             <div className="flex items-center space-x-1">
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={markAllRead}
-                  className="text-zinc-400 hover:text-zinc-200 h-8 px-2"
+                  className="text-muted-foreground hover:text-foreground h-8 px-2"
                 >
                   <CheckCheck className="size-3.5 mr-1" />
                   <span className="text-xs">Mark all read</span>
@@ -59,14 +59,15 @@ export function NotificationCenter() {
                   variant="ghost"
                   size="sm"
                   onClick={clearAll}
-                  className="text-zinc-400 hover:text-zinc-200 h-8 px-2"
+                  className="text-muted-foreground hover:text-foreground h-8 px-2"
+                  aria-label="Clear all notifications"
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
               )}
             </div>
           </div>
-          <SheetDescription className="text-zinc-500 text-xs">
+          <SheetDescription className="text-tertiary text-xs">
             {unreadCount > 0
               ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}`
               : "All caught up"}
@@ -76,9 +77,9 @@ export function NotificationCenter() {
         <div className="mt-4 space-y-1">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Bell className="size-8 text-zinc-700 mb-3" />
-              <p className="text-sm text-zinc-500">No notifications yet</p>
-              <p className="text-xs text-zinc-600 mt-1">
+              <Bell className="size-8 text-muted-foreground/50 mb-3" />
+              <p className="text-sm text-tertiary">No notifications yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
                 Actions and events will appear here
               </p>
             </div>
@@ -89,7 +90,7 @@ export function NotificationCenter() {
                 className={`flex items-start space-x-3 p-3 rounded-lg transition-colors ${
                   notification.read
                     ? "opacity-60"
-                    : "bg-zinc-800/30"
+                    : "bg-muted/30"
                 }`}
               >
                 <div
@@ -98,8 +99,8 @@ export function NotificationCenter() {
                   )}`}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-zinc-300">{notification.message}</p>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                  <p className="text-sm text-foreground/80">{notification.message}</p>
+                  <p className="text-[11px] text-tertiary mt-0.5">
                     {formatLastUsed(notification.timestamp.toISOString())}
                   </p>
                 </div>

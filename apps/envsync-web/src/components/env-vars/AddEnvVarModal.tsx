@@ -39,6 +39,7 @@ interface AddEnvVarModalProps {
   onSave: (data: EnvVarFormData) => void;
   isSaving: boolean;
   isSecret?: boolean; // Optional prop to force secret mode
+  defaultEnvironment?: string; // Pre-fill environment from page context
 }
 
 export const AddEnvVarModal = ({
@@ -47,7 +48,8 @@ export const AddEnvVarModal = ({
   environmentTypes,
   onSave,
   isSaving,
-  isSecret
+  isSecret,
+  defaultEnvironment,
 }: AddEnvVarModalProps) => {
   const location = useLocation();
   
@@ -62,15 +64,19 @@ export const AddEnvVarModal = ({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (open) {
+      const prefilledEnvId = defaultEnvironment && environmentTypes.some(et => et.id === defaultEnvironment)
+        ? defaultEnvironment
+        : "";
       const initialForm = {
         ...INITIAL_ENV_VAR_FORM,
+        env_type_id: prefilledEnvId,
         // Auto-set sensitive to true if on secrets page
         sensitive: isSecretsPage
       };
       setFormData(initialForm);
       setFormErrors(INITIAL_ENV_FORM_ERRORS);
     }
-  }, [open, isSecretsPage]);
+  }, [open, isSecretsPage, defaultEnvironment, environmentTypes]);
 
   // Form validation
   const validateForm = useCallback((): boolean => {
@@ -144,9 +150,9 @@ export const AddEnvVarModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+      <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             {isSecretsPage ? (
               <Shield className="w-5 h-5 text-red-500 mr-2" />
             ) : (
@@ -154,7 +160,7 @@ export const AddEnvVarModal = ({
             )}
             {modalTitle}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             {modalDescription}
           </DialogDescription>
         </DialogHeader>
@@ -180,7 +186,7 @@ export const AddEnvVarModal = ({
 
           {/* Environment Type Selection */}
           <div className="space-y-2">
-            <Label htmlFor="env-type" className="text-white">
+            <Label htmlFor="env-type" className="text-foreground">
               Environment Type *
             </Label>
             <Select
@@ -189,18 +195,18 @@ export const AddEnvVarModal = ({
               disabled={isSaving}
             >
               <SelectTrigger
-                className={`bg-zinc-900 border-zinc-800 text-white ${
+                className={`bg-card border-border text-foreground ${
                   formErrors.env_type_id ? "border-red-500" : ""
                 }`}
               >
                 <SelectValue placeholder="Select environment type" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectContent className="bg-card border-border">
                 {environmentTypes.map((envType) => (
                   <SelectItem
                     key={envType.id}
                     value={envType.id}
-                    className="text-white hover:bg-zinc-800"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center space-x-2">
                       <div
@@ -220,7 +226,7 @@ export const AddEnvVarModal = ({
 
           {/* Variable Key */}
           <div className="space-y-2">
-            <Label htmlFor="var-key" className="text-white">
+            <Label htmlFor="var-key" className="text-foreground">
               {isSecretsPage ? "Secret Key" : "Variable Key"} *
             </Label>
             <Input
@@ -229,7 +235,7 @@ export const AddEnvVarModal = ({
               onChange={(e) =>
                 handleInputChange("key", e.target.value.toUpperCase())
               }
-              className={`bg-zinc-900 border-zinc-800 text-white font-mono ${
+              className={`bg-card border-border text-foreground font-mono ${
                 formErrors.key ? "border-red-500" : ""
               }`}
               placeholder={isSecretsPage ? "API_SECRET_KEY" : "DATABASE_URL"}
@@ -239,7 +245,7 @@ export const AddEnvVarModal = ({
             {formErrors.key && (
               <p className="text-red-400 text-sm">{formErrors.key}</p>
             )}
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Must start with a letter and contain only uppercase letters,
               numbers, and underscores
             </p>
@@ -247,7 +253,7 @@ export const AddEnvVarModal = ({
 
           {/* Variable Value */}
           <div className="space-y-2">
-            <Label htmlFor="var-value" className="text-white">
+            <Label htmlFor="var-value" className="text-foreground">
               {isSecretsPage ? "Secret Value" : "Variable Value"} *
             </Label>
             <div className="relative">
@@ -255,7 +261,7 @@ export const AddEnvVarModal = ({
                 id="var-value"
                 value={formData.value}
                 onChange={(e) => handleInputChange("value", e.target.value)}
-                className={`bg-zinc-900 border-zinc-800 text-white font-mono min-h-[100px] ${
+                className={`bg-card border-border text-foreground font-mono min-h-[100px] ${
                   formErrors.value ? "border-red-500" : ""
                 } ${formData.sensitive ? "pr-12" : ""}`}
                 placeholder={
@@ -275,7 +281,7 @@ export const AddEnvVarModal = ({
             {formErrors.value && (
               <p className="text-red-400 text-sm">{formErrors.value}</p>
             )}
-            <div className="flex justify-between text-xs text-zinc-400">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>
                 {formData.sensitive 
                   ? "This value will be encrypted and stored securely"
@@ -289,38 +295,38 @@ export const AddEnvVarModal = ({
           </div>
 
           {/* Preview */}
-          <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-            <h4 className="text-sm font-medium text-white mb-2">Preview</h4>
+          <div className="bg-card rounded-lg p-4 border border-border">
+            <h4 className="text-sm font-medium text-foreground mb-2">Preview</h4>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-zinc-400">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-zinc-800 px-2 py-1 rounded">
+                <span className="text-xs text-muted-foreground">Key:</span>
+                <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
                   {formData.key || (isSecretsPage ? "SECRET_KEY" : "VARIABLE_KEY")}
                 </code>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-zinc-400">Value:</span>
-                <code className="text-sm font-mono text-zinc-300 bg-zinc-800 px-2 py-1 rounded">
+                <span className="text-xs text-muted-foreground">Value:</span>
+                <code className="text-sm font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
                   {formData.sensitive || isSecretsPage
                     ? "••••••••"
                     : formData.value || "variable_value"}
                 </code>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-zinc-400">Type:</span>
+                <span className="text-xs text-muted-foreground">Type:</span>
                 <span
                   className={`text-xs px-2 py-1 rounded ${
                     formData.sensitive || isSecretsPage
                       ? "bg-red-900/20 text-red-400"
-                      : "bg-zinc-800 text-zinc-300"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {formData.sensitive || isSecretsPage ? "Secret" : "Variable"}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-zinc-400">Environment:</span>
-                <span className="text-xs text-zinc-300">
+                <span className="text-xs text-muted-foreground">Environment:</span>
+                <span className="text-xs text-muted-foreground">
                   {environmentTypes.find(env => env.id === formData.env_type_id)?.name || "Select environment"}
                 </span>
               </div>
@@ -332,14 +338,14 @@ export const AddEnvVarModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isSaving}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className={`text-white ${buttonColor}`}
+            className={`text-foreground ${buttonColor}`}
             disabled={
               isSaving ||
               !formData.key ||

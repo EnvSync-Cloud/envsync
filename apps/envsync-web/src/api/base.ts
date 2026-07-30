@@ -1,4 +1,4 @@
-import { ApiError, EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
+import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
 import { env, type Function } from "@/utils/env";
 import { runtimeConfig } from "@/utils/runtime-config";
 
@@ -18,12 +18,27 @@ function isUnsafeMethod(method: string) {
   return ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase());
 }
 
+const RELOGIN_CODES = ["AUTH_MISSING", "AUTH_INVALID", "AUTH_RELOGIN_REQUIRED"];
+
 export function isReloginError(error: unknown) {
-  return error instanceof ApiError &&
-    error.status === 401 &&
-    ["AUTH_MISSING", "AUTH_INVALID", "AUTH_RELOGIN_REQUIRED"].includes(
-      String(error.body?.code ?? "")
-    );
+  if (error instanceof ApiRequestError) {
+    return error.status === 401 && RELOGIN_CODES.includes(String(error.code ?? ""));
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    (error as { status: unknown }).status === 401 &&
+    "body" in error
+  ) {
+    const body = (error as { body: unknown }).body;
+    if (typeof body === "object" && body !== null && "code" in body) {
+      return RELOGIN_CODES.includes(String((body as { code: unknown }).code ?? ""));
+    }
+  }
+
+  return false;
 }
 
 export async function redirectToLogin() {
@@ -38,7 +53,8 @@ export async function redirectToLogin() {
   } catch (error) {
     console.error("Failed to create web login:", error);
   }
-  loginRedirectInFlight = false;
+  // Don't reset loginRedirectInFlight on failure - prevents infinite retry loop
+  // The guard stays set until the page navigates or reloads
 }
 
 export async function logoutWebSession() {
@@ -118,12 +134,14 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new ApiRequestError(
+    const err = new ApiRequestError(
       String((body as { error?: string } | null)?.error || response.statusText || "Request failed"),
       response.status,
       String((body as { code?: string } | null)?.code || ""),
       body,
     );
+
+    throw err;
   }
 
   return body as T;

@@ -138,13 +138,13 @@ const Certificates = () => {
   const getTypeBadge = (type: string) => {
     return type === "org_ca"
       ? <Badge className="bg-blue-600">CA</Badge>
-      : <Badge variant="outline" className="border-zinc-600 text-zinc-300">Member</Badge>;
+      : <Badge variant="outline" className="border-border text-muted-foreground">Member</Badge>;
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -174,20 +174,20 @@ const Certificates = () => {
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-zinc-800 border-zinc-700">
+              <DialogContent className="bg-muted border-border">
                 <DialogHeader>
-                  <DialogTitle className="text-white">Issue Member Certificate</DialogTitle>
-                  <DialogDescription className="text-zinc-400">Issue a new certificate signed by the org CA</DialogDescription>
+                  <DialogTitle className="text-foreground">Issue Member Certificate</DialogTitle>
+                  <DialogDescription className="text-muted-foreground">Issue a new certificate signed by the org CA</DialogDescription>
                 </DialogHeader>
                 {!issuedCert ? (
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-zinc-300">Member Email</Label>
+                      <Label className="text-muted-foreground">Member Email</Label>
                       <Input
                         list="certificate-user-emails"
                         value={issueEmail}
                         onChange={(e) => setIssueEmail(e.target.value)}
-                        className="bg-zinc-700 border-zinc-600 text-white"
+                        className="bg-muted border-border text-foreground"
                         placeholder="user@example.com"
                       />
                       <datalist id="certificate-user-emails">
@@ -199,16 +199,16 @@ const Certificates = () => {
                       </datalist>
                     </div>
                     <div>
-                      <p className="text-xs text-zinc-500 mt-1">
+                      <p className="text-xs text-tertiary mt-1">
                         Certificates can only be issued to existing organization users. Their current org role is resolved automatically by the backend.
                       </p>
                     </div>
                     <div>
-                      <Label className="text-zinc-300">Description</Label>
-                      <Input value={issueDescription} onChange={(e) => setIssueDescription(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white" />
+                      <Label className="text-muted-foreground">Description</Label>
+                      <Input value={issueDescription} onChange={(e) => setIssueDescription(e.target.value)} className="bg-muted border-border text-foreground" />
                     </div>
                     <div>
-                      <Label className="text-zinc-300">Metadata (optional)</Label>
+                      <Label className="text-muted-foreground">Metadata (optional)</Label>
                       <div className="space-y-2 mt-1">
                         {issueMetadata.map((entry, idx) => (
                           <div key={idx} className="flex gap-2">
@@ -219,7 +219,7 @@ const Certificates = () => {
                                 updated[idx].key = e.target.value;
                                 setIssueMetadata(updated);
                               }}
-                              className="bg-zinc-700 border-zinc-600 text-white flex-1"
+                              className="bg-muted border-border text-foreground flex-1"
                               placeholder="Key"
                             />
                             <Input
@@ -229,7 +229,7 @@ const Certificates = () => {
                                 updated[idx].value = e.target.value;
                                 setIssueMetadata(updated);
                               }}
-                              className="bg-zinc-700 border-zinc-600 text-white flex-1"
+                              className="bg-muted border-border text-foreground flex-1"
                               placeholder="Value"
                             />
                             <Button
@@ -245,7 +245,7 @@ const Certificates = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+                          className="border-border text-muted-foreground hover:bg-muted"
                           onClick={() => setIssueMetadata([...issueMetadata, { key: "", value: "" }])}
                         >
                           <Plus className="w-3 h-3 mr-1" /> Add metadata
@@ -260,16 +260,16 @@ const Certificates = () => {
                       <span className="font-medium">Certificate issued successfully</span>
                     </div>
                     <div>
-                      <Label className="text-zinc-300">Certificate PEM</Label>
-                      <Textarea value={issuedCert.cert_pem} readOnly className="bg-zinc-900 border-zinc-600 text-green-400 min-h-[80px] font-mono text-xs" />
-                      <Button variant="ghost" size="sm" className="mt-1 text-zinc-400" onClick={() => { navigator.clipboard.writeText(issuedCert.cert_pem); toast.success("Copied!"); }}>
+                      <Label className="text-muted-foreground">Certificate PEM</Label>
+                      <Textarea value={issuedCert.cert_pem} readOnly className="bg-card border-border text-green-400 min-h-[80px] font-mono text-xs" />
+                      <Button variant="ghost" size="sm" className="mt-1 text-muted-foreground" onClick={() => { navigator.clipboard.writeText(issuedCert.cert_pem); toast.success("Copied!"); }}>
                         <Copy className="w-3 h-3 mr-1" /> Copy Certificate
                       </Button>
                     </div>
                     <div>
-                      <Label className="text-zinc-300">Private Key PEM</Label>
-                      <Textarea value={issuedCert.key_pem} readOnly className="bg-zinc-900 border-zinc-600 text-yellow-400 min-h-[80px] font-mono text-xs" />
-                      <Button variant="ghost" size="sm" className="mt-1 text-zinc-400" onClick={() => { navigator.clipboard.writeText(issuedCert.key_pem); toast.success("Copied!"); }}>
+                      <Label className="text-muted-foreground">Private Key PEM</Label>
+                      <Textarea value={issuedCert.key_pem} readOnly className="bg-card border-border text-yellow-400 min-h-[80px] font-mono text-xs" />
+                      <Button variant="ghost" size="sm" className="mt-1 text-muted-foreground" onClick={() => { navigator.clipboard.writeText(issuedCert.key_pem); toast.success("Copied!"); }}>
                         <Copy className="w-3 h-3 mr-1" /> Copy Key
                       </Button>
                     </div>
@@ -288,7 +288,7 @@ const Certificates = () => {
                       Issue
                     </Button>
                   ) : (
-                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline" className="border-zinc-600 text-zinc-300">
+                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline" className="border-border text-muted-foreground">
                       Done
                     </Button>
                   )}
@@ -300,9 +300,9 @@ const Certificates = () => {
       >
 
       {/* CA Status Card */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             <ShieldCheck className="w-5 h-5 mr-2 text-emerald-400" />
             Organization CA
           </CardTitle>
@@ -313,11 +313,11 @@ const Certificates = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <span className="text-white font-medium">{orgCA.subject_cn}</span>
+                  <span className="text-foreground font-medium">{orgCA.subject_cn}</span>
                   {getStatusBadge(orgCA.status)}
                 </div>
-                <p className="text-zinc-500 text-sm mt-1">
-                  Serial: <code className="text-zinc-400 font-mono">{orgCA.serial_hex}</code>
+                <p className="text-tertiary text-sm mt-1">
+                  Serial: <code className="text-muted-foreground font-mono">{orgCA.serial_hex}</code>
                   {" | "}
                   Created: {new Date(orgCA.created_at).toLocaleDateString()}
                 </p>
@@ -325,27 +325,27 @@ const Certificates = () => {
             </div>
           ) : (
             <div className="text-center py-6">
-              <ShieldCheck className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
-              <p className="text-zinc-400 mb-3">Organization CA not initialized</p>
+              <ShieldCheck className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-3">Organization CA not initialized</p>
               <Dialog open={isInitCAOpen} onOpenChange={setIsInitCAOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-emerald-500 hover:bg-emerald-600">
                     Initialize CA
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-zinc-800 border-zinc-700">
+                <DialogContent className="bg-muted border-border">
                   <DialogHeader>
-                    <DialogTitle className="text-white">Initialize Organization CA</DialogTitle>
-                    <DialogDescription className="text-zinc-400">Create an intermediate CA for your organization</DialogDescription>
+                    <DialogTitle className="text-foreground">Initialize Organization CA</DialogTitle>
+                    <DialogDescription className="text-muted-foreground">Create an intermediate CA for your organization</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-zinc-300">Organization Name</Label>
-                      <Input value={caOrgName} onChange={(e) => setCAOrgName(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white" placeholder="My Organization" />
+                      <Label className="text-muted-foreground">Organization Name</Label>
+                      <Input value={caOrgName} onChange={(e) => setCAOrgName(e.target.value)} className="bg-muted border-border text-foreground" placeholder="My Organization" />
                     </div>
                     <div>
-                      <Label className="text-zinc-300">Description</Label>
-                      <Input value={caDescription} onChange={(e) => setCADescription(e.target.value)} className="bg-zinc-700 border-zinc-600 text-white" />
+                      <Label className="text-muted-foreground">Description</Label>
+                      <Input value={caDescription} onChange={(e) => setCADescription(e.target.value)} className="bg-muted border-border text-foreground" />
                     </div>
                   </div>
                   <DialogFooter>
@@ -362,24 +362,24 @@ const Certificates = () => {
       </Card>
 
       {/* Certificates Table */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
+          <CardTitle className="text-foreground flex items-center">
             Certificates
             {certificates && certificates.length > 0 && (
               <Badge variant="secondary" className="ml-2">{certificates.length}</Badge>
             )}
           </CardTitle>
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             System-generated EnvSync certificates are not listed here. Use Account Settings → My Certificates to view your managed bundle.
           </p>
         </CardHeader>
         <CardContent>
           {!certificates || certificates.length === 0 ? (
             <div className="text-center py-12">
-              <ShieldCheck className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-              <p className="text-zinc-400">No certificates issued yet</p>
-              <p className="text-zinc-500 text-sm mt-1">
+              <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No certificates issued yet</p>
+              <p className="text-tertiary text-sm mt-1">
                 {hasCA ? "Issue a member certificate to get started" : "Initialize the org CA first"}
               </p>
             </div>
@@ -387,32 +387,32 @@ const Certificates = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Subject</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Type</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Serial</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Status</th>
-                    <th className="text-left text-zinc-400 text-sm font-medium py-3 px-4">Issued</th>
-                    <th className="text-right text-zinc-400 text-sm font-medium py-3 px-4">Actions</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Subject</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Type</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Serial</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Status</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Issued</th>
+                    <th className="text-right text-muted-foreground text-sm font-medium py-3 px-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {certificates.map((cert) => (
-                    <tr key={cert.id} className="border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                    <tr key={cert.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="text-white font-medium">{cert.subject_cn}</div>
+                        <div className="text-foreground font-medium">{cert.subject_cn}</div>
                         {cert.subject_email && (
-                          <div className="text-zinc-500 text-xs">{cert.subject_email}</div>
+                          <div className="text-tertiary text-xs">{cert.subject_email}</div>
                         )}
                       </td>
                       <td className="py-3 px-4">{getTypeBadge(cert.cert_type)}</td>
                       <td className="py-3 px-4">
-                        <code className="text-zinc-300 text-xs bg-zinc-900 px-2 py-1 rounded font-mono">
+                        <code className="text-muted-foreground text-xs bg-card px-2 py-1 rounded font-mono">
                           {cert.serial_hex}
                         </code>
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(cert.status)}</td>
-                      <td className="py-3 px-4 text-zinc-400 text-sm">
+                      <td className="py-3 px-4 text-muted-foreground text-sm">
                         {new Date(cert.created_at).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
@@ -469,29 +469,29 @@ const Certificates = () => {
 
       {/* Revoke Dialog */}
       <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>
-        <DialogContent className="bg-zinc-800 border-zinc-700">
+        <DialogContent className="bg-muted border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">Revoke Certificate</DialogTitle>
-            <DialogDescription className="text-zinc-400">
+            <DialogTitle className="text-foreground">Revoke Certificate</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               This action cannot be undone. Serial: <code className="font-mono">{revokeSerial}</code>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-zinc-300">Reason Code (RFC 5280)</Label>
+              <Label className="text-muted-foreground">Reason Code (RFC 5280)</Label>
               <Input
                 type="number"
                 min={0}
                 max={10}
                 value={revokeReason}
                 onChange={(e) => setRevokeReason(parseInt(e.target.value) || 0)}
-                className="bg-zinc-700 border-zinc-600 text-white"
+                className="bg-muted border-border text-foreground"
               />
-              <p className="text-xs text-zinc-500 mt-1">0=unspecified, 1=keyCompromise, 3=affiliationChanged, 4=superseded, 5=cessationOfOperation</p>
+              <p className="text-xs text-tertiary mt-1">0=unspecified, 1=keyCompromise, 3=affiliationChanged, 4=superseded, 5=cessationOfOperation</p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRevokeOpen(false)} className="border-zinc-600 text-zinc-300">Cancel</Button>
+            <Button variant="outline" onClick={() => setIsRevokeOpen(false)} className="border-border text-muted-foreground">Cancel</Button>
             <Button onClick={handleRevoke} disabled={revokeCert.isPending} variant="destructive">
               {revokeCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Revoke

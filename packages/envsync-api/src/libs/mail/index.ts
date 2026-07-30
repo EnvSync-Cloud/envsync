@@ -43,17 +43,17 @@ export const onOrgOnboardingInvite = async (
 		text: subject,
 		html,
 	};
-	sendMail(mail)
-		.then(() => {
-			infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
-		})
-		.catch((err) => {
-			infoLogs(
-				`Error sending email to ${email}: ${err?.message || err}`,
-				LogTypes.ERROR,
-				"MAIL:INVITE",
-			);
-		});
+	try {
+		await sendMail(mail);
+		infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
+	} catch (err) {
+		infoLogs(
+			`Error sending email to ${email}: ${(err as Error)?.message || err}`,
+			LogTypes.ERROR,
+			"MAIL:INVITE",
+		);
+		throw new Error(`Failed to send invitation email to ${email}`);
+	}
 };
 
 export const onUserOnboardingInvite = async (
@@ -73,15 +73,15 @@ export const onUserOnboardingInvite = async (
 		text: subject,
 		html,
 	};
-	sendMail(mail)
-		.then(() => {
-			infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
-		})
-		.catch((err) => {
-			infoLogs(
-				`Error sending email to ${email}: ${err?.message || err}`,
-				LogTypes.ERROR,
-				"MAIL:INVITE",
-			);
-		});
+	try {
+		await sendMail(mail);
+		infoLogs(`Email sent to ${email}`, LogTypes.LOGS, "MAIL:INVITE");
+	} catch (err) {
+		infoLogs(
+			`Error sending email to ${email}: ${(err as Error)?.message || err}`,
+			LogTypes.ERROR,
+			"MAIL:INVITE",
+		);
+		throw new Error(`Failed to send invitation email to ${email}`);
+	}
 };

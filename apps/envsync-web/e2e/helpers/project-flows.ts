@@ -13,9 +13,9 @@ function expectObjectBody(body: JsonValue | null, label: string): asserts body i
 async function openRowActions(page: Page, key: string) {
 	const row = page.locator("tr").filter({ hasText: key }).first();
 	await row.waitFor({ state: "visible" });
-	const actionButton = row.getByRole("button").last();
+	const actionButton = row.getByRole("button", { name: "Row actions" });
 	await actionButton.scrollIntoViewIfNeeded();
-	await actionButton.click({ force: true });
+	await actionButton.click();
 	return row;
 }
 
@@ -389,7 +389,7 @@ export async function createVariable(page: Page, appId: string, envTypeName: str
 
 export async function updateVariable(page: Page, appId: string, envTypeId: string, key: string, nextValue: string) {
 	await openRowActions(page, key);
-	await page.getByRole("menuitem", { name: "Edit Variable" }).click();
+	await page.getByRole("menuitem", { name: "Full Edit" }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator("#edit-var-key")).toBeDisabled();
@@ -473,7 +473,7 @@ export async function createSecret(page: Page, appId: string, envTypeName: strin
 
 export async function updateSecret(page: Page, appId: string, envTypeId: string, key: string, nextValue: string) {
 	await openRowActions(page, key);
-	await page.getByRole("menuitem", { name: /Edit Secret|Edit Variable|Edit/i }).first().click();
+	await page.getByRole("menuitem", { name: "Full Edit" }).click();
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator("#edit-var-key")).toBeDisabled();

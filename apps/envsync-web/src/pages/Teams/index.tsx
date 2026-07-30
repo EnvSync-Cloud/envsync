@@ -174,10 +174,10 @@ const Teams = () => {
         secondaryNav={
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "teams" | "detail")}>
             <TabsList className="h-auto bg-transparent p-0">
-              <TabsTrigger data-testid="teams-tab-directory" value="teams" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-white">
+              <TabsTrigger data-testid="teams-tab-directory" value="teams" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
                 Teams Directory
               </TabsTrigger>
-              <TabsTrigger data-testid="teams-tab-detail" value="detail" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-white">
+              <TabsTrigger data-testid="teams-tab-detail" value="detail" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
                 Team Details
               </TabsTrigger>
             </TabsList>
@@ -185,74 +185,92 @@ const Teams = () => {
         }
       >
       {activeTab === "teams" ? (
-        <Card data-testid="teams-directory-list" className="border-zinc-800 bg-zinc-950/70">
+        <Card data-testid="teams-directory-list" className="border-border bg-card/70">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-white">Teams</CardTitle>
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search teams…"
-                className="max-w-sm border-zinc-700 bg-zinc-950 text-white"
+                className="max-w-sm border-border bg-card text-foreground"
               />
             </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800 hover:bg-transparent">
-                  <TableHead className="text-zinc-400">Name</TableHead>
-                  <TableHead className="text-zinc-400">Description</TableHead>
-                  <TableHead className="text-zinc-400">Team Role</TableHead>
-                  <TableHead className="text-zinc-400">Updated</TableHead>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">Name</TableHead>
+                  <TableHead className="text-muted-foreground">Description</TableHead>
+                  <TableHead className="text-muted-foreground">Team Role</TableHead>
+                  <TableHead className="text-muted-foreground">Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTeams.map((team) => (
+                {filteredTeams.length === 0 ? (
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableCell colSpan={4} className="h-32 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Users className="size-8 text-tertiary" />
+                        <div>
+                          <p className="font-medium text-muted-foreground">No teams yet</p>
+                          <p className="mt-1 text-sm text-tertiary">Create your first team to start managing access.</p>
+                        </div>
+                        {canManage && (
+                          <Button variant="outline" className="border-border text-foreground" onClick={openCreate}>
+                            <Plus className="mr-2 size-4" />
+                            Create your first team
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                filteredTeams.map((team) => (
                   <TableRow
                     key={team.id}
                     data-testid={`teams-row-${team.id}`}
-                    className={`cursor-pointer border-zinc-800 ${selectedTeamId === team.id ? "bg-zinc-900" : "hover:bg-zinc-900/60"}`}
+                    className={`cursor-pointer border-border ${selectedTeamId === team.id ? "bg-card" : "hover:bg-card/60"}`}
                     onClick={() => {
                       setSelectedTeamId(team.id);
                       setActiveTab("detail");
                     }}
                   >
-                    <TableCell className="font-medium text-white">
+                    <TableCell className="font-medium text-foreground">
                       <div className="flex items-center gap-2">
                         <span className="size-3 rounded-full" style={{ backgroundColor: team.color }} />
                         {team.name}
                       </div>
                     </TableCell>
-                    <TableCell className="text-zinc-300">{team.description || "No description"}</TableCell>
+                    <TableCell className="text-muted-foreground">{team.description || "No description"}</TableCell>
                     <TableCell>
                       {team.role_id ? (
                         <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
                           {roles.find((role) => role.id === team.role_id)?.name || "Assigned"}
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-zinc-800 text-zinc-300">
+                        <Badge variant="secondary" className="bg-muted text-muted-foreground">
                           None
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-zinc-400">
+                    <TableCell className="text-muted-foreground">
                       {new Date(team.updated_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
-                ))}
+                )))}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       ) : (
-        <Card data-testid="teams-detail-panel" className="border-zinc-800 bg-zinc-950/70">
+        <Card data-testid="teams-detail-panel" className="border-border bg-card/70">
           <CardHeader className="flex flex-row items-start justify-between">
             <div>
-              <CardTitle className="text-white">
+              <CardTitle className="text-foreground">
                 {selectedTeam ? selectedTeam.name : "Select a team"}
               </CardTitle>
-              <p className="mt-1 text-sm text-zinc-400">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {selectedTeam
                   ? "Members inherit the team role and any app access granted to this team."
                   : "Pick a team from the directory to manage membership and the shared role."}
@@ -260,7 +278,7 @@ const Teams = () => {
             </div>
             {selectedTeam && canManage && (
               <div className="flex gap-2">
-                <Button variant="outline" className="border-zinc-700 text-zinc-200" onClick={openEdit}>
+                <Button variant="outline" className="border-border text-foreground" onClick={openEdit}>
                   <Pencil className="mr-2 size-4" />
                   Edit
                 </Button>
@@ -279,12 +297,12 @@ const Teams = () => {
             {selectedTeam ? (
               <>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
+                  <div className="rounded-lg border border-border bg-card/70 p-4">
                     <div className="mb-3 flex items-center gap-2">
                       <ShieldAlert className="size-4 text-emerald-400" />
-                      <h3 className="font-medium text-white">Team Role</h3>
+                      <h3 className="font-medium text-foreground">Team Role</h3>
                     </div>
-                    <p className="mb-3 text-sm text-zinc-400">
+                    <p className="mb-3 text-sm text-muted-foreground">
                       Team members keep their direct org role and also inherit this team-scoped role bundle.
                     </p>
                     <div className="mb-3 flex items-center gap-2">
@@ -295,14 +313,14 @@ const Teams = () => {
                     {canManage && (
                       <div className="flex gap-2">
                         <Select value={teamRoleId} onValueChange={setTeamRoleId}>
-                          <SelectTrigger className="border-zinc-700 bg-zinc-950 text-white">
+                          <SelectTrigger className="border-border bg-card text-foreground">
                             <SelectValue placeholder="Choose role" />
                           </SelectTrigger>
-                          <SelectContent className="border-zinc-700 bg-zinc-900">
+                          <SelectContent className="border-border bg-card">
                             {roles
                               .filter((role) => !role.isMaster)
                               .map((role) => (
-                                <SelectItem key={role.id} value={role.id} className="text-white">
+                                <SelectItem key={role.id} value={role.id} className="text-foreground">
                                   {role.name}
                                 </SelectItem>
                               ))}
@@ -317,7 +335,7 @@ const Teams = () => {
                         {selectedTeam.role_id && (
                           <Button
                             variant="outline"
-                            className="border-zinc-700 text-zinc-200"
+                            className="border-border text-foreground"
                             onClick={() => unassignRole.mutate({ teamId: selectedTeam.id })}
                           >
                             Clear
@@ -327,23 +345,23 @@ const Teams = () => {
                     )}
                   </div>
 
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
+                  <div className="rounded-lg border border-border bg-card/70 p-4">
                     <div className="mb-3 flex items-center gap-2">
                       <UserPlus className="size-4 text-emerald-400" />
-                      <h3 className="font-medium text-white">Add Member</h3>
+                      <h3 className="font-medium text-foreground">Add Member</h3>
                     </div>
-                    <p className="mb-3 text-sm text-zinc-400">
+                    <p className="mb-3 text-sm text-muted-foreground">
                       App access can be granted to the team, and every member inherits that access automatically.
                     </p>
                     {canManage ? (
                       <div className="flex gap-2">
                         <Select value={memberUserId} onValueChange={setMemberUserId}>
-                          <SelectTrigger className="border-zinc-700 bg-zinc-950 text-white">
+                          <SelectTrigger className="border-border bg-card text-foreground">
                             <SelectValue placeholder="Select user" />
                           </SelectTrigger>
-                          <SelectContent className="border-zinc-700 bg-zinc-900">
+                          <SelectContent className="border-border bg-card">
                             {availableUsers.map((entry) => (
-                              <SelectItem key={entry.id} value={entry.id} className="text-white">
+                              <SelectItem key={entry.id} value={entry.id} className="text-foreground">
                                 {entry.full_name || entry.email}
                               </SelectItem>
                             ))}
@@ -357,30 +375,30 @@ const Teams = () => {
                         </Button>
                       </div>
                     ) : (
-                      <p className="text-sm text-zinc-500">Admin access required to manage membership.</p>
+                      <p className="text-sm text-tertiary">Admin access required to manage membership.</p>
                     )}
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4">
-                  <h3 className="mb-3 font-medium text-white">Members</h3>
+                <div className="rounded-lg border border-border bg-card/70 p-4">
+                  <h3 className="mb-3 font-medium text-foreground">Members</h3>
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-zinc-800 hover:bg-transparent">
-                        <TableHead className="text-zinc-400">User</TableHead>
-                        <TableHead className="text-zinc-400">Email</TableHead>
-                        <TableHead className="text-zinc-400">Joined</TableHead>
-                        <TableHead className="text-right text-zinc-400">Actions</TableHead>
+                      <TableRow className="border-border hover:bg-transparent">
+                        <TableHead className="text-muted-foreground">User</TableHead>
+                        <TableHead className="text-muted-foreground">Email</TableHead>
+                        <TableHead className="text-muted-foreground">Joined</TableHead>
+                        <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedTeam.members.map((member) => (
-                        <TableRow key={member.id} className="border-zinc-800">
-                          <TableCell className="text-white">{member.full_name || "Unnamed user"}</TableCell>
-                          <TableCell className="text-zinc-300">
+                        <TableRow key={member.id} className="border-border">
+                          <TableCell className="text-foreground">{member.full_name || "Unnamed user"}</TableCell>
+                          <TableCell className="text-muted-foreground">
                             <span className="hdx-mask">{member.email}</span>
                           </TableCell>
-                          <TableCell className="text-zinc-400">
+                          <TableCell className="text-muted-foreground">
                             {new Date(member.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-right">
@@ -402,7 +420,7 @@ const Teams = () => {
                 </div>
               </>
             ) : (
-              <div data-testid="teams-empty-detail" className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/50 p-8 text-center text-zinc-400">
+              <div data-testid="teams-empty-detail" className="rounded-lg border border-dashed border-border bg-card/50 p-8 text-center text-muted-foreground">
                 Pick a team from the directory to manage membership, shared roles, and inherited access.
               </div>
             )}
@@ -411,23 +429,23 @@ const Teams = () => {
       )}
 
       <Sheet open={editorOpen} onOpenChange={setEditorOpen}>
-        <SheetContent side="right" className="border-zinc-800 bg-zinc-900 sm:max-w-xl">
+        <SheetContent side="right" className="border-border bg-card sm:max-w-xl">
           <SheetHeader>
-            <SheetTitle className="text-white">
+            <SheetTitle className="text-foreground">
               {editingTeamId ? "Edit Team" : "Create Team"}
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label className="text-white">Name</Label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} className="border-zinc-700 bg-zinc-950 text-white" />
+              <Label className="text-foreground">Name</Label>
+              <Input value={name} onChange={(event) => setName(event.target.value)} className="border-border bg-card text-foreground" />
             </div>
             <div className="space-y-2">
-              <Label className="text-white">Description</Label>
-              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} className="border-zinc-700 bg-zinc-950 text-white" />
+              <Label className="text-foreground">Description</Label>
+              <Textarea value={description} onChange={(event) => setDescription(event.target.value)} className="border-border bg-card text-foreground" />
             </div>
             <div className="space-y-2">
-              <Label className="text-white">Color</Label>
+              <Label className="text-foreground">Color</Label>
               <div className="flex flex-wrap gap-2">
                 {DEFAULT_COLORS.map((value) => (
                   <button
@@ -442,7 +460,7 @@ const Teams = () => {
             </div>
           </div>
           <SheetFooter className="mt-8">
-            <Button variant="outline" className="border-zinc-700 text-zinc-200" onClick={() => setEditorOpen(false)}>
+            <Button variant="outline" className="border-border text-foreground" onClick={() => setEditorOpen(false)}>
               Cancel
             </Button>
             <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={saveTeam}>

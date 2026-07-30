@@ -1,73 +1,108 @@
 import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Badge } from "@/components/ui/badge";
 import { runtimeConfig } from "@/utils/runtime-config";
+
+// Version synced from package.json — update manually on release.
+export const VERSION = "v0.11.0";
+
+const linkClasses =
+  "rounded-sm text-sm text-muted-foreground transition-colors duration-200 " +
+  "hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent-outline/35";
+
+const linkGroups = [
+  {
+    heading: "Developer",
+    links: [
+      { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
+      { label: "GitHub", href: "https://github.com/EnvSync-Cloud/envsync", external: true },
+    ],
+  },
+  {
+    heading: "Workflow",
+    links: [
+      { label: "Integrations", href: "/integrations", external: false },
+      { label: "Get Started", href: "/onboarding", external: false },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
+      { label: "About", href: "/about", external: false },
+      { label: "Roadmap", href: "https://envsync.notion.site", external: true },
+      { label: "Contact", href: "mailto:team@envsync.cloud", external: true },
+    ],
+  },
+] as const;
 
 const Footer = () => {
   return (
-    <footer className="container relative mx-auto border-x border-t border-border bg-background p-0">
-      <div className="container relative z-10 mx-auto p-0">
-        <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))]">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 opacity-45"
-            style={{
-              backgroundImage:
-                "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
-              backgroundSize: "36px 36px",
-            }}
-          />
-          <div className="relative z-10 grid grid-cols-1 gap-0 md:grid-cols-4">
-            <div className="border border-border bg-[hsl(var(--surface-1))] p-6 md:col-span-1">
-              <div className="mb-4 flex items-center space-x-2">
-                <img src="/EnvSync.svg" alt="EnvSync Logo" className="h-8 w-8" />
-                <span className="text-xl font-bold text-foreground">EnvSync</span>
-                <Badge className="rounded-none border border-sky-500/60 bg-sky-500/15 px-2 py-1 text-xs font-bold text-sky-300 hover:bg-sky-500/20">
-                  BETA
-                </Badge>
-              </div>
-              <p className="mb-6 text-muted-foreground">
-                Developer-first environment control for teams shipping across staging, CI, and production.
-              </p>
-              <div className="flex space-x-4">
-                <a href="https://github.com/EnvSync-Cloud/envsync" className="text-muted-foreground transition-colors hover:text-primary">
-                  <Github className="h-5 w-5" />
-                </a>
-              </div>
-            </div>
-
-            <div className="-ml-px border border-border bg-[hsl(var(--surface-1))] p-6">
-              <h3 className="mb-4 font-semibold text-foreground">Developer</h3>
-              <ul className="space-y-2">
-                <li><a href={runtimeConfig.apiDocsUrl} className="text-muted-foreground transition-colors hover:text-foreground">API Reference</a></li>
-                <li><a href="https://github.com/EnvSync-Cloud/envsync" className="text-muted-foreground transition-colors hover:text-foreground">GitHub</a></li>
-              </ul>
-            </div>
-
-            <div className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-6 md:mt-0">
-              <h3 className="mb-4 font-semibold text-foreground">Workflow</h3>
-              <ul className="space-y-2">
-                <li><Link to="/integrations" className="text-muted-foreground transition-colors hover:text-foreground">Integrations</Link></li>
-                <li><Link to="/onboarding" className="text-muted-foreground transition-colors hover:text-foreground">Get Started</Link></li>
-              </ul>
-            </div>
-
-            <div className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-6 md:mt-0">
-              <h3 className="mb-4 font-semibold text-foreground">Company</h3>
-              <ul className="space-y-2">
-                <li><a href="/about" className="text-muted-foreground transition-colors hover:text-foreground">About</a></li>
-                <li><a href="https://envsync.notion.site" target="_blank" rel="noopener noreferrer" className="text-muted-foreground transition-colors hover:text-foreground">Roadmap</a></li>
-                <li><a href="mailto:team@envsync.cloud" className="text-muted-foreground transition-colors hover:text-foreground">Contact</a></li>
-              </ul>
+    <footer className="border-t border-border bg-background">
+      <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-8">
+        <div className="grid gap-12 md:grid-cols-[2fr_1fr_1fr_1fr]">
+          {/* Brand column */}
+          <div>
+            <Link to="/" className="flex items-center gap-2">
+              <img src="/EnvSync.svg" alt="EnvSync Logo" className="h-7 w-7" />
+              <span className="text-base font-medium text-foreground">EnvSync</span>
+              <span className="rounded-full border border-border px-2 py-0.5 font-mono text-xs leading-4 text-muted-foreground">
+                BETA
+              </span>
+            </Link>
+            <p className="mt-4 max-w-xs text-sm text-muted-foreground">
+              Developer-first environment control for teams shipping across staging, CI, and production.
+            </p>
+            <div className="mt-6">
+              <a
+                href="https://github.com/EnvSync-Cloud/envsync"
+                className="rounded-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent-outline/35"
+                aria-label="GitHub"
+              >
+                <Github className="h-4 w-4" />
+              </a>
             </div>
           </div>
+
+          {/* Link groups */}
+          {linkGroups.map((group) => (
+            <div key={group.heading}>
+              <span className="mb-4 block font-mono text-xs leading-4 tracking-normal text-tertiary">
+                {group.heading}
+              </span>
+              <ul className="space-y-3">
+                {group.links.map((link) => (
+                  <li key={link.label}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target={link.href.startsWith("mailto:") ? undefined : "_blank"}
+                        rel={link.href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
+                        className={linkClasses}
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        to={link.href}
+                        className={linkClasses}
+                      >
+                        {link.label}
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="-mt-px border border-border bg-[hsl(var(--surface-2))] px-6 py-6">
-          <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
-            <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} EnvSync. All rights reserved.</p>
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Built for delivery-safe config changes</p>
-          </div>
+      {/* Bottom bar */}
+      <div className="border-t border-border">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-2 px-4 py-6 sm:px-8 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-muted-foreground">
+            &copy; {new Date().getFullYear()} EnvSync. All rights reserved.
+          </p>
+          <span className="font-mono text-xs leading-4 text-tertiary">{VERSION}</span>
         </div>
       </div>
     </footer>

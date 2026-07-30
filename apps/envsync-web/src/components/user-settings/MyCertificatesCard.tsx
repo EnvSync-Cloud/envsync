@@ -27,8 +27,8 @@ function downloadText(filename: string, value: string) {
 
 function getStatusTone(status?: string) {
   return status?.toLowerCase() === "active"
-    ? "bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-500/20"
-    : "bg-white/[0.06] text-zinc-200 ring-1 ring-white/10";
+    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-200 ring-1 ring-emerald-500/20"
+    : "bg-white/[0.06] text-foreground ring-1 ring-white/10";
 }
 
 function getSerialPreview(serial?: string) {
@@ -56,21 +56,21 @@ export const MyCertificatesCard = () => {
   }, [data]);
 
   return (
-    <Card className="border-zinc-800 bg-zinc-900/70">
+    <Card className="border-border bg-card/70">
       <CardHeader className="space-y-3">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-emerald-500/10 p-2 ring-1 ring-emerald-500/20">
             <ShieldCheck className="size-5 text-emerald-400" />
           </div>
           <div>
-            <CardTitle className="text-base text-zinc-100">My Certificates</CardTitle>
-            <p className="text-sm text-zinc-400">Managed certificate bundle.</p>
+            <CardTitle className="text-base text-foreground">My Certificates</CardTitle>
+            <p className="text-sm text-muted-foreground">Managed certificate bundle.</p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" />
             Loading certificate bundle...
           </div>
@@ -80,24 +80,24 @@ export const MyCertificatesCard = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
+            <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-4">
               <div data-testid="my-certs-status-row" className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className={cn("border-0 px-2.5 py-1 font-medium", getStatusTone(data.member_certificate.status))}>
                     {data.member_certificate.status}
                   </Badge>
-                  <Badge variant="secondary" className="bg-emerald-500/10 px-2.5 py-1 text-emerald-200">
+                  <Badge variant="secondary" className="bg-emerald-500/10 px-2.5 py-1 text-emerald-700 dark:text-emerald-200">
                     {data.member_certificate.metadata?.role_name ?? "System"}
                   </Badge>
                 </div>
-                <div className="text-sm text-zinc-400">{getSerialPreview(data.member_certificate.serial_hex)}</div>
+                <div className="text-sm text-muted-foreground">{getSerialPreview(data.member_certificate.serial_hex)}</div>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <Button
                   data-testid="my-certs-copy-bundle"
                   variant="outline"
-                  className="justify-start border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                  className="justify-start border-border text-foreground hover:bg-muted"
                   onClick={() => copyToClipboard(bundleText, "Certificate bundle")}
                 >
                   <Copy className="mr-2 size-4" />
@@ -106,7 +106,7 @@ export const MyCertificatesCard = () => {
                 <Button
                   data-testid="my-certs-download-bundle"
                   variant="outline"
-                  className="justify-start border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                  className="justify-start border-border text-foreground hover:bg-muted"
                   onClick={() => downloadText("envsync-certificate-bundle.pem", bundleText)}
                 >
                   <Download className="mr-2 size-4" />
@@ -114,7 +114,7 @@ export const MyCertificatesCard = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                  className="justify-start border-border text-foreground hover:bg-muted"
                   onClick={() => copyToClipboard(data.member_certificate.cert_pem ?? "", "Member certificate")}
                 >
                   <Copy className="mr-2 size-4" />
@@ -122,7 +122,7 @@ export const MyCertificatesCard = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+                  className="justify-start border-border text-foreground hover:bg-muted"
                   onClick={() => downloadText("envsync-root-ca.pem", data.root_ca_pem)}
                 >
                   <Download className="mr-2 size-4" />
@@ -130,9 +130,9 @@ export const MyCertificatesCard = () => {
                 </Button>
               </div>
 
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-100">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-amber-300" />
+                  <AlertTriangle className="size-4 text-amber-600 dark:text-amber-300" />
                   <span>Private key stays hidden until revealed.</span>
                 </div>
               </div>
@@ -158,15 +158,15 @@ export const MyCertificatesCard = () => {
                           : "my-certs-section-private-key"
                     }
                     className={cn(
-                      "overflow-hidden rounded-2xl border bg-zinc-950/70 px-4",
-                      entry.isSensitive ? "border-amber-500/20" : "border-zinc-800"
+                      "overflow-hidden rounded-2xl border bg-card/70 px-4",
+                      entry.isSensitive ? "border-amber-500/20" : "border-border"
                     )}
                   >
                     <AccordionTrigger className="py-4 text-left hover:no-underline">
                       <div className="flex min-w-0 items-center gap-2 pr-4">
-                        <p className="text-sm font-semibold text-zinc-100">{entry.label}</p>
+                        <p className="text-sm font-medium text-foreground">{entry.label}</p>
                         {entry.isSensitive ? (
-                          <Badge className="bg-amber-500/10 text-amber-200 ring-1 ring-amber-500/20">Sensitive</Badge>
+                          <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-200 ring-1 ring-amber-500/20">Sensitive</Badge>
                         ) : null}
                       </div>
                     </AccordionTrigger>
@@ -176,7 +176,7 @@ export const MyCertificatesCard = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-amber-500/30 text-amber-100 hover:bg-amber-500/10"
+                            className="border-amber-500/30 text-amber-800 dark:text-amber-100 hover:bg-amber-500/10"
                             onClick={() => setIsPrivateKeyVisible((visible) => !visible)}
                           >
                             {isPrivateKeyVisible ? (
@@ -195,7 +195,7 @@ export const MyCertificatesCard = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                          className="border-border text-muted-foreground hover:bg-muted"
                           onClick={() => copyToClipboard(entry.value, entry.label)}
                         >
                           <Copy className="mr-2 size-3" />
@@ -204,7 +204,7 @@ export const MyCertificatesCard = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                          className="border-border text-muted-foreground hover:bg-muted"
                           onClick={() => downloadText(entry.filename, entry.value)}
                         >
                           <Download className="mr-2 size-3" />
@@ -213,7 +213,7 @@ export const MyCertificatesCard = () => {
                       </div>
 
                       {isHiddenSensitiveSection ? (
-                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-100">
+                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-800 dark:text-amber-100">
                           Reveal on trusted devices only.
                         </div>
                       ) : (
@@ -221,8 +221,8 @@ export const MyCertificatesCard = () => {
                           readOnly
                           value={entry.value}
                           className={cn(
-                            "min-h-[140px] font-mono text-xs text-zinc-300",
-                            entry.isSensitive ? "border-amber-500/20 bg-black/80" : "border-zinc-800 bg-zinc-950"
+                            "min-h-[140px] font-mono text-xs text-muted-foreground",
+                            entry.isSensitive ? "border-amber-500/20 bg-card/80" : "border-border bg-card"
                           )}
                         />
                       )}

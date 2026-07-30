@@ -49,6 +49,17 @@ export const useAuth = () => {
     void fetchUser();
   }, [fetchUser]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && isAuthenticated) {
+        void fetchUser();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchUser, isAuthenticated]);
+
   const switchOrg = useCallback(async (orgId: string) => {
     if (!user || user.org.id === orgId) return;
 

@@ -9,7 +9,7 @@ interface DangerZoneCardProps {
 
 export const DangerZoneCard = ({ onDeleteClick, isDeleting }: DangerZoneCardProps) => {
   return (
-    <Card className="bg-zinc-800 border-red-900 border">
+    <Card className="bg-muted border-red-900 border">
       <CardHeader>
         <div className="flex items-center space-x-2">
           <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -19,14 +19,14 @@ export const DangerZoneCard = ({ onDeleteClick, isDeleting }: DangerZoneCardProp
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-white">Delete Organization</h4>
-            <p className="text-sm text-zinc-400">
+            <h4 className="font-medium text-foreground">Delete Organization</h4>
+            <p className="text-sm text-muted-foreground">
               Permanently delete this organization and all associated data. This action cannot be undone.
             </p>
           </div>
           <Button
             variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-foreground"
             onClick={onDeleteClick}
             disabled={isDeleting}
           >

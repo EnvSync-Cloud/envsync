@@ -11,7 +11,7 @@ export function ProjectsOverview({ projects }: ProjectsOverviewProps) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-8">
-        <p className="text-zinc-500 text-sm">No projects yet</p>
+        <p className="text-muted-foreground text-sm">No projects yet</p>
         <Link
           to="/applications/create"
           className="text-sm text-emerald-400 hover:text-emerald-300 mt-2 inline-block transition-colors"
@@ -41,14 +41,14 @@ export function ProjectsOverview({ projects }: ProjectsOverviewProps) {
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">
+              <p className="text-sm font-medium text-foreground group-hover:text-emerald-400 transition-colors">
                 {project.name}
               </p>
               {(() => {
                 const configItemCount = (project.env_count ?? 0) + (project.secret_count ?? 0);
 
                 return (
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="text-[11px] text-muted-foreground">
                     <span data-testid={`dashboard-project-${project.id}-count`}>
                       {configItemCount} vars / secrets
                     </span>
@@ -57,7 +57,7 @@ export function ProjectsOverview({ projects }: ProjectsOverviewProps) {
               })()}
             </div>
           </div>
-          <span className="text-[11px] text-zinc-500">
+          <span className="text-[11px] text-muted-foreground">
             {formatLastUsed(project.updated_at.toString())}
           </span>
         </Link>

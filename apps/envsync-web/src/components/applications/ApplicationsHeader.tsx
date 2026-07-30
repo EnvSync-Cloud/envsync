@@ -26,17 +26,17 @@ export const ApplicationsHeader = ({
         </div>
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-semibold text-zinc-100">Projects</h1>
+            <h1 className="text-xl font-medium text-foreground">Projects</h1>
             <div className="flex items-center space-x-2">
               <Badge
                 variant="secondary"
-                className="bg-zinc-800 text-zinc-400 text-xs"
+                className="text-xs"
               >
                 {statistics.total}
               </Badge>
             </div>
           </div>
-          <p className="text-sm text-zinc-400 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Manage your environment configurations
           </p>
         </div>
@@ -46,7 +46,6 @@ export const ApplicationsHeader = ({
           onClick={onRefresh}
           variant="outline"
           size="sm"
-          className="text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-200"
           disabled={isRefetching}
         >
           <RefreshCw
@@ -56,7 +55,6 @@ export const ApplicationsHeader = ({
         {canEdit && (
           <Button
             onClick={onCreateProject}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
             size="sm"
           >
             <Plus className="w-4 h-4 mr-2" />

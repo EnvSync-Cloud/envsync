@@ -79,16 +79,16 @@ export const InviteUserModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-800 border-zinc-700">
+      <DialogContent className="bg-muted border-border">
         <DialogHeader>
-          <DialogTitle className="text-white">Invite Team Member</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogTitle className="text-foreground">Invite Team Member</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Send an invitation to add a new member to your team.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="invite-email" className="text-white">
+            <Label htmlFor="invite-email" className="text-foreground">
               Email Address *
             </Label>
             <Input
@@ -96,7 +96,7 @@ export const InviteUserModal = ({
               type="email"
               value={emailAddress}
               onChange={(e) => setEmailAddress(e.target.value)}
-              className={`bg-zinc-900 border-zinc-700 text-white ${
+              className={`bg-card border-border text-foreground ${
                 formErrors.email ? "border-red-500" : ""
               }`}
               placeholder="Enter email address"
@@ -107,7 +107,7 @@ export const InviteUserModal = ({
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="invite-role" className="text-white">
+            <Label htmlFor="invite-role" className="text-foreground">
               Role *
             </Label>
             <Select
@@ -116,18 +116,18 @@ export const InviteUserModal = ({
               disabled={isLoading}
             >
               <SelectTrigger
-                className={`bg-zinc-900 border-zinc-700 text-white ${
+                className={`bg-card border-border text-foreground ${
                   formErrors.role ? "border-red-500" : ""
                 }`}
               >
                 <SelectValue placeholder="Select a role" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-800 border-zinc-700">
+              <SelectContent className="bg-muted border-border">
                 {roles.map((role) => (
                   <SelectItem
                     key={role.id}
                     value={role.id}
-                    className="text-white hover:bg-zinc-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center space-x-2">
                       {getRoleIcon(role.name)}
@@ -146,14 +146,14 @@ export const InviteUserModal = ({
           <Button
             variant="outline"
             onClick={onClose}
-            className="text-white border-zinc-600 hover:bg-zinc-700"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             onClick={onInvite}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isLoading || !emailAddress || !selectedRoleId}
           >
             {isLoading ? (

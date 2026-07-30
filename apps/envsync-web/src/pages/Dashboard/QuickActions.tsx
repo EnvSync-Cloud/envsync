@@ -17,7 +17,7 @@ export function QuickActions() {
       <Button
         onClick={() => navigate("/users")}
         variant="outline"
-        className="border-zinc-700 text-zinc-300 hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-zinc-100 w-full justify-start"
+        className="border-border text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-foreground w-full justify-start"
       >
         <UserPlus className="size-4 mr-2" />
         Invite Member
@@ -25,7 +25,7 @@ export function QuickActions() {
       <Button
         onClick={() => navigate("/apikeys")}
         variant="outline"
-        className="border-zinc-700 text-zinc-300 hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-zinc-100 w-full justify-start"
+        className="border-border text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-foreground w-full justify-start"
       >
         <Key className="size-4 mr-2" />
         Generate API Key
@@ -33,7 +33,7 @@ export function QuickActions() {
       <Button
         onClick={() => navigate("/audit")}
         variant="outline"
-        className="border-zinc-700 text-zinc-300 hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-zinc-100 w-full justify-start"
+        className="border-border text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-foreground w-full justify-start"
       >
         <Activity className="size-4 mr-2" />
         View Activity

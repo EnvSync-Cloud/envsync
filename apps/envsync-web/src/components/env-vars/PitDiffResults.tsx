@@ -44,13 +44,13 @@ export const PitDiffResults = ({
 	const itemLabel = getPitItemLabel(kind);
 
 	return (
-		<Card className="border-zinc-800 bg-zinc-900">
+		<Card className="border-border bg-card">
 			<CardHeader>
-				<CardTitle className="flex items-center gap-2 text-base text-white">
+				<CardTitle className="flex items-center gap-2 text-base text-foreground">
 					<GitCompareArrows className="size-4 text-emerald-400" />
 					{title}
 				</CardTitle>
-				<p className="text-sm text-zinc-400">{description}</p>
+				<p className="text-sm text-muted-foreground">{description}</p>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{error && (
@@ -61,19 +61,19 @@ export const PitDiffResults = ({
 				)}
 
 				{isPending && (
-					<div className="rounded-lg border border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+					<div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
 						Loading diff results...
 					</div>
 				)}
 
 				{!isPending && !error && !hasPreviewed && (
-					<div className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+					<div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
 						Run a comparison to render the inline diff here.
 					</div>
 				)}
 
 				{!isPending && !error && hasPreviewed && diff && totalChanges === 0 && (
-					<div className="rounded-lg border border-zinc-800 bg-zinc-950 p-6 text-sm text-zinc-400">
+					<div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
 						No net {itemLabel} changes were found for the selected comparison.
 					</div>
 				)}
@@ -94,20 +94,20 @@ export const PitDiffResults = ({
 
 						<Table>
 							<TableHeader>
-								<TableRow className="border-zinc-800 hover:bg-transparent">
-									<TableHead className="text-zinc-500">Change type</TableHead>
-									<TableHead className="text-zinc-500">Key</TableHead>
-									<TableHead className="text-zinc-500">Before</TableHead>
-									<TableHead className="text-zinc-500">After</TableHead>
+								<TableRow className="border-border hover:bg-transparent">
+									<TableHead className="text-tertiary">Change type</TableHead>
+									<TableHead className="text-tertiary">Key</TableHead>
+									<TableHead className="text-tertiary">Before</TableHead>
+									<TableHead className="text-tertiary">After</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{rows.map((row) => (
-									<TableRow key={`${row.type}-${row.key}`} className="border-zinc-800 hover:bg-zinc-800/60">
-										<TableCell className="text-zinc-200">{row.type}</TableCell>
-										<TableCell className="font-mono text-sm text-white">{row.key}</TableCell>
-										<TableCell className="text-zinc-400">{row.before}</TableCell>
-										<TableCell className="text-zinc-200">{row.after}</TableCell>
+									<TableRow key={`${row.type}-${row.key}`} className="border-border hover:bg-muted/60">
+										<TableCell className="text-foreground">{row.type}</TableCell>
+										<TableCell className="font-mono text-sm text-foreground">{row.key}</TableCell>
+										<TableCell className="text-muted-foreground">{row.before}</TableCell>
+										<TableCell className="text-foreground">{row.after}</TableCell>
 									</TableRow>
 								))}
 							</TableBody>

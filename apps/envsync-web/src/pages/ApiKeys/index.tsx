@@ -28,12 +28,10 @@ export const ApiKeys = () => {
   const [showCreatedKeyModalOpen, setShowCreatedKeyModalOpen] = useState(false);
   const [newKeyDescription, setNewKeyDescription] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
-  // Loading states for individual actions
   const [actionLoadingStates, setActionLoadingStates] = useState<
     Record<string, boolean>
   >({});
 
-  // Helper function to set loading state for individual actions
   const setActionLoading = useCallback((keyId: string, loading: boolean) => {
     setActionLoadingStates((prev) => ({ ...prev, [keyId]: loading }));
   }, []);
@@ -94,7 +92,6 @@ export const ApiKeys = () => {
     },
   });
 
-  // Action handlers
   const handleCreateKey = useCallback(() => {
     if (createApiKey.isPending) return;
     createApiKey.mutate(newKeyDescription);
@@ -159,22 +156,22 @@ export const ApiKeys = () => {
           open={showCreatedKeyModalOpen}
           onOpenChange={setShowCreatedKeyModalOpen}
         >
-          <DialogContent className="bg-zinc-800 border-zinc-700">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-white">API Key Created</DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogTitle>API Key Created</DialogTitle>
+              <DialogDescription>
                 Your new API key has been created successfully. Make sure to
                 copy it as you won't be able to see it again.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-white">API Key</Label>
+                <Label>API Key</Label>
                 <div className="relative">
                   <Textarea
                     readOnly
                     value={createdKey || ""}
-                    className="hdx-block bg-zinc-900 border-zinc-700 text-white pr-12"
+                    className="hdx-block pr-12"
                     rows={3}
                   />
                   <Button
@@ -192,13 +189,11 @@ export const ApiKeys = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowCreatedKeyModalOpen(false)}
-                className="text-white border-zinc-600 hover:bg-zinc-700"
               >
                 Close
               </Button>
               <Button
                 onClick={() => copy.mutate(createdKey || "")}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
               >
                 <Copy className="w-4 h-4 mr-2" />
                 Copy Key
@@ -211,26 +206,25 @@ export const ApiKeys = () => {
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
               disabled={createApiKey.isPending}
             >
               <Plus className="w-4 h-4 mr-2" />
               Create API Key
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-zinc-800 border-zinc-700">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle>
                 Create New API Key
               </DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription>
                 Create a new API key for your organization. Make sure to copy it
                 as you won't be able to see it again.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="description" className="text-white">
+                <Label htmlFor="description">
                   Description
                 </Label>
                 <Textarea
@@ -238,7 +232,6 @@ export const ApiKeys = () => {
                   placeholder="Enter a description for this API key..."
                   value={newKeyDescription}
                   onChange={(e) => setNewKeyDescription(e.target.value)}
-                  className="bg-zinc-900 border-zinc-700 text-white"
                   disabled={createApiKey.isPending}
                 />
               </div>
@@ -247,14 +240,12 @@ export const ApiKeys = () => {
               <Button
                 variant="outline"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-white border-zinc-600 hover:bg-zinc-700"
                 disabled={createApiKey.isPending}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateKey}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
                 disabled={createApiKey.isPending}
               >
                 {createApiKey.isPending ? (
@@ -270,9 +261,9 @@ export const ApiKeys = () => {
           </DialogContent>
         </Dialog>
 
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white flex items-center">
+          <CardTitle className="flex items-center">
             <Key className="size-8 mr-3 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
             API Keys
             <Count
@@ -293,7 +284,7 @@ export const ApiKeys = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
+                  <tr className="border-b border-border">
                     {[
                       "Description",
                       "API Key",
@@ -304,12 +295,12 @@ export const ApiKeys = () => {
                     ].map((header) => (
                       <th
                         key={header}
-                        className="text-left py-3 px-4 text-zinc-400 font-medium"
+                        className="text-left py-3 px-4 text-muted-foreground font-medium"
                       >
                         {header}
                       </th>
                     ))}
-                    <th className="text-right py-3 px-4 text-zinc-400 font-medium">
+                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">
                       Actions
                     </th>
                   </tr>
@@ -319,25 +310,25 @@ export const ApiKeys = () => {
                     ? Array.from({ length: 6 }, (_, index) => (
                         <tr key={index} className="animate-pulse">
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-3/4" />
+                            <div className="h-4 bg-muted rounded w-3/4" />
                           </td>
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-full" />
+                            <div className="h-4 bg-muted rounded w-full" />
                           </td>
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-1/2" />
+                            <div className="h-4 bg-muted rounded w-1/2" />
                           </td>
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-1/3" />
+                            <div className="h-4 bg-muted rounded w-1/3" />
                           </td>
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-1/3" />
+                            <div className="h-4 bg-muted rounded w-1/3" />
                           </td>
                           <td className="py-4 px-4">
-                            <div className="h-4 bg-zinc-700 rounded w-full" />
+                            <div className="h-4 bg-muted rounded w-full" />
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="h-6 bg-zinc-700 rounded w-full" />
+                            <div className="h-6 bg-muted rounded w-full" />
                           </td>
                         </tr>
                       ))

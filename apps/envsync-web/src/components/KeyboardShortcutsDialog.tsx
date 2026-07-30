@@ -45,9 +45,9 @@ export function KeyboardShortcutsDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800">
+      <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="text-zinc-100">Keyboard Shortcuts</DialogTitle>
+          <DialogTitle className="text-foreground">Keyboard Shortcuts</DialogTitle>
         </DialogHeader>
         <div className="space-y-1 pt-2">
           {shortcuts.map((shortcut) => (
@@ -55,7 +55,7 @@ export function KeyboardShortcutsDialog() {
               key={shortcut.description}
               className="flex items-center justify-between py-2 px-1"
             >
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-muted-foreground">
                 {shortcut.description}
               </span>
               <div className="flex items-center space-x-1">
@@ -64,7 +64,7 @@ export function KeyboardShortcutsDialog() {
                     {i > 0 && (
                       <span className="text-zinc-600 mx-0.5">+</span>
                     )}
-                    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono bg-zinc-800 text-zinc-400 border border-zinc-700 rounded">
+                    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-xs font-mono bg-muted text-muted-foreground border border-border rounded">
                       {key}
                     </kbd>
                   </span>

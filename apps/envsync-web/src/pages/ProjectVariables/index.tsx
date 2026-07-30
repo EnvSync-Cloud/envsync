@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Settings } from "lucide-react";
-import { ProjectEnvironmentsHeader } from "@/components/env-vars/ProjectEnvironmentsHeader";
+import { ProjectHeader } from "@/components/ProjectHeader";
 import { EnvironmentVariablesTable } from "@/components/env-vars/EnvironmentVariablesTable";
+import { VariableHistoryDrawer } from "@/components/env-vars/VariableHistoryDrawer";
 import { AddEnvVarModal } from "@/components/env-vars/AddEnvVarModal";
 import { EditEnvVarModal } from "@/components/env-vars/EditEnvVarModal";
 import { DeleteEnvVarModal } from "@/components/env-vars/DeleteEnvVarModal";
@@ -31,7 +32,6 @@ export const ProjectEnvironments = () => {
   const onBack = () => navigate("/");
 
   const {
-    // Data
     project,
     environmentTypes,
     environmentVariables,
@@ -39,72 +39,76 @@ export const ProjectEnvironments = () => {
     enableSecrets,
     isLoading,
     error,
-
-    // Mutations
     createVariable,
     updateVariable,
     deleteVariable,
     bulkImportVariables,
-    createSecret,
-    updateSecret,
-    deleteSecret,
-    bulkImportSecrets,
-
-    // Utility functions
     refetch,
   } = useProjectEnvironments(appId);
 
+  const defaultEnvId = getDefaultEnvironmentType(environmentTypes);
+
   const [selectedEnvironment, setSelectedEnvironment] = useQueryState(
     "selected",
-    parseAsString.withDefault(getDefaultEnvironmentType(environmentTypes))
+    parseAsString.withDefault("")
   );
 
   useEffect(() => {
-    if (!selectedEnvironment && environmentTypes.length > 0) {
-      setSelectedEnvironment(getDefaultEnvironmentType(environmentTypes));
+    if (environmentTypes.length > 0 && !environmentTypes.find((e) => e.id === selectedEnvironment)) {
+      setSelectedEnvironment(defaultEnvId);
     }
-  }, [environmentTypes]);
+  }, [environmentTypes, selectedEnvironment, setSelectedEnvironment, defaultEnvId]);
 
-  // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [selectedVariable, setSelectedVariable] =
     useState<EnvironmentVariable | null>(null);
+  const [historyVariable, setHistoryVariable] =
+    useState<EnvironmentVariable | null>(null);
 
-  // Event handlers
   const handleAddVariable = useCallback(
     (data: EnvVarFormData) => {
       createVariable.mutate(data, {
-        onSuccess: () => {
-          setShowAddModal(false);
-        },
+        onSuccess: () => setShowAddModal(false),
       });
     },
     [createVariable]
   );
 
   const handleEditVariable = (data: SingleItemEnvVarUpdateData) => {
-    updateVariable.mutate(
-      data,
-      {
-        onSuccess: () => {
-          setShowEditModal(false);
-          setSelectedVariable(null);
-        },
-      }
-    );
+    updateVariable.mutate(data, {
+      onSuccess: () => {
+        setShowEditModal(false);
+        setSelectedVariable(null);
+      },
+    });
   };
+
+  const handleInlineEdit = useCallback(
+    async (data: SingleItemEnvVarUpdateData) => {
+      return new Promise<void>((resolve, reject) => {
+        updateVariable.mutate(data, {
+          onSuccess: () => {
+            toast.success("Variable updated");
+            resolve();
+          },
+          onError: (error) => {
+            toast.error("Failed to update variable");
+            reject(error);
+          },
+        });
+      });
+    },
+    [updateVariable]
+  );
 
   const handleDeleteVariable = useCallback(
     (env_type_id: string, key: string, appId: string) => {
       deleteVariable.mutate(
-        {
-          env_type_id,
-          key,
-          appId,
-        },
+        { env_type_id, key, appId },
         {
           onSuccess: () => {
             setShowDeleteModal(false);
@@ -119,9 +123,7 @@ export const ProjectEnvironments = () => {
   const handleBulkImport = useCallback(
     (data: BulkEnvVarData) => {
       bulkImportVariables.mutate(data, {
-        onSuccess: () => {
-          setShowBulkImportModal(false);
-        },
+        onSuccess: () => setShowBulkImportModal(false),
       });
     },
     [bulkImportVariables]
@@ -148,6 +150,60 @@ export const ProjectEnvironments = () => {
     toast.success(`Exported ${filtered.length} variables`);
   }, [environmentVariables, selectedEnvironment, environmentTypes, project]);
 
+  const handleBulkDelete = useCallback(
+    async (varsToDelete: EnvironmentVariable[]) => {
+      const count = varsToDelete.length;
+      const confirmed = window.confirm(
+        `Are you sure you want to delete ${count} ${count === 1 ? "variable" : "variables"}? This action cannot be undone.`
+      );
+      if (!confirmed) return;
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const variable of varsToDelete) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            deleteVariable.mutate(
+              { env_type_id: variable.env_type_id, key: variable.key, appId: appId! },
+              { onSuccess: () => resolve(), onError: (error) => reject(error) }
+            );
+          });
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Deleted ${successCount} ${successCount === 1 ? "variable" : "variables"}`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to delete ${errorCount} ${errorCount === 1 ? "variable" : "variables"}`);
+      }
+    },
+    [deleteVariable, appId]
+  );
+
+  const handleBulkExport = useCallback(
+    (varsToExport: EnvironmentVariable[]) => {
+      if (varsToExport.length === 0) {
+        toast.error("No variables selected for export");
+        return;
+      }
+      const content = varsToExport.map((v) => `${v.key}=${v.value}`).join("\n");
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${project!.id}-selected.env.var`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${varsToExport.length} variables`);
+    },
+    [project]
+  );
+
   const handleEditClick = useCallback((variable: EnvironmentVariable) => {
     setSelectedVariable(variable);
     setShowEditModal(true);
@@ -158,6 +214,11 @@ export const ProjectEnvironments = () => {
     setShowDeleteModal(true);
   }, []);
 
+  const handleViewHistory = useCallback((variable: EnvironmentVariable) => {
+    setHistoryVariable(variable);
+    setShowHistoryDrawer(true);
+  }, []);
+
   const handleRetry = useCallback(() => {
     refetch();
   }, [refetch]);
@@ -166,7 +227,7 @@ export const ProjectEnvironments = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <p className="text-zinc-400 mb-4">Loading user data ...</p>
+          <p className="text-muted-foreground mb-4">Loading user data ...</p>
         </div>
       </div>
     );
@@ -190,16 +251,16 @@ export const ProjectEnvironments = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Project not found
           </h3>
-          <p className="text-zinc-400 mb-4">
+          <p className="text-muted-foreground mb-4">
             The requested project could not be found.
           </p>
           <Button
             onClick={onBack}
             variant="outline"
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Go Back
@@ -213,11 +274,11 @@ export const ProjectEnvironments = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center text-center max-w-md">
-          <Settings className="w-12 h-12 text-zinc-500 mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">
+          <Settings className="w-12 h-12 text-tertiary mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No Environment Types
           </h3>
-          <p className="text-zinc-400 mb-6">
+          <p className="text-muted-foreground mb-6">
             Create at least one environment type (e.g. Development, Staging,
             Production) before adding variables.
           </p>
@@ -225,16 +286,14 @@ export const ProjectEnvironments = () => {
             <Button
               onClick={onBack}
               variant="outline"
-              className="text-white border-zinc-700 hover:bg-zinc-800"
+              className="text-foreground border-border hover:bg-muted"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
             <Button
-              onClick={() =>
-                navigate(appManageEnvironmentsPath(appId ?? ""))
-              }
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              onClick={() => navigate(appManageEnvironmentsPath(appId ?? ""))}
+              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             >
               <Settings className="w-4 h-4 mr-2" />
               Create Environment Type
@@ -246,56 +305,54 @@ export const ProjectEnvironments = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <ProjectEnvironmentsHeader
-        environmentTypes={environmentTypes.length}
-        environmentId={selectedEnvironment}
-        environmentName={environmentTypes.find((e) => e.id === selectedEnvironment)?.name}
+    <div>
+      <ProjectHeader
+        projectName={project.name}
+        environmentTypes={environmentTypes}
+        selectedEnvironment={selectedEnvironment}
+        onEnvironmentChange={setSelectedEnvironment}
+        totalVariables={environmentVariables.length}
+        totalSecrets={secrets.length}
+        canEdit={user.role.can_edit}
         isRefetching={
           createVariable.isPending ||
           updateVariable.isPending ||
           deleteVariable.isPending ||
           bulkImportVariables.isPending
         }
-        projectName={project.name}
-        totalSecrets={secrets.length}
-        totalVariables={environmentVariables.length}
         enableSecrets={enableSecrets}
-        onBack={onBack}
+        onRefresh={handleRetry}
         onAddVariable={() => setShowAddModal(true)}
         onBulkImport={() => setShowBulkImportModal(true)}
-        canEdit={user.role.can_edit}
         onExport={handleExport}
-        onRefresh={handleRetry}
-        onManageEnvironments={() => {
-          navigate(appManageEnvironmentsPath(appId ?? ""));
-        }}
+        onManageEnvironments={() => navigate(appManageEnvironmentsPath(appId ?? ""))}
       />
 
-      {/* Environment Variables Table */}
-      <EnvironmentVariablesTable
-        selectedEnvironment={selectedEnvironment}
-        setSelectedEnvironment={setSelectedEnvironment}
-        variables={environmentVariables}
-        environmentTypes={environmentTypes}
-        onEdit={handleEditClick}
-        onDelete={handleDeleteClick}
-        canEdit={user.role.can_edit}
-        onPrimaryAction={() => setShowAddModal(true)}
-        primaryActionLabel="Add Variable"
-      />
+      <div className="mx-auto max-w-[1600px] px-5 md:px-6 py-6">
+        <EnvironmentVariablesTable
+          selectedEnvironment={selectedEnvironment}
+          setSelectedEnvironment={setSelectedEnvironment}
+          variables={environmentVariables}
+          environmentTypes={environmentTypes}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+          onViewHistory={handleViewHistory}
+          onInlineEdit={handleInlineEdit}
+          onBulkDelete={handleBulkDelete}
+          onBulkExport={handleBulkExport}
+          canEdit={user.role.can_edit}
+        />
+      </div>
 
-      {/* Add Variable Modal */}
       <AddEnvVarModal
         open={showAddModal}
         onOpenChange={setShowAddModal}
         environmentTypes={environmentTypes}
         onSave={handleAddVariable}
         isSaving={createVariable.isPending}
+        defaultEnvironment={selectedEnvironment}
       />
 
-      {/* Edit Variable Modal */}
       <EditEnvVarModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
@@ -305,7 +362,6 @@ export const ProjectEnvironments = () => {
         isSaving={updateVariable.isPending}
       />
 
-      {/* Delete Variable Modal */}
       <DeleteEnvVarModal
         open={showDeleteModal}
         onOpenChange={setShowDeleteModal}
@@ -315,13 +371,20 @@ export const ProjectEnvironments = () => {
         isDeleting={deleteVariable.isPending}
       />
 
-      {/* Bulk Import Modal */}
       <BulkImportModal
         open={showBulkImportModal}
         onOpenChange={setShowBulkImportModal}
         environmentTypes={environmentTypes}
         onImport={handleBulkImport}
         isImporting={bulkImportVariables.isPending}
+        defaultEnvironment={selectedEnvironment}
+      />
+
+      <VariableHistoryDrawer
+        variable={historyVariable}
+        kind="variables"
+        isOpen={showHistoryDrawer}
+        onOpenChange={setShowHistoryDrawer}
       />
     </div>
   );

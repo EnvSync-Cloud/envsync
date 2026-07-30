@@ -3,6 +3,7 @@ import { initTelemetry } from "@/telemetry";
 initTelemetry();
 
 import { createRoot } from "react-dom/client";
+import { ThemeProvider } from "next-themes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
@@ -13,7 +14,9 @@ if (!root) {
 }
 
 createRoot(root).render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>
+  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="envsync-theme">
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  </ThemeProvider>
 );

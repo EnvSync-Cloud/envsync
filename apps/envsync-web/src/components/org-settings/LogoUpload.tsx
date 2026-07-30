@@ -22,9 +22,9 @@ export const LogoUpload = ({
 
   return (
     <div className="space-y-2">
-      <Label className="text-white">Company Logo</Label>
+      <Label className="text-foreground">Company Logo</Label>
       <div className="flex items-center space-x-4">
-        <div className="w-16 h-16 bg-zinc-700 rounded-lg flex items-center justify-center overflow-hidden border-2 border-zinc-600">
+        <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden border-2 border-border">
           {logoPreview ? (
             <img 
               src={logoPreview} 
@@ -32,13 +32,13 @@ export const LogoUpload = ({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-zinc-400 text-xs font-medium">Logo</span>
+            <span className="text-muted-foreground text-xs font-medium">Logo</span>
           )}
         </div>
         <div className="flex flex-col space-y-2">
           <Button 
             variant="outline" 
-            className="text-white border-zinc-600 hover:bg-zinc-700" 
+            className="text-foreground border-border hover:bg-muted" 
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
@@ -49,7 +49,7 @@ export const LogoUpload = ({
           {logoPreview && (
             <Button 
               variant="ghost" 
-              className="text-zinc-400 hover:text-white text-sm" 
+              className="text-muted-foreground hover:text-foreground text-sm" 
               type="button"
               onClick={onLogoRemove}
               disabled={isUploading}
@@ -70,7 +70,7 @@ export const LogoUpload = ({
       {error && (
         <p className="text-red-400 text-sm">{error}</p>
       )}
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-muted-foreground">
         Recommended: Square image, max 5MB (PNG, JPG, GIF)
       </p>
     </div>

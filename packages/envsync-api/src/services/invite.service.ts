@@ -48,6 +48,29 @@ export class InviteService {
 
 	public static createUserInvite = async (email: string, org_id: string, role_id: string) => {
 		const db = await DB.getInstance();
+
+		const existingUser = await db
+			.selectFrom("users")
+			.select("id")
+			.where("email", "=", email)
+			.executeTakeFirst();
+
+		if (existingUser) {
+			throw new ConflictError("An account already exists for this email.", "ACCOUNT_ALREADY_EXISTS");
+		}
+
+		const existingInvite = await db
+			.selectFrom("invite_user")
+			.select("id")
+			.where("email", "=", email)
+			.where("org_id", "=", org_id)
+			.where("is_accepted", "=", false)
+			.executeTakeFirst();
+
+		if (existingInvite) {
+			throw new ConflictError("An invitation is already pending for this email in this organization.", "INVITE_ALREADY_SENT");
+		}
+
 		const { id, invite_token } = await db
 			.insertInto("invite_user")
 			.values({

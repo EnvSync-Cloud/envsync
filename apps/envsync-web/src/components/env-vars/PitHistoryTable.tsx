@@ -65,11 +65,11 @@ export const PitHistoryTable = ({
 	const itemLabel = getPitItemLabel(kind);
 
 	return (
-		<Card className="border-zinc-800 bg-zinc-900">
+		<Card className="border-border bg-card">
 			<CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>
-					<CardTitle className="text-base text-white">{title}</CardTitle>
-					<p className="text-sm text-zinc-400">{description}</p>
+					<CardTitle className="text-base text-foreground">{title}</CardTitle>
+					<p className="text-sm text-muted-foreground">{description}</p>
 				</div>
 				{totalPages > 1 && (
 					<div className="flex items-center gap-2">
@@ -78,11 +78,11 @@ export const PitHistoryTable = ({
 							size="sm"
 							onClick={() => onPageChange(currentPage - 1)}
 							disabled={currentPage <= 1 || isRefetching}
-							className="border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+							className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
 						>
 							Previous
 						</Button>
-						<span className="text-sm text-zinc-500">
+						<span className="text-sm text-tertiary">
 							Page {currentPage} of {totalPages}
 						</span>
 						<Button
@@ -90,7 +90,7 @@ export const PitHistoryTable = ({
 							size="sm"
 							onClick={() => onPageChange(currentPage + 1)}
 							disabled={currentPage >= totalPages || isRefetching}
-							className="border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+							className="border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
 						>
 							Next
 						</Button>
@@ -100,19 +100,19 @@ export const PitHistoryTable = ({
 			<CardContent className="px-0 pb-0">
 				<Table>
 					<TableHeader>
-						<TableRow className="border-zinc-800 hover:bg-transparent">
-							<TableHead className="text-zinc-500">Snapshot</TableHead>
-							<TableHead className="text-zinc-500">Created at</TableHead>
-							<TableHead className="text-zinc-500">Changed by</TableHead>
-							<TableHead className="text-zinc-500">Changes</TableHead>
-							<TableHead className="text-zinc-500">Message</TableHead>
-							<TableHead className="text-right text-zinc-500">Actions</TableHead>
+						<TableRow className="border-border hover:bg-transparent">
+							<TableHead className="text-tertiary">Snapshot</TableHead>
+							<TableHead className="text-tertiary">Created at</TableHead>
+							<TableHead className="text-tertiary">Changed by</TableHead>
+							<TableHead className="text-tertiary">Changes</TableHead>
+							<TableHead className="text-tertiary">Message</TableHead>
+							<TableHead className="text-right text-tertiary">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{history.length === 0 && (
-							<TableRow className="border-zinc-800 hover:bg-transparent">
-								<TableCell colSpan={6} className="py-10 text-center text-sm text-zinc-500">
+							<TableRow className="border-border hover:bg-transparent">
+								<TableCell colSpan={6} className="py-10 text-center text-sm text-tertiary">
 									{mode === "snapshots"
 										? `No point-in-time snapshots exist for this environment's ${itemLabel}s yet.`
 										: "No snapshots were found in the selected time range."}
@@ -128,13 +128,13 @@ export const PitHistoryTable = ({
 									key={pit.id}
 									onClick={() => onSelectRow(pit.id)}
 									className={cn(
-										"cursor-pointer border-zinc-800 hover:bg-zinc-800/60",
-										isSelected && "bg-zinc-800"
+										"cursor-pointer border-border hover:bg-muted/60",
+										isSelected && "bg-muted"
 									)}
 								>
 									<TableCell>
 										<div className="flex flex-col gap-1">
-											<span className="font-mono text-sm text-white">
+											<span className="font-mono text-sm text-foreground">
 												{truncatePitId(pit.id)}
 											</span>
 											{isSelected && (
@@ -144,16 +144,16 @@ export const PitHistoryTable = ({
 											)}
 										</div>
 									</TableCell>
-									<TableCell className="text-zinc-300">
+									<TableCell className="text-muted-foreground">
 										{formatDateTime(pit.created_at)}
 									</TableCell>
-									<TableCell className="text-zinc-300">
+									<TableCell className="text-muted-foreground">
 										{getUserLabel(pit.user_id)}
 									</TableCell>
-									<TableCell className="text-zinc-300">
+									<TableCell className="text-muted-foreground">
 										{pit.changes_count}
 									</TableCell>
-									<TableCell className="max-w-[320px] text-zinc-400">
+									<TableCell className="max-w-[320px] text-muted-foreground">
 										{truncateMessage(pit.change_request_message, 72)}
 									</TableCell>
 									<TableCell>
@@ -166,7 +166,7 @@ export const PitHistoryTable = ({
 													event.stopPropagation();
 													onUseForCompare(pit.id);
 												}}
-												className="border-zinc-800 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+												className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 											>
 												<ExternalLink className="mr-2 size-4" />
 												Use for compare
@@ -179,7 +179,7 @@ export const PitHistoryTable = ({
 													event.stopPropagation();
 													onViewChanges(pit.id);
 												}}
-												className="border-zinc-800 bg-zinc-950 text-zinc-200 hover:bg-zinc-800 hover:text-white"
+												className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 											>
 												<Eye className="mr-2 size-4" />
 												View changes

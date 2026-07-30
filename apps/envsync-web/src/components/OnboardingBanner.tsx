@@ -32,7 +32,6 @@ export function OnboardingBanner({
   const completedCount = steps.filter((s) => s.done).length;
   const progress = (completedCount / steps.length) * 100;
 
-  // If everything is done, don't show
   if (completedCount === steps.length) return null;
 
   const handleDismiss = () => {
@@ -41,38 +40,38 @@ export function OnboardingBanner({
   };
 
   return (
-    <div className="relative rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 via-emerald-500/5 to-emerald-500/5 p-5 shadow-glow-sm">
+    <div className="relative rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 via-emerald-500/5 to-emerald-500/5 p-5">
       <button
         onClick={handleDismiss}
-        className="absolute top-3 right-3 p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
       >
         <X className="size-4" />
       </button>
 
       <div className="space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-zinc-100">
+          <h3 className="text-sm font-medium text-foreground">
             Get started with EnvSync
           </h3>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Complete these steps to set up your workspace
           </p>
         </div>
 
-        <Progress value={progress} className="h-1.5 bg-zinc-800" />
+        <Progress value={progress} className="h-1.5" />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {steps.map((step, idx) => (
             <Link
               key={idx}
               to={step.href}
-              className="flex items-center space-x-2 p-2.5 rounded-lg bg-zinc-900/50 hover:bg-emerald-500/5 border border-zinc-800 hover:border-emerald-500/20 transition-all"
+              className="flex items-center space-x-2 p-2.5 rounded-lg bg-card hover:bg-emerald-500/5 border border-border hover:border-emerald-500/20 transition-all"
             >
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
                   step.done
                     ? "bg-green-500/20 text-green-400"
-                    : "bg-zinc-800 text-zinc-500"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {step.done ? (
@@ -83,7 +82,7 @@ export function OnboardingBanner({
               </div>
               <span
                 className={`text-xs ${
-                  step.done ? "text-zinc-500 line-through" : "text-zinc-300"
+                  step.done ? "text-muted-foreground line-through" : "text-foreground"
                 }`}
               >
                 {step.label}

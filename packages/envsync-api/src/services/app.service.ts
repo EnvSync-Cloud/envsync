@@ -4,7 +4,7 @@ import { sql } from "kysely";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
-import { orNotFound, NotFoundError } from "@/libs/errors";
+import { orNotFound, NotFoundError, ConflictError } from "@/libs/errors";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { appsCreated } from "@/libs/telemetry/metrics";
 import { KMSClient } from "@/libs/kms/client";
@@ -86,6 +86,19 @@ export class AppService {
 		public_key?: string | null;
 		private_key?: string | null;
 	}) => {
+		const db = await DB.getInstance();
+
+		const existing = await db
+			.selectFrom("app")
+			.select("id")
+			.where("name", "=", name)
+			.where("org_id", "=", org_id)
+			.executeTakeFirst();
+
+		if (existing) {
+			throw new ConflictError("Project name already exists in this organization");
+		}
+
 		const ctx: { app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date } } = {};
 		await runSaga("createApp", ctx, [
 			{

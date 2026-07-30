@@ -10,8 +10,8 @@ test.describe("route surface", () => {
 			{ path: "/dashboard", heading: "Dashboard" },
 			{ path: "/applications", heading: "Projects" },
 			{ path: "/applications/create", heading: "Create New Project" },
-			{ path: `/applications/${seededApp!.id}`, heading: "Core Platform" },
-			{ path: `/applications/${seededApp!.id}/secrets`, heading: "Core Platform" },
+			{ path: `/applications/${seededApp!.id}`, heading: "Variables" },
+			{ path: `/applications/${seededApp!.id}/secrets`, heading: "Secrets" },
 			{ path: `/applications/${seededApp!.id}/manage-environments`, heading: /Manage Environments|Environments/ },
 			{ path: `/applications/${seededApp!.id}/access`, heading: "Project Access" },
 			{ path: `/applications/pit/${seededApp!.id}`, heading: "Core Platform" },
@@ -31,9 +31,6 @@ test.describe("route surface", () => {
 		for (const routeCheck of routeChecks) {
 			await page.goto(routeCheck.path, { waitUntil: "domcontentloaded" });
 			await expect(page.getByRole("heading", { name: routeCheck.heading }).first()).toBeVisible();
-			if (routeCheck.path === `/applications/pit/${seededApp!.id}`) {
-				await expect(page.getByText(/Point in Time/i).first()).toBeVisible();
-			}
 		}
 
 		await page.goto("/definitely-not-a-real-page", { waitUntil: "domcontentloaded" });

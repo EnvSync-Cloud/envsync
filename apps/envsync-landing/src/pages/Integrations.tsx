@@ -1,9 +1,8 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/Button";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Cloud, Code, Database, MessageCircle, Shield } from "lucide-react";
+import { ArrowRight, Cloud, Code, Database, MessageCircle } from "lucide-react";
 
 type Integration = {
   name: string;
@@ -144,33 +143,62 @@ const cloudIntegrations: Integration[] = [
   },
 ];
 
+const categories = [
+  {
+    key: "cicd",
+    icon: Code,
+    title: "CI/CD",
+    description: "Inject secrets into your pipelines with scoped access and audit trails.",
+    integrations: cicdIntegrations,
+  },
+  {
+    key: "platform",
+    icon: Cloud,
+    title: "PaaS & Deployment",
+    description: "Push controlled environment updates wherever your workloads run.",
+    integrations: platformIntegrations,
+  },
+  {
+    key: "cloud",
+    icon: Database,
+    title: "Cloud Providers",
+    description: "Sync secrets to native cloud secret stores and serverless platforms.",
+    integrations: cloudIntegrations,
+  },
+  {
+    key: "notification",
+    icon: MessageCircle,
+    title: "Notifications",
+    description: "Keep engineering and security teams informed in real-time.",
+    integrations: notificationIntegrations,
+  },
+];
+
 const IntegrationGrid = ({ integrations }: { integrations: Integration[] }) => (
-  <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
+  <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-2">
     {integrations.map((integration) => (
       <div
         key={integration.name}
-        className="-ml-px -mt-px border border-border bg-[hsl(var(--surface-1))] p-6 md:p-7"
+        className="bg-background p-6 transition-colors duration-200 hover:bg-card"
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-card">
               <img src={integration.icon} alt={`${integration.name} icon`} className="h-6 w-6" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground">{integration.name}</h3>
+            <h3 className="text-h3 font-medium text-foreground">{integration.name}</h3>
           </div>
-          <Badge
+          <span
             className={cn(
-              "rounded-none border text-xs font-medium",
-              integration.status === "live" &&
-                "border-primary/35 bg-primary/15 text-primary hover:bg-primary/20",
-              integration.status === "coming-soon" &&
-                "border-amber-500/30 bg-amber-500/10 text-amber-100/90 hover:bg-amber-500/15",
+              "rounded-full border px-2 py-0.5 font-mono text-mono-label",
+              integration.status === "live" && "border-primary/35 text-accent-ink",
+              integration.status === "coming-soon" && "border-status-warning/35 text-status-warning",
             )}
           >
             {integration.status}
-          </Badge>
+          </span>
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground md:text-base">{integration.description}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{integration.description}</p>
       </div>
     ))}
   </div>
@@ -182,127 +210,49 @@ const Integrations = () => {
       <Header />
 
       <main className="pt-16">
-        <section className="container mx-auto border-x border-border px-0 ">
-          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8 md:py-32">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-45"
-              style={{
-                backgroundImage:
-                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
-                backgroundSize: "36px 36px",
-              }}
-            />
-            <div className="relative z-10">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Integrations</p>
-            <h1 className="mb-6 text-5xl font-bold text-foreground md:text-6xl">
+        <section className="border-b border-border bg-background">
+          <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-8 md:py-24 text-left">
+            <p className="font-mono text-mono-label uppercase text-accent-ink">Integrations</p>
+            <h1 className="mt-4 max-w-3xl text-h1 font-medium text-foreground text-balance">
               Connect EnvSync with the tools your team ships on.
             </h1>
-            <p className="text-lg text-muted-foreground md:text-xl">
+            <p className="mt-6 max-w-2xl text-lead text-muted-foreground">
               28+ integrations across CI/CD, cloud platforms, PaaS providers, and notification channels.
             </p>
-            </div>
           </div>
         </section>
 
-        <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="w-full">
-            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
-                  <Code className="h-5 w-5 text-primary" />
+        {categories.map((cat) => (
+          <section key={cat.key} className="border-b border-border">
+            <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                  <cat.icon className="h-5 w-5 text-foreground" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">CI/CD</h2>
-                  <p className="text-sm text-muted-foreground md:text-base">
-                    Inject secrets into your pipelines with scoped access and audit trails.
-                  </p>
+                  <h2 className="text-h2 font-medium text-foreground">{cat.title}</h2>
+                  <p className="text-sm text-muted-foreground">{cat.description}</p>
                 </div>
               </div>
+              <IntegrationGrid integrations={cat.integrations} />
             </div>
-            <IntegrationGrid integrations={cicdIntegrations} />
-          </div>
-        </section>
+          </section>
+        ))}
 
-        <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="w-full">
-            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
-                  <Cloud className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground">PaaS & Deployment</h2>
-                  <p className="text-sm text-muted-foreground md:text-base">
-                    Push controlled environment updates wherever your workloads run.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <IntegrationGrid integrations={platformIntegrations} />
-          </div>
-        </section>
-
-        <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="w-full">
-            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
-                  <Database className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground">Cloud Providers</h2>
-                  <p className="text-sm text-muted-foreground md:text-base">
-                    Sync secrets to native cloud secret stores and serverless platforms.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <IntegrationGrid integrations={cloudIntegrations} />
-          </div>
-        </section>
-
-        <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="w-full">
-            <div className="relative overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-6 text-left md:p-8">
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center border border-border bg-[hsl(var(--surface-2))]">
-                  <MessageCircle className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground">Notifications</h2>
-                  <p className="text-sm text-muted-foreground md:text-base">
-                    Keep engineering and security teams informed in real-time.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <IntegrationGrid integrations={notificationIntegrations} />
-          </div>
-        </section>
-
-        <section className="container mx-auto border-x border-t border-border p-0">
-          <div className="relative w-full overflow-hidden border border-border bg-[hsl(var(--surface-1))] p-8 text-left md:p-10">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-45"
-              style={{
-                backgroundImage:
-                  "linear-gradient(hsl(var(--border) / 0.7) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / 0.7) 1px, transparent 1px)",
-                backgroundSize: "36px 36px",
-              }}
-            />
-            <div className="relative z-10">
-              <h3 className="mb-4 text-3xl font-bold text-foreground">Need a custom integration?</h3>
-              <p className="mb-8 max-w-2xl text-lg text-muted-foreground">
+        <section className="border-b border-border">
+          <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-8">
+            <div className="rounded-lg border border-border bg-card p-8 md:p-10">
+              <h2 className="text-h2 font-medium text-foreground">Need a custom integration?</h2>
+              <p className="mt-4 max-w-2xl text-muted-foreground">
                 Tell us what your stack needs. We prioritize integrations that improve secure delivery velocity.
               </p>
               <a
                 href="https://github.com/EnvSync-Cloud/envsync/issues/new?title=Feature%20Request:%20&labels=enhancement"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="mt-8 inline-block"
               >
-                <Button size="lg" className="px-8">
+                <Button variant="primary" size="lg">
                   Request Integration
                   <ArrowRight className="h-4 w-4" />
                 </Button>

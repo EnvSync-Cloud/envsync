@@ -12,7 +12,7 @@ export async function gotoPit(
 	await page.goto(`${basePath}?env=${encodeURIComponent(envName.toLowerCase())}`, {
 		waitUntil: "domcontentloaded",
 	});
-	await expect(page.getByText("Point in Time", { exact: false })).toBeVisible();
+	await expect(page.getByText(/snapshot history|snapshots in selected range/i).first()).toBeVisible();
 }
 
 export async function expectPitHistory(page: Page) {

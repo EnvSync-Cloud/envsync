@@ -37,9 +37,9 @@ export const UsersTable = ({
   onDeleteUser,
 }: UsersTableProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border shadow-xl rounded-xl">
       <CardHeader>
-        <CardTitle className="text-white flex items-center gap-3">
+        <CardTitle className="text-foreground flex items-center gap-3">
           <Users className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
           Team Members
           <Count size="xl" variant="subtle" count={users?.length} />
@@ -52,20 +52,20 @@ export const UsersTable = ({
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-800">
-                  <th className="text-left py-3 px-4 text-zinc-400 font-medium">
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
                     Member
                   </th>
-                  <th className="text-left py-3 px-4 text-zinc-400 font-medium">
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
                     Role
                   </th>
-                  <th className="text-left py-3 px-4 text-zinc-400 font-medium">
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
                     Status
                   </th>
-                  <th className="text-left py-3 px-4 text-zinc-400 font-medium">
+                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
                     Last Seen
                   </th>
-                  <th className="text-right py-3 px-4 text-zinc-400 font-medium">
+                  <th className="text-right py-3 px-4 text-muted-foreground font-medium">
                     Actions
                   </th>
                 </tr>

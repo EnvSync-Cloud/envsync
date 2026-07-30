@@ -10,7 +10,7 @@ interface PitModeSwitchProps {
 
 export const PitModeSwitch = ({ value, onValueChange }: PitModeSwitchProps) => {
 	return (
-		<div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+		<div className="inline-flex rounded-lg border border-border bg-card p-1">
 			<ToggleGroup
 				type="single"
 				value={value}
@@ -24,7 +24,7 @@ export const PitModeSwitch = ({ value, onValueChange }: PitModeSwitchProps) => {
 				<ToggleGroupItem
 					value="snapshots"
 					aria-label="Snapshots"
-					className="h-9 gap-2 rounded-md border-0 px-4 text-sm data-[state=on]:bg-zinc-800 data-[state=on]:text-white"
+					className="h-9 gap-2 rounded-md border-0 px-4 text-sm data-[state=on]:bg-muted data-[state=on]:text-foreground"
 				>
 					<Clock3 className="size-4 text-emerald-400" />
 					Snapshots
@@ -32,7 +32,7 @@ export const PitModeSwitch = ({ value, onValueChange }: PitModeSwitchProps) => {
 				<ToggleGroupItem
 					value="time-range"
 					aria-label="Time Range"
-					className="h-9 gap-2 rounded-md border-0 px-4 text-sm data-[state=on]:bg-zinc-800 data-[state=on]:text-white"
+					className="h-9 gap-2 rounded-md border-0 px-4 text-sm data-[state=on]:bg-muted data-[state=on]:text-foreground"
 				>
 					<GitCompareArrows className="size-4 text-cyan-400" />
 					Time Range

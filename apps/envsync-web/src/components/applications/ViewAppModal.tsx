@@ -61,17 +61,17 @@ export const ViewAppModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-2xl">
+      <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-              <Database className="w-6 h-6 text-white" />
+              <Database className="w-6 h-6 text-foreground" />
             </div>
             <div>
-              <DialogTitle className="text-white text-xl font-semibold">
+              <DialogTitle className="text-foreground text-xl font-medium">
                 {app.name}
               </DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogDescription className="text-muted-foreground">
                 Project Details and Configuration
               </DialogDescription>
             </div>
@@ -87,12 +87,12 @@ export const ViewAppModal = ({
                 className={`${
                   app.status === "active"
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-zinc-700 text-zinc-300 border-zinc-600"
+                    : "bg-muted text-muted-foreground border-border"
                 } border`}
               >
                 {app.status || "active"}
               </Badge>
-              <div className="flex items-center space-x-4 text-sm text-zinc-400">
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   <Key className="w-4 h-4" />
                   <span>{app.env_count || 0} variables</span>
@@ -108,7 +108,7 @@ export const ViewAppModal = ({
             {canEdit && (
               <Button
                 onClick={() => onEdit(app)}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
                 size="sm"
               >
                 <Edit className="w-4 h-4 mr-2" />
@@ -119,8 +119,8 @@ export const ViewAppModal = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <h4 className="text-white font-medium">Description</h4>
-            <p className="text-zinc-300 bg-zinc-900 p-3 rounded-lg">
+            <h4 className="text-foreground font-medium">Description</h4>
+            <p className="text-muted-foreground bg-card p-3 rounded-lg">
               {app.description || "No description provided"}
             </p>
           </div>
@@ -129,18 +129,18 @@ export const ViewAppModal = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <h4 className="text-white font-medium flex items-center">
+                <h4 className="text-foreground font-medium flex items-center">
                   <Database className="w-4 h-4 mr-2" />
                   Project ID
                 </h4>
                 <div className="flex items-center space-x-2">
-                  <code className="text-sm select-all font-mono text-zinc-300 bg-zinc-900 px-3 py-2 rounded flex-1">
+                  <code className="text-sm select-all font-mono text-muted-foreground bg-card px-3 py-2 rounded flex-1">
                     {app.id}
                   </code>
                   {/* <Button
                     size="sm"
                     variant="ghost"
-                    className="text-zinc-400 hover:text-white"
+                    className="text-muted-foreground hover:text-foreground"
                     onClick={handleCopyId}
                   >
                     <Copy className="w-4 h-4" />
@@ -151,20 +151,20 @@ export const ViewAppModal = ({
 
             <div className="space-y-4">
               {/* <div className="space-y-2">
-                <h4 className="text-white font-medium flex items-center">
+                <h4 className="text-foreground font-medium flex items-center">
                   <User className="w-4 h-4 mr-2" />
                   Organization
                 </h4>
-                <p className="text-zinc-300 bg-zinc-900 p-3 rounded">
+                <p className="text-muted-foreground bg-card p-3 rounded">
                   {app.org_id}
                 </p>
               </div> */}
               <div className="space-y-2">
-                <h4 className="text-white font-medium flex items-center">
+                <h4 className="text-foreground font-medium flex items-center">
                   <Calendar className="w-4 h-4 mr-2" />
                   Secrets Enabled
                 </h4>
-                <p className="text-zinc-300 bg-zinc-900 p-3 rounded">
+                <p className="text-muted-foreground bg-card p-3 rounded">
                   {app.enable_secrets ? "Yes" : "No"}
                 </p>
               </div>
@@ -174,9 +174,9 @@ export const ViewAppModal = ({
           {/* Metadata */}
           {app.metadata && Object.keys(app.metadata).length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-white font-medium">Metadata</h4>
-              <div className="bg-zinc-900 p-3 rounded-lg">
-                <pre className="text-sm text-zinc-300 overflow-x-auto">
+              <h4 className="text-foreground font-medium">Metadata</h4>
+              <div className="bg-card p-3 rounded-lg">
+                <pre className="text-sm text-muted-foreground overflow-x-auto">
                   {JSON.stringify(app.metadata, null, 2)}
                 </pre>
               </div>
@@ -186,9 +186,9 @@ export const ViewAppModal = ({
           {/* Public Key */}
           {app.public_key && (
             <div className="space-y-2">
-              <h4 className="text-white font-medium">Public Key</h4>
-              <div className="bg-zinc-900 p-3 rounded-lg">
-                <pre className="text-sm text-zinc-300 overflow-x-auto">
+              <h4 className="text-foreground font-medium">Public Key</h4>
+              <div className="bg-card p-3 rounded-lg">
+                <pre className="text-sm text-muted-foreground overflow-x-auto">
                   {app.public_key ? app.public_key : "No public key available"}
                 </pre>
               </div>
@@ -196,14 +196,14 @@ export const ViewAppModal = ({
           )}
 
           {/* Quick Actions */}
-          <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800">
-            <div className="text-xs text-zinc-400">
+          <div className="flex items-center justify-between gap-4 pt-4 border-t border-border">
+            <div className="text-xs text-muted-foreground">
               <Info className="inline-block mr-1" size={16} />
               Manage variables and configurations for this project
             </div>
             <Button
               variant="outline"
-              className="text-white border-zinc-700 hover:bg-zinc-800"
+              className="text-foreground border-border hover:bg-muted"
               onClick={() => {
                 // Navigate to project environments
                 navigate(`/applications/${app.id}`);

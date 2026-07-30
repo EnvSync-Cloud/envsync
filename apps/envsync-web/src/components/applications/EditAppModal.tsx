@@ -145,15 +145,15 @@ export const EditAppModal = ({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+      <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-              <Database className="w-5 h-5 text-white" />
+              <Database className="w-5 h-5 text-foreground" />
             </div>
             <div>
-              <DialogTitle className="text-white">Edit Project</DialogTitle>
-              <DialogDescription className="text-zinc-400">
+              <DialogTitle className="text-foreground">Edit Project</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
                 Update project information and settings
               </DialogDescription>
             </div>
@@ -163,14 +163,14 @@ export const EditAppModal = ({
         <div className="space-y-4">
           {/* Project Name */}
           <div className="space-y-2">
-            <Label htmlFor="edit-name" className="text-white">
+            <Label htmlFor="edit-name" className="text-foreground">
               Project Name *
             </Label>
             <Input
               id="edit-name"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              className={`bg-zinc-900 border-zinc-800 text-white ${
+              className={`bg-card border-border text-foreground ${
                 formErrors.name ? "border-red-500" : ""
               }`}
               placeholder="Enter project name"
@@ -183,14 +183,14 @@ export const EditAppModal = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="edit-description" className="text-white">
+            <Label htmlFor="edit-description" className="text-foreground">
               Description
             </Label>
             <Textarea
               id="edit-description"
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
-              className={`bg-zinc-900 border-zinc-800 text-white ${
+              className={`bg-card border-border text-foreground ${
                 formErrors.description ? "border-red-500" : ""
               }`}
               placeholder="Enter project description"
@@ -200,14 +200,14 @@ export const EditAppModal = ({
             {formErrors.description && (
               <p className="text-red-400 text-sm">{formErrors.description}</p>
             )}
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               {formData.description.length}/500 characters
             </p>
           </div>
 
           {/* Status */}
           <div className="space-y-2">
-            <Label htmlFor="edit-status" className="text-white">
+            <Label htmlFor="edit-status" className="text-foreground">
               Status
             </Label>
             <Select
@@ -215,15 +215,15 @@ export const EditAppModal = ({
               onValueChange={(value) => handleInputChange("status", value)}
               disabled={isSaving}
             >
-              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white">
+              <SelectTrigger className="bg-card border-border text-foreground">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800">
+              <SelectContent className="bg-card border-border">
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className="text-white hover:bg-zinc-800"
+                    className="text-foreground hover:bg-muted"
                   >
                     {option.label}
                   </SelectItem>
@@ -246,7 +246,7 @@ export const EditAppModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isSaving}
           >
             <X className="w-4 h-4 mr-2" />
@@ -254,7 +254,7 @@ export const EditAppModal = ({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isSaving || !hasUnsavedChanges}
           >
             {isSaving ? (

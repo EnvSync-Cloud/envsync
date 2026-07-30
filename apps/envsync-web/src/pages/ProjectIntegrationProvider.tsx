@@ -70,7 +70,7 @@ function buildMetadata(
 
 function FieldHint({ text }: { text?: string }) {
   if (!text) return null;
-  return <p className="text-xs text-zinc-500">{text}</p>;
+  return <p className="text-xs text-tertiary">{text}</p>;
 }
 
 function ProviderFieldEditor({
@@ -84,12 +84,12 @@ function ProviderFieldEditor({
   onChange: (value: string) => void;
   secretOptions?: string[];
 }) {
-  const commonClassName = "flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white";
+  const commonClassName = "flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground";
   const listId = `${field.key}-secret-options`;
 
   return (
     <label className="space-y-2">
-      <span className="text-sm text-zinc-400">{field.label}</span>
+      <span className="text-sm text-muted-foreground">{field.label}</span>
       {field.kind === "select" ? (
         <select
           value={value}
@@ -370,17 +370,17 @@ export default function ProjectIntegrationProvider() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button onClick={handleBack} variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-200">
+          <Button onClick={handleBack} variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             Integrations
           </Button>
           <span className="text-zinc-600">/</span>
-          <h1 className="text-lg font-medium text-zinc-100">
+          <h1 className="text-lg font-medium text-foreground">
             {copy.name} {project?.name ? `— ${project.name}` : ""}
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={onRequestSync} size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700">
+          <Button onClick={onRequestSync} size="sm" className="bg-emerald-600 text-foreground hover:bg-emerald-700">
             <RefreshCw className="mr-1.5 h-4 w-4" />
             Trigger Sync
           </Button>
@@ -389,42 +389,42 @@ export default function ProjectIntegrationProvider() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 @768px:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-400">Connections</p>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{eligibleConnections.length}</p>
+        <div className="rounded-xl border border-border bg-card/50 p-4">
+          <p className="text-xs text-muted-foreground">Connections</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{eligibleConnections.length}</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-400">Bindings</p>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{providerBindings.length}</p>
+        <div className="rounded-xl border border-border bg-card/50 p-4">
+          <p className="text-xs text-muted-foreground">Bindings</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{providerBindings.length}</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-400">Mappings</p>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{providerMappings.length}</p>
+        <div className="rounded-xl border border-border bg-card/50 p-4">
+          <p className="text-xs text-muted-foreground">Mappings</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{providerMappings.length}</p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <p className="text-xs text-zinc-400">Sync Runs</p>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{providerSyncRuns.length}</p>
+        <div className="rounded-xl border border-border bg-card/50 p-4">
+          <p className="text-xs text-muted-foreground">Sync Runs</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{providerSyncRuns.length}</p>
         </div>
       </div>
 
       {/* Tabbed content */}
       <Tabs defaultValue="bindings" className="space-y-4">
-        <TabsList className="h-auto rounded-none border-b border-zinc-800 bg-transparent p-0 w-full justify-start gap-0">
+        <TabsList className="h-auto rounded-none border-b border-border bg-transparent p-0 w-full justify-start gap-0">
           <TabsTrigger
             value="bindings"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-300 data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-zinc-100 data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Bindings
           </TabsTrigger>
           <TabsTrigger
             value="mappings"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-300 data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-zinc-100 data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Mappings
           </TabsTrigger>
           <TabsTrigger
             value="syncs"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-300 data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-zinc-100 data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Sync Runs
           </TabsTrigger>
@@ -433,9 +433,9 @@ export default function ProjectIntegrationProvider() {
         {/* Bindings tab */}
         <TabsContent value="bindings" className="mt-0 space-y-4">
           {/* Create binding form */}
-          <div className="border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-              <h3 className="text-sm font-medium text-zinc-200">Create Binding</h3>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-card/50">
+              <h3 className="text-sm font-medium text-foreground">Create Binding</h3>
             </div>
             <form onSubmit={onCreateBinding} className="p-4 space-y-4">
               <div className="space-y-2">
@@ -444,7 +444,7 @@ export default function ProjectIntegrationProvider() {
                   id="provider-connection"
                   value={bindingForm.provider_connection_id}
                   onChange={(event) => setBindingForm((prev) => ({ ...prev, provider_connection_id: event.target.value }))}
-                  className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                  className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
                 >
                   <option value="">Select connection</option>
                   {eligibleConnections.map((connection) => (
@@ -479,13 +479,13 @@ export default function ProjectIntegrationProvider() {
           </div>
 
           {/* Existing bindings */}
-          <div className="border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-              <h3 className="text-sm font-medium text-zinc-200">Existing Bindings</h3>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-card/50">
+              <h3 className="text-sm font-medium text-foreground">Existing Bindings</h3>
             </div>
             {providerBindings.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <p className="text-sm text-zinc-500">No bindings yet</p>
+                <p className="text-sm text-tertiary">No bindings yet</p>
               </div>
             ) : (
               <div>
@@ -498,14 +498,14 @@ export default function ProjectIntegrationProvider() {
                   const connection = providerConnectionById[binding.provider_connection_id];
 
                   return (
-                    <div key={binding.id} className="px-4 py-3 border-b border-zinc-800/50 last:border-0">
+                    <div key={binding.id} className="px-4 py-3 border-b border-border/50 last:border-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-zinc-200 truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {connection?.name ?? binding.provider_connection_id}
                             </p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-tertiary">
                               {binding.provider_type} · {draft.is_enabled ? "enabled" : "disabled"}
                             </p>
                           </div>
@@ -516,7 +516,7 @@ export default function ProjectIntegrationProvider() {
                           size="sm"
                           disabled={updateBinding.isPending}
                           onClick={() => void onSaveBinding(binding.id)}
-                          className="text-zinc-500 hover:text-zinc-200"
+                          className="text-tertiary hover:text-foreground"
                         >
                           Save
                         </Button>
@@ -532,9 +532,9 @@ export default function ProjectIntegrationProvider() {
         {/* Mappings tab */}
         <TabsContent value="mappings" className="mt-0 space-y-4">
           {/* Create mapping form */}
-          <div className="border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-              <h3 className="text-sm font-medium text-zinc-200">Create Mapping</h3>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-card/50">
+              <h3 className="text-sm font-medium text-foreground">Create Mapping</h3>
             </div>
             <form onSubmit={onCreateMapping} className="p-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -544,7 +544,7 @@ export default function ProjectIntegrationProvider() {
                     id="mapping-binding"
                     value={mappingForm.integration_binding_id}
                     onChange={(event) => setMappingForm((prev) => ({ ...prev, integration_binding_id: event.target.value }))}
-                    className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
                   >
                     <option value="">Select binding</option>
                     {providerBindings.map((binding) => {
@@ -563,7 +563,7 @@ export default function ProjectIntegrationProvider() {
                     id="mapping-env-type"
                     value={mappingForm.env_type_id}
                     onChange={(event) => setMappingForm((prev) => ({ ...prev, env_type_id: event.target.value }))}
-                    className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+                    className="flex h-10 w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
                   >
                     <option value="">Select environment type</option>
                     {envTypes.map((envType) => (
@@ -619,13 +619,13 @@ export default function ProjectIntegrationProvider() {
           </div>
 
           {/* Existing mappings */}
-          <div className="border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-              <h3 className="text-sm font-medium text-zinc-200">Existing Mappings</h3>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-card/50">
+              <h3 className="text-sm font-medium text-foreground">Existing Mappings</h3>
             </div>
             {providerMappings.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <p className="text-sm text-zinc-500">No mappings yet</p>
+                <p className="text-sm text-tertiary">No mappings yet</p>
               </div>
             ) : (
               <div>
@@ -642,14 +642,14 @@ export default function ProjectIntegrationProvider() {
                   };
 
                   return (
-                    <div key={mapping.id} className="px-4 py-3 border-b border-zinc-800/50 last:border-0">
+                    <div key={mapping.id} className="px-4 py-3 border-b border-border/50 last:border-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-zinc-200 truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {envType?.name ?? mapping.env_type_id}
                             </p>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-tertiary">
                               {connection?.name ?? binding?.provider_connection_id ?? mapping.integration_binding_id}
                             </p>
                           </div>
@@ -660,7 +660,7 @@ export default function ProjectIntegrationProvider() {
                           size="sm"
                           disabled={updateMapping.isPending}
                           onClick={() => void onSaveMapping(mapping.id)}
-                          className="text-zinc-500 hover:text-zinc-200"
+                          className="text-tertiary hover:text-foreground"
                         >
                           Save
                         </Button>
@@ -675,21 +675,21 @@ export default function ProjectIntegrationProvider() {
 
         {/* Sync Runs tab */}
         <TabsContent value="syncs" className="mt-0 space-y-4">
-          <div className="border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
-              <h3 className="text-sm font-medium text-zinc-200">Sync Runs</h3>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-card/50">
+              <h3 className="text-sm font-medium text-foreground">Sync Runs</h3>
             </div>
             {providerSyncRuns.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <RefreshCw className="mx-auto h-8 w-8 text-zinc-700 mb-3" />
-                <p className="text-sm text-zinc-500">No sync runs yet</p>
+                <p className="text-sm text-tertiary">No sync runs yet</p>
               </div>
             ) : (
               <div>
                 {providerSyncRuns.slice(0, 10).map((run) => (
                   <div
                     key={run.id}
-                    className={`px-4 py-3 border-b border-zinc-800/50 last:border-0 cursor-pointer hover:bg-zinc-800/30 transition-colors ${
+                    className={`px-4 py-3 border-b border-border/50 last:border-0 cursor-pointer hover:bg-muted/30 transition-colors ${
                       selectedSyncRunId === run.id ? "bg-emerald-500/5" : ""
                     }`}
                     onClick={() => setSelectedSyncRunId(run.id)}
@@ -697,10 +697,10 @@ export default function ProjectIntegrationProvider() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-zinc-200 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {run.id.slice(0, 8)}...
                           </p>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-tertiary">
                             {new Date(run.started_at).toLocaleString()}
                             {run.completed_at ? ` · ${new Date(run.completed_at).toLocaleString()}` : ""}
                           </p>
@@ -730,10 +730,10 @@ export default function ProjectIntegrationProvider() {
 
           {/* Selected sync run details */}
           {selectedSyncRun && (
-            <div className="border border-zinc-800 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-card/50">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-zinc-200">Sync Run Details</h3>
+                  <h3 className="text-sm font-medium text-foreground">Sync Run Details</h3>
                   <Button
                     type="button"
                     variant="outline"
@@ -746,7 +746,7 @@ export default function ProjectIntegrationProvider() {
                         metadata: { source: "dashboard-retry", retry_of: selectedSyncRun.id },
                       });
                     }}
-                    className="text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                    className="text-muted-foreground border-border hover:bg-muted"
                   >
                     Retry
                   </Button>
@@ -763,19 +763,19 @@ export default function ProjectIntegrationProvider() {
                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                             : event.result === "error"
                               ? "bg-red-500/10 text-red-400 border-red-500/20"
-                              : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                              : "bg-zinc-500/10 text-muted-foreground border-zinc-500/20"
                         }`}
                       >
                         {event.result}
                       </Badge>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-zinc-200">{event.action}</p>
-                        <p className="text-xs text-zinc-500">{new Date(event.created_at).toLocaleString()}</p>
+                        <p className="text-sm text-foreground">{event.action}</p>
+                        <p className="text-xs text-tertiary">{new Date(event.created_at).toLocaleString()}</p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-zinc-500 text-center py-4">No audit events recorded for this run.</p>
+                  <p className="text-sm text-tertiary text-center py-4">No audit events recorded for this run.</p>
                 )}
               </div>
             </div>

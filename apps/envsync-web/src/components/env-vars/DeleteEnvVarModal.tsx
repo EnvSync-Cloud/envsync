@@ -13,6 +13,12 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, Trash2, Shield, Key } from "lucide-react";
 import { EnvironmentVariable, EnvironmentType } from "@/constants";
 
+const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(?:secret|password|token|auth|credential|private|api[_-]?key)(?:[_-]|$)/i;
+
+function isSensitiveVariable(variable: EnvironmentVariable): boolean {
+  return variable.sensitive || SENSITIVE_KEY_PATTERN.test(variable.key);
+}
+
 interface DeleteEnvVarModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -61,41 +67,41 @@ export const DeleteEnvVarModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
+      <DialogContent className="bg-card border-border max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center">
+          <DialogTitle className="text-foreground flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-            Delete {variable.sensitive ? "Secret" : "Variable"}:{" "}
+            Delete {isSensitiveVariable(variable) ? "Secret" : "Variable"}:{" "}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             This action cannot be undone. This will permanently delete the
-            {variable.sensitive ? " secret" : " variable"} and remove it from all deployments.
+            {isSensitiveVariable(variable) ? " secret" : " variable"} and remove it from all deployments.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Variable Info */}
-          <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
-            <h4 className="text-sm font-medium text-white mb-3">
+          <div className="bg-card rounded-lg p-4 border border-border">
+            <h4 className="text-sm font-medium text-foreground mb-3">
               Variable Details
             </h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-zinc-800 px-2 py-1 rounded">
+                <span className="text-sm text-muted-foreground">Key:</span>
+                <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
                   {variable.key}
                 </code>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Environment:</span>
+                <span className="text-sm text-muted-foreground">Environment:</span>
                 {environmentType && (
                   <div className="flex items-center space-x-2">
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: environmentType.color }}
                     />
-                    <span className="text-sm text-white">
+                    <span className="text-sm text-foreground">
                       {environmentType.name}
                     </span>
                   </div>
@@ -103,27 +109,27 @@ export const DeleteEnvVarModal = ({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Type:</span>
+                <span className="text-sm text-muted-foreground">Type:</span>
                 <div
                   className={`flex items-center space-x-1 text-xs px-2 py-1 rounded ${
-                    variable.sensitive
+                    isSensitiveVariable(variable)
                       ? "bg-red-900/20 text-red-400"
-                      : "bg-zinc-800 text-zinc-300"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  {variable.sensitive ? (
+                  {isSensitiveVariable(variable) ? (
                     <Shield className="w-3 h-3" />
                   ) : (
                     <Key className="w-3 h-3" />
                   )}
-                  <span>{variable.sensitive ? "Secret" : "Variable"}</span>
+                  <span>{isSensitiveVariable(variable) ? "Secret" : "Variable"}</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Value:</span>
-                <code className="text-sm font-mono text-zinc-300 bg-zinc-800 px-2 py-1 rounded max-w-xs truncate">
-                  {variable.sensitive ? "••••••••" : variable.value}
+                <span className="text-sm text-muted-foreground">Value:</span>
+                <code className="text-sm font-mono text-muted-foreground bg-muted px-2 py-1 rounded max-w-xs truncate">
+                  {isSensitiveVariable(variable) ? "••••••••" : variable.value}
                 </code>
               </div>
             </div>
@@ -136,10 +142,10 @@ export const DeleteEnvVarModal = ({
               <div className="text-sm text-red-200">
                 <p className="font-medium mb-1">This will permanently:</p>
                 <ul className="list-disc list-inside space-y-1 text-red-300">
-                  <li>Delete the {variable.sensitive ? "secret" : "variable"} from all environments</li>
+                  <li>Delete the {isSensitiveVariable(variable) ? "secret" : "variable"} from all environments</li>
                   <li>Remove it from any active deployments</li>
                   <li>
-                    Clear the {variable.sensitive ? "secret" : "variable"} from build and runtime configurations
+                    Clear the {isSensitiveVariable(variable) ? "secret" : "variable"} from build and runtime configurations
                   </li>
                 </ul>
               </div>
@@ -148,9 +154,9 @@ export const DeleteEnvVarModal = ({
 
           {/* Confirmation Input */}
           <div className="space-y-2">
-            <Label htmlFor="delete-confirm" className="text-white">
+            <Label htmlFor="delete-confirm" className="text-foreground">
               Type{" "}
-              <code className="bg-zinc-800 px-1 rounded font-mono text-red-400">
+              <code className="bg-muted px-1 rounded font-mono text-red-400">
                 {variable.key}
               </code>{" "}
               to confirm:
@@ -159,7 +165,7 @@ export const DeleteEnvVarModal = ({
               id="delete-confirm"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className={`bg-zinc-900 border-zinc-800 text-white font-mono ${
+              className={`bg-card border-border text-foreground font-mono ${
                 confirmText && !isConfirmValid ? "border-red-500" : ""
               }`}
               placeholder="Enter the Key"
@@ -175,7 +181,7 @@ export const DeleteEnvVarModal = ({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="text-white border-zinc-700 hover:bg-zinc-800"
+            className="text-foreground border-border hover:bg-muted"
             disabled={isDeleting}
           >
             Cancel
@@ -184,7 +190,7 @@ export const DeleteEnvVarModal = ({
             variant="destructive"
             onClick={handleDelete}
             disabled={!isConfirmValid || isDeleting}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-foreground"
           >
             {isDeleting ? (
               <>
@@ -194,7 +200,7 @@ export const DeleteEnvVarModal = ({
             ) : (
               <>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Delete {variable.sensitive ? "Secret" : "Variable"}
+                Delete {isSensitiveVariable(variable) ? "Secret" : "Variable"}
               </>
             )}
           </Button>

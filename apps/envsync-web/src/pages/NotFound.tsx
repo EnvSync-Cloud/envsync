@@ -42,10 +42,10 @@ const NotFound = () => {
           </div>
         </div>
 
-        <h1 className="text-xl font-semibold text-zinc-100 mb-2">
+        <h1 className="text-xl font-semibold text-foreground mb-2">
           Page not found
         </h1>
-        <p className="text-sm text-zinc-400 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           The page you're looking for doesn't exist or has been moved.
         </p>
         <a

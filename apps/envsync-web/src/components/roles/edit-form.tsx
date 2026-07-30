@@ -226,7 +226,7 @@ export const RoleEditForm = ({
           })
         ) : (
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={createRoleMutation.isPending}
           >
             <Plus className="size-4 mr-2" />
@@ -234,19 +234,19 @@ export const RoleEditForm = ({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent hideCloseButton className="bg-zinc-800 border-zinc-700 max-w-lg">
+      <DialogContent hideCloseButton className="bg-muted border-border max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-white">
+          <DialogTitle className="text-foreground">
             {edit ? "Edit Role" : "Create New Role"}
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             Roles define sets of permissions that can be assigned to users.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-2 flex gap-2">
             <div className="space-y-2 w-full">
-              <Label className="text-white" htmlFor="role-name">
+              <Label className="text-foreground" htmlFor="role-name">
                 Name *
               </Label>
               <Input
@@ -254,11 +254,11 @@ export const RoleEditForm = ({
                 id="role-name"
                 value={name}
                 onChange={(e) => setRoleName(e.target.value)}
-                className="bg-zinc-900"
+                className="bg-card"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-white" htmlFor="access-level">
+              <Label className="text-foreground" htmlFor="access-level">
                 Color
               </Label>
               <ColorSelector color={color} setColor={setColor} />
@@ -266,10 +266,10 @@ export const RoleEditForm = ({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-white">Permissions</Label>
+            <Label className="text-foreground">Permissions</Label>
             {PERMISSION_GROUPS.map((group) => (
               <div key={group.label} className="space-y-2">
-                <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {group.label}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -288,16 +288,16 @@ export const RoleEditForm = ({
                         className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
                           isChecked
                             ? "border-emerald-500 bg-emerald-500/10"
-                            : "border-zinc-700 bg-zinc-900 hover:border-zinc-600"
+                            : "border-border bg-card hover:border-muted-foreground"
                         }`}
                       >
                         <Checkbox
                           checked={isChecked || isInherited}
                           onCheckedChange={() => togglePermission(perm.key)}
-                          className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                          className="border-border data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
                         />
-                        <Icon size={14} className="text-zinc-400 shrink-0" />
-                        <span className="text-sm text-white truncate">
+                        <Icon size={14} className="text-muted-foreground shrink-0" />
+                        <span className="text-sm text-foreground truncate">
                           {perm.label}
                         </span>
                       </label>
@@ -317,7 +317,7 @@ export const RoleEditForm = ({
           <DialogClose asChild>
             <Button
               variant="outline"
-              className="text-white border-zinc-600 hover:bg-zinc-700"
+              className="text-foreground border-border hover:bg-muted"
             >
               Close
             </Button>
@@ -325,7 +325,7 @@ export const RoleEditForm = ({
           {edit ? (
             <Button
               onClick={handleUpdateRole}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
               disabled={!unsavedChanges || updateRoleMutation.isPending}
             >
               Update
@@ -333,7 +333,7 @@ export const RoleEditForm = ({
           ) : (
             <Button
               onClick={handleCreateRole}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
               disabled={!name || createRoleMutation.isPending}
             >
               Create

@@ -60,12 +60,12 @@ export function AvatarGroup({
               src={user.avatar || "/placeholder.svg"}
               alt={user.name}
             />
-            <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+            <AvatarFallback className="bg-primary text-primary-foreground">
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>
           {/* Tooltip on hover */}
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20">
             {user.name}
           </div>
         </div>
@@ -84,7 +84,7 @@ export function AvatarGroup({
             </AvatarFallback>
           </Avatar>
           {/* Tooltip showing remaining users */}
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 max-w-48">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 max-w-48">
             {items
               .slice(show)
               .map((user) => user.name)

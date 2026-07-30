@@ -1,13 +1,25 @@
-import { LayoutDashboard, Plus, UserPlus, Key, Activity, ArrowRight, Database, Variable, Users, Shield, Clock, ChevronRight, KeyRound, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Plus, UserPlus, Key, Activity, Database, Variable, Users, Shield, Clock, ChevronRight, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageShell } from "@/components/PageShell";
 import { PageError } from "@/components/ui/page-error";
 import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useDashboard } from "@/hooks/useDashboard";
-import { formatLastUsed } from "@/lib/utils";
+import { useDashboard, type DashboardStats } from "@/hooks/useDashboard";
+import { formatLastUsed, truncateUUIDs } from "@/lib/utils";
 import { appDetailPath } from "@/lib/app-routes";
+
+function StatValue({ value }: { value: number | null }) {
+  if (value === null) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-amber-400">
+        <AlertCircle className="size-4" />
+        <span className="text-sm">Error</span>
+      </span>
+    );
+  }
+  return <>{value}</>;
+}
 
 export default function Dashboard() {
   const { stats, recentProjects, auditLogs, isLoading, auditLoading, error } = useDashboard();
@@ -22,19 +34,37 @@ export default function Dashboard() {
     );
   }
 
+  const hasProjects = stats.projectsCount !== null && stats.projectsCount > 0;
+
   return (
     <PageShell
       title="Dashboard"
       description="Overview of your workspace"
       icon={LayoutDashboard}
       isLoading={isLoading}
+      stats={[
+        {
+          label: "Projects",
+          value: <StatValue value={stats.projectsCount} />,
+          tone: stats.projectsCount === null ? "warning" : "default",
+        },
+        {
+          label: "Config Items",
+          value: <StatValue value={stats.variablesCount} />,
+          tone: stats.variablesCount === null ? "warning" : "default",
+        },
+        {
+          label: "Team Members",
+          value: <StatValue value={stats.teamMembersCount} />,
+          tone: stats.teamMembersCount === null ? "warning" : "default",
+        },
+        {
+          label: "API Keys",
+          value: <StatValue value={stats.apiKeysCount} />,
+          tone: stats.apiKeysCount === null ? "warning" : "default",
+        },
+      ]}
     >
-      <OnboardingBanner
-        hasProjects={stats.projectsCount > 0}
-        hasTeamMembers={stats.teamMembersCount > 1}
-        hasApiKeys={stats.apiKeysCount > 0}
-      />
-
       {/* Quick actions bar */}
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
@@ -43,13 +73,13 @@ export default function Dashboard() {
             Create Project
           </Link>
         </Button>
-        <Button asChild size="sm" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+        <Button asChild size="sm" variant="outline">
           <Link to="/users">
             <UserPlus className="size-4 mr-1.5" />
             Invite Member
           </Link>
         </Button>
-        <Button asChild size="sm" variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+        <Button asChild size="sm" variant="outline">
           <Link to="/apikeys">
             <Key className="size-4 mr-1.5" />
             API Keys
@@ -57,17 +87,19 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* 3-column quick access grid — Cloudflare style */}
-      <div className="grid grid-cols-1 gap-0 @768px:grid-cols-3 border border-zinc-800 rounded-xl overflow-hidden">
+      {/* 2-column grid: Projects + Recent Activity */}
+      <div className="grid grid-cols-1 gap-0 @768px:grid-cols-2 border border-border rounded-xl overflow-hidden">
         {/* Column 1: Projects */}
-        <div className="border-b @768px:border-b-0 @768px:border-r border-zinc-800">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+        <div className="border-b @768px:border-b-0 @768px:border-r border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Database className="size-4 text-emerald-400" />
-              <h3 className="text-sm font-medium text-zinc-200">Projects</h3>
-              <Badge variant="secondary" className="bg-zinc-800 text-zinc-400 text-[10px] px-1.5 py-0">
-                {stats.projectsCount}
-              </Badge>
+              <h3 className="text-sm font-medium text-foreground">Projects</h3>
+              {stats.projectsCount !== null && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {stats.projectsCount}
+                </Badge>
+              )}
             </div>
             <Link to="/applications" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
               View all
@@ -76,31 +108,33 @@ export default function Dashboard() {
           <div className="max-h-[280px] overflow-y-auto">
             {recentProjects.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <p className="text-xs text-zinc-500">No projects yet</p>
-                <Link to="/applications/create" className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
-                  Create your first project →
-                </Link>
+                <p className="text-xs text-muted-foreground">No projects yet</p>
+                {!hasProjects && (
+                  <Link to="/applications/create" className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
+                    Create your first project →
+                  </Link>
+                )}
               </div>
             ) : (
               recentProjects.map((project) => (
                 <Link
                   key={project.id}
                   to={appDetailPath(project.id)}
-                  className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/30 last:border-0"
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 transition-colors border-b border-border last:border-0"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="size-7 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                    <div className="size-7 rounded bg-muted flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-emerald-400">
                         {project.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-sm text-zinc-200 truncate">{project.name}</span>
+                    <span className="text-sm text-foreground truncate">{project.name}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[11px] text-zinc-500">
+                    <span className="text-[11px] text-muted-foreground">
                       {(project.env_count ?? 0) + (project.secret_count ?? 0)}
                     </span>
-                    <ChevronRight className="size-3 text-zinc-600" />
+                    <ChevronRight className="size-3 text-muted-foreground" />
                   </div>
                 </Link>
               ))
@@ -108,63 +142,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Column 2: Security */}
-        <div className="border-b @768px:border-b-0 @768px:border-r border-zinc-800">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
-            <div className="flex items-center gap-2">
-              <Shield className="size-4 text-amber-400" />
-              <h3 className="text-sm font-medium text-zinc-200">Security</h3>
-            </div>
-          </div>
-          <div>
-            <Link
-              to="/apikeys"
-              className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/30"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="size-7 rounded bg-zinc-800 flex items-center justify-center">
-                  <Key className="size-3.5 text-amber-400" />
-                </div>
-                <span className="text-sm text-zinc-200">API Keys</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-zinc-100">{stats.apiKeysCount}</span>
-                <ChevronRight className="size-3 text-zinc-600" />
-              </div>
-            </Link>
-            <Link
-              to="/gpgkeys"
-              className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/50 transition-colors border-b border-zinc-800/30"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="size-7 rounded bg-zinc-800 flex items-center justify-center">
-                  <KeyRound className="size-3.5 text-blue-400" />
-                </div>
-                <span className="text-sm text-zinc-200">GPG Keys</span>
-              </div>
-              <ChevronRight className="size-3 text-zinc-600" />
-            </Link>
-            <Link
-              to="/certificates"
-              className="flex items-center justify-between px-4 py-2.5 hover:bg-zinc-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="size-7 rounded bg-zinc-800 flex items-center justify-center">
-                  <ShieldCheck className="size-3.5 text-emerald-400" />
-                </div>
-                <span className="text-sm text-zinc-200">Certificates</span>
-              </div>
-              <ChevronRight className="size-3 text-zinc-600" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Column 3: Recents */}
+        {/* Column 2: Recents */}
         <div>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
               <Clock className="size-4 text-purple-400" />
-              <h3 className="text-sm font-medium text-zinc-200">Recent Activity</h3>
+              <h3 className="text-sm font-medium text-foreground">Recent Activity</h3>
             </div>
             <Link to="/audit" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
               View all
@@ -175,26 +158,26 @@ export default function Dashboard() {
               <div className="px-4 py-4 space-y-3">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="flex items-center gap-2.5 animate-pulse">
-                    <div className="size-7 rounded bg-zinc-800" />
+                    <div className="size-7 rounded bg-muted" />
                     <div className="flex-1 space-y-1">
-                      <div className="h-3 bg-zinc-800 rounded w-3/4" />
-                      <div className="h-2 bg-zinc-800 rounded w-1/2" />
+                      <div className="h-3 bg-muted rounded w-3/4" />
+                      <div className="h-2 bg-muted rounded w-1/2" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : auditLogs.length === 0 ? (
               <div className="px-4 py-8 text-center">
-                <p className="text-xs text-zinc-500">No recent activity</p>
+                <p className="text-xs text-muted-foreground">No recent activity</p>
               </div>
             ) : (
               auditLogs.slice(0, 6).map((log, idx) => (
                 <div
                   key={log.id ?? idx}
-                  className="flex items-start gap-2.5 px-4 py-2.5 border-b border-zinc-800/30 last:border-0"
+                  className="flex items-start gap-2.5 px-4 py-2.5 border-b border-border last:border-0"
                 >
-                  <div className="size-7 rounded bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Activity className="size-3 text-zinc-400" />
+                  <div className="size-7 rounded bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Activity className="size-3 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -205,8 +188,8 @@ export default function Dashboard() {
                         {log.action?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Unknown"}
                       </Badge>
                     </div>
-                    <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
-                      {log.message || log.details || "No details"}
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                      {truncateUUIDs(log.message || log.details || "No details")}
                       {log.created_at && (
                         <span className="ml-1">· {formatLastUsed(log.created_at)}</span>
                       )}
@@ -219,37 +202,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats overview */}
-      <div className="grid grid-cols-2 @768px:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400">Projects</p>
-            <Database className="size-4 text-emerald-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{stats.projectsCount}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400">Config Items</p>
-            <Variable className="size-4 text-blue-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{stats.variablesCount}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400">Team Members</p>
-            <Users className="size-4 text-purple-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{stats.teamMembersCount}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400">API Keys</p>
-            <Shield className="size-4 text-amber-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-zinc-100">{stats.apiKeysCount}</p>
-        </div>
-      </div>
+      {/* Onboarding banner - only shows for new users, dismissible */}
+      <OnboardingBanner
+        hasProjects={hasProjects}
+        hasTeamMembers={(stats.teamMembersCount ?? 0) > 1}
+        hasApiKeys={(stats.apiKeysCount ?? 0) > 0}
+      />
     </PageShell>
   );
 }

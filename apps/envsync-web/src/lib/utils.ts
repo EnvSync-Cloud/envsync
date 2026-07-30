@@ -161,3 +161,13 @@ export const getDefaultEnvironmentType = (
 
   return defaultEnvType ? defaultEnvType.id : environmentTypes[0].id;
 };
+
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+/**
+ * Truncates UUIDs in a string to first 8 characters for readability.
+ * "a8bf8002-afdf-4fad-a9e7-cf20413dfe76" → "a8bf8002…"
+ */
+export const truncateUUIDs = (text: string): string => {
+  return text.replace(UUID_PATTERN, (uuid) => `${uuid.slice(0, 8)}…`);
+};
