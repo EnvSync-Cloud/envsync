@@ -16,7 +16,7 @@ import { EnvironmentVariable, EnvironmentType } from "@/constants";
 const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(?:secret|password|token|auth|credential|private|api[_-]?key)(?:[_-]|$)/i;
 
 function isSensitiveVariable(variable: EnvironmentVariable): boolean {
-  return isSensitiveVariable(variable) || SENSITIVE_KEY_PATTERN.test(variable.key);
+  return variable.sensitive || SENSITIVE_KEY_PATTERN.test(variable.key);
 }
 
 interface DeleteEnvVarModalProps {

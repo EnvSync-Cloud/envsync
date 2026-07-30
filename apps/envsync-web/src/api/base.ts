@@ -53,7 +53,8 @@ export async function redirectToLogin() {
   } catch (error) {
     console.error("Failed to create web login:", error);
   }
-  loginRedirectInFlight = false;
+  // Don't reset loginRedirectInFlight on failure - prevents infinite retry loop
+  // The guard stays set until the page navigates or reloads
 }
 
 export async function logoutWebSession() {
