@@ -187,7 +187,7 @@ export async function createApiApp(surface: ApiSurface) {
 		enterpriseLicenseLockMiddleware(
 			isManagement
 				? ["/api/license/status", "/api/license/activate", "/api/license/verify", "/api/system/status"]
-				: ["/api/system/status"],
+				: ["/api/system/status", "/api/setup/status", "/api/setup/org"],
 		),
 	);
 

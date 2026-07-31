@@ -226,7 +226,11 @@ function createSteadyApiDeploymentState(config: DeployConfig, generated: DeployG
 	};
 }
 
-export function buildRuntimeEnv(config: DeployConfig, generated: DeployGeneratedState): RuntimeEnv {
+export function buildRuntimeEnv(
+	config: DeployConfig,
+	generated: DeployGeneratedState,
+	options?: { setupToken?: string },
+): RuntimeEnv {
 	const hosts = domainMap(config.domain.root_domain);
 	const bucketName = "envsync-bucket";
 	const oss = isOssConfig(config);
@@ -242,6 +246,8 @@ export function buildRuntimeEnv(config: DeployConfig, generated: DeployGenerated
 		ENVSYNC_LANDING_ENABLED: "false",
 		ENVSYNC_SINGLE_ORG_MODE: "true",
 		ENVSYNC_MAX_ORGS: "1",
+		// Operator setup token for POST /api/setup/org (Phase 1b).
+		ENVSYNC_SETUP_TOKEN: options?.setupToken ?? "",
 		ENVSYNC_LICENSE_ENFORCEMENT: oss ? "false" : "true",
 		ENVSYNC_LICENSE_MODE: oss ? "none" : "certificate",
 		ENVSYNC_LICENSE_BUNDLE_PATH: oss ? "" : "/etc/envsync/license/enterprise-license-bundle.json",

@@ -16,13 +16,14 @@ This guide is for operators deploying EnvSync on a single Ubuntu or Debian Docke
 
 Recommended public hosts:
 
-- `<root-domain>` for landing
 - `app.<root-domain>` for the dashboard
 - `api.<root-domain>` for the API
 - `auth.<root-domain>` for Keycloak
 - `obs.<root-domain>` for ClickStack
 - `s3.<root-domain>` for the S3-compatible API
 - `console.s3.<root-domain>` for the object storage console
+
+Self-host does **not** require a marketing landing host. Public signup is Hosted-only.
 
 ## Deploy CLI flow
 
@@ -50,10 +51,34 @@ Deploy the pinned release:
 npx @envsync-cloud/deploy-cli deploy
 ```
 
+### First organization (required)
+
+Self-host has **no public signup** and **no dashboard “create organization”**.  
+Create the first org with the operator CLI (setup token under `/etc/envsync/setup.token`):
+
+```bash
+# Interactive (TTY)
+envsync-deploy org create --interactive
+
+# Non-interactive
+envsync-deploy org create \
+  --name "Acme" \
+  --email "admin@example.com" \
+  --password 'Str0ng!Pass'
+
+# Status
+envsync-deploy org status
+envsync-deploy health --json   # includes first_org.ready
+```
+
+- OSS: at most one organization.
+- Enterprise self-host: one org by default; further orgs only via `org create` when license/`ENVSYNC_MAX_ORGS` allows (not via web).
+
 Important facts:
 
 - `setup` writes the desired self-host config.
 - `bootstrap` is destructive and rebuilds the managed EnvSync infra.
+- `bootstrap` / deploy may prompt for the first org when a TTY is available.
 - `deploy` performs the release rollout.
 - running `envsync-deploy` with no subcommand shows the current status and the recommended next step.
 

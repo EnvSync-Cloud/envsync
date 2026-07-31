@@ -8,6 +8,7 @@ import YAML from "yaml";
 import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud/deploy-core";
 import * as renderHelpers from "./render";
 import * as staticBundleHelpers from "./static-bundle";
+import * as orgSetup from "./org-setup";
 
 interface DeployConfig {
 	edition?: "oss" | "enterprise";
@@ -252,6 +253,7 @@ const DEPLOY_ENV = path.join(ETC_ROOT, "deploy.env");
 const DEPLOY_YAML = path.join(ETC_ROOT, "deploy.yaml");
 const WIREGUARD_ROOT = path.join(ETC_ROOT, "wireguard");
 const LICENSE_ROOT = path.join(ETC_ROOT, "license");
+const SETUP_TOKEN_FILE = path.join(ETC_ROOT, "setup.token");
 const LICENSE_BUNDLE_FILE = path.join(LICENSE_ROOT, "enterprise-license-bundle.json");
 const LICENSE_CERT_FILE = path.join(LICENSE_ROOT, "enterprise-cert.pem");
 const LICENSE_KEY_FILE = path.join(LICENSE_ROOT, "enterprise-key.pem");
@@ -1029,6 +1031,8 @@ function renderHelpBlock() {
 		"  license issue-cert   Issue and install an Enterprise certificate bundle",
 		"  license renew-cert   Renew and install the Enterprise certificate bundle",
 		"  license validate-cert Validate the installed Enterprise certificate bundle files",
+		"  org create           Create organization via setup token (self-host; first org + further if allowed)",
+		"  org status           Show setup/org readiness via setup token",
 		"  backup               Create a managed self-host backup archive",
 		"  restore <archive>    Restore a backup archive into the managed self-host roots",
 		"",
@@ -1036,6 +1040,8 @@ function renderHelpBlock() {
 		"  --dry-run            Preview mutating work without changing the host",
 		"  --force              Skip destructive confirmations where supported",
 		"  --deploy             Used with restore to start services after restore",
+		"  --name/--email/--password  Non-interactive org create flags",
+		"  --interactive / -i   Prompt for org create fields",
 	].join("\n");
 }
 
@@ -2402,8 +2408,15 @@ configs:
 }
 
 function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedState) {
-	const runtimeEnv = renderHelpers.buildRuntimeEnv(config, generated);
+	const setupToken = currentOptions.dryRun
+		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
+		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
+	const runtimeEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
 	logStep("Rendering deploy artifacts");
+	if (!currentOptions.dryRun) {
+		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
+		logInfo(`Setup token fingerprint: ${orgSetup.setupTokenFingerprint(setupToken)} (${SETUP_TOKEN_FILE})`);
+	}
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
 	writeFileMaybe(
 		INTERNAL_CONFIG_JSON,
@@ -3562,6 +3575,8 @@ function printHealthSection(title: string) {
 
 function printHealthSummary(checks: {
 	edition: "oss" | "enterprise";
+	deployment_mode?: string;
+	first_org?: { ready: boolean; org_count: number | null; error: string | null };
 	bootstrap: {
 		completed: boolean;
 		completed_at: string | null;
@@ -3631,6 +3646,18 @@ function printHealthSummary(checks: {
 	printHealthLine("ClickStack", formatHealthStatus(checks.observability.service));
 	printHealthLine("Active slot", chalk.cyan(checks.deploy.active_slot));
 	printHealthLine("Maintenance mode", checks.deploy.maintenance_mode ? chalk.yellow("enabled") : chalk.green("disabled"));
+	if (checks.deployment_mode) {
+		printHealthLine("Deployment mode", chalk.cyan(checks.deployment_mode));
+	}
+	if (checks.first_org) {
+		if (checks.first_org.ready) {
+			printHealthLine("First org", chalk.green(`ready (count=${checks.first_org.org_count ?? "?"})`));
+		} else if (checks.first_org.error) {
+			printHealthLine("First org", chalk.yellow(`not ready (${checks.first_org.error})`));
+		} else {
+			printHealthLine("First org", chalk.yellow("missing — run: envsync-deploy org create"));
+		}
+	}
 	if (checks.deploy.previous_slot) {
 		printHealthLine("Rollback slot", chalk.yellow(checks.deploy.previous_slot));
 	}
@@ -3978,6 +4005,131 @@ async function cmdBootstrap() {
 	writeDeployArtifacts(config, bootstrappedGenerated);
 	logClickstackCredentials(bootstrappedGenerated);
 	logSuccess("Bootstrap completed");
+	// First org is operator-created (not landing/web). EE requires first org; OSS prompts when TTY.
+	await maybeEnsureFirstOrg(config, { required: !isOssConfig(config) });
+}
+
+async function resolveApiBaseUrl(config: DeployConfig) {
+	const hosts = domainMap(config.domain.root_domain);
+	return publicHttpsUrl(config, hosts.api);
+}
+
+async function maybeEnsureFirstOrg(config: DeployConfig, options: { required: boolean }) {
+	const token = orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE);
+	if (!token) {
+		logWarn(`No setup token at ${SETUP_TOKEN_FILE}. Run deploy to generate one, then: envsync-deploy org create`);
+		return;
+	}
+	const apiBaseUrl = await resolveApiBaseUrl(config);
+	let status: orgSetup.SetupStatus;
+	try {
+		status = await orgSetup.fetchSetupStatus(apiBaseUrl, token);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		logWarn(`Setup API not reachable yet (${message}). When API is healthy: envsync-deploy org create --interactive`);
+		return;
+	}
+	if (status.first_org_ready) {
+		logInfo(`First organization ready (org_count=${status.org_count}).`);
+		return;
+	}
+	if (!status.can_create_organization) {
+		logWarn("Cannot create organization (limit reached or setup channel denied).");
+		return;
+	}
+	const interactive = Boolean(process.stdin.isTTY);
+	if (!interactive) {
+		const msg = "No organization yet. Create one with: envsync-deploy org create --name ... --email ... --password ...";
+		if (options.required) {
+			logWarn(`Enterprise self-host is not fully ready until first org exists. ${msg}`);
+		} else {
+			logWarn(msg);
+		}
+		return;
+	}
+	logSection("Create first organization");
+	logInfo("Self-host does not use public signup. Create the first organization now.");
+	try {
+		const input = await orgSetup.promptCreateOrgInteractive();
+		const result = await orgSetup.createOrgViaSetup(apiBaseUrl, token, input);
+		logSuccess(`Organization created (${result.org_id}). Admin user: ${result.admin_user_id}`);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (options.required) {
+			logWarn(`First org not created: ${message}. Stack is up; finish with: envsync-deploy org create --interactive`);
+		} else {
+			logWarn(`Skipped first org: ${message}. You can run: envsync-deploy org create --interactive`);
+		}
+	}
+}
+
+async function cmdOrg(args: string[]) {
+	const sub = args[0] ?? "status";
+	const rest = args.slice(1);
+	const { config } = loadState();
+	const token = orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE);
+	if (!token) {
+		throw new Error(`Setup token missing at ${SETUP_TOKEN_FILE}. Run bootstrap/deploy first.`);
+	}
+	const apiBaseUrl = await resolveApiBaseUrl(config);
+
+	if (sub === "status") {
+		const status = await orgSetup.fetchSetupStatus(apiBaseUrl, token);
+		if (rest.includes("--json") || args.includes("--json")) {
+			console.log(JSON.stringify(status, null, 2));
+		} else {
+			logSection("Organization setup status");
+			console.log(`deployment_mode: ${status.deployment_mode}`);
+			console.log(`edition: ${status.edition}`);
+			console.log(`org_count: ${status.org_count}`);
+			console.log(`max_orgs: ${status.max_orgs ?? "unlimited"}`);
+			console.log(`first_org_ready: ${status.first_org_ready}`);
+			console.log(`can_create: ${status.can_create_organization}`);
+			console.log(`channel: ${status.channel}`);
+		}
+		return;
+	}
+
+	if (sub === "create") {
+		logSection("Create organization (operator setup token)");
+		const parsed = orgSetup.parseOrgCreateArgs(rest);
+		let input: orgSetup.CreateOrgInput;
+		if (parsed.interactive || !parsed.org_name || !parsed.admin_email || !parsed.admin_password) {
+			if (!process.stdin.isTTY && (!parsed.org_name || !parsed.admin_email || !parsed.admin_password)) {
+				throw new Error("Non-interactive org create requires --name, --email, and --password");
+			}
+			if (parsed.org_name && parsed.admin_email && parsed.admin_password) {
+				input = {
+					org_name: parsed.org_name,
+					org_slug: parsed.org_slug,
+					admin_email: parsed.admin_email,
+					admin_full_name: parsed.admin_full_name,
+					admin_password: parsed.admin_password,
+				};
+			} else {
+				input = await orgSetup.promptCreateOrgInteractive();
+			}
+		} else {
+			input = {
+				org_name: parsed.org_name,
+				org_slug: parsed.org_slug,
+				admin_email: parsed.admin_email,
+				admin_full_name: parsed.admin_full_name,
+				admin_password: parsed.admin_password,
+			};
+		}
+		const result = await orgSetup.createOrgViaSetup(apiBaseUrl, token, input);
+		if (parsed.json) {
+			console.log(JSON.stringify(result, null, 2));
+		} else {
+			logSuccess(`Organization created: ${result.org_id}`);
+			logInfo(`Admin user id: ${result.admin_user_id}`);
+			logInfo(`Source channel: ${result.source}${result.first_org ? " (first org)" : ""}`);
+		}
+		return;
+	}
+
+	throw new Error(`Unknown org subcommand: ${sub}. Use: org status | org create`);
 }
 
 async function cmdDeploy() {
@@ -4126,6 +4278,7 @@ async function cmdDeploy() {
 		logInfo(`Rollback slot: ${currentState.deployment.previous_slot}`);
 	}
 	logSuccess("Deploy completed");
+	await maybeEnsureFirstOrg(config, { required: false });
 }
 
 async function cmdPromote(target?: string) {
@@ -4233,8 +4386,36 @@ async function cmdHealth(asJson: boolean) {
 		openfga: serviceHealth(services, `${stackName}_openfga`),
 		minikms: serviceHealth(services, `${stackName}_minikms`),
 	};
+	let firstOrg: { ready: boolean; org_count: number | null; error: string | null } = {
+		ready: false,
+		org_count: null,
+		error: null,
+	};
+	const setupToken = orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE);
+	if (setupToken) {
+		try {
+			const apiBaseUrl = await resolveApiBaseUrl(config);
+			const setupStatus = await orgSetup.fetchSetupStatus(apiBaseUrl, setupToken);
+			firstOrg = {
+				ready: setupStatus.first_org_ready,
+				org_count: setupStatus.org_count,
+				error: null,
+			};
+		} catch (error) {
+			firstOrg = {
+				ready: false,
+				org_count: null,
+				error: error instanceof Error ? error.message : String(error),
+			};
+		}
+	} else {
+		firstOrg.error = `setup token missing at ${SETUP_TOKEN_FILE}`;
+	}
+
 	const checks = {
 		edition: config.edition ?? "enterprise",
+		deployment_mode: "selfhosted",
+		first_org: firstOrg,
 		bootstrap: {
 			completed: hasCompleteBootstrapState(generated) && generated.bootstrap.completed_at.length > 0,
 			completed_at: generated.bootstrap.completed_at || null,
@@ -5043,6 +5224,9 @@ async function main() {
 			break;
 		case "license":
 			await cmdLicense(positionals[0]);
+			break;
+		case "org":
+			await cmdOrg(positionals);
 			break;
 		case "backup":
 			await cmdBackup();

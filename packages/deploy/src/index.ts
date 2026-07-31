@@ -16,6 +16,7 @@ ${chalk.bold("EnvSync OSS Deploy")}
 	  deploy                            Deploy the OSS self-host topology
   remove [--force]                  Remove local OSS deployment resources and files
 	  health [--json]                   Inspect OSS self-host health
+  org create|status                 Create first org / show setup status (operator token)
   backup                            Create a self-host backup
   validate [deploy.yaml] [--json]   Validate an OSS topology config
   plan [deploy.yaml] [--json]       Render the OSS topology plan
@@ -66,7 +67,9 @@ async function main() {
 		case "promote":
 		case "rollback":
 		case "upgrade":
-		case "upgrade-deps": {
+		case "upgrade-deps":
+		case "org": {
+			// Phase 1b: org create/status via setup token (still delegates until Phase 3 OSS lifecycle split)
 			runLifecycleCommand([command, ...rest]);
 			break;
 		}
