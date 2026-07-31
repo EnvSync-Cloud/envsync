@@ -99,7 +99,11 @@ export class AuthController {
 		}
 	};
 
-	public static readonly createWorkspace = async (c: Context) => {
+	/**
+	 * Hosted-only org create for dashboard sessions.
+	 * Preferred route: POST /auth/create-organization (create-workspace is a deprecated alias).
+	 */
+	public static readonly createOrganization = async (c: Context) => {
 		if (!readAccessToken(c)) {
 			return c.json({ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" }, 401);
 		}
@@ -130,5 +134,10 @@ export class AuthController {
 		});
 		setActiveMembershipCookie(c, result.user_id);
 		return c.json(await buildSessionPayload(result.user_id));
+	};
+
+	/** @deprecated Prefer createOrganization — kept for any internal callers */
+	public static readonly createWorkspace = async (c: Context) => {
+		return AuthController.createOrganization(c);
 	};
 }

@@ -44,7 +44,7 @@ export const DeleteAccountModal = ({
             Leave Organization
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            This action cannot be undone for this workspace. It removes your membership from the current organization and ends your access immediately.
+            This action cannot be undone for this organization. It removes your membership from the current organization and ends your access immediately.
           </DialogDescription>
         </DialogHeader>
         
@@ -57,7 +57,7 @@ export const DeleteAccountModal = ({
                 <ul className="list-disc list-inside space-y-1 text-red-300">
                   <li>Your membership in this organization</li>
                   <li>Your access to this organization's projects and secrets</li>
-                  <li>Your team memberships and org-level permissions in this workspace</li>
+                  <li>Your team memberships and org-level permissions in this organization</li>
                 </ul>
               </div>
             </div>

@@ -1,49 +1,87 @@
-# Edition Structure
+# Edition structure (dual-license monorepo)
 
-EnvSync uses a shared-shell model for maintaining a public FOSS edition and a private superset edition.
+EnvSync is a **public monorepo** with a dual license (MIT + proprietary enterprise),
+not a “private superset only” model. Enterprise packages live in-tree under a
+proprietary license; OSS builds must not depend on them.
 
-## Public Repo
+## Product matrix
 
-- `packages/envsync-api` remains the shared backend shell.
-- `apps/envsync-web` remains the shared dashboard shell.
-- Public SDKs remain public-only and must not reference private packages.
+| | Hosted Enterprise | Self-host OSS | Self-host Enterprise |
+|--|-------------------|---------------|----------------------|
+| `ENVSYNC_DEPLOYMENT_MODE` | `hosted` | `selfhosted` | `selfhosted` |
+| `ENVSYNC_EDITION` | `enterprise` | `oss` | `enterprise` |
+| Public org signup (landing) | Yes | No | No |
+| Multi-org | Yes (SaaS) | No (`max_orgs=1`) | Licensed claims only (default 1) |
+| First org | Landing / hosted dashboard | Bootstrap / OSS deploy CLI | EE deploy CLI |
+| Further orgs | Dashboard **Organization** create | Never | EE deploy CLI + entitlement |
+| Landing service | Separate (Cloudflare) | No | No |
+| Management API process | EnvSync-operated | No | Yes |
+| License authority | Platform billing | N/A | Entitlement JWT / cert (public verify key) |
+| Deploy tool | N/A | `@envsync-cloud/deploy` | `@envsync-cloud/deploy-enterprise` |
+| Dashboard | `envsync-web` + EE modules | `envsync-web` OSS build | `envsync-web` EE build |
+| Management SPA | **None** (deleted) | None | None |
 
-The public repo now contains registry-based extension seams for:
+Full program decisions: [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md).
 
-- API route modules
-- frontend route and nav modules
-- environment schema extensions
-- additional migration directories
-- background handler registration
-- future DB type augmentation
+## Package graph (simplified)
 
-## Private Superset Repo
+```text
+MIT
+  envsync-kernel
+  envsync-api          (core process + loaders)
+  deploy / deploy-core
+  apps/envsync-web     (shell; OSS stub for EE modules)
+  apps/envsync-landing
 
-The private repo should be created from the full public history and add enterprise-only packages such as:
+PROPRIETARY
+  envsync-enterprise       (management module registry)
+  envsync-enterprise-web   (dashboard WebModule[] + pages)
+  envsync-management-api   (management process)
+  deploy-cli               (npm: deploy-enterprise)
+```
 
-- `packages/envsync-enterprise-api`
-- `packages/envsync-enterprise-web`
-- `packages/envsync-enterprise-shared`
-- `sdks/envsync-enterprise-ts-sdk`
+## How edition injection works
 
-The private repo should replace:
+### API
 
-- `packages/envsync-api/src/modules/external-modules.ts`
-- `apps/envsync-web/src/modules/external-modules.ts`
+- Core process: `loadApiModules("core")` — never imports `envsync-enterprise`.
+- Management process: registers `enterpriseManagementModules` from `envsync-enterprise`.
+- Feature gates (Phase 4): verified entitlements when `ENVSYNC_LICENSE_ENFORCEMENT=true`.
 
-with imports from those enterprise-only packages.
+### Frontend
 
-## Sync Workflow
+- OSS: Vite `@enterprise-modules` → empty stub.
+- Enterprise: `@enterprise-modules` → `packages/envsync-enterprise-web`.
+- Shell chrome is shared; EE pages import UI via `@shell/*`.
 
-Recommended git model:
+### Deploy
 
-1. Keep the public repo as the canonical upstream for shared code.
-2. Add the public repo as a `public` remote in the private repo.
-3. Open automated sync PRs in the private repo by merging `public/main`.
-4. Upstream shared seams to the public repo before adding enterprise behavior.
+- Public `@envsync-cloud/deploy` is self-contained OSS (no monorepo spawn).
+- Enterprise deploy is a separate private package/bin.
+
+## Optional private-superset workflow
+
+A private repo that only holds secrets/signing keys or additional closed modules
+remains **optional**. The default product story is:
+
+1. Public monorepo dual license (this document).
+2. Private license-server for entitlement signing (keys never in the monorepo).
+
+If you maintain a private superset, keep public as upstream and never import
+proprietary packages from MIT package production graphs.
 
 ## Guardrails
 
-- Public code must not import enterprise-only packages.
-- Shared shell changes should remain generic and additive.
-- Provider-specific or proprietary behavior belongs in the private repo.
+- MIT packages must not list proprietary packages as **production** dependencies
+  (CI: `bun run check:boundaries`).
+- Self-host **web** must never create organizations (any edition).
+- Multi-org on self-host EE is **CLI + entitlement claims**, not cookie sessions.
+- Do not reintroduce `apps/envsync-management-web` or `/manage` merge.
+
+## Vocabulary
+
+| Term | Meaning |
+|------|---------|
+| **Organization** | Tenant boundary (DB `orgs`). Use this in product UI. |
+| **Workspace** | Deprecated as multi-org alias. APIs may keep compat aliases (`create-workspace`) for a deprecation window. |
+| **Project / App** | Work unit under one org. |

@@ -82,11 +82,32 @@ Use `bun run test:e2e` from the repo root. It runs `e2e-setup init` before invok
 - Register new dashboard routes and nav items via `src/modules/core-modules.ts`
 - Run `bun run lint` before pushing
 
-## Editions & Shared Shell
+## Editions & dual license
 
-- The public repo is the canonical FOSS shared shell.
-- Shared extension seams live in the `src/modules/` loaders for API and web.
-- If future enterprise work needs a seam, upstream the seam first and keep proprietary logic outside public packages.
+EnvSync is a **public dual-license monorepo** (not private-superset-only). See:
+
+- [LICENSE](./LICENSE) — MIT default + proprietary carve-out  
+- [EDITIONING.md](./EDITIONING.md) — product matrix and package graph  
+- [docs/SUPPORT.md](./docs/SUPPORT.md) — Hosted / OSS SH / EE SH support matrix  
+
+### Proprietary paths
+
+Code under `packages/envsync-enterprise`, `packages/envsync-enterprise-web`,
+`packages/envsync-management-api`, and `packages/deploy-cli` (enterprise deploy)
+is **proprietary**. By contributing to those paths you grant EnvSync Cloud the
+right to use, modify, and distribute your contribution under the EnvSync
+Enterprise License (and to relicense as needed for the product).
+
+MIT-path contributions remain under MIT.
+
+### Guardrails for contributors
+
+- Do not add proprietary packages as **production** dependencies of MIT packages
+  (CI: `bun run check:boundaries`).
+- Do not reintroduce `apps/envsync-management-web` or monorepo spawn shims for OSS deploy.
+- Prefer **Organization** in user-facing copy; `create-workspace` API remains a
+  deprecated compatibility alias for `create-organization`.
+- Shared extension seams live in API/web module loaders; keep core shells free of EE imports.
 
 ## CLI Changes (`packages/envsync-cli/`)
 
