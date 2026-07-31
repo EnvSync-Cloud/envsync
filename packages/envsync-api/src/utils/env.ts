@@ -76,7 +76,7 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_LANDING_ENABLED: z.string().optional(),
 	ENVSYNC_MANAGEMENT_WEB_ENABLED: z.string().optional(),
 	ENVSYNC_LICENSE_ENFORCEMENT: z.string().default("false"),
-	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate"]).default("certificate"),
+	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate", "entitlement"]).default("certificate"),
 	ENVSYNC_LICENSE_BUNDLE_PATH: z.string().optional(),
 	ENVSYNC_LICENSE_CERT_PATH: z.string().optional(),
 	ENVSYNC_LICENSE_KEY_PATH: z.string().optional(),
@@ -86,6 +86,12 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_LICENSE_KEY: z.string().optional(),
 	ENVSYNC_INSTALL_FINGERPRINT: z.string().optional(),
 	ENVSYNC_LICENSE_LEASE_TTL_SECONDS: z.string().default("300"),
+	// Phase 4 Coder-style entitlement JWT (public key verify only; private key never ships)
+	ENVSYNC_ENTITLEMENT_JWT: z.string().optional(),
+	ENVSYNC_ENTITLEMENT_JWT_PATH: z.string().optional(),
+	ENVSYNC_ENTITLEMENT_GRACE_SECONDS: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_PEM: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_PATH: z.string().optional(),
 	ENVSYNC_STACK_NAME: z.string().optional(),
 	ENVSYNC_RELEASE_VERSION: z.string().optional(),
 	// OpenFGA configuration

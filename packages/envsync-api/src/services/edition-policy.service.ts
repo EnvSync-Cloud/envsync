@@ -141,7 +141,10 @@ export class EditionPolicyService {
 
 	/**
 	 * Max organizations for this install.
-	 * Hosted: unlimited (null). Self-host: 1 by default; ENVSYNC_MAX_ORGS for CLI interim only.
+	 * Hosted: unlimited (null).
+	 * Self-host: verified entitlement `max_orgs` / `multi_org` when cached (Phase 4);
+	 * else ENVSYNC_MAX_ORGS support interim; else 1.
+	 * Web channels never unlock multi-org on self-host (channel matrix).
 	 */
 	public static getMaxOrgs(): number | null {
 		if (this.#testOverrides?.max_orgs !== undefined) {
@@ -150,11 +153,29 @@ export class EditionPolicyService {
 		if (this.isHosted()) {
 			return null;
 		}
+		// Lazy import avoids circular init with EntitlementService → EditionPolicyService.
+		const fromEntitlement = this.readEntitlementMaxOrgs();
+		if (fromEntitlement !== null) {
+			return fromEntitlement;
+		}
 		const fromEnv = parsePositiveInt(config.ENVSYNC_MAX_ORGS);
 		if (fromEnv !== null && this.isEnterprise()) {
 			return fromEnv;
 		}
 		return 1;
+	}
+
+	/**
+	 * Sync read of cached entitlement max_orgs (populated by EntitlementService.resolve/verify).
+	 */
+	private static readEntitlementMaxOrgs(): number | null {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const { EntitlementService } = require("@/services/entitlement.service") as typeof import("@/services/entitlement.service");
+			return EntitlementService.getMaxOrgsFromEntitlement();
+		} catch {
+			return null;
+		}
 	}
 
 	/** Public email org signup (landing → onboarding org*). Hosted only. */
@@ -270,6 +291,7 @@ export class EditionPolicyService {
 
 	/** Policy snapshot for system status / whoami. */
 	public static getPolicySnapshot() {
+		const entitlement = this.readEntitlementSnapshot();
 		return {
 			edition: this.getEdition(),
 			deployment_mode: this.getDeploymentMode(),
@@ -281,7 +303,51 @@ export class EditionPolicyService {
 			observability_enabled: this.isObservabilityEnabled(),
 			management_web_enabled: this.isManagementWebEnabled(),
 			landing_enabled: this.isLandingEnabled(),
+			license_enforcement: this.requiresEnterpriseLicense(),
+			entitlement: entitlement,
 		};
+	}
+
+	private static readEntitlementSnapshot(): {
+		present: boolean;
+		source: string | null;
+		in_grace: boolean;
+		features: string[];
+		max_orgs: number | null;
+		expires_at: string | null;
+	} {
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const { EntitlementService } = require("@/services/entitlement.service") as typeof import("@/services/entitlement.service");
+			const cached = EntitlementService.getCached();
+			if (!cached) {
+				return {
+					present: false,
+					source: null,
+					in_grace: false,
+					features: [],
+					max_orgs: null,
+					expires_at: null,
+				};
+			}
+			return {
+				present: true,
+				source: cached.source,
+				in_grace: cached.in_grace,
+				features: cached.claims.features,
+				max_orgs: EntitlementService.getMaxOrgsFromEntitlement(cached),
+				expires_at: cached.expires_at?.toISOString() ?? null,
+			};
+		} catch {
+			return {
+				present: false,
+				source: null,
+				in_grace: false,
+				features: [],
+				max_orgs: null,
+				expires_at: null,
+			};
+		}
 	}
 
 	private static isChannelAllowed(channel: OrgProvisionSource, mode: EnvSyncDeploymentMode): boolean {

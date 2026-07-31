@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { DynamicSecretService } from "@/services/dynamic_secret.service";
 import { AuditLogService } from "@/services/audit_log.service";
 
@@ -8,7 +8,7 @@ export class DynamicSecretController {
 	// ── Engines ────────────────────────────────────────────────────────────
 
 	public static readonly createEngine = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { engine_type, name, config, enabled } = await c.req.json();
@@ -41,7 +41,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly getAllEngines = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 
 		const engines = await DynamicSecretService.getAllEngines(org_id);
@@ -49,7 +49,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly updateEngine = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const id = c.req.param("id");
@@ -75,7 +75,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly deleteEngine = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const id = c.req.param("id");
@@ -96,7 +96,7 @@ export class DynamicSecretController {
 	// ── Leases ─────────────────────────────────────────────────────────────
 
 	public static readonly createLease = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const engine_id = c.req.param("id");
@@ -123,7 +123,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly getLease = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const id = c.req.param("leaseId");
 
@@ -132,7 +132,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly getLeasesByEngine = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const engine_id = c.req.param("id");
 
@@ -141,7 +141,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly revokeLease = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const lease_id = c.req.param("leaseId");
@@ -160,7 +160,7 @@ export class DynamicSecretController {
 	};
 
 	public static readonly cleanupExpired = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("dynamic_secrets");
 		const org_id = c.get("org_id");
 
 		const result = await DynamicSecretService.cleanupExpiredLeases();

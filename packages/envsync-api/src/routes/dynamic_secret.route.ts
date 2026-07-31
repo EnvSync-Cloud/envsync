@@ -24,7 +24,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
-app.use(enterpriseGuard());
+app.use(enterpriseGuard("dynamic_secrets"));
 
 // ── Engine CRUD ─────────────────────────────────────────────────────────
 

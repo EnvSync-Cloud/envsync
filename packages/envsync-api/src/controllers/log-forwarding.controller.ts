@@ -1,12 +1,12 @@
 import { type Context } from "hono";
 
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { AuditLogService } from "@/services/audit_log.service";
 import { LogForwardingService } from "@/services/log-forwarding.service";
 
 export class LogForwardingController {
     public static readonly createConfig = async (c: Context) => {
-        assertEnterprise();
+        await assertEntitled("log_forwarding");
         const org_id = c.get("org_id");
         const user_id = c.get("user_id");
         const { name, provider_type, config, enabled } = await c.req.json();
@@ -32,14 +32,14 @@ export class LogForwardingController {
     };
 
     public static readonly getConfigs = async (c: Context) => {
-        assertEnterprise();
+        await assertEntitled("log_forwarding");
         const org_id = c.get("org_id");
         const configs = await LogForwardingService.getConfigsByOrgId(org_id);
         return c.json(configs, 200);
     };
 
     public static readonly getConfig = async (c: Context) => {
-        assertEnterprise();
+        await assertEntitled("log_forwarding");
         const org_id = c.get("org_id");
         const id = c.req.param("id");
 
@@ -53,7 +53,7 @@ export class LogForwardingController {
     };
 
     public static readonly deleteConfig = async (c: Context) => {
-        assertEnterprise();
+        await assertEntitled("log_forwarding");
         const org_id = c.get("org_id");
         const user_id = c.get("user_id");
         const id = c.req.param("id");

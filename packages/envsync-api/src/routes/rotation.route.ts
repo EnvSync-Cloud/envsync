@@ -21,7 +21,7 @@ import { errorResponseSchema } from "@/validators/common";
 const app = new Hono();
 
 app.use(authMiddleware());
-app.use(enterpriseGuard());
+app.use(enterpriseGuard("rotation"));
 
 // ── Policy CRUD ─────────────────────────────────────────────────────────
 

@@ -1,20 +1,20 @@
 import type { Context } from "hono";
 
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { AuditLogService } from "@/services/audit_log.service";
 import { EnterpriseIntegrationService } from "@/services/enterprise-integration.service";
 import { EnterpriseProviderService } from "@/services/enterprise-provider.service";
 
 export class EnterpriseController {
 	public static readonly getProviders = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json({
 			providers: EnterpriseProviderService.listProviders(),
 		});
 	};
 
 	public static readonly getOrgSecretModel = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json({
 			resource: "org_secret",
 			description: "Org-level reusable secret material for enterprise integrations.",
@@ -23,12 +23,12 @@ export class EnterpriseController {
 	};
 
 	public static readonly listProviderConnections = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json(await EnterpriseIntegrationService.listProviderConnections(c.get("org_id")));
 	};
 
 	public static readonly createProviderConnection = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const payload = c.req.valid("json" as never) as Omit<
 			Parameters<typeof EnterpriseIntegrationService.createProviderConnection>[0],
@@ -53,7 +53,7 @@ export class EnterpriseController {
 	};
 
 	public static readonly updateProviderConnection = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const payload = c.req.valid("json" as never);
 		const updated = await EnterpriseIntegrationService.updateProviderConnection(
@@ -76,12 +76,12 @@ export class EnterpriseController {
 	};
 
 	public static readonly listOrgSecrets = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json(await EnterpriseIntegrationService.listOrgSecrets(c.get("org_id")));
 	};
 
 	public static readonly createOrgSecret = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const payload = c.req.valid("json" as never) as Omit<
 			Parameters<typeof EnterpriseIntegrationService.createOrgSecret>[0],
@@ -105,7 +105,7 @@ export class EnterpriseController {
 	};
 
 	public static readonly updateOrgSecret = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const payload = c.req.valid("json" as never);
 		const updated = await EnterpriseIntegrationService.updateOrgSecret(c.req.param("id"), org_id, payload);
@@ -123,12 +123,12 @@ export class EnterpriseController {
 	};
 
 	public static readonly listBindings = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json(await EnterpriseIntegrationService.listBindings(c.get("org_id"), c.req.param("app_id")));
 	};
 
 	public static readonly createBinding = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const app_id = c.req.param("app_id");
 		const payload = c.req.valid("json" as never) as Omit<
@@ -155,7 +155,7 @@ export class EnterpriseController {
 	};
 
 	public static readonly updateBinding = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const app_id = c.req.param("app_id");
 		const payload = c.req.valid("json" as never);
@@ -175,12 +175,12 @@ export class EnterpriseController {
 	};
 
 	public static readonly listMappings = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json(await EnterpriseIntegrationService.listMappings(c.get("org_id"), c.req.param("app_id")));
 	};
 
 	public static readonly createMapping = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const app_id = c.req.param("app_id");
 		const payload = c.req.valid("json" as never) as Omit<
@@ -208,7 +208,7 @@ export class EnterpriseController {
 	};
 
 	public static readonly updateMapping = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const app_id = c.req.param("app_id");
 		const payload = c.req.valid("json" as never);
@@ -229,13 +229,13 @@ export class EnterpriseController {
 	};
 
 	public static readonly listSyncRuns = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const app_id = c.req.query("app_id");
 		return c.json(await EnterpriseIntegrationService.listSyncRuns(c.get("org_id"), app_id));
 	};
 
 	public static readonly createManualSyncRun = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		const org_id = c.get("org_id");
 		const payload = c.req.valid("json" as never) as Omit<
 			Parameters<typeof EnterpriseIntegrationService.createManualSyncRun>[0],
@@ -261,7 +261,7 @@ export class EnterpriseController {
 	};
 
 	public static readonly listSyncAuditEvents = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("integrations");
 		return c.json(await EnterpriseIntegrationService.listSyncAuditEvents(c.get("org_id"), c.req.param("sync_run_id")));
 	};
 }

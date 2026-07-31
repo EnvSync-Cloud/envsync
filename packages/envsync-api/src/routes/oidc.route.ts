@@ -17,7 +17,7 @@ import { errorResponseSchema } from "@/validators/common";
 const app = new Hono();
 
 app.use(authMiddleware());
-app.use(enterpriseGuard());
+app.use(enterpriseGuard("oidc"));
 app.use(requirePermission("can_manage_api_keys", "org"));
 
 app.post(

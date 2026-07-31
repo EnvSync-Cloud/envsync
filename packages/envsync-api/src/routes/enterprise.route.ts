@@ -37,7 +37,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
-app.use(enterpriseGuard());
+app.use(enterpriseGuard("integrations"));
 
 app.get(
 	"/providers",
