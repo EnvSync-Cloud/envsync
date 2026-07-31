@@ -114,7 +114,8 @@ envsync push --env staging
 | `packages/envsync-cli` | Go CLI |
 | `apps/envsync-web` | React dashboard |
 | `apps/envsync-landing` | Landing page |
-| `packages/deploy-cli` | Self-hosted deployment CLI |
+| `packages/deploy` | Public OSS self-host CLI (`@envsync-cloud/deploy`) |
+| `packages/deploy-cli` | Enterprise self-host CLI sources → `@envsync-cloud/deploy-enterprise` (private) |
 | `packages/envsync-keycloak-theme` | Custom Keycloak theme |
 | `sdks/` | Generated TypeScript and Go SDKs |
 | `scripts/` | Local bootstrap and helper scripts |
