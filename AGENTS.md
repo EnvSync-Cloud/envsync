@@ -25,7 +25,6 @@ Do not reintroduce product piggybacks (OSS deploy spawning enterprise CLI, manag
 - `packages/deploy-core/` — Shared deployment primitives (TypeScript)
 - `apps/envsync-web/` — Web dashboard (React + Vite)
 - `apps/envsync-landing/` — Marketing landing page (React + Vite)
-- `apps/envsync-management-web/` — Enterprise management dashboard (React + Vite)
 - `sdks/envsync-ts-sdk/` — TypeScript SDK (auto-generated)
 - `sdks/envsync-go-sdk/` — Go SDK (auto-generated)
 - `sdks/envsync-management-ts-sdk/` — Management API TypeScript SDK (auto-generated)

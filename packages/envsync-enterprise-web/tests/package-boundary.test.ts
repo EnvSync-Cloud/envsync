@@ -21,13 +21,26 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(Array.isArray(mod.enterpriseWebModules)).toBe(true);
     expect(mod.enterpriseWebModules.length).toBeGreaterThan(0);
     expect(mod.enterpriseWebModules[0].name).toBe("enterprise-integrations");
-    expect(mod.enterpriseWebModules[0].routes.some(r => r.id === "organisation-integrations")).toBe(true);
+    const ids = mod.enterpriseWebModules[0].routes.map(r => r.id);
+    expect(ids).toContain("organisation-integrations");
+    expect(ids).toContain("organisation-license");
+    expect(ids).toContain("organisation-sync");
   });
 
-  test("source lives in package (integrations pages present)", () => {
+  test("source lives in package (integrations + license + sync pages present)", () => {
     expect(fs.existsSync(path.join(srcRoot, "pages/ProjectIntegrations.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/OrgIntegrations.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/LicenseSettings.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/SyncOperations.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "modules.ts"))).toBe(true);
+  });
+
+  test("nav exposes Enterprise group with license and sync", async () => {
+    const mod = await import("../src/index.ts");
+    const nav = mod.enterpriseWebModules[0].navGroups.flatMap(g => g.items.map(i => i.id));
+    expect(nav).toContain("organisation-license");
+    expect(nav).toContain("organisation-sync");
+    expect(nav).toContain("organisation-integrations");
   });
 
   test("pages import shell chrome via @shell, not apps/envsync-web relative paths", () => {

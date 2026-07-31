@@ -95,6 +95,27 @@ if (!fs.existsSync(eeWebLicense) || !/proprietary|Enterprise License/i.test(fs.r
 	ok("envsync-enterprise-web has proprietary LICENSE");
 }
 
+// 7) Phase 5c: management-web SPA deleted
+const managementWeb = path.join(root, "apps/envsync-management-web");
+if (fs.existsSync(managementWeb)) {
+	fail("apps/envsync-management-web must be deleted (Phase 5c)");
+} else {
+	ok("apps/envsync-management-web is deleted");
+}
+const mergeScript = path.join(root, "scripts/merge-management-web-dist.ts");
+if (fs.existsSync(mergeScript)) {
+	fail("scripts/merge-management-web-dist.ts must be deleted (Phase 5c)");
+} else {
+	ok("merge-management-web-dist script is deleted");
+}
+const licensePage = path.join(root, "packages/envsync-enterprise-web/src/pages/LicenseSettings.tsx");
+const syncPage = path.join(root, "packages/envsync-enterprise-web/src/pages/SyncOperations.tsx");
+if (!fs.existsSync(licensePage) || !fs.existsSync(syncPage)) {
+	fail("enterprise-web must include LicenseSettings + SyncOperations pages");
+} else {
+	ok("enterprise-web has License + Sync ops pages (ex-management-web)");
+}
+
 if (failed) {
 	process.exit(1);
 }
