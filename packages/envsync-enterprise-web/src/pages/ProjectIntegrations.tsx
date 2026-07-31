@@ -3,15 +3,15 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, Layers3, Link2, Plus, RefreshCw, Workflow } from "lucide-react";
 
-import { sdk } from "@/api";
-import { useCreateManualSyncRun, useEnvTypeMappings, useIntegrationBindings, useOrgSecrets, useProviderConnections, useSyncRuns, type EnterpriseProvider } from "@/api/enterprise/hooks";
-import { CreateOrgSecretModal } from "@/components/enterprise/CreateOrgSecretModal";
-import { CreateProviderConnectionModal } from "@/components/enterprise/CreateProviderConnectionModal";
-import { SyncRunsList } from "@/components/enterprise/SyncRunsList";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { appDetailPath, appIntegrationProviderPath, orgIntegrationsPath } from "@/lib/app-routes";
-import { enterpriseProviderUi } from "@/lib/enterprise-provider-ui";
+import { sdk } from "@shell/api";
+import { useCreateManualSyncRun, useEnvTypeMappings, useIntegrationBindings, useOrgSecrets, useProviderConnections, useSyncRuns, type EnterpriseProvider } from "../api/hooks";
+import { CreateOrgSecretModal } from "../components/CreateOrgSecretModal";
+import { CreateProviderConnectionModal } from "../components/CreateProviderConnectionModal";
+import { SyncRunsList } from "../components/SyncRunsList";
+import { Button } from "@shell/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shell/components/ui/tabs";
+import { appDetailPath, appIntegrationProviderPath, orgIntegrationsPath } from "@shell/lib/app-routes";
+import { enterpriseProviderUi } from "../lib/enterprise-provider-ui";
 
 const providers = Object.values(enterpriseProviderUi) as Array<{
   id: EnterpriseProvider;

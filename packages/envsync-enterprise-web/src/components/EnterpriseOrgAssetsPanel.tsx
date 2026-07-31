@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 
-import { sdk } from "@/api";
+import { sdk } from "@shell/api";
 import {
   listIntegrationBindings,
   useOrgSecrets,
   useProviderConnections,
-} from "@/api/enterprise/hooks";
-import type { EnterpriseProvider, OrgSecret, ProviderConnection } from "@/api/enterprise/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "../api/hooks";
+import type { EnterpriseProvider, OrgSecret, ProviderConnection } from "../api/types";
+import { Button } from "@shell/components/ui/button";
+import { Input } from "@shell/components/ui/input";
 import {
   emptyFieldValues,
   enterpriseProviderUi,
@@ -17,7 +17,7 @@ import {
   mergeFieldValuesIntoRecord,
   omitKnownFields,
   type ProviderFieldConfig,
-} from "@/lib/enterprise-provider-ui";
+} from "../lib/enterprise-provider-ui";
 
 type FieldState = Record<string, string>;
 

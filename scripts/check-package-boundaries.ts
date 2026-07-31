@@ -69,6 +69,32 @@ if (!fs.existsSync(path.join(root, "packages/envsync-kernel/package.json"))) {
 	ok("envsync-kernel package present");
 }
 
+// 6) Phase 5b: enterprise-web package present; shell no longer owns integration pages
+const eeWeb = path.join(root, "packages/envsync-enterprise-web");
+if (!fs.existsSync(path.join(eeWeb, "package.json"))) {
+	fail("envsync-enterprise-web package missing");
+} else {
+	ok("envsync-enterprise-web package present");
+}
+const shellIntegrations = path.join(root, "apps/envsync-web/src/pages/ProjectIntegrations.tsx");
+if (fs.existsSync(shellIntegrations)) {
+	fail("apps/envsync-web still has ProjectIntegrations.tsx (should live in envsync-enterprise-web)");
+} else {
+	ok("shell does not ship ProjectIntegrations page source");
+}
+const viteConfig = fs.readFileSync(path.join(root, "apps/envsync-web/vite.config.ts"), "utf8");
+if (!viteConfig.includes("envsync-enterprise-web") || !viteConfig.includes("@enterprise-modules")) {
+	fail("envsync-web vite.config must alias @enterprise-modules to envsync-enterprise-web");
+} else {
+	ok("envsync-web Vite injects envsync-enterprise-web for enterprise builds");
+}
+const eeWebLicense = path.join(eeWeb, "LICENSE");
+if (!fs.existsSync(eeWebLicense) || !/proprietary|Enterprise License/i.test(fs.readFileSync(eeWebLicense, "utf8"))) {
+	fail("envsync-enterprise-web/LICENSE missing or not proprietary");
+} else {
+	ok("envsync-enterprise-web has proprietary LICENSE");
+}
+
 if (failed) {
 	process.exit(1);
 }

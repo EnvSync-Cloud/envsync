@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
-import { useCreateOrgSecret } from "@/api/enterprise/hooks";
-import type { EnterpriseProvider } from "@/api/enterprise/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useCreateOrgSecret } from "../api/hooks";
+import type { EnterpriseProvider } from "../api/types";
+import { Button } from "@shell/components/ui/button";
+import { Input } from "@shell/components/ui/input";
+import { Textarea } from "@shell/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -13,7 +13,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@shell/components/ui/sheet";
 
 interface CreateOrgSecretModalProps {
   open: boolean;

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, ChevronRight, Plus, RefreshCw } from "lucide-react";
 
-import { sdk } from "@/api";
+import { sdk } from "@shell/api";
 import {
   type EnterpriseProvider,
   useCreateEnvTypeMapping,
@@ -18,14 +18,14 @@ import {
   useSyncRuns,
   useUpdateEnvTypeMapping,
   useUpdateIntegrationBinding,
-} from "@/api/enterprise/hooks";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { appIntegrationsPath, orgIntegrationsPath } from "@/lib/app-routes";
+} from "../api/hooks";
+import { Badge } from "@shell/components/ui/badge";
+import { Button } from "@shell/components/ui/button";
+import { Input } from "@shell/components/ui/input";
+import { Label } from "@shell/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shell/components/ui/tabs";
+import { Textarea } from "@shell/components/ui/textarea";
+import { appIntegrationsPath, orgIntegrationsPath } from "@shell/lib/app-routes";
 import {
   emptyFieldValues,
   enterpriseProviderUi,
@@ -33,7 +33,7 @@ import {
   mergeFieldValuesIntoRecord,
   omitKnownFields,
   type ProviderFieldConfig,
-} from "@/lib/enterprise-provider-ui";
+} from "../lib/enterprise-provider-ui";
 
 type FieldState = Record<string, string>;
 

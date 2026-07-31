@@ -156,6 +156,7 @@
         "cmdk": "^1.1.1",
         "date-fns": "^3.6.0",
         "embla-carousel-react": "^8.6.0",
+        "envsync-enterprise-web": "workspace:*",
         "lucide-react": "^0.462.0",
         "next-themes": "^0.3.0",
         "nuqs": "^2.4.3",
@@ -320,6 +321,25 @@
       },
       "peerDependencies": {
         "envsync-api": "workspace:*",
+      },
+    },
+    "packages/envsync-enterprise-web": {
+      "name": "envsync-enterprise-web",
+      "version": "0.11.0",
+      "devDependencies": {
+        "@types/react": "^18.3.23",
+        "@types/react-dom": "^18.3.7",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
+        "@envsync-cloud/envsync-ts-sdk": "workspace:*",
+        "@tanstack/react-query": "^5.0.0",
+        "lucide-react": ">=0.400.0",
+        "react": "^18.0.0",
+        "react-dom": "^18.0.0",
+        "react-router-dom": "^6.0.0",
+        "sonner": ">=1.0.0",
       },
     },
     "packages/envsync-kernel": {
@@ -1484,6 +1504,8 @@
     "envsync-api": ["envsync-api@workspace:packages/envsync-api"],
 
     "envsync-enterprise": ["envsync-enterprise@workspace:packages/envsync-enterprise"],
+
+    "envsync-enterprise-web": ["envsync-enterprise-web@workspace:packages/envsync-enterprise-web"],
 
     "envsync-kernel": ["envsync-kernel@workspace:packages/envsync-kernel"],
 

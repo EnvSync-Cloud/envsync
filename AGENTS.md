@@ -17,6 +17,7 @@ Do not reintroduce product piggybacks (OSS deploy spawning enterprise CLI, manag
 - `packages/envsync-cli/` — CLI client (Go)
 - `packages/envsync-kernel/` — Shared MIT kernel (errors, ApiModule types)
 - `packages/envsync-enterprise/` — Proprietary management module registry + EE surface
+- `packages/envsync-enterprise-web/` — Proprietary dashboard WebModule[] + integrations pages (injected into envsync-web)
 - `packages/envsync-management-api/` — Enterprise management API process (depends on enterprise + api, not relative core src)
 - `packages/envsync-keycloak-theme/` — Custom Keycloak login theme (Docker-bundled)
 - `packages/deploy/` — Public OSS deploy CLI (`@envsync-cloud/deploy`, bin `envsync-deploy`)
