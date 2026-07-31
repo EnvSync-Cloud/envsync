@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Play, RefreshCw } from "lucide-react";
 
-import type { SyncRun } from "@/api/enterprise/types";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn, formatLastUsed } from "@/lib/utils";
+import type { SyncRun } from "../api/types";
+import { Badge } from "@shell/components/ui/badge";
+import { Button } from "@shell/components/ui/button";
+import { cn, formatLastUsed } from "@shell/lib/utils";
 
 type SyncRunsListProps = {
   syncRuns: SyncRun[];

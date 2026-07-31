@@ -1,4 +1,4 @@
-import { EnterpriseOrgAssetsPanel } from "@/components/enterprise/EnterpriseOrgAssetsPanel";
+import { EnterpriseOrgAssetsPanel } from "../components/EnterpriseOrgAssetsPanel";
 
 export default function OrgIntegrations() {
   return (

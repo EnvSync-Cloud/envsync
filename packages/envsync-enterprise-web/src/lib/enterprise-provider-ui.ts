@@ -1,4 +1,4 @@
-import type { EnterpriseProvider } from "@/api/enterprise/types";
+import type { EnterpriseProvider } from "../api/types";
 
 export type ProviderFieldKind = "text" | "select" | "secret-ref";
 

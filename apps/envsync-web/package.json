@@ -34,6 +34,7 @@
     "@fontsource/jetbrains-mono": "^5.2.5",
     "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
     "@envsync-cloud/envsync-ts-sdk": "workspace:*",
+    "envsync-enterprise-web": "workspace:*",
     "@hookform/resolvers": "^3.10.0",
     "@hyperdx/browser": "^0.22.0",
     "@icons-pack/react-simple-icons": "^13.6.0",

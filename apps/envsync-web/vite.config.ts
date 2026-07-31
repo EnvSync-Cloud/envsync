@@ -6,6 +6,11 @@ import path from "path";
 const rootDir = path.resolve(__dirname, "../..");
 const dashboardVariant = process.env.VITE_SERVER_LICENSE === "oss" ? "oss" : "enterprise";
 
+const enterpriseModulesEntry =
+  dashboardVariant === "enterprise"
+    ? path.resolve(rootDir, "packages/envsync-enterprise-web/src/modules.ts")
+    : path.resolve(__dirname, "./src/modules/enterprise-modules.stub.ts");
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   envDir: rootDir,
@@ -20,12 +25,10 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@enterprise-modules": path.resolve(
-        __dirname,
-        dashboardVariant === "enterprise"
-          ? "./src/modules/enterprise-modules.ts"
-          : "./src/modules/enterprise-modules.stub.ts"
-      ),
+      // Phase 5b: enterprise modules from proprietary package; OSS uses empty stub.
+      "@enterprise-modules": enterpriseModulesEntry,
+      // Enterprise package pages import shell chrome via @shell/*
+      "@shell": path.resolve(__dirname, "./src"),
     },
   },
   optimizeDeps: {

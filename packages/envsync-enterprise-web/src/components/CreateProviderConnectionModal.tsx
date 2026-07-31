@@ -4,12 +4,12 @@ import { toast } from "sonner";
 import {
   useCreateProviderConnection,
   useOrgSecrets,
-} from "@/api/enterprise/hooks";
-import type { EnterpriseProvider } from "@/api/enterprise/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "../api/hooks";
+import type { EnterpriseProvider } from "../api/types";
+import { Button } from "@shell/components/ui/button";
+import { Input } from "@shell/components/ui/input";
+import { Label } from "@shell/components/ui/label";
+import { Textarea } from "@shell/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -17,13 +17,13 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@shell/components/ui/sheet";
 import {
   emptyFieldValues,
   enterpriseProviderUi,
   mergeFieldValuesIntoRecord,
   type ProviderFieldConfig,
-} from "@/lib/enterprise-provider-ui";
+} from "../lib/enterprise-provider-ui";
 
 type FieldState = Record<string, string>;
 

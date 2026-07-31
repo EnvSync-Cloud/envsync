@@ -1,4 +1,4 @@
-import { runtimeConfig } from "@/utils/runtime-config";
+import { runtimeConfig } from "@shell/utils/runtime-config";
 
 let managementSdkPromise: Promise<import("@envsync-cloud/envsync-management-ts-sdk").EnvSyncManagementAPISDK> | null = null;
 
