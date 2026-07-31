@@ -116,6 +116,19 @@ if (!fs.existsSync(licensePage) || !fs.existsSync(syncPage)) {
 	ok("enterprise-web has License + Sync ops pages (ex-management-web)");
 }
 
+// 8) Phase 7: create-workspace route removed
+const authRoute = fs.readFileSync(
+	path.join(root, "packages/envsync-api/src/routes/auth.route.ts"),
+	"utf8",
+);
+if (authRoute.includes('"/create-workspace"') || authRoute.includes("'/create-workspace'")) {
+	fail("create-workspace route must be removed (Phase 7); use create-organization only");
+} else if (!authRoute.includes("create-organization")) {
+	fail("create-organization route missing from auth.route.ts");
+} else {
+	ok("create-workspace removed; create-organization present");
+}
+
 if (failed) {
 	process.exit(1);
 }

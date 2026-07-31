@@ -34,11 +34,11 @@ import { CreateWorkspaceDialog } from "@/components/auth/CreateWorkspaceDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const Header = () => {
-  const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingWorkspace } = useAuthContext();
+  const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingOrganization } = useAuthContext();
   const breadcrumbs = useBreadcrumbs();
   const navigate = useNavigate();
   const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
   const activeMembership = useMemo(
     () =>
       memberships.find((membership) => membership.user_id === activeMembershipUserId)
@@ -71,7 +71,7 @@ export const Header = () => {
               <Popover open={orgSwitcherOpen} onOpenChange={setOrgSwitcherOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    data-testid="workspace-switcher-trigger"
+                    data-testid="organization-switcher-trigger"
                     className="inline-flex items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-left text-primary-foreground transition-colors hover:border-primary/30 hover:bg-primary/14"
                   >
                     <span className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-primary/15">
@@ -82,7 +82,7 @@ export const Header = () => {
                         {activeOrgName}
                       </span>
                     </span>
-                    {isSwitchingOrg || isCreatingWorkspace ? (
+                    {isSwitchingOrg || isCreatingOrganization ? (
                       <Loader2 className="size-4 animate-spin text-primary/70" />
                     ) : (
                       <ChevronsUpDown className="size-4 text-primary/70" />
@@ -105,13 +105,13 @@ export const Header = () => {
                           return (
                             <CommandItem
                               key={membership.user_id}
-                              data-testid={`workspace-switcher-item-${membership.org_slug}`}
+                              data-testid={`organization-switcher-item-${membership.org_slug}`}
                               value={`${membership.org_name} ${membership.org_slug} ${membership.role_name}`}
                               onSelect={() => {
                                 setOrgSwitcherOpen(false);
                                 void switchOrg(membership.org_id);
                               }}
-                              disabled={isSwitchingOrg || isCreatingWorkspace}
+                              disabled={isSwitchingOrg || isCreatingOrganization}
                               className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-muted"
                             >
                               <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
@@ -135,13 +135,13 @@ export const Header = () => {
                           <CommandSeparator className="bg-border" />
                           <CommandGroup heading="Organization">
                             <CommandItem
-                              data-testid="create-workspace-action"
+                              data-testid="create-organization-action"
                               value="create new organization"
                               onSelect={() => {
                                 setOrgSwitcherOpen(false);
-                                setCreateWorkspaceOpen(true);
+                                setCreateOrganizationOpen(true);
                               }}
-                              disabled={isSwitchingOrg || isCreatingWorkspace}
+                              disabled={isSwitchingOrg || isCreatingOrganization}
                               className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
                             >
                               <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
@@ -291,8 +291,8 @@ export const Header = () => {
         </div>
       </header>
       <CreateWorkspaceDialog
-        open={createWorkspaceOpen}
-        onOpenChange={setCreateWorkspaceOpen}
+        open={createOrganizationOpen}
+        onOpenChange={setCreateOrganizationOpen}
       />
     </>
   );

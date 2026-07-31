@@ -11,9 +11,9 @@ export interface IAuthContext {
   memberships: AuthMembershipSummary[];
   activeMembershipUserId: string | null;
   isSwitchingOrg: boolean;
-  isCreatingWorkspace: boolean;
+  isCreatingOrganization: boolean;
   switchOrg: (orgId: string) => Promise<void>;
-  createWorkspace: (name: string) => Promise<void>;
+  createOrganization: (name: string) => Promise<void>;
 }
 
 const FALLBACK_AUTH_CONTEXT: IAuthContext = {
@@ -26,9 +26,9 @@ const FALLBACK_AUTH_CONTEXT: IAuthContext = {
   memberships: [],
   activeMembershipUserId: null,
   isSwitchingOrg: false,
-  isCreatingWorkspace: false,
+  isCreatingOrganization: false,
   switchOrg: async () => undefined,
-  createWorkspace: async () => undefined,
+  createOrganization: async () => undefined,
 };
 
 let hasWarnedMissingProvider = false;

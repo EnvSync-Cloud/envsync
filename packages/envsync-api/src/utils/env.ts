@@ -66,8 +66,10 @@ export const BaseEnvSchema = z.object({
 	// Reserved for program plan Phase 1+ (no behavior until policy wiring):
 	// hosted = multi-tenant SaaS; selfhosted = single-tenant product defaults.
 	ENVSYNC_DEPLOYMENT_MODE: z.enum(["hosted", "selfhosted"]).optional(),
-	// Interim support-only max orgs for self-host EE CLI (Phase 1b/4). Web must ignore.
+	// Phase 7: max_orgs comes from entitlement claims. ENVSYNC_MAX_ORGS is ignored unless
+	// ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE=true (stranded multi-org support installs only).
 	ENVSYNC_MAX_ORGS: z.string().optional(),
+	ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE: z.string().optional(),
 	// Operator setup token for self-host org create (Phase 1b). Not an end-user session.
 	ENVSYNC_SETUP_TOKEN: z.string().optional(),
 	ENVSYNC_OBSERVABILITY_ENABLED: z.string().default("true"),

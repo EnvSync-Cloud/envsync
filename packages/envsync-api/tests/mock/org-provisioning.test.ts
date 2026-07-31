@@ -80,11 +80,15 @@ describe("OrgProvisioningService.assertProvisioningAllowed", () => {
 		});
 	});
 
-	test("allows CLI multi-org on selfhosted enterprise when MAX_ORGS allows", async () => {
+	test("allows CLI multi-org on selfhosted enterprise when entitlement max_orgs allows", async () => {
 		Object.assign(config, {
 			ENVSYNC_EDITION: "enterprise",
 			ENVSYNC_DEPLOYMENT_MODE: "selfhosted",
-			ENVSYNC_MAX_ORGS: "3",
+		});
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+			max_orgs: 3,
 		});
 		await seedOrg();
 

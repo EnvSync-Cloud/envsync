@@ -16,8 +16,8 @@ export const AuthContextProvider = ({
     authError,
     switchOrg,
     isSwitchingOrg,
-    createWorkspace,
-    isCreatingWorkspace,
+    createOrganization,
+    isCreatingOrganization,
   } = useAuth();
   const registeredScopes = useMemo(() => getRegisteredScopeIds(), []);
   const scopeRules = useMemo(() => getWebScopeRuleMap(), []);
@@ -41,8 +41,8 @@ export const AuthContextProvider = ({
       activeMembershipUserId: user?.active_membership_user_id ?? null,
       switchOrg,
       isSwitchingOrg,
-      createWorkspace,
-      isCreatingWorkspace,
+      createOrganization,
+      isCreatingOrganization,
     };
   }, [
     user,
@@ -54,8 +54,8 @@ export const AuthContextProvider = ({
     scopeRules,
     switchOrg,
     isSwitchingOrg,
-    createWorkspace,
-    isCreatingWorkspace,
+    createOrganization,
+    isCreatingOrganization,
   ]);
 
   return (

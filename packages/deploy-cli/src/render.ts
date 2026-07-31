@@ -245,7 +245,7 @@ export function buildRuntimeEnv(
 		// Landing is Hosted-only; self-host does not ship marketing/signup surface.
 		ENVSYNC_LANDING_ENABLED: "false",
 		ENVSYNC_SINGLE_ORG_MODE: "true",
-		ENVSYNC_MAX_ORGS: "1",
+		// max_orgs from entitlement claims (Phase 4+); no product ENVSYNC_MAX_ORGS (Phase 7)
 		// Operator setup token for POST /api/setup/org (Phase 1b).
 		ENVSYNC_SETUP_TOKEN: options?.setupToken ?? "",
 		ENVSYNC_LICENSE_ENFORCEMENT: oss ? "false" : "true",

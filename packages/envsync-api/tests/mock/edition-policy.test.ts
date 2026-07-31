@@ -43,7 +43,7 @@ describe("EditionPolicyService channel matrix", () => {
 		).toThrow(expect.objectContaining({ code: "ORG_CREATE_CHANNEL_FORBIDDEN" }));
 	});
 
-	test("selfhosted CLI respects max_orgs interim override", () => {
+	test("selfhosted CLI respects max_orgs from policy overrides (entitlement/test)", () => {
 		EditionPolicyService.setTestOverrides({
 			edition: "enterprise",
 			deployment_mode: "selfhosted",
@@ -71,6 +71,35 @@ describe("EditionPolicyService channel matrix", () => {
 		expect(EditionPolicyService.normalizeProvisionSource("workspace_switcher")).toBe("hosted_dashboard");
 		expect(EditionPolicyService.normalizeProvisionSource("org_invite_accept")).toBe("hosted_signup");
 		expect(EditionPolicyService.normalizeProvisionSource("cli_bootstrap")).toBe("dev");
+	});
+
+	test("ENVSYNC_MAX_ORGS alone does not raise max_orgs without support override", async () => {
+		const { config } = await import("@/utils/env");
+		const prevMax = config.ENVSYNC_MAX_ORGS;
+		const prevOverride = config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE;
+		try {
+			config.ENVSYNC_MAX_ORGS = "9";
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = "false";
+			EditionPolicyService.clearTestOverrides();
+			EditionPolicyService.setTestOverrides({
+				edition: "enterprise",
+				deployment_mode: "selfhosted",
+			});
+			// Without max_orgs test override, env is ignored → default 1
+			expect(EditionPolicyService.getMaxOrgs()).toBe(1);
+
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = "true";
+			EditionPolicyService.clearTestOverrides();
+			EditionPolicyService.setTestOverrides({
+				edition: "enterprise",
+				deployment_mode: "selfhosted",
+			});
+			expect(EditionPolicyService.getMaxOrgs()).toBe(9);
+		} finally {
+			config.ENVSYNC_MAX_ORGS = prevMax;
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = prevOverride;
+			EditionPolicyService.clearTestOverrides();
+		}
 	});
 
 	test("policy snapshot exposes Phase 1 fields", () => {
