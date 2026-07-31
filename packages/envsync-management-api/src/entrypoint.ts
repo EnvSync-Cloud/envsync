@@ -1,19 +1,23 @@
-import "../../envsync-api/src/instrumentation";
+/**
+ * Management API process entrypoint (Phase 5 / D5).
+ * Dependency graph: envsync-kernel ← envsync-api ← envsync-enterprise ← this package.
+ * No relative monorepo path imports into envsync-api/src.
+ */
+import "envsync-api/instrumentation";
 
-import { CacheClient } from "../../envsync-api/src/libs/cache";
-import { DB } from "../../envsync-api/src/libs/db";
-import { FGAClient } from "../../envsync-api/src/libs/openfga";
-import { registerApiBackgroundHandlers } from "../../envsync-api/src/modules/load-modules";
-import { managementApp as app } from "../../envsync-api/src/app/management";
-import { config } from "../../envsync-api/src/utils/env";
+import { registerManagementModules } from "envsync-api/modules";
+import { bootstrapRuntime, getManagementPort } from "envsync-api/bootstrap";
+import { createManagementApp } from "envsync-api/create-management-app";
+import { enterpriseManagementModules } from "envsync-enterprise";
 
-CacheClient.init();
-await DB.healthCheck();
-await FGAClient.getInstance();
-await registerApiBackgroundHandlers("management");
+registerManagementModules(enterpriseManagementModules);
+
+await bootstrapRuntime("management");
+
+const app = await createManagementApp();
 
 export default {
 	fetch: app.fetch.bind(app),
-	port: Number(config.MANAGEMENT_API_PORT),
+	port: getManagementPort(),
 	idleTimeout: 255,
 };

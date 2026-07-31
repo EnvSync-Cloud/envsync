@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
+import { enterpriseManagementModules } from "envsync-enterprise";
+
 import { createApiApp } from "@/app/factory";
+import { registerManagementModules } from "@/modules/load-modules";
 import { LicenseStateService } from "@/services/license-state.service";
 import { SystemStateService } from "@/services/system-state.service";
 
@@ -9,6 +12,7 @@ const originalActivateLicense = LicenseStateService.activateLicense;
 const originalVerifyLicenseNow = LicenseStateService.verifyLicenseNow;
 const originalGetSystemStatus = SystemStateService.getSystemStatus;
 
+registerManagementModules(enterpriseManagementModules);
 const managementApp = await createApiApp("management");
 
 afterEach(() => {

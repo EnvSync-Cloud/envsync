@@ -22,7 +22,8 @@
     "selfhost:smoke:oss": "bun run scripts/selfhost-smoke-oss.ts",
     "e2e-setup": "bun run scripts/e2e-setup.ts",
     "test:mock": "turbo test:mock",
-    "test:e2e": "bun run e2e-setup init && turbo test:e2e"
+    "test:e2e": "bun run e2e-setup init && turbo test:e2e",
+    "check:boundaries": "bun run scripts/check-package-boundaries.ts"
   },
   "peerDependencies": {
     "typescript": "^5",

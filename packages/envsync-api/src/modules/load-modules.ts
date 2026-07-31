@@ -1,25 +1,46 @@
 import type { ZodRawShape } from "zod";
 
+import type { ApiModule, ApiSurface, EnvSchemaExtension } from "@/modules/types";
 import { coreApiModules } from "./core-modules";
 import { externalApiModules } from "./external-modules";
-import { managementApiModules } from "./management-modules";
-import type { ApiModule, ApiSurface, EnvSchemaExtension } from "./types";
 
-const allApiModules = [...coreApiModules, ...managementApiModules, ...externalApiModules];
+/**
+ * Management modules are owned by `envsync-enterprise` and registered by the
+ * management process entrypoint. Core never imports the enterprise package.
+ */
+let registeredManagementModules: ApiModule[] | null = null;
 
 function resolveEnvShape(extension: EnvSchemaExtension): ZodRawShape {
 	return typeof extension === "function" ? extension() : extension;
 }
 
+/**
+ * Wire management/enterprise modules from `envsync-enterprise`.
+ * Must be called before `createApiApp("management")` / background handlers.
+ */
+export function registerManagementModules(modules: ApiModule[]) {
+	registeredManagementModules = [...modules];
+}
+
+/** Test helper — clear registration between suites. */
+export function clearManagementModulesForTests() {
+	registeredManagementModules = null;
+}
+
 export function loadApiModules(surface: ApiSurface = "core"): ApiModule[] {
 	if (surface === "management") {
-		return [...managementApiModules];
+		if (!registeredManagementModules || registeredManagementModules.length === 0) {
+			return [];
+		}
+		return [...registeredManagementModules];
 	}
 
 	return [...coreApiModules, ...externalApiModules];
 }
 
-export function collectEnvSchemaExtensions(modules: ApiModule[] = allApiModules): ZodRawShape[] {
+export function collectEnvSchemaExtensions(
+	modules: ApiModule[] = [...coreApiModules, ...externalApiModules, ...(registeredManagementModules ?? [])],
+): ZodRawShape[] {
 	return modules
 		.flatMap(module => {
 			if (!module.extendEnvSchema) {

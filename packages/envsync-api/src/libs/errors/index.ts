@@ -1,49 +1,15 @@
 import { NoResultError } from "kysely";
 
-export class AppError extends Error {
-	constructor(
-		message: string,
-		public readonly statusCode: number,
-		public readonly code: string,
-	) {
-		super(message);
-		this.name = this.constructor.name;
-	}
-}
+import { NotFoundError } from "envsync-kernel/errors";
 
-export class NotFoundError extends AppError {
-	constructor(resource: string, id?: string, code = "NOT_FOUND") {
-		super(
-			id ? `${resource} not found: ${id}` : `${resource} not found`,
-			404,
-			code,
-		);
-	}
-}
-
-export class ConflictError extends AppError {
-	constructor(msg: string, code = "CONFLICT") {
-		super(msg, 409, code);
-	}
-}
-
-export class ValidationError extends AppError {
-	constructor(msg: string, code = "VALIDATION_ERROR") {
-		super(msg, 422, code);
-	}
-}
-
-export class BusinessRuleError extends AppError {
-	constructor(msg: string, status = 422, code = "BUSINESS_RULE_VIOLATION") {
-		super(msg, status, code);
-	}
-}
-
-export class ForbiddenError extends AppError {
-	constructor(msg: string, code = "FORBIDDEN") {
-		super(msg, 403, code);
-	}
-}
+export {
+	AppError,
+	BusinessRuleError,
+	ConflictError,
+	ForbiddenError,
+	NotFoundError,
+	ValidationError,
+} from "envsync-kernel/errors";
 
 /**
  * Wraps executeTakeFirstOrThrow, converting NoResultError → NotFoundError

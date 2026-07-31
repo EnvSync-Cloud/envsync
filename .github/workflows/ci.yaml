@@ -71,6 +71,8 @@ jobs:
       - name: Setup Bun Runtime
         uses: oven-sh/setup-bun@v2
       - run: bun i
+      - name: Package boundary checks (Phase 5)
+        run: bun run check:boundaries
       - name: Run deploy planner tests
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core
@@ -83,6 +85,9 @@ jobs:
       - name: Run mock tests
         run: bun run test:mock
         working-directory: packages/envsync-api
+      - name: Management API boundary tests
+        run: bun test
+        working-directory: packages/envsync-management-api
 
   test-e2e:
     name: E2E Tests

@@ -19,17 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
--------------------------------------------------------------------------------
-Dual-license carve-out (Phase 5+)
-
-The following paths are **not** licensed under the MIT License above and are
-instead governed by the proprietary EnvSync Enterprise License in each package:
-
-  packages/envsync-enterprise/
-  packages/envsync-management-api/
-  packages/deploy-cli/          (published as @envsync-cloud/deploy-enterprise)
-  apps/envsync-management-web/  (deprecated; to be removed after Phase 5c)
-
-See packages/envsync-enterprise/LICENSE for enterprise terms. Phase 6 will
-finalize monorepo dual-license documentation (EDITIONING.md / CONTRIBUTING).
