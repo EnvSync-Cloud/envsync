@@ -44,7 +44,9 @@ describe("createDeploymentPlan", () => {
 
 		expect(plan.edition).toBe("enterprise");
 		expect(plan.services.find(service => service.id === "management-api")?.enabled).toBe(true);
-		expect(plan.services.find(service => service.id === "landing")?.enabled).toBe(true);
+		// Landing default off for self-host enterprise (Phase 2).
+		expect(plan.services.find(service => service.id === "landing")?.enabled).toBe(false);
+		expect(plan.frontend.find(artifact => artifact.id === "landing")?.included).toBe(false);
 		expect(plan.frontend.find(artifact => artifact.id === "dashboard")).toMatchObject({
 			included: true,
 			mount_path: "/",

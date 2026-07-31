@@ -1831,7 +1831,8 @@ function renderTraefikDynamicConfig(config: DeployConfig, generated: DeployGener
 	const hosts = domainMap(config.domain.root_domain);
 	const activeSlot = generated.deployment.active_slot;
 	const apiServiceName = generated.deployment.maintenance_mode ? "envsync-api-maintenance" : "envsync-api";
-	const landingEnabled = !isOssConfig(config);
+	// Landing is Hosted-only (Phase 2); self-host never enables landing routers.
+	const landingEnabled = false;
 	const managementEnabled = !isOssConfig(config);
 	const otelAllowedOrigins = [
 		...(landingEnabled ? publicHttpsOriginVariants(config, hosts.landing) : []),
@@ -2429,9 +2430,7 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	writeFileMaybe(BOOTSTRAP_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "bootstrap", DEPLOY_RENDER_PATHS));
 	writeFileMaybe(STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "full", DEPLOY_RENDER_PATHS));
 	writeFileMaybe(NGINX_WEB_CONF, renderHelpers.renderNginxConf("web"));
-	if (!isOssConfig(config)) {
-		writeFileMaybe(NGINX_LANDING_CONF, renderHelpers.renderNginxConf("landing"));
-	}
+	// Landing nginx config omitted on self-host (Phase 2).
 	writeFileMaybe(NGINX_API_MAINTENANCE_CONF, renderHelpers.renderApiMaintenanceConf());
 	writeFileMaybe(OTEL_AGENT_CONF, renderHelpers.renderOtelAgentConfig(config));
 	writeFileMaybe(CLICKSTACK_CLICKHOUSE_CONF, renderHelpers.renderClickstackClickHouseConfig());
@@ -2651,9 +2650,7 @@ function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
 function activateFrontendReleaseForState(config: DeployConfig, state: DeployGeneratedState, fallbackVersion = config.release.version) {
 	const version = state.deployment.slots[state.deployment.active_slot].release_version || fallbackVersion;
 	activateFrontendRelease("web", version, renderHelpers.renderFrontendRuntimeConfig(config, state));
-	if (!isOssConfig(config)) {
-		activateFrontendRelease("landing", version, renderHelpers.renderFrontendRuntimeConfig(config, state));
-	}
+	// Landing activation omitted on self-host (Phase 2).
 }
 
 function buildKeycloakImage(imageTag: string, repoRoot = REPO_ROOT) {
@@ -4157,14 +4154,9 @@ async function cmdDeploy() {
 	buildKeycloakImage(config.images.keycloak);
 	if (!currentOptions.dryRun) {
 		ensureDir(currentReleaseDir("web"));
-		if (!isOssConfig(config)) {
-			ensureDir(currentReleaseDir("landing"));
-		}
 	}
 	stageFrontendRelease("web", config.images.web, config.release.version);
-	if (!isOssConfig(config)) {
-		stageFrontendRelease("landing", config.images.landing, config.release.version);
-	}
+	// Landing static release omitted on self-host (Phase 2).
 
 	const originalState = normalizeGeneratedState(generated);
 	let currentState = originalState;

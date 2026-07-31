@@ -203,14 +203,15 @@ describe("renderStack", () => {
 	test("full mode includes web, api, and netutils", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
 		const stackFull = renderStack(configWithNetutils, runtimeEnv, generated, "full", paths);
-		expect(stackFull).toContain("landing_nginx");
+		// Phase 2: self-host omits landing service
+		expect(stackFull).not.toContain("landing_nginx");
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
 		expect(stackFull).toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
-		expect(stackFull).toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
+		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/keycloak-realm.envsync.json");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
 		expect(stackFull).toContain("  netutils:");
@@ -228,7 +229,8 @@ describe("renderTraefikDynamicConfig", () => {
 		expect(traefik).toContain("Host(`app.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`api.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`manage-api.enterprise.example.com`)");
-		expect(traefik).toContain("Host(`enterprise.example.com`)");
+		// Apex landing host is Hosted-only; self-host stack does not route marketing site.
+		expect(traefik).not.toContain("Host(`enterprise.example.com`)");
 		expect(traefik).toContain("obs.enterprise.example.com");
 	});
 });

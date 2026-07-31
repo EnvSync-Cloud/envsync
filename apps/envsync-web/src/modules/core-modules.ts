@@ -26,6 +26,13 @@ export const coreWebModules: WebModule[] = [
         loadComponent: () => import("@/pages/Callback"),
       },
       {
+        // Public user-invite accept (self-host emails point here; Hosted landing may share path)
+        id: "accept-user-invite",
+        layout: "standalone",
+        path: "/onboarding/accept-user-invite/:invite_code",
+        loadComponent: () => import("@/pages/AcceptUserInvite"),
+      },
+      {
         id: "dashboard-index",
         layout: "root",
         index: true,

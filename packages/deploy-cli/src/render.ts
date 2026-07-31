@@ -297,7 +297,8 @@ export function buildRuntimeEnv(
 		KEYCLOAK_WEB_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/web/callback"),
 		KEYCLOAK_WEB_CALLBACK_URL: publicHttpsUrl(config, hosts.app, "/auth/callback"),
 		KEYCLOAK_API_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/api/callback"),
-		LANDING_PAGE_URL: oss ? "" : publicHttpsUrl(config, hosts.landing),
+		// Self-host: no landing; invite emails use dashboard accept routes (Phase 2).
+		LANDING_PAGE_URL: publicHttpsUrl(config, hosts.app),
 		DASHBOARD_URL: publicHttpsUrl(config, hosts.app),
 		OPENFGA_API_URL: "http://openfga:8090",
 		OPENFGA_STORE_ID: generated.openfga.store_id,
@@ -405,7 +406,8 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 	const hosts = domainMap(config.domain.root_domain);
 	const activeSlot = generated.deployment.active_slot;
 	const apiServiceName = generated.deployment.maintenance_mode ? "envsync-api-maintenance" : "envsync-api";
-	const landingEnabled = !isOssConfig(config);
+	// Landing is Hosted-only; self-host Swarm omits landing routers (Phase 2).
+	const landingEnabled = false;
 	const managementEnabled = !isOssConfig(config);
 	const otelAllowedOrigins = [
 		...(landingEnabled ? publicHttpsOriginVariants(config, hosts.landing) : []),
@@ -828,9 +830,10 @@ export function renderStack(
 	const hosts = domainMap(config.domain.root_domain);
 	const includeRuntimeInfra = mode !== "base";
 	const includeAppServices = mode === "full";
-	const landingEnabled = !isOssConfig(config);
+	const landingEnabled = false;
 	const managementEnabled = !isOssConfig(config);
-	const apiLicenseVolume = landingEnabled ? "\n    volumes:\n      - /etc/envsync/license:/etc/envsync/license:ro" : "";
+	// License mount is enterprise (management), not tied to landing.
+	const apiLicenseVolume = managementEnabled ? "\n    volumes:\n      - /etc/envsync/license:/etc/envsync/license:ro" : "";
 	const deployment = createSteadyApiDeploymentState(config, generated);
 	const stackName = config.services.stack_name;
 	const s3RouterName = `${stackName}-s3-router`;

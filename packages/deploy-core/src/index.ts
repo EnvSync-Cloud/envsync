@@ -161,9 +161,8 @@ function validateEditionRules(config: DeployConfig, edition: DeployEdition) {
 		if (config.features.management_api === false) {
 			errors.push("Enterprise edition must enable management_api.");
 		}
-		if (config.features.landing === false) {
-			errors.push("Enterprise edition must enable landing.");
-		}
+		// Landing is Hosted-only marketing/signup (program plan Phase 2). Self-host must not require it.
+		// Optional branding: features.landing === true may re-enable later; default is off.
 		if (config.license.required === false) {
 			errors.push("Enterprise edition must require licensing.");
 		}
@@ -183,7 +182,8 @@ function validateEditionRules(config: DeployConfig, edition: DeployEdition) {
 function buildServicePlans(config: DeployConfig, edition: DeployEdition): ServicePlan[] {
 	const observabilityEnabled = config.observability.enabled ?? (edition === "enterprise");
 	const managementEnabled = edition === "enterprise";
-	const landingEnabled = edition === "enterprise";
+	// Hosted marketing/signup only — self-host topology omits landing by default (Phase 2).
+	const landingEnabled = config.features.landing === true;
 
 	return [
 		{ id: "api", enabled: true, tier: "core", reason: "Required in all editions.", image: config.images.api },
@@ -195,7 +195,7 @@ function buildServicePlans(config: DeployConfig, edition: DeployEdition): Servic
 		{ id: "minikms", enabled: true, tier: "core", reason: "Secret encryption service.", image: null },
 		{ id: "keycloak", enabled: true, tier: "core", reason: "Authentication provider.", image: config.images.keycloak },
 		{ id: "management-api", enabled: managementEnabled, tier: "enterprise", reason: managementEnabled ? "Enterprise control plane API." : "Not deployed in OSS.", image: managementEnabled ? config.images.management_api : null },
-		{ id: "landing", enabled: landingEnabled, tier: "enterprise", reason: landingEnabled ? "Enterprise/public onboarding surface." : "Omitted in OSS.", image: landingEnabled ? config.images.landing : null },
+		{ id: "landing", enabled: landingEnabled, tier: "optional", reason: landingEnabled ? "Optional marketing surface (Hosted)." : "Omitted from self-host; user invites use dashboard.", image: landingEnabled ? config.images.landing : null },
 		{ id: "clickstack", enabled: observabilityEnabled, tier: observabilityEnabled ? "optional" : "optional", reason: observabilityEnabled ? "Observability enabled for this topology." : "Observability disabled.", image: observabilityEnabled ? config.images.clickstack : null },
 		{ id: "otel-agent", enabled: observabilityEnabled, tier: "optional", reason: observabilityEnabled ? "OTEL pipeline enabled for this topology." : "OTEL disabled.", image: observabilityEnabled ? config.images.otel_agent : null },
 	];
@@ -203,6 +203,7 @@ function buildServicePlans(config: DeployConfig, edition: DeployEdition): Servic
 
 function buildFrontendArtifacts(config: DeployConfig, edition: DeployEdition): FrontendArtifactPlan[] {
 	const enterprise = edition === "enterprise";
+	const landingEnabled = config.features.landing === true;
 
 	return [
 		{
@@ -218,8 +219,8 @@ function buildFrontendArtifacts(config: DeployConfig, edition: DeployEdition): F
 			package_name: "envsync-landing",
 			build_command: "bun run --filter envsync-landing build",
 			mount_path: "/",
-			included: enterprise,
-			image: enterprise ? config.images.landing : null,
+			included: landingEnabled,
+			image: landingEnabled ? config.images.landing : null,
 		},
 	];
 }
