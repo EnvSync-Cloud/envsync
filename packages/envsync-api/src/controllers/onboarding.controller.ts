@@ -8,6 +8,7 @@ import { isPasswordStrong } from "@/utils/password";
 import { config } from "@/utils/env";
 import { CertificateRoleMapper } from "@/services/certificate-role.mapper";
 import { CertificateService } from "@/services/certificate.service";
+import { EditionPolicyService } from "@/services/edition-policy.service";
 import { OrgProvisioningService } from "@/services/org-provisioning.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
@@ -15,6 +16,8 @@ import { UserService } from "@/services/user.service";
 
 export class OnboardingController {
 	public static readonly createOrgInvite = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { email } = await c.req.json();
 
 		if (!email) {
@@ -31,6 +34,8 @@ export class OnboardingController {
 	};
 
 	public static readonly acceptOrgInvite = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { invite_code } = c.req.param();
 
 		const {
@@ -71,7 +76,7 @@ export class OnboardingController {
 				full_name,
 				password,
 			},
-			source: "org_invite_accept",
+			source: "hosted_signup",
 			inviteId: invite_data.id,
 		});
 
@@ -85,6 +90,8 @@ export class OnboardingController {
 	};
 
 	public static readonly getOrgInviteByCode = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { invite_code } = c.req.param();
 
 		if (!invite_code) {

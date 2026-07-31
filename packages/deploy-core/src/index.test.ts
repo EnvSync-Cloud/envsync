@@ -19,7 +19,10 @@ describe("createDeploymentPlan", () => {
 		expect(plan.services.find(service => service.id === "landing")?.enabled).toBe(false);
 		expect(plan.frontend.find(artifact => artifact.id === "management")).toBeUndefined();
 		expect(plan.runtime_env.ENVSYNC_MANAGEMENT_ENABLED).toBe("false");
+		expect(plan.runtime_env.ENVSYNC_DEPLOYMENT_MODE).toBe("selfhosted");
+		expect(plan.runtime_env.ENVSYNC_LANDING_ENABLED).toBe("false");
 		expect(plan.runtime_env.ENVSYNC_SINGLE_ORG_MODE).toBe("true");
+		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBe("1");
 		expect(plan.warnings).toContain(
 			"Observability is disabled for OSS. ClickStack and OTEL services will be omitted.",
 		);
@@ -50,6 +53,9 @@ describe("createDeploymentPlan", () => {
 		expect(plan.runtime_env.MANAGEMENT_API_URL).toBe("https://manage-api.enterprise.example.com");
 		expect(plan.runtime_env.MANAGEMENT_DASHBOARD_URL).toBeUndefined();
 		expect(plan.runtime_env.ENVSYNC_LICENSE_SERVER_URL).toBe("https://licenses.example.com");
+		expect(plan.runtime_env.ENVSYNC_DEPLOYMENT_MODE).toBe("selfhosted");
+		expect(plan.runtime_env.ENVSYNC_LANDING_ENABLED).toBe("false");
+		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBe("1");
 	});
 
 	test("rejects enterprise-invalid topology in OSS mode", () => {

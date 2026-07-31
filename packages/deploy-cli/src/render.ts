@@ -235,9 +235,13 @@ export function buildRuntimeEnv(config: DeployConfig, generated: DeployGenerated
 	return {
 		NODE_ENV: "production",
 		ENVSYNC_EDITION: oss ? "oss" : "enterprise",
+		// Self-host product install — never multi-tenant SaaS mode (program plan Phase 1).
+		ENVSYNC_DEPLOYMENT_MODE: "selfhosted",
 		ENVSYNC_MANAGEMENT_ENABLED: oss ? "false" : "true",
-		ENVSYNC_LANDING_ENABLED: oss ? "false" : "true",
-		ENVSYNC_SINGLE_ORG_MODE: oss ? "true" : "false",
+		// Landing is Hosted-only; self-host does not ship marketing/signup surface.
+		ENVSYNC_LANDING_ENABLED: "false",
+		ENVSYNC_SINGLE_ORG_MODE: "true",
+		ENVSYNC_MAX_ORGS: "1",
 		ENVSYNC_LICENSE_ENFORCEMENT: oss ? "false" : "true",
 		ENVSYNC_LICENSE_MODE: oss ? "none" : "certificate",
 		ENVSYNC_LICENSE_BUNDLE_PATH: oss ? "" : "/etc/envsync/license/enterprise-license-bundle.json",
@@ -586,6 +590,7 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 	const managementApiEnabled = !isOssConfig(config);
 	const activeReleaseVersion = generated.deployment.slots[generated.deployment.active_slot].release_version || config.release.version;
 	const managementApiUrl = managementApiEnabled ? publicHttpsUrl(config, hosts.manage_api) : "";
+	const edition = isOssConfig(config) ? "oss" : "enterprise";
 	return `window.__ENVSYNC_RUNTIME_CONFIG__ = ${JSON.stringify({
 		apiBaseUrl: publicHttpsUrl(config, hosts.api),
 		appBaseUrl: publicHttpsUrl(config, hosts.app),
@@ -594,6 +599,14 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 		keycloakRealm: config.auth.keycloak_realm,
 		webClientId: config.auth.web_client_id,
 		apiDocsUrl: publicHttpsUrl(config, hosts.api, "/docs"),
+		edition,
+		dashboardVariant: edition,
+		managementEnabled: managementApiEnabled,
+		// Self-host installs never offer dashboard org-create (program plan §1.1a).
+		deploymentMode: "selfhosted",
+		canCreateOrganization: false,
+		publicSignupEnabled: false,
+		maxOrgs: 1,
 		otelEndpoint,
 		hyperdxApiKey: generated.clickstack.browser_api_key || undefined,
 		hyperdxUrl: otelEndpoint,

@@ -250,6 +250,9 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(frontendRuntime).toContain("\"managementApiUrl\": \"https://manage-api.enterprise.example.com\"");
 		expect(frontendRuntime).toContain("\"activeApiSlot\": \"blue\"");
 		expect(frontendRuntime).toContain("\"releaseVersion\": \"0.8.7\"");
+		expect(frontendRuntime).toContain("\"deploymentMode\": \"selfhosted\"");
+		expect(frontendRuntime).toContain("\"canCreateOrganization\": false");
+		expect(frontendRuntime).toContain("\"publicSignupEnabled\": false");
 	});
 });
 

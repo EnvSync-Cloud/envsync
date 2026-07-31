@@ -30,17 +30,22 @@ export interface ProvisionOrganizationInput {
 }
 
 export class OrgProvisioningService {
-	public static async assertProvisioningAllowed() {
+	public static async assertProvisioningAllowed(source?: string) {
 		const db = await DB.getInstance();
 		const countResult = await db
 			.selectFrom("orgs")
 			.select(({ fn }) => fn.count<string>("id").as("count"))
 			.executeTakeFirstOrThrow();
-		EditionPolicyService.assertOrgProvisioningAllowed(Number(countResult.count));
+		const orgCount = Number(countResult.count);
+		if (source) {
+			EditionPolicyService.assertCanProvisionOrg({ source, orgCount });
+			return;
+		}
+		EditionPolicyService.assertOrgProvisioningAllowed(orgCount);
 	}
 
 	public static async provisionOrganization(input: ProvisionOrganizationInput) {
-		await this.assertProvisioningAllowed();
+		await this.assertProvisioningAllowed(input.source);
 
 		const sagaCtx = { org_id: "", admin_role_id: "", user_id: "" };
 		let generatedBundle: {

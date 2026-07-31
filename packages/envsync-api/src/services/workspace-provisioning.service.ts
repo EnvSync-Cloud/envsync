@@ -45,7 +45,8 @@ export class WorkspaceProvisioningService {
 		currentUserId: string;
 		source?: string;
 	}) {
-		await OrgProvisioningService.assertProvisioningAllowed();
+		const source = input.source ?? "hosted_dashboard";
+		await OrgProvisioningService.assertProvisioningAllowed(source);
 
 		const currentUser = await UserService.getUser(input.currentUserId);
 		const slug = await generateUniqueWorkspaceSlug(input.workspaceName);
@@ -58,7 +59,7 @@ export class WorkspaceProvisioningService {
 					ctx.org_id = await OrgService.createOrg({
 						name: input.workspaceName,
 						slug,
-						metadata: SystemStateService.buildProvisioningMetadata(input.source ?? "workspace_switcher"),
+						metadata: SystemStateService.buildProvisioningMetadata(source),
 					});
 				},
 				compensate: async (ctx) => {

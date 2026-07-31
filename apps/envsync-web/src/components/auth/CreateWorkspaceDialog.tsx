@@ -68,16 +68,16 @@ export const CreateWorkspaceDialog = ({
         data-testid="create-workspace-dialog"
       >
         <DialogHeader>
-          <DialogTitle>Create new workspace</DialogTitle>
+          <DialogTitle>Create organization</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Set up a new workspace and switch into it immediately.
+            Create a new organization and switch into it immediately. Available on Hosted only.
           </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="workspace-name" className="text-foreground">
-              Workspace name
+              Organization name
             </Label>
             <Input
               id="workspace-name"
@@ -117,7 +117,7 @@ export const CreateWorkspaceDialog = ({
               disabled={isCreatingWorkspace}
               className="bg-emerald-500 text-black hover:bg-emerald-400"
             >
-              {isCreatingWorkspace ? "Creating..." : "Create workspace"}
+              {isCreatingWorkspace ? "Creating..." : "Create organization"}
             </Button>
           </DialogFooter>
         </form>

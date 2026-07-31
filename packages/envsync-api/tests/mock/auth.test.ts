@@ -338,8 +338,11 @@ describe("multi-org cookie sessions", () => {
 		expect(whoAmIBody.org.id).toBe(createBody.org.id);
 	});
 
-	test("rejects workspace creation on oss editions", async () => {
-		EditionPolicyService.setTestOverrides({ edition: "oss" });
+	test("rejects workspace creation on selfhosted deployments", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+		});
 		const seed = await seedAuthOrg();
 
 		const createRes = await testRequest("/api/auth/create-workspace", {
@@ -355,7 +358,27 @@ describe("multi-org cookie sessions", () => {
 
 		expect(createRes.status).toBe(403);
 		const body = await createRes.json<{ code?: string }>();
-		expect(body.code).toBe("ENTERPRISE_REQUIRED");
+		expect(body.code).toBe("ORG_CREATE_CHANNEL_FORBIDDEN");
+	});
+
+	test("rejects workspace creation on oss (selfhosted) editions", async () => {
+		EditionPolicyService.setTestOverrides({ edition: "oss", deployment_mode: "selfhosted" });
+		const seed = await seedAuthOrg();
+
+		const createRes = await testRequest("/api/auth/create-workspace", {
+			method: "POST",
+			headers: {
+				Cookie: sessionCookie(seed.masterUser.token, seed.masterUser.id),
+				"X-CSRF-Token": "test-csrf-token",
+			},
+			body: {
+				name: "Should Fail",
+			},
+		});
+
+		expect(createRes.status).toBe(403);
+		const body = await createRes.json<{ code?: string }>();
+		expect(body.code).toBe("ORG_CREATE_CHANNEL_FORBIDDEN");
 	});
 });
 

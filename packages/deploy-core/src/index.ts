@@ -230,10 +230,13 @@ function buildRuntimeEnv(config: DeployConfig, edition: DeployEdition) {
 
 	return {
 		ENVSYNC_EDITION: edition,
+		ENVSYNC_DEPLOYMENT_MODE: "selfhosted",
 		ENVSYNC_OBSERVABILITY_ENABLED: String(observabilityEnabled),
 		ENVSYNC_MANAGEMENT_ENABLED: String(enterprise),
-		ENVSYNC_LANDING_ENABLED: String(enterprise),
-		ENVSYNC_SINGLE_ORG_MODE: String(edition === "oss"),
+		// Landing is Hosted-only (program plan D3 / Phase 1).
+		ENVSYNC_LANDING_ENABLED: "false",
+		ENVSYNC_SINGLE_ORG_MODE: "true",
+		ENVSYNC_MAX_ORGS: "1",
 		ENVSYNC_LICENSE_ENFORCEMENT: String(enterprise),
 		ENVSYNC_LICENSE_MODE: enterprise ? "certificate" : "none",
 		ENVSYNC_LICENSE_BUNDLE_PATH: enterprise ? "/etc/envsync/license/enterprise-license-bundle.json" : "",

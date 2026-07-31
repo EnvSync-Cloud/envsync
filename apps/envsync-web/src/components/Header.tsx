@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Fragment, useMemo, useState } from "react";
 import { logoutWebSession } from "@/api";
-import { runtimeConfig } from "@/utils/runtime-config";
+import { canCreateOrganizationInUi, runtimeConfig } from "@/utils/runtime-config";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -49,6 +49,7 @@ export const Header = () => {
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
   const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
   const canSwitchOrganizations = runtimeConfig.edition === "enterprise";
+  const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
 
   const handleLogout = async () => {
     try {
@@ -129,24 +130,28 @@ export const Header = () => {
                           );
                         })}
                       </CommandGroup>
-                      <CommandSeparator className="bg-border" />
-                      <CommandGroup heading="Workspace">
-                        <CommandItem
-                          data-testid="create-workspace-action"
-                          value="create new workspace"
-                          onSelect={() => {
-                            setOrgSwitcherOpen(false);
-                            setCreateWorkspaceOpen(true);
-                          }}
-                          disabled={isSwitchingOrg || isCreatingWorkspace}
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
-                        >
-                          <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                            <Plus className="size-4" />
-                          </span>
-                          <span className="text-sm font-medium">+ Create new Workspace</span>
-                        </CommandItem>
-                      </CommandGroup>
+                      {canCreateOrganization && (
+                        <>
+                          <CommandSeparator className="bg-border" />
+                          <CommandGroup heading="Organization">
+                            <CommandItem
+                              data-testid="create-workspace-action"
+                              value="create new organization"
+                              onSelect={() => {
+                                setOrgSwitcherOpen(false);
+                                setCreateWorkspaceOpen(true);
+                              }}
+                              disabled={isSwitchingOrg || isCreatingWorkspace}
+                              className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
+                            >
+                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                <Plus className="size-4" />
+                              </span>
+                              <span className="text-sm font-medium">+ Create organization</span>
+                            </CommandItem>
+                          </CommandGroup>
+                        </>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>

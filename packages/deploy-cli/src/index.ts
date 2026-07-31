@@ -2015,6 +2015,7 @@ function renderFrontendRuntimeConfig(config: DeployConfig, generated: DeployGene
 	const otelEndpoint = publicHttpsUrl(config, hosts.obs);
 	const managementApiEnabled = !isOssConfig(config);
 	const activeReleaseVersion = generated.deployment.slots[generated.deployment.active_slot].release_version || config.release.version;
+	const edition = isOssConfig(config) ? "oss" : "enterprise";
 	return `window.__ENVSYNC_RUNTIME_CONFIG__ = ${JSON.stringify({
 		apiBaseUrl: publicHttpsUrl(config, hosts.api),
 		appBaseUrl: publicHttpsUrl(config, hosts.app),
@@ -2023,6 +2024,13 @@ function renderFrontendRuntimeConfig(config: DeployConfig, generated: DeployGene
 		keycloakRealm: config.auth.keycloak_realm,
 		webClientId: config.auth.web_client_id,
 		apiDocsUrl: publicHttpsUrl(config, hosts.api, "/docs"),
+		edition,
+		dashboardVariant: edition,
+		managementEnabled: managementApiEnabled,
+		deploymentMode: "selfhosted",
+		canCreateOrganization: false,
+		publicSignupEnabled: false,
+		maxOrgs: 1,
 		otelEndpoint,
 		hyperdxApiKey: generated.clickstack.browser_api_key || undefined,
 		hyperdxUrl: otelEndpoint,
