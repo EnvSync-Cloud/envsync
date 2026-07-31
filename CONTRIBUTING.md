@@ -13,10 +13,19 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 ## Development Workflow
 
-1. Fork the repo and create a branch from `main`
+1. Fork the repo and create a branch from `main` (or from the active program track branch when working on the no-piggyback rollout — see below)
 2. Branch naming: `feat/`, `fix/`, `chore/`, `docs/`
 3. Keep PRs focused — one feature or fix per PR
-4. Push and open a PR against `main`
+4. Push and open a PR against `main` (or the program track branch when directed)
+5. Use the [PR template](./.github/PULL_REQUEST_TEMPLATE.md) no-piggyback + org-create channel checks
+
+### No-piggyback program (active)
+
+When working on tenancy, deploy CLI split, management API, licensing, or FE edition isolation:
+
+- Plan: [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md)
+- ADR: [docs/adr/0001-no-piggyback-program.md](./docs/adr/0001-no-piggyback-program.md)
+- Track: `feat/the-big-update` with phase branches `feat/the-big-update-pN`
 
 ## API / Backend Changes (`packages/envsync-api/`)
 

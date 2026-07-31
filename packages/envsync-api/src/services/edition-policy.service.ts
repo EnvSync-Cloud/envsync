@@ -21,6 +21,16 @@ function parseBoolean(value: string | undefined, fallback = false) {
 	return value === "true";
 }
 
+/**
+ * Edition / install policy.
+ *
+ * Program note (feat/the-big-update): Phase 1 will add deployment_mode + org-create
+ * channel enforcement. Reserved env vars ENVSYNC_DEPLOYMENT_MODE and ENVSYNC_MAX_ORGS
+ * are parsed in env.ts but not applied here until Phase 1.
+ *
+ * @see docs/plans/2026-08-no-piggyback-program.md
+ * @see docs/plans/phase-0/org-create-inventory.md
+ */
 export class EditionPolicyService {
 	static #testOverrides: EditionPolicyTestOverrides | null = null;
 

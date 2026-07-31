@@ -2,6 +2,15 @@
 
 Environment variable management platform — store, sync, and manage secrets across teams and environments.
 
+## Active program: no-piggyback rollout
+
+- **Track branch:** `feat/the-big-update` (phase branches: `feat/the-big-update-p0`, `p1`, …)
+- **Plan:** [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md)
+- **ADR:** [docs/adr/0001-no-piggyback-program.md](./docs/adr/0001-no-piggyback-program.md)
+- **Phase 0 exit package:** [docs/plans/phase-0/README.md](./docs/plans/phase-0/README.md)
+
+Do not reintroduce product piggybacks (OSS deploy spawning enterprise CLI, management API as core re-export, self-host web org-create, landing required on self-host). See PR template checklist.
+
 ## Monorepo structure
 
 - `packages/envsync-api/` — Backend API (Hono + Bun)
