@@ -101,7 +101,7 @@ export class AuthController {
 
 	/**
 	 * Hosted-only org create for dashboard sessions.
-	 * Preferred route: POST /auth/create-organization (create-workspace is a deprecated alias).
+	 * Route: POST /auth/create-organization
 	 */
 	public static readonly createOrganization = async (c: Context) => {
 		if (!readAccessToken(c)) {
@@ -134,10 +134,5 @@ export class AuthController {
 		});
 		setActiveMembershipCookie(c, result.user_id);
 		return c.json(await buildSessionPayload(result.user_id));
-	};
-
-	/** @deprecated Prefer createOrganization — kept for any internal callers */
-	public static readonly createWorkspace = async (c: Context) => {
-		return AuthController.createOrganization(c);
 	};
 }

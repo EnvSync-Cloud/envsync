@@ -105,8 +105,10 @@ MIT-path contributions remain under MIT.
 - Do not add proprietary packages as **production** dependencies of MIT packages
   (CI: `bun run check:boundaries`).
 - Do not reintroduce `apps/envsync-management-web` or monorepo spawn shims for OSS deploy.
-- Prefer **Organization** in user-facing copy; `create-workspace` API remains a
-  deprecated compatibility alias for `create-organization`.
+- Prefer **Organization** in user-facing copy; org create API is
+  `POST /auth/create-organization` only.
+- Self-host multi-org limits come from **entitlement claims**; do not rely on
+  bare `ENVSYNC_MAX_ORGS` (support override only).
 - Shared extension seams live in API/web module loaders; keep core shells free of EE imports.
 
 ## CLI Changes (`packages/envsync-cli/`)

@@ -22,7 +22,7 @@ describe("createDeploymentPlan", () => {
 		expect(plan.runtime_env.ENVSYNC_DEPLOYMENT_MODE).toBe("selfhosted");
 		expect(plan.runtime_env.ENVSYNC_LANDING_ENABLED).toBe("false");
 		expect(plan.runtime_env.ENVSYNC_SINGLE_ORG_MODE).toBe("true");
-		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBe("1");
+		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBeUndefined();
 		expect(plan.warnings).toContain(
 			"Observability is disabled for OSS. ClickStack and OTEL services will be omitted.",
 		);
@@ -57,7 +57,7 @@ describe("createDeploymentPlan", () => {
 		expect(plan.runtime_env.ENVSYNC_LICENSE_SERVER_URL).toBe("https://licenses.example.com");
 		expect(plan.runtime_env.ENVSYNC_DEPLOYMENT_MODE).toBe("selfhosted");
 		expect(plan.runtime_env.ENVSYNC_LANDING_ENABLED).toBe("false");
-		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBe("1");
+		expect(plan.runtime_env.ENVSYNC_MAX_ORGS).toBeUndefined();
 	});
 
 	test("rejects enterprise-invalid topology in OSS mode", () => {

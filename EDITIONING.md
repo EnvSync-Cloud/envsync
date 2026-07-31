@@ -83,5 +83,5 @@ proprietary packages from MIT package production graphs.
 | Term | Meaning |
 |------|---------|
 | **Organization** | Tenant boundary (DB `orgs`). Use this in product UI. |
-| **Workspace** | Deprecated as multi-org alias. APIs may keep compat aliases (`create-workspace`) for a deprecation window. |
+| **Workspace** | Deprecated as multi-org alias. Use Organization; `create-workspace` HTTP alias removed (Phase 7). |
 | **Project / App** | Work unit under one org. |

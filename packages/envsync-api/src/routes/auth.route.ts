@@ -97,69 +97,10 @@ const createOrganizationRoute = describeRoute({
 	},
 });
 
-/** Preferred path (Phase 6 naming). */
+/** Hosted dashboard org create (Phase 6 naming; Phase 7 removed create-workspace alias). */
 app.post(
 	"/create-organization",
 	createOrganizationRoute,
-	zValidator("json", createOrganizationRequestSchema),
-	AuthController.createOrganization,
-);
-
-/**
- * @deprecated Use POST /auth/create-organization. Compatibility alias for clients
- * still calling create-workspace (Phase 6 deprecation window; remove in Phase 7).
- */
-app.post(
-	"/create-workspace",
-	describeRoute({
-		operationId: "createWorkspace",
-		summary: "Create Organization (deprecated alias)",
-		description:
-			"Deprecated: use POST /auth/create-organization. Same behavior as createOrganization.",
-		tags: ["Authentication"],
-		responses: {
-			200: {
-				description: "Organization created successfully",
-				content: {
-					"application/json": {
-						schema: resolver(whoAmIResponseSchema),
-					},
-				},
-			},
-			400: {
-				description: "Invalid request",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			401: {
-				description: "Cookie session required",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			403: {
-				description: "Not allowed on this deployment",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			409: {
-				description: "Organization slug conflict or org limit reached",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-		},
-	}),
 	zValidator("json", createOrganizationRequestSchema),
 	AuthController.createOrganization,
 );

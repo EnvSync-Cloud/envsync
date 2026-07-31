@@ -10,7 +10,7 @@ export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
-  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [isCreatingOrganization, setIsCreatingOrganization] = useState(false);
   const queryClient = useQueryClient();
 
   const syncIdentity = useCallback((userData: AuthSession) => {
@@ -92,13 +92,13 @@ export const useAuth = () => {
     }
   }, [queryClient, syncIdentity, user]);
 
-  const createWorkspace = useCallback(async (name: string) => {
+  const createOrganization = useCallback(async (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
       throw new Error("Organization name is required.");
     }
 
-    setIsCreatingWorkspace(true);
+    setIsCreatingOrganization(true);
     setAuthError(null);
 
     try {
@@ -123,7 +123,7 @@ export const useAuth = () => {
       setAuthError(message);
       throw error instanceof Error ? error : new Error(message);
     } finally {
-      setIsCreatingWorkspace(false);
+      setIsCreatingOrganization(false);
     }
   }, [queryClient, syncIdentity]);
 
@@ -136,7 +136,7 @@ export const useAuth = () => {
     authError,
     switchOrg,
     isSwitchingOrg,
-    createWorkspace,
-    isCreatingWorkspace,
+    createOrganization,
+    isCreatingOrganization,
   };
 };

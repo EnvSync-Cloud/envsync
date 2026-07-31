@@ -15,34 +15,34 @@ async function getAuthSession(page: import("@playwright/test").Page) {
   });
 }
 
-test.describe("workspace switcher", () => {
-  test("creates a new workspace from the enterprise header switcher and can switch back", async ({ page, makeName }) => {
+test.describe("organization switcher", () => {
+  test("creates a new organization from the enterprise header switcher and can switch back", async ({ page, makeName }) => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     const originalSession = await getAuthSession(page);
-    const workspaceName = makeName("Workspace");
+    const organizationName = makeName("Workspace");
 
-    await page.getByTestId("workspace-switcher-trigger").click();
-    await expect(page.getByTestId("create-workspace-action")).toBeVisible();
-    await page.getByTestId("create-workspace-action").click();
+    await page.getByTestId("organization-switcher-trigger").click();
+    await expect(page.getByTestId("create-organization-action")).toBeVisible();
+    await page.getByTestId("create-organization-action").click();
 
-    await expect(page.getByTestId("create-workspace-dialog")).toBeVisible();
-    await page.getByTestId("create-workspace-name-input").fill(workspaceName);
-    await page.getByTestId("create-workspace-submit").click();
+    await expect(page.getByTestId("create-organization-dialog")).toBeVisible();
+    await page.getByTestId("create-organization-name-input").fill(organizationName);
+    await page.getByTestId("create-organization-submit").click();
 
     await page.waitForURL("**/dashboard");
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-    await expect(page.getByTestId("workspace-switcher-trigger")).toContainText(workspaceName);
+    await expect(page.getByTestId("organization-switcher-trigger")).toContainText(organizationName);
 
     const createdSession = await getAuthSession(page);
-    expect(createdSession.org.name).toBe(workspaceName);
+    expect(createdSession.org.name).toBe(organizationName);
     expect(createdSession.memberships.length).toBeGreaterThanOrEqual(2);
 
-    await page.getByTestId("workspace-switcher-trigger").click();
-    await expect(page.getByTestId(`workspace-switcher-item-${originalSession.org.slug}`)).toBeVisible();
-    await expect(page.getByTestId(`workspace-switcher-item-${createdSession.org.slug}`)).toBeVisible();
+    await page.getByTestId("organization-switcher-trigger").click();
+    await expect(page.getByTestId(`organization-switcher-item-${originalSession.org.slug}`)).toBeVisible();
+    await expect(page.getByTestId(`organization-switcher-item-${createdSession.org.slug}`)).toBeVisible();
 
-    await page.getByTestId(`workspace-switcher-item-${originalSession.org.slug}`).click();
+    await page.getByTestId(`organization-switcher-item-${originalSession.org.slug}`).click();
     await page.waitForURL("**/");
-    await expect(page.getByTestId("workspace-switcher-trigger")).toContainText(originalSession.org.name);
+    await expect(page.getByTestId("organization-switcher-trigger")).toContainText(originalSession.org.name);
   });
 });

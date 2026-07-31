@@ -22,7 +22,7 @@ export const CreateWorkspaceDialog = ({
   open,
   onOpenChange,
 }: CreateWorkspaceDialogProps) => {
-  const { createWorkspace, isCreatingWorkspace } = useAuthContext();
+  const { createOrganization, isCreatingOrganization } = useAuthContext();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +50,7 @@ export const CreateWorkspaceDialog = ({
     setError(null);
 
     try {
-      await createWorkspace(trimmedName);
+      await createOrganization(trimmedName);
       onOpenChange(false);
     } catch (submissionError) {
       setError(
@@ -65,7 +65,7 @@ export const CreateWorkspaceDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="border-border bg-card text-foreground sm:max-w-md"
-        data-testid="create-workspace-dialog"
+        data-testid="create-organization-dialog"
       >
         <DialogHeader>
           <DialogTitle>Create organization</DialogTitle>
@@ -81,20 +81,20 @@ export const CreateWorkspaceDialog = ({
             </Label>
             <Input
               id="workspace-name"
-              data-testid="create-workspace-name-input"
+              data-testid="create-organization-name-input"
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Acme Platform"
               autoFocus
               maxLength={120}
-              disabled={isCreatingWorkspace}
+              disabled={isCreatingOrganization}
               className="border-border bg-card text-foreground placeholder:text-tertiary"
             />
           </div>
 
           {error && (
             <div
-              data-testid="create-workspace-error"
+              data-testid="create-organization-error"
               className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
             >
               {error}
@@ -106,18 +106,18 @@ export const CreateWorkspaceDialog = ({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isCreatingWorkspace}
+              disabled={isCreatingOrganization}
               className="border-border bg-transparent text-muted-foreground hover:bg-card hover:text-foreground"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              data-testid="create-workspace-submit"
-              disabled={isCreatingWorkspace}
+              data-testid="create-organization-submit"
+              disabled={isCreatingOrganization}
               className="bg-emerald-500 text-black hover:bg-emerald-400"
             >
-              {isCreatingWorkspace ? "Creating..." : "Create organization"}
+              {isCreatingOrganization ? "Creating..." : "Create organization"}
             </Button>
           </DialogFooter>
         </form>

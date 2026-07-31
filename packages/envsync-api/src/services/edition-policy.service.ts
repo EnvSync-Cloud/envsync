@@ -142,8 +142,9 @@ export class EditionPolicyService {
 	/**
 	 * Max organizations for this install.
 	 * Hosted: unlimited (null).
-	 * Self-host: verified entitlement `max_orgs` / `multi_org` when cached (Phase 4);
-	 * else ENVSYNC_MAX_ORGS support interim; else 1.
+	 * Self-host: verified entitlement `max_orgs` / `multi_org` when cached (Phase 4+).
+	 * Support-only: ENVSYNC_MAX_ORGS when ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE=true (stranded installs).
+	 * Default: 1.
 	 * Web channels never unlock multi-org on self-host (channel matrix).
 	 */
 	public static getMaxOrgs(): number | null {
@@ -158,9 +159,13 @@ export class EditionPolicyService {
 		if (fromEntitlement !== null) {
 			return fromEntitlement;
 		}
-		const fromEnv = parsePositiveInt(config.ENVSYNC_MAX_ORGS);
-		if (fromEnv !== null && this.isEnterprise()) {
-			return fromEnv;
+		// Phase 7: env max_orgs is not a product feature — support override only.
+		const supportOverride = parseBoolean(config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE, false);
+		if (supportOverride && this.isEnterprise()) {
+			const fromEnv = parsePositiveInt(config.ENVSYNC_MAX_ORGS);
+			if (fromEnv !== null) {
+				return fromEnv;
+			}
 		}
 		return 1;
 	}
@@ -242,7 +247,7 @@ export class EditionPolicyService {
 
 	/**
 	 * Assert the caller channel may create an org, then enforce max_orgs.
-	 * Web channels never use ENVSYNC_MAX_ORGS to unlock self-host multi-org.
+	 * Web channels never use env max_orgs to unlock self-host multi-org.
 	 */
 	public static assertCanProvisionOrg(input: {
 		source: string;
@@ -364,7 +369,7 @@ export class EditionPolicyService {
 
 	/**
 	 * Web channels on self-host always max 1 effectively via channel deny.
-	 * CLI may use ENVSYNC_MAX_ORGS interim (enterprise only).
+	 * CLI uses entitlement max_orgs (or support override) on self-host.
 	 */
 	private static getMaxOrgsForChannel(channel: OrgProvisionSource): number | null {
 		if (channel === "hosted_signup" || channel === "hosted_dashboard") {
