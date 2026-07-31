@@ -18,14 +18,18 @@ export const switchOrgRequestSchema = z.object({
 	org_id: z.string().openapi({ example: "org_123" }),
 });
 
-export const createWorkspaceRequestSchema = z.object({
+/** Preferred name (Phase 6). createWorkspaceRequestSchema is a deprecated alias. */
+export const createOrganizationRequestSchema = z.object({
 	name: z
 		.string()
 		.trim()
-		.min(1, "Workspace name is required")
-		.max(120, "Workspace name must be 120 characters or fewer")
+		.min(1, "Organization name is required")
+		.max(120, "Organization name must be 120 characters or fewer")
 		.openapi({ example: "Acme Platform" }),
 });
+
+/** @deprecated Use createOrganizationRequestSchema */
+export const createWorkspaceRequestSchema = createOrganizationRequestSchema;
 
 export const whoAmIResponseSchema = z
 	.object({

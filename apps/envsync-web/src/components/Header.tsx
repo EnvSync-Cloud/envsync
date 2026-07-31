@@ -92,14 +92,14 @@ export const Header = () => {
                 <PopoverContent align="start" className="w-[340px] border-border bg-popover p-0">
                   <Command className="bg-transparent text-foreground">
                     <div className="border-b border-border px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active workspace</p>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active organization</p>
                       <p className="mt-1 truncate text-sm font-medium text-foreground">{activeOrgName}</p>
                       <p className="truncate text-xs text-tertiary">{activeRole}</p>
                     </div>
-                    <CommandInput placeholder="Search workspaces..." className="text-foreground placeholder:text-tertiary" />
+                    <CommandInput placeholder="Search organizations..." className="text-foreground placeholder:text-tertiary" />
                     <CommandList className="max-h-[320px]">
-                      <CommandEmpty className="text-tertiary">No workspaces found.</CommandEmpty>
-                      <CommandGroup heading="Your workspaces">
+                      <CommandEmpty className="text-tertiary">No organizations found.</CommandEmpty>
+                      <CommandGroup heading="Your organizations">
                         {memberships.map((membership) => {
                           const isActive = membership.user_id === activeMembershipUserId || membership.is_active;
                           return (

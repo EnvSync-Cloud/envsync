@@ -38,12 +38,12 @@ export const CreateWorkspaceDialog = ({
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      setError("Workspace name is required.");
+      setError("Organization name is required.");
       return;
     }
 
     if (trimmedName.length > 120) {
-      setError("Workspace name must be 120 characters or fewer.");
+      setError("Organization name must be 120 characters or fewer.");
       return;
     }
 
@@ -56,7 +56,7 @@ export const CreateWorkspaceDialog = ({
       setError(
         submissionError instanceof Error
           ? submissionError.message
-          : "Failed to create workspace.",
+          : "Failed to create organization.",
       );
     }
   };

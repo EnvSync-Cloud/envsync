@@ -95,7 +95,7 @@ export const useAuth = () => {
   const createWorkspace = useCallback(async (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      throw new Error("Workspace name is required.");
+      throw new Error("Organization name is required.");
     }
 
     setIsCreatingWorkspace(true);
@@ -103,7 +103,7 @@ export const useAuth = () => {
 
     try {
       const createdSession = normalizeAuthSession(
-        await apiRequest<AuthSession>("/api/auth/create-workspace", {
+        await apiRequest<AuthSession>("/api/auth/create-organization", {
           method: "POST",
           body: JSON.stringify({ name: trimmedName }),
         }),
@@ -114,12 +114,12 @@ export const useAuth = () => {
       queryClient.clear();
       window.location.assign("/");
     } catch (error) {
-      console.error("Failed to create workspace:", error);
+      console.error("Failed to create organization:", error);
       if (isReloginError(error)) {
         await redirectToLogin();
         return;
       }
-      const message = error instanceof Error ? error.message : "Failed to create workspace.";
+      const message = error instanceof Error ? error.message : "Failed to create organization.";
       setAuthError(message);
       throw error instanceof Error ? error : new Error(message);
     } finally {

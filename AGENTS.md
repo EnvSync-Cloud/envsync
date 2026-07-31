@@ -11,6 +11,9 @@ Environment variable management platform — store, sync, and manage secrets acr
 
 Do not reintroduce product piggybacks (OSS deploy spawning enterprise CLI, management API as core re-export, self-host web org-create, landing required on self-host). See PR template checklist.
 
+**Dual license:** [LICENSE](./LICENSE) · **Editions:** [EDITIONING.md](./EDITIONING.md) · **Support matrix:** [docs/SUPPORT.md](./docs/SUPPORT.md)  
+Prefer **Organization** in product UI; `POST /auth/create-workspace` is a deprecated alias of `create-organization`.
+
 ## Monorepo structure
 
 - `packages/envsync-api/` — Backend API (Hono + Bun)

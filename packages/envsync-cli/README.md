@@ -385,3 +385,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Making environment configuration simple, secure, and synchronized** 🌟
 
 Built with ❤️ by the EnvSync team
+
+## Organization vocabulary
+
+EnvSync uses **Organization** as the tenant boundary (not “workspace”).
+Self-host multi-org is license-gated and provisioned via enterprise deploy/operator
+paths—not the dashboard. See `EDITIONING.md` and `docs/SUPPORT.md` in the monorepo root.

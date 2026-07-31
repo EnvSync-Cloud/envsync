@@ -54,7 +54,7 @@ export function OnboardingBanner({
             Get started with EnvSync
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Complete these steps to set up your workspace
+            Complete these steps to set up your organization
           </p>
         </div>
 

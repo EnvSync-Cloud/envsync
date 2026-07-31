@@ -63,7 +63,7 @@ export const RootLayout = () => {
               className="size-16 animate-pulse"
             />
           </div>
-          <p className="text-muted-foreground text-sm">Loading your workspace...</p>
+          <p className="text-muted-foreground text-sm">Loading your organization...</p>
         </div>
       </div>
     );
