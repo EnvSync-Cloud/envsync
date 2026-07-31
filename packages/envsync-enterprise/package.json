@@ -1,0 +1,32 @@
+{
+  "name": "envsync-enterprise",
+  "version": "0.11.0",
+  "description": "Proprietary EnvSync enterprise API modules (management surface, EE capabilities)",
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules": "./src/management-modules.ts"
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "envsync-kernel": "workspace:*"
+  },
+  "peerDependencies": {
+    "envsync-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "envsync-api": "workspace:*",
+    "typescript": "^5.0.0"
+  }
+}
