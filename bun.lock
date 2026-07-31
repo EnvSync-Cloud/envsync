@@ -78,23 +78,6 @@
         "wrangler": "^4.66.0",
       },
     },
-    "apps/envsync-management-web": {
-      "name": "envsync-management-web",
-      "version": "0.10.1",
-      "dependencies": {
-        "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "zod": "^3.25.76",
-      },
-      "devDependencies": {
-        "@types/react": "^18.3.23",
-        "@types/react-dom": "^18.3.7",
-        "@vitejs/plugin-react-swc": "^4.0.0",
-        "typescript": "^5.8.3",
-        "vite": "^7.0.0",
-      },
-    },
     "apps/envsync-web": {
       "name": "envsync-web",
       "version": "0.11.0",
@@ -1512,8 +1495,6 @@
     "envsync-landing": ["envsync-landing@workspace:apps/envsync-landing"],
 
     "envsync-management-api": ["envsync-management-api@workspace:packages/envsync-management-api"],
-
-    "envsync-management-web": ["envsync-management-web@workspace:apps/envsync-management-web"],
 
     "envsync-web": ["envsync-web@workspace:apps/envsync-web"],
 

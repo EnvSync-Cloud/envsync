@@ -30,7 +30,6 @@ instead governed by the proprietary EnvSync Enterprise License in each package:
   packages/envsync-enterprise-web/
   packages/envsync-management-api/
   packages/deploy-cli/          (published as @envsync-cloud/deploy-enterprise)
-  apps/envsync-management-web/  (deprecated; to be removed after Phase 5c)
 
 See packages/envsync-enterprise/LICENSE and packages/envsync-enterprise-web/LICENSE
 for enterprise terms. Phase 6 will finalize monorepo dual-license documentation

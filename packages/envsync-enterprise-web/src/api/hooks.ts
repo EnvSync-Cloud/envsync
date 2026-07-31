@@ -65,6 +65,38 @@ export async function listSyncAuditEvents(syncRunId: string): Promise<SyncAuditE
   }
 }
 
+export async function getManagementSystemStatus() {
+  try {
+    return await (await getManagementSDK()).system.getManagementSystemStatus();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export async function getLicenseStatus() {
+  try {
+    return await (await getManagementSDK()).license.getManagementLicenseStatus();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export async function activateLicense() {
+  try {
+    return await (await getManagementSDK()).license.activateManagementLicense();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export async function verifyLicense() {
+  try {
+    return await (await getManagementSDK()).license.verifyManagementLicense();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
 export function useProviderConnections() {
   return useQuery({
     queryKey: ["enterprise", "provider-connections"],
@@ -355,6 +387,45 @@ export function useSyncAuditEvents(syncRunId?: string) {
       return listSyncAuditEvents(syncRunId);
     },
     enabled: isEnterpriseUiEnabled() && Boolean(syncRunId),
+  });
+}
+
+export function useManagementSystemStatus() {
+  return useQuery({
+    queryKey: ["enterprise", "system-status"],
+    queryFn: getManagementSystemStatus,
+    enabled: isEnterpriseUiEnabled(),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useLicenseStatus() {
+  return useQuery({
+    queryKey: ["enterprise", "license-status"],
+    queryFn: getLicenseStatus,
+    enabled: isEnterpriseUiEnabled(),
+  });
+}
+
+export function useActivateLicense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: activateLicense,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "license-status"] });
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "system-status"] });
+    },
+  });
+}
+
+export function useVerifyLicense() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: verifyLicense,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "license-status"] });
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "system-status"] });
+    },
   });
 }
 

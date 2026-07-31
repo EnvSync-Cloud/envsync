@@ -69,7 +69,7 @@ export function SyncRunsList({
   syncRuns,
   onTriggerSync,
   isTriggering = false,
-  basePath = "/enterprise/sync-runs",
+  basePath = "/organisation/sync",
 }: SyncRunsListProps) {
   const sortedRuns = useMemo(
     () =>

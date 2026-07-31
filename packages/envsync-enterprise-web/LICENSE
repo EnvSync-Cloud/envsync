@@ -16,7 +16,7 @@ subscription or other written license from EnvSync Cloud.
 
 - Enterprise dashboard WebModule registry and injected pages
 - Integrations UI (providers, org secrets, sync runs, bindings)
-- Future modules absorbed from `envsync-management-web` (Phase 5c)
+- License activate/verify and org-level sync diagnostics (ex-management SPA)
 
 ## What this does not cover
 
