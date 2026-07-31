@@ -263,7 +263,7 @@ function buildReleaseArtifacts(config: DeployConfig, edition: DeployEdition): Re
 			publish: edition === "oss",
 		},
 		{
-			name: "@envsync-cloud/deploy-cli",
+			name: "@envsync-cloud/deploy-enterprise",
 			registry: "github-packages",
 			edition: "enterprise",
 			publish: edition === "enterprise",

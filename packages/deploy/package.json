@@ -1,6 +1,7 @@
 {
   "name": "@envsync-cloud/deploy",
   "version": "0.11.0",
+  "description": "OSS CLI for self-hosted EnvSync deployment on Docker Swarm",
   "type": "module",
   "bin": {
     "envsync-deploy": "dist/index.js"
@@ -37,8 +38,7 @@
   ],
   "dependencies": {
     "chalk": "^5.6.2",
-    "yaml": "^2.8.1",
-    "zod": "^3.25.76"
+    "yaml": "^1.10.2"
   },
   "devDependencies": {
     "@envsync-cloud/deploy-core": "workspace:*",

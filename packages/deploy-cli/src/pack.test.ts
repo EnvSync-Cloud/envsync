@@ -22,16 +22,22 @@ function runPackDryRun(packageDir: string) {
 	return JSON.parse(match[1]) as Array<{ files: PackEntry[] }>;
 }
 
-describe("deploy-cli package artifact", () => {
-	test("pack output contains built artifacts and excludes source files", () => {
+describe("deploy-enterprise package artifact", () => {
+	test("pack output uses enterprise bin name and excludes source", () => {
 		const packageDir = path.resolve(import.meta.dir, "..");
 		const pkg = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8")) as {
+			name: string;
 			bin: Record<string, string>;
+			publishConfig?: { access?: string; registry?: string };
 		};
 		const [{ files }] = runPackDryRun(packageDir);
 		const filePaths = files.map(file => file.path);
 
-		expect(pkg.bin["envsync-deploy"]).toBe("./dist/index.js");
+		expect(pkg.name).toBe("@envsync-cloud/deploy-enterprise");
+		expect(pkg.bin["envsync-deploy-enterprise"]).toBe("./dist/index.js");
+		expect(pkg.bin["envsync-deploy"]).toBeUndefined();
+		expect(pkg.publishConfig?.access).toBe("restricted");
+		expect(pkg.publishConfig?.registry).toContain("npm.pkg.github.com");
 		expect(filePaths).toContain("dist/index.js");
 		expect(filePaths).toContain("README.md");
 		expect(filePaths).toContain("LICENSE");

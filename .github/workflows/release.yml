@@ -232,7 +232,7 @@ jobs:
           fi
 
           if [ "${DEPLOY_VERSION}" != "${ROOT_VERSION}" ]; then
-            echo "deploy-cli version ${DEPLOY_VERSION} does not match root version ${ROOT_VERSION}"
+            echo "OSS deploy package version ${DEPLOY_VERSION} does not match root version ${ROOT_VERSION}"
             exit 1
           fi
 
@@ -318,10 +318,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-enterprise-deploy-cli:
-    name: Publish Enterprise Deploy CLI
+    name: Publish Enterprise Deploy CLI (private)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -331,11 +332,11 @@ jobs:
         with:
           bun-version: "1.3.9"
 
-      - name: Set up Node
+      - name: Set up Node (GitHub Packages)
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          registry-url: "https://registry.npmjs.org"
+          registry-url: "https://npm.pkg.github.com"
           scope: "@envsync-cloud"
 
       - name: Install dependencies
@@ -345,7 +346,13 @@ jobs:
         run: |
           ROOT_VERSION=$(node -p "require('./package.json').version")
           DEPLOY_VERSION=$(node -p "require('./packages/deploy-cli/package.json').version")
+          PKG_NAME=$(node -p "require('./packages/deploy-cli/package.json').name")
           TAG_NAME="${GITHUB_REF_NAME}"
+
+          if [ "${PKG_NAME}" != "@envsync-cloud/deploy-enterprise" ]; then
+            echo "Expected package name @envsync-cloud/deploy-enterprise, got ${PKG_NAME}"
+            exit 1
+          fi
 
           if [ "${TAG_NAME}" != "v${ROOT_VERSION}" ]; then
             echo "Tag ${TAG_NAME} does not match root package version v${ROOT_VERSION}"
@@ -353,7 +360,7 @@ jobs:
           fi
 
           if [ "${DEPLOY_VERSION}" != "${ROOT_VERSION}" ]; then
-            echo "deploy-cli version ${DEPLOY_VERSION} does not match root version ${ROOT_VERSION}"
+            echo "deploy-enterprise version ${DEPLOY_VERSION} does not match root version ${ROOT_VERSION}"
             exit 1
           fi
 
@@ -379,14 +386,11 @@ jobs:
         working-directory: packages/deploy-cli
         run: npm pack --dry-run
 
-      - name: Wait for 10 sec
-        run: sleep 10
-
-      - name: Publish to NPM Packages
+      - name: Publish to GitHub Packages (private / restricted)
         working-directory: packages/deploy-cli
-        run: npm publish --provenance --access public
+        run: npm publish --access restricted
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-ts-sdk:
     name: Publish TypeScript SDK

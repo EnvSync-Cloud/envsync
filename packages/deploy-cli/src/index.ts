@@ -10,6 +10,11 @@ import * as renderHelpers from "./render";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 
+// Enterprise package binary defaults to forced enterprise edition when not pre-set by OSS entry.
+if (!process.env.ENVSYNC_DEPLOY_FORCE_EDITION && process.env.npm_package_name === "@envsync-cloud/deploy-enterprise") {
+	process.env.ENVSYNC_DEPLOY_FORCE_EDITION = "enterprise";
+}
+
 interface DeployConfig {
 	edition?: "oss" | "enterprise";
 	source: {
@@ -382,8 +387,18 @@ const MANAGED_VERSIONED_IMAGE_PREFIXES = {
 	management_api: "ghcr.io/envsync-cloud/envsync-management-api:",
 	keycloak: "envsync-keycloak:",
 	web: "ghcr.io/envsync-cloud/envsync-web-static:",
+	web_oss: "ghcr.io/envsync-cloud/envsync-web-oss-static:",
 	landing: "ghcr.io/envsync-cloud/envsync-landing-static:",
 } as const;
+
+/** Set by OSS package entry (`ENVSYNC_DEPLOY_FORCE_EDITION=oss`) so one codebase serves both products. */
+function getForcedDeployEdition(): "oss" | "enterprise" | null {
+	const value = process.env.ENVSYNC_DEPLOY_FORCE_EDITION?.trim().toLowerCase();
+	if (value === "oss" || value === "enterprise") {
+		return value;
+	}
+	return null;
+}
 
 function formatShellArg(arg: string) {
 	if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(arg)) return arg;
@@ -1006,11 +1021,20 @@ function logReleaseContext(config: DeployConfig) {
 }
 
 function renderHelpBlock() {
-	return [
-		`${chalk.bold("EnvSync Self-Host Deploy CLI")}`,
+	const forced = getForcedDeployEdition();
+	const product =
+		forced === "oss"
+			? "EnvSync OSS Self-Host Deploy"
+			: forced === "enterprise"
+				? "EnvSync Enterprise Self-Host Deploy"
+				: "EnvSync Self-Host Deploy CLI";
+	const bin = forced === "oss" ? "envsync-deploy" : forced === "enterprise" ? "envsync-deploy-enterprise" : "envsync-deploy";
+	const lines = [
+		`${chalk.bold(product)}`,
+		forced ? chalk.dim(`Forced edition: ${forced}`) : "",
 		"",
 		`${chalk.dim("Usage")}`,
-		"  envsync-deploy <command> [options]",
+		`  ${bin} <command> [options]`,
 		"",
 		`${chalk.dim("Commands")}`,
 		"  preinstall           Prepare the host with Docker, Swarm, and required packages",
@@ -1021,16 +1045,22 @@ function renderHelpBlock() {
 		"  promote [blue|green] Promote the requested or inactive API slot",
 		"  rollback             Switch traffic back to the previous API slot",
 		"  health [--json]      Show operator health or machine-readable health JSON",
-		"  plan-topology [file] Render the Enterprise topology plan from deploy.yaml",
-		"  validate-topology    Validate Enterprise edition topology rules",
+		"  plan-topology [file] Render the topology plan from deploy.yaml",
+		"  validate-topology    Validate edition topology rules",
 		"  upgrade [version]    Pin a target release and deploy it",
 		"  upgrade-deps         Refresh dependency images and redeploy",
 		"  vpn pubkey           Generate or print WireGuard server public key",
 		"  vpn whitelist <key>  Add a client public key to allowed peers",
 		"  vpn status           Show WireGuard server/peer status",
-		"  license issue-cert   Issue and install an Enterprise certificate bundle",
-		"  license renew-cert   Renew and install the Enterprise certificate bundle",
-		"  license validate-cert Validate the installed Enterprise certificate bundle files",
+	];
+	if (forced !== "oss") {
+		lines.push(
+			"  license issue-cert   Issue and install an Enterprise certificate bundle",
+			"  license renew-cert   Renew and install the Enterprise certificate bundle",
+			"  license validate-cert Validate the installed Enterprise certificate bundle files",
+		);
+	}
+	lines.push(
 		"  org create           Create organization via setup token (self-host; first org + further if allowed)",
 		"  org status           Show setup/org readiness via setup token",
 		"  backup               Create a managed self-host backup archive",
@@ -1042,7 +1072,8 @@ function renderHelpBlock() {
 		"  --deploy             Used with restore to start services after restore",
 		"  --name/--email/--password  Non-interactive org create flags",
 		"  --interactive / -i   Prompt for org create fields",
-	].join("\n");
+	);
+	return lines.filter(Boolean).join("\n");
 }
 
 type OperatorOverview = {
@@ -1168,13 +1199,17 @@ function assertSemverVersion(version: string, label = "release version") {
 	}
 }
 
-function versionedImages(version: string) {
+function versionedImages(version: string, edition: "oss" | "enterprise" = "enterprise") {
 	assertSemverVersion(version);
+	const web =
+		edition === "oss"
+			? `ghcr.io/envsync-cloud/envsync-web-oss-static:${version}`
+			: `ghcr.io/envsync-cloud/envsync-web-static:${version}`;
 	return {
 		api: `ghcr.io/envsync-cloud/envsync-api:${version}`,
 		management_api: `ghcr.io/envsync-cloud/envsync-management-api:${version}`,
 		keycloak: `envsync-keycloak:${version}`,
-		web: `ghcr.io/envsync-cloud/envsync-web-static:${version}`,
+		web,
 		landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
 	};
 }
@@ -1187,6 +1222,12 @@ function defaultSourceConfig(version: string) {
 }
 
 function isOssConfig(config: DeployConfig) {
+	if (getForcedDeployEdition() === "oss") {
+		return true;
+	}
+	if (getForcedDeployEdition() === "enterprise") {
+		return false;
+	}
 	return config.edition === "oss";
 }
 
@@ -1194,7 +1235,16 @@ function isManagedVersionedImage(
 	image: string | undefined,
 	key: keyof Pick<DeployConfig["images"], "api" | "keycloak" | "web" | "landing" | "management_api">,
 ) {
-	return typeof image === "string" && image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES[key]);
+	if (typeof image !== "string") {
+		return false;
+	}
+	if (key === "web") {
+		return (
+			image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES.web)
+			|| image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES.web_oss)
+		);
+	}
+	return image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES[key]);
 }
 
 function resolveReleaseVersion(raw: Partial<DeployConfig>) {
@@ -1226,14 +1276,19 @@ function requireDefined<T>(value: T | undefined, label: string): T {
 
 function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 	const version = resolveReleaseVersion(raw);
-	const derivedImages = versionedImages(version);
+	const forced = getForcedDeployEdition();
+	const edition = forced ?? raw.edition ?? "enterprise";
+	const derivedImages = versionedImages(version, edition);
 	const { release_channel: _legacyReleaseChannel, ...rest } = raw;
 	const rootDomain = requireDefined(raw.domain?.root_domain, "domain.root_domain");
 	const acmeEmail = requireDefined(raw.domain?.acme_email, "domain.acme_email");
 	const stackName = requireDefined(raw.services?.stack_name, "services.stack_name");
+	if (forced && raw.edition && raw.edition !== forced) {
+		logWarn(`Ignoring deploy.yaml edition=${raw.edition}; this CLI is forced to edition=${forced}.`);
+	}
 	return {
 		...rest,
-		edition: raw.edition ?? "enterprise",
+		edition,
 		source: {
 			repo_url: raw.source?.repo_url ?? DEFAULT_SOURCE_REPO_URL,
 			ref: `v${version}`,
@@ -3726,17 +3781,23 @@ function printHealthSummary(checks: {
 	}
 
 	printHealthSection("Next Steps");
+	const bin = getForcedDeployEdition() === "enterprise" ? "envsync-deploy-enterprise" : "envsync-deploy";
 	if (!checks.bootstrap.completed) {
-		printHealthLine("Recommended", chalk.cyan("envsync-deploy bootstrap"));
+		printHealthLine("Recommended", chalk.cyan(`${bin} bootstrap`));
 		return;
 	}
-	if (checks.deploy.api !== "healthy" || checks.deploy.web !== "healthy" || (checks.edition !== "oss" && checks.deploy.landing !== "healthy")) {
-		printHealthLine("Recommended", chalk.cyan("envsync-deploy deploy"));
+	// Landing is not required on self-host (Phase 2).
+	if (checks.deploy.api !== "healthy" || checks.deploy.web !== "healthy") {
+		printHealthLine("Recommended", chalk.cyan(`${bin} deploy`));
 		return;
 	}
-	printHealthLine("Inspect JSON", chalk.cyan("envsync-deploy health --json"));
-	printHealthLine("Upgrade", chalk.cyan("envsync-deploy upgrade"));
-	printHealthLine("Backup", chalk.cyan("envsync-deploy backup"));
+	if (checks.first_org && !checks.first_org.ready) {
+		printHealthLine("Recommended", chalk.cyan(`${bin} org create --interactive`));
+		return;
+	}
+	printHealthLine("Inspect JSON", chalk.cyan(`${bin} health --json`));
+	printHealthLine("Upgrade", chalk.cyan(`${bin} upgrade`));
+	printHealthLine("Backup", chalk.cyan(`${bin} backup`));
 }
 
 async function cmdPreinstall() {
@@ -3778,7 +3839,7 @@ async function cmdSetup() {
 	const acmeEmail = await ask("ACME email", `admin@${rootDomain}`);
 	const releaseVersion = await ask("Release version", getDeployCliVersion());
 	assertSemverVersion(releaseVersion, "release version");
-	const releaseImages = versionedImages(releaseVersion);
+	const releaseImages = versionedImages(releaseVersion, getForcedDeployEdition() ?? "enterprise");
 	const adminUser = await ask("Keycloak admin user", "admin");
 	const adminPassword = await ask("Keycloak admin password", randomSecret(12));
 	const smtpHost = await ask("SMTP host", "smtp.example.com");
@@ -4531,7 +4592,7 @@ async function cmdUpgrade(targetVersion?: string) {
 	}
 	config.images = {
 		...config.images,
-		...versionedImages(desiredVersion),
+		...versionedImages(desiredVersion, getForcedDeployEdition() ?? (isOssConfig(config) ? "oss" : "enterprise")),
 	};
 	saveDesiredConfig(config);
 	if (currentOptions.dryRun) {
@@ -5215,6 +5276,9 @@ async function main() {
 			await cmdVpn(positionals);
 			break;
 		case "license":
+			if (getForcedDeployEdition() === "oss") {
+				throw new Error("License commands are not available in the OSS deploy CLI. Use @envsync-cloud/deploy-enterprise.");
+			}
 			await cmdLicense(positionals[0]);
 			break;
 		case "org":
