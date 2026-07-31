@@ -1,12 +1,12 @@
 import { type Context } from "hono";
 
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { OidcService } from "@/services/oidc.service";
 import { AuditLogService } from "@/services/audit_log.service";
 
 export class OidcController {
 	public static readonly createProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("oidc");
 
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
@@ -36,7 +36,7 @@ export class OidcController {
 	};
 
 	public static readonly getProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("oidc");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 
@@ -50,14 +50,14 @@ export class OidcController {
 	};
 
 	public static readonly getAllProviders = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("oidc");
 		const org_id = c.get("org_id");
 		const providers = await OidcService.getProvidersByOrg(org_id);
 		return c.json(providers, 200);
 	};
 
 	public static readonly updateProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("oidc");
 
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
@@ -88,7 +88,7 @@ export class OidcController {
 	};
 
 	public static readonly deleteProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("oidc");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");

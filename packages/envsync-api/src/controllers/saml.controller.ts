@@ -1,6 +1,6 @@
 import { type Context } from "hono";
 
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { setWebAuthCookies, setActiveMembershipCookie } from "@/helpers/web-auth";
 import { SamlService } from "@/services/saml.service";
 import { UserService } from "@/services/user.service";
@@ -55,7 +55,7 @@ async function generateSamlSessionToken(userId: string, email: string): Promise<
 
 export class SamlController {
 	public static readonly createProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const body = await c.req.json();
@@ -85,7 +85,7 @@ export class SamlController {
 	};
 
 	public static readonly getProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 
@@ -99,14 +99,14 @@ export class SamlController {
 	};
 
 	public static readonly getAllProviders = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const providers = await SamlService.getProvidersByOrg(org_id);
 		return c.json(providers, 200);
 	};
 
 	public static readonly updateProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
@@ -139,7 +139,7 @@ export class SamlController {
 	};
 
 	public static readonly deleteProvider = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
@@ -164,14 +164,14 @@ export class SamlController {
 	};
 
 	public static readonly getMetadata = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const metadata = await SamlService.getMetadata(org_id);
 		return c.text(metadata, 200, { "Content-Type": "application/xml" });
 	};
 
 	public static readonly initiateSso = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const body = await c.req.json();
 		const provider = await SamlService.getProvider(body.provider_id);

@@ -1,5 +1,5 @@
 import { type Context } from "hono";
-import { assertEnterprise } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "@/helpers/enterprise-guard";
 import { RotationService } from "@/services/rotation.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { AuthorizationService } from "@/services/authorization.service";
@@ -7,7 +7,7 @@ import { EnvTypeService } from "@/services/env_type.service";
 
 export class RotationController {
 	public static readonly createPolicy = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const body = await c.req.json();
@@ -57,7 +57,7 @@ export class RotationController {
 	};
 
 	public static readonly getPolicies = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const app_id = c.req.query("app_id");
 		const env_type_id = c.req.query("env_type_id");
@@ -75,7 +75,7 @@ export class RotationController {
 	};
 
 	public static readonly getPolicy = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const { id } = c.req.param();
 
@@ -84,7 +84,7 @@ export class RotationController {
 	};
 
 	public static readonly updatePolicy = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { id } = c.req.param();
@@ -117,7 +117,7 @@ export class RotationController {
 	};
 
 	public static readonly deletePolicy = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { id } = c.req.param();
@@ -144,7 +144,7 @@ export class RotationController {
 	};
 
 	public static readonly triggerRotation = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { id } = c.req.param();
@@ -178,7 +178,7 @@ export class RotationController {
 	};
 
 	public static readonly getRotationStates = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const { id } = c.req.param();
 
@@ -187,7 +187,7 @@ export class RotationController {
 	};
 
 	public static readonly revokeExpiredCredentials = async (c: Context) => {
-		assertEnterprise();
+		await assertEntitled("rotation");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 

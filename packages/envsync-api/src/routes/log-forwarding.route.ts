@@ -18,7 +18,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
-app.use(enterpriseGuard());
+app.use(enterpriseGuard("log_forwarding"));
 
 app.post(
     "/",
