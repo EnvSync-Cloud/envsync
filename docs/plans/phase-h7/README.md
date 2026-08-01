@@ -50,3 +50,17 @@ cd packages/envsync-api && bun test tests/mock/enterprise-sync.test.ts tests/moc
 # if local private tree:
 # cd packages/license-server && bun test
 ```
+
+## E2E pack (follow-up)
+
+API + UI coverage for cutover invariants (branch `feat/the-big-update-e2e-pack`):
+
+```sh
+# API (after e2e-setup init)
+cd packages/envsync-api && bun test tests/e2e/flows/create-organization.e2e.test.ts \
+  --preload tests/e2e/helpers/real-setup.ts --timeout 60000
+
+# UI (enterprise Vite default; harness up)
+cd apps/envsync-web && bun run ui:features -- enterprise-routes
+# or full regression: bun run ui:regression
+```
