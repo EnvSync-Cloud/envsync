@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — E2E pack (create-org channel + enterprise routes)
+
+### Added
+
+- **API E2E:** `create-organization.e2e.test.ts` — hosted create-org, selfhost 403, create-workspace 404, cookie-session requirement
+- **UI E2E:** `enterprise-routes.spec.ts` — organisation integrations/license/sync, project integrations, no management SPA
+- **UI regression:** core route surface includes EE organisation routes
+
+---
+
 ## Unreleased — hardening H7 (deferred close-out)
 
 ### Added
