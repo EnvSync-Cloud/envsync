@@ -62,9 +62,10 @@ export const BaseEnvSchema = z.object({
 	MANAGEMENT_API_URL: z.string().default("http://localhost:4001"),
 	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
 	MANAGEMENT_API_PORT: z.string().default("4001"),
+	// Default enterprise favors Hosted/local EE dev. Self-host OSS must set oss explicitly.
 	ENVSYNC_EDITION: z.enum(["oss", "enterprise"]).default("enterprise"),
-	// Reserved for program plan Phase 1+ (no behavior until policy wiring):
-	// hosted = multi-tenant SaaS; selfhosted = single-tenant product defaults.
+	// Optional: when unset, EditionPolicyService maps OSS→selfhosted, enterprise→hosted.
+	// Self-host enterprise installs MUST set selfhosted (see CONTRIBUTING footguns).
 	ENVSYNC_DEPLOYMENT_MODE: z.enum(["hosted", "selfhosted"]).optional(),
 	// Phase 7: max_orgs comes from entitlement claims. ENVSYNC_MAX_ORGS is ignored unless
 	// ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE=true (stranded multi-org support installs only).

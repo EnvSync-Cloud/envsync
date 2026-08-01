@@ -1,7 +1,8 @@
 # EnvSync Program Plan: No Piggybacking
 
 **Status:** Decisions locked; **implementation P0–P7 complete on `feat/the-big-update`**.  
-**Follow-on:** [2026-08-post-program-hardening.md](./2026-08-post-program-hardening.md) (Hosted cutover H1, EE extraction H3, envsync-ui H5).  
+**Hardening:** H1–H6 on track (`feat/the-big-update-hN`) — see [2026-08-post-program-hardening.md](./2026-08-post-program-hardening.md).  
+**Remaining ops (not code):** Hosted secrets checklist + staging smoke (H1.4–H1.5); deeper EE extraction (H3.4+); private license-server publish.  
 **Date:** 2026-08-01 (amended same day: org channels, license ops, FE D9–D12; post-review hardening plan same day)  
 **Track:** `feat/the-big-update` · phases `feat/the-big-update-pN` · hardening `feat/the-big-update-hN`  
 **Scope:** Tenancy, org-create channels, deploy CLIs, management API, licensing, landing, dual-license monorepo, FE injection, design tokens  

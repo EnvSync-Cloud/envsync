@@ -200,6 +200,20 @@ if (fs.existsSync(path.join(eeServicesDir, "enterprise-sync.service.ts"))) {
 	}
 }
 
+// 12) H6: envsync-web must not list proprietary EE web as a production dependency
+const webPkg = JSON.parse(
+	fs.readFileSync(path.join(root, "apps/envsync-web/package.json"), "utf8"),
+) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+if (webPkg.dependencies?.["envsync-enterprise-web"]) {
+	fail(
+		"envsync-web production dependencies must not include envsync-enterprise-web (use devDependency for Vite enterprise builds)",
+	);
+} else if (!webPkg.devDependencies?.["envsync-enterprise-web"]) {
+	fail("envsync-web must list envsync-enterprise-web as a devDependency for enterprise/hosted Vite builds");
+} else {
+	ok("envsync-web keeps envsync-enterprise-web as devDependency only");
+}
+
 if (failed) {
 	process.exit(1);
 }

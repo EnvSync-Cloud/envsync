@@ -51,8 +51,12 @@ PROPRIETARY
 ### Frontend
 
 - OSS: Vite `@enterprise-modules` → empty stub.
-- Enterprise: `@enterprise-modules` → `packages/envsync-enterprise-web`.
+- Enterprise / Hosted: `@enterprise-modules` → `packages/envsync-enterprise-web`
+  (`build:enterprise` / `build:hosted`). Hosted CF **must not** use `build:oss`.
+- `envsync-enterprise-web` is a **devDependency** of `envsync-web` (not a production dep)
+  so MIT production graphs stay free of proprietary packages; monorepo Vite still resolves it.
 - Shell chrome is shared; EE pages import UI via `@shell/*`.
+- Design tokens: MIT `envsync-ui` (do not fork `:root` in apps).
 
 ### Deploy
 

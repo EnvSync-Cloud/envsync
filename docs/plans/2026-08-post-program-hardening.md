@@ -1,6 +1,6 @@
 # Plan: Post–no-piggyback hardening & Hosted cutover
 
-**Status:** Proposed (architecture review after P0–P7 on `feat/the-big-update`)  
+**Status:** H1–H6 code slices complete on `feat/the-big-update` (ops cutover H1.4–H1.5 still open)  
 **Date:** 2026-08-01  
 **Depends on:** [2026-08-no-piggyback-program.md](./2026-08-no-piggyback-program.md) (phases 0–7 complete on track)  
 **Branch convention:** continue `feat/the-big-update` · slices `feat/the-big-update-hN` (h = hardening)
@@ -267,8 +267,11 @@ Does **not** block Hosted cutover.
 ### Sprint B (hygiene)
 
 - [x] H2 naming (`feat/the-big-update-h2`)  
-- [ ] H6.1 program plan status  
-- [ ] H6.5 footgun docs  
+- [x] H6.1 program plan status  
+- [x] H6.2 SUPPORT edition matrix  
+- [x] H6.5 footgun docs  
+- [x] H6.6 envsync-enterprise-web as web devDependency  
+- [x] H6 full — [phase-h6/README.md](./phase-h6/README.md)  
 
 ### Sprint C (architecture depth)
 

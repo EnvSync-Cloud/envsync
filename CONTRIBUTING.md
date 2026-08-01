@@ -24,8 +24,30 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 When working on tenancy, deploy CLI split, management API, licensing, or FE edition isolation:
 
 - Plan: [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md)
+- Hardening: [docs/plans/2026-08-post-program-hardening.md](./docs/plans/2026-08-post-program-hardening.md)
 - ADR: [docs/adr/0001-no-piggyback-program.md](./docs/adr/0001-no-piggyback-program.md)
-- Track: `feat/the-big-update` with phase branches `feat/the-big-update-pN`
+- Track: `feat/the-big-update` with phase branches `feat/the-big-update-pN` / hardening `feat/the-big-update-hN`
+
+### Deployment mode & edition footguns
+
+Local defaults favor Hosted-like development. That is intentional — and easy to misread as production self-host config.
+
+| Variable | Default / missing behavior | Footgun |
+|----------|----------------------------|---------|
+| `ENVSYNC_EDITION` | Defaults to **`enterprise`** in `env.ts` | An “OSS” mental model still loads enterprise edition flags unless you set `ENVSYNC_EDITION=oss`. |
+| `ENVSYNC_DEPLOYMENT_MODE` | **Optional.** If unset: OSS → `selfhosted`; enterprise → **`hosted`** | Self-host **enterprise** installs that omit the var behave as **Hosted** (multi-org SaaS policy, license bypass for multi-org). **Always set `ENVSYNC_DEPLOYMENT_MODE=selfhosted` for self-host.** |
+| Hosted FE build | CF `deploy-fe` must use **`build:hosted`** | Never point Hosted Cloudflare at `build:oss` — EE dashboard modules will be empty stubs. |
+| Org create API | `POST /auth/create-organization` only | Do not reintroduce `/auth/create-workspace`. |
+
+Self-host checklist:
+
+```bash
+ENVSYNC_DEPLOYMENT_MODE=selfhosted
+ENVSYNC_EDITION=oss          # or enterprise for licensed EE
+# EE self-host also needs entitlement verify + setup token / deploy CLI for org create
+```
+
+See [docs/SUPPORT.md](./docs/SUPPORT.md) and [docs/LICENSE-RUNBOOK.md](./docs/LICENSE-RUNBOOK.md).
 
 ## API / Backend Changes (`packages/envsync-api/`)
 
@@ -103,13 +125,15 @@ MIT-path contributions remain under MIT.
 ### Guardrails for contributors
 
 - Do not add proprietary packages as **production** dependencies of MIT packages
-  (CI: `bun run check:boundaries`).
+  (CI: `bun run check:boundaries`). `envsync-enterprise-web` is a **devDependency**
+  of `envsync-web` (Vite resolves it only for enterprise/hosted builds).
 - Do not reintroduce `apps/envsync-management-web` or monorepo spawn shims for OSS deploy.
 - Prefer **Organization** in user-facing copy; org create API is
   `POST /auth/create-organization` only.
 - Self-host multi-org limits come from **entitlement claims**; do not rely on
   bare `ENVSYNC_MAX_ORGS` (support override only).
 - Shared extension seams live in API/web module loaders; keep core shells free of EE imports.
+- Shared design tokens live in MIT `envsync-ui` — do not fork `:root` / `.dark` blocks in apps.
 
 ## CLI Changes (`packages/envsync-cli/`)
 
