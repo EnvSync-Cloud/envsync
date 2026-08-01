@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — hardening H4 (license issuer)
+
+### Changed
+
+- License-server issues **Ed25519 (EdDSA) entitlement JWTs** as `signed_lease` (features, max_orgs).
+- Ops: [docs/LICENSE-RUNBOOK.md](./docs/LICENSE-RUNBOOK.md) for Hosted vs self-host EE.
+
+---
+
 ## Unreleased — hardening H3 (EE extraction)
 
 ### Changed
