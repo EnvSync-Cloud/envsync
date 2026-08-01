@@ -23,7 +23,8 @@
     "e2e-setup": "bun run scripts/e2e-setup.ts",
     "test:mock": "turbo test:mock",
     "test:e2e": "bun run e2e-setup init && turbo test:e2e",
-    "check:boundaries": "bun run scripts/check-package-boundaries.ts"
+    "check:boundaries": "bun run scripts/check-package-boundaries.ts",
+    "check:hosted-cutover": "bun run scripts/hosted-cutover-check.ts"
   },
   "peerDependencies": {
     "typescript": "^5",

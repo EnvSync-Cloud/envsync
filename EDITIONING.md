@@ -34,11 +34,15 @@ MIT
   apps/envsync-landing
 
 PROPRIETARY
-  envsync-enterprise       (management module registry)
+  envsync-enterprise       (management modules + EE services/engines/migrations)
   envsync-enterprise-web   (dashboard WebModule[] + pages)
   envsync-management-api   (management process)
   deploy-cli               (npm: deploy-enterprise)
 ```
+
+EE services (OIDC, SAML, rotation, dynamic secrets, integrations, log-forwarding) and
+their migrations live under `envsync-enterprise`. `envsync-api` keeps thin monorepo
+re-export shims only (no production package.json dependency).
 
 ## How edition injection works
 

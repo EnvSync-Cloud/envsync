@@ -33,21 +33,26 @@ API keeps **re-export shims** at old `@/services/...` paths (monorepo relative, 
 - Background: `startEnterpriseSyncWorker` owned by enterprise; management modules use it
 - Loaders: `startEnterpriseSync` delegates to enterprise background
 
-## Deferred
+## Follow-up (H7)
 
-| ID | Work |
-|----|------|
-| H3.4 | Migration stream split |
-| H3.x | Move OIDC/SAML/rotation/dyn-secret services + routes into enterprise |
-| H3.6 | `envsync-core-domain` extraction |
+| ID | Work | Status |
+|----|------|--------|
+| H3.4 | EE migrations physical ownership in `envsync-enterprise/src/migrations` + API re-export shims | Done in H7 |
+| H3.x | Move OIDC/SAML/rotation/dyn-secret/log-forwarding services + engines | Done in H7 |
+| H3.x | Move EE HTTP controllers/routes into enterprise package | Deferred (still via management-route-loaders) |
+| H3.6 | `envsync-core-domain` extraction | Deferred |
 
-## Acceptance (this slice)
+See [phase-h7/README.md](../phase-h7/README.md).
+
+## Acceptance (this slice + H7 services)
 
 - [x] Inventory documented  
 - [x] Integration/sync services owned by envsync-enterprise  
+- [x] Capability services (OIDC/SAML/rotation/dyn-secret/log-forwarding) owned by envsync-enterprise  
+- [x] EE migrations owned by envsync-enterprise with core re-export shims  
 - [x] envsync-api production deps still exclude envsync-enterprise  
 - [x] Re-export shims keep existing imports working  
-- [ ] Full EE route package ownership  
+- [ ] Full EE route package ownership (controllers still in api)  
 
 ## Verify
 

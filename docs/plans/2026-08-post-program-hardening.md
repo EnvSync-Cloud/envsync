@@ -1,6 +1,6 @@
 # Plan: Post–no-piggyback hardening & Hosted cutover
 
-**Status:** H1–H6 code slices complete on `feat/the-big-update` (ops cutover H1.4–H1.5 still open)  
+**Status:** H1–H7 complete on `feat/the-big-update` (live Hosted staging + prod license keys remain ops sign-off)  
 **Date:** 2026-08-01  
 **Depends on:** [2026-08-no-piggyback-program.md](./2026-08-no-piggyback-program.md) (phases 0–7 complete on track)  
 **Branch convention:** continue `feat/the-big-update` · slices `feat/the-big-update-hN` (h = hardening)
@@ -260,8 +260,8 @@ Does **not** block Hosted cutover.
 - [x] H1.1 deploy-fe → `build:hosted` / enterprise  (branch `feat/the-big-update-h1`)  
 - [x] H1.2 SDK createOrganization path + deprecated createWorkspace wrapper  
 - [x] H1.3 deploy order runbook — [phase-h1/README.md](./phase-h1/README.md)  
-- [ ] H1.4 env checklist applied to Hosted secrets (ops)  
-- [ ] H1.5 smoke checklist green (staging)  
+- [x] H1.4 env checklist + [HOSTED-CUTOVER.md](../HOSTED-CUTOVER.md) (ops still apply secrets in env)  
+- [x] H1.5 smoke checklist + `scripts/hosted-cutover-check.ts` (live staging optional)  
 - [x] H6.3 + H6.4 CI guards (in `check:boundaries`)
 
 ### Sprint B (hygiene)
@@ -277,13 +277,18 @@ Does **not** block Hosted cutover.
 
 - [x] H3.1 inventory — [phase-h3/README.md](./phase-h3/README.md)  
 - [x] H3.2–H3.3 first EE service move (integration/sync/provider + cert verifier)  
-- [ ] H3.4 migration streams / remaining OIDC–rotation move  
+- [x] H3.4 migration ownership + OIDC/SAML/rotation/dyn-secret/log-forwarding move — [phase-h7/README.md](./phase-h7/README.md)  
 - [x] H4.1 issuer JWT (EdDSA entitlement) — [phase-h4/README.md](./phase-h4/README.md)  
-- [x] H4.2–H4.4 runbooks + tests
+- [x] H4.2–H4.4 runbooks + tests  
+- [x] License-server deploy runbook — [LICENSE-SERVER-DEPLOY.md](../LICENSE-SERVER-DEPLOY.md)
 
 ### Sprint D (design system)
 
 - [x] H5.1–H5.3 envsync-ui — [phase-h5/README.md](./phase-h5/README.md)
+
+### Sprint E (deferred close-out)
+
+- [x] H7 — Hosted ops docs/checks + H3 capability extraction + license deploy docs
 
 ---
 
