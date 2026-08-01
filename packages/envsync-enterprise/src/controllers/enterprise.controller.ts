@@ -2,8 +2,8 @@ import type { Context } from "hono";
 
 import { assertEntitled } from "@/helpers/enterprise-guard";
 import { AuditLogService } from "@/services/audit_log.service";
-import { EnterpriseIntegrationService } from "@/services/enterprise-integration.service";
-import { EnterpriseProviderService } from "@/services/enterprise-provider.service";
+import { EnterpriseIntegrationService } from "../services/enterprise-integration.service";
+import { EnterpriseProviderService } from "../services/enterprise-provider.service";
 
 export class EnterpriseController {
 	public static readonly getProviders = async (c: Context) => {

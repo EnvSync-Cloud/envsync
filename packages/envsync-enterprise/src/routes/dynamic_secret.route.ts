@@ -6,7 +6,7 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
-import { DynamicSecretController } from "@/controllers/dynamic_secret.controller";
+import { DynamicSecretController } from "../controllers/dynamic_secret.controller";
 import {
 	createDynamicSecretEngineRequestSchema,
 	updateDynamicSecretEngineRequestSchema,
@@ -17,7 +17,7 @@ import {
 	dynamicSecretLeasesResponseSchema,
 	revokeLeaseResponseSchema,
 	cleanupResponseSchema,
-} from "@/validators/dynamic_secret.validator";
+} from "../validators/dynamic_secret.validator";
 import { errorResponseSchema } from "@/validators/common";
 
 const app = new Hono();

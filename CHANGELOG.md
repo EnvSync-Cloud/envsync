@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — no-piggyback P1 (management HTTP ownership)
+
+### Changed
+
+- EE HTTP surface (routes/controllers/validators for integrations, license, OIDC, SAML,
+  rotation, dynamic secrets, log-forwarding) lives under `envsync-enterprise`.
+- `enterpriseManagementModules` loads local routes; core `management-route-loaders`
+  only exposes shared onboarding + system.
+- `envsync-management-api` owns `create-app.ts` process factory wrap.
+
+### Still open
+
+- `@/*` from enterprise into api internals; shared app factory still in core; envsync-ui tokens-only.
+
+---
+
 ## Unreleased — no-piggyback P0 (graph honesty)
 
 ### Fixed

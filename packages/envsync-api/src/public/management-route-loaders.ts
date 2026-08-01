@@ -1,27 +1,15 @@
 /**
- * Public route/worker loaders for the management surface.
- * Consumed by `envsync-enterprise` module registry (no relative monorepo paths).
+ * Shared (core) route loaders still used by management surface.
+ *
+ * P1: EE modules (license, enterprise, oidc, saml, rotation, dynamic_secret,
+ * log_forwarding) live in `envsync-enterprise` and are registered via
+ * `enterpriseManagementModules` — they are no longer loaded from core.
  */
 export const managementRouteLoaders = {
 	onboarding: async () => (await import("@/routes/onboarding.route")).default,
-	license: async () => (await import("@/routes/license.route")).default,
-	enterprise: async () => (await import("@/routes/enterprise.route")).default,
 	system: async () => (await import("@/routes/system.route")).default,
-	oidc: async () => (await import("@/routes/oidc.route")).default,
-	saml: async () => (await import("@/routes/saml.route")).default,
-	rotation: async () => (await import("@/routes/rotation.route")).default,
-	dynamicSecret: async () => (await import("@/routes/dynamic_secret.route")).default,
-	logForwarding: async () => (await import("@/routes/log-forwarding.route")).default,
 	startLicenseHeartbeat: async () => {
 		const { startLicenseHeartbeat } = await import("./license");
 		await startLicenseHeartbeat();
-	},
-	/**
-	 * @deprecated Prefer `envsync-enterprise` `startEnterpriseSyncWorker` from the EE package.
-	 * Kept for loaders/tests; monorepo path only until EE routes leave core (P1).
-	 */
-	startEnterpriseSync: async () => {
-		const { startEnterpriseSyncWorker } = await import("../../../envsync-enterprise/src/background.ts");
-		await startEnterpriseSyncWorker();
 	},
 } as const;

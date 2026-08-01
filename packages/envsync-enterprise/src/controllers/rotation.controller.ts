@@ -1,6 +1,6 @@
 import { type Context } from "hono";
 import { assertEntitled } from "@/helpers/enterprise-guard";
-import { RotationService } from "@/services/rotation.service";
+import { RotationService } from "../services/rotation.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { AuthorizationService } from "@/services/authorization.service";
 import { EnvTypeService } from "@/services/env_type.service";

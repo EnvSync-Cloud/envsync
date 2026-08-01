@@ -1,66 +1,69 @@
 import type { ApiModule } from "envsync-kernel";
 
-import { managementRouteLoaders as L } from "envsync-api/management-route-loaders";
 import { startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
 
 /**
- * Canonical management / enterprise API module surface (D5 / H3).
- * Wired by `envsync-management-api` via `registerManagementModules`.
- * Background workers for enterprise sync are owned by this package (H3).
- * Capability services (OIDC/SAML/rotation/dyn-secret/log-forwarding) live under `./services` (H7).
+ * Canonical management / enterprise API module surface.
  *
- * H3.4 migrations: physical source of truth is `./migrations/*`. The core process
- * migrator still discovers them via thin re-export shims under envsync-api so
- * Kysely migration names stay unique and OSS/core auto-migrate history is stable.
- * Do **not** also register `migrationDirectories` here while those shims exist
- * (would duplicate names in CompositeMigrationProvider).
+ * P1: EE routes/controllers/validators are owned by this package (not envsync-api loaders).
+ * Shared core routes (onboarding, system) still load from envsync-api public surface.
  */
+async function loadCoreOnboarding() {
+	const { managementRouteLoaders } = await import("envsync-api/management-route-loaders");
+	return managementRouteLoaders.onboarding();
+}
+
+async function loadCoreSystem() {
+	const { managementRouteLoaders } = await import("envsync-api/management-route-loaders");
+	return managementRouteLoaders.system();
+}
+
 export const enterpriseManagementModules: ApiModule[] = [
 	{
 		name: "onboarding",
 		mountPath: "/onboarding",
-		createRouter: L.onboarding,
+		createRouter: loadCoreOnboarding,
 	},
 	{
 		name: "license",
 		mountPath: "/license",
-		createRouter: L.license,
+		createRouter: async () => (await import("./routes/license.route")).default,
 		registerBackgroundHandlers: startLicenseHeartbeat,
 	},
 	{
 		name: "enterprise",
 		mountPath: "/enterprise",
-		createRouter: L.enterprise,
+		createRouter: async () => (await import("./routes/enterprise.route")).default,
 		registerBackgroundHandlers: startEnterpriseSyncWorker,
 	},
 	{
 		name: "system",
 		mountPath: "/system",
-		createRouter: L.system,
+		createRouter: loadCoreSystem,
 	},
 	{
 		name: "oidc",
 		mountPath: "/oidc",
-		createRouter: L.oidc,
+		createRouter: async () => (await import("./routes/oidc.route")).default,
 	},
 	{
 		name: "saml",
 		mountPath: "/saml",
-		createRouter: L.saml,
+		createRouter: async () => (await import("./routes/saml.route")).default,
 	},
 	{
 		name: "rotation",
 		mountPath: "/rotation",
-		createRouter: L.rotation,
+		createRouter: async () => (await import("./routes/rotation.route")).default,
 	},
 	{
 		name: "dynamic_secret",
 		mountPath: "/dynamic_secret",
-		createRouter: L.dynamicSecret,
+		createRouter: async () => (await import("./routes/dynamic_secret.route")).default,
 	},
 	{
 		name: "log_forwarding",
 		mountPath: "/log_forwarding",
-		createRouter: L.logForwarding,
+		createRouter: async () => (await import("./routes/log-forwarding.route")).default,
 	},
 ];

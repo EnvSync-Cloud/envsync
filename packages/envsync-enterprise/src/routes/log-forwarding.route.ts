@@ -2,14 +2,14 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import { LogForwardingController } from "@/controllers/log-forwarding.controller";
+import { LogForwardingController } from "../controllers/log-forwarding.controller";
 import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import {
     createLogForwardingRequestSchema,
     logForwardingResponseSchema,
     logForwardingsResponseSchema,
-} from "@/validators/log-forwarding.validator";
+} from "../validators/log-forwarding.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { cliMiddleware } from "@/middlewares/cli.middleware";

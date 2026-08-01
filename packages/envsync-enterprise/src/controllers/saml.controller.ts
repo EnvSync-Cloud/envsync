@@ -2,7 +2,7 @@ import { type Context } from "hono";
 
 import { assertEntitled } from "@/helpers/enterprise-guard";
 import { setWebAuthCookies, setActiveMembershipCookie } from "@/helpers/web-auth";
-import { SamlService } from "@/services/saml.service";
+import { SamlService } from "../services/saml.service";
 import { UserService } from "@/services/user.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { config } from "@/utils/env";
