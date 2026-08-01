@@ -2,8 +2,8 @@ import { PutParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { importPKCS8, SignJWT } from "jose";
 import sodium from "libsodium-wrappers";
 
-import { DB } from "@/libs/db";
-import { NotFoundError, ValidationError } from "@/libs/errors";
+import { DB } from "envsync-api/ports/db";
+import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
 
 import { type EnterpriseProvider } from "./enterprise-provider.service";
 

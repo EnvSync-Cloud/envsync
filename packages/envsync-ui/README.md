@@ -2,45 +2,48 @@
 
 **License:** MIT
 
-Shared **design tokens** and **Tailwind preset** for EnvSync apps (D12 / H5).
+Shared design system for EnvSync apps: tokens, Tailwind preset, and primitives.
 
 ## Contents
 
 | Export | Use |
 |--------|-----|
 | `envsync-ui/tokens.css` | CSS variables (`:root` / `.dark`) |
-| `envsync-ui/tailwind-preset` | Shared `theme.extend` colors, fonts, radii |
+| `envsync-ui/tailwind-preset` | Shared `theme.extend` |
+| `envsync-ui/cn` | `cn()` class merge helper |
+| `envsync-ui/button` | `Button` |
+| `envsync-ui/badge` | `Badge` |
+| `envsync-ui/card` | `Card` + header/content/footer |
+| `envsync-ui/input` | `Input` |
 
-Not a full component library — apps keep their own shadcn/ui primitives.
+P2 starts a real component library (not tokens-only). Apps may re-export from
+`@/components/ui/*` for compatibility; prefer package imports for new code.
 
 ## Usage
 
-### CSS
-
-```css
-@import "envsync-ui/tokens.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+```tsx
+import { Button } from "envsync-ui/button";
+import { cn } from "envsync-ui/cn";
 ```
 
 ### Tailwind
 
 ```ts
-import type { Config } from "tailwindcss";
 import envsyncUiPreset from "envsync-ui/tailwind-preset";
 
 export default {
   presets: [envsyncUiPreset],
-  content: ["./src/**/*.{ts,tsx}"],
-  // app-specific theme/plugins only
-} satisfies Config;
+  content: [
+    "./src/**/*.{ts,tsx}",
+    "../../packages/envsync-ui/src/**/*.{ts,tsx}",
+  ],
+} satisfies import("tailwindcss").Config;
 ```
 
 ### Consumers
 
-- `apps/envsync-web`
+- `apps/envsync-web` (re-exports primitives under `components/ui`)
 - `apps/envsync-landing`
-- `packages/envsync-enterprise-web` (via shell chrome)
+- `packages/envsync-enterprise-web` (via shell or direct package)
 
-Brand anchor: `--primary: 153 74% 44%` (EnvSync green).
+Brand anchor: `--primary: 153 74% 44%`.

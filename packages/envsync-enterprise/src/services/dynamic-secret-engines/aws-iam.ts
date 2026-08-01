@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import infoLogs, { LogTypes } from "@/libs/logger";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 import type { CredentialResult, DynamicSecretEngineInterface } from "./base";
 

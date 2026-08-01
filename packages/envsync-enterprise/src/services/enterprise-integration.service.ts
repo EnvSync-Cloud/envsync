@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { DB } from "@/libs/db";
-import { NotFoundError, ValidationError } from "@/libs/errors";
-import { AppService } from "@/services/app.service";
-import { EnvTypeService } from "@/services/env_type.service";
+import { DB } from "envsync-api/ports/db";
+import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import { AppService } from "envsync-api/ports/services";
+import { EnvTypeService } from "envsync-api/ports/services";
 import {
 	EnterpriseProviderService,
 	type EnterpriseProvider,
-} from "@/services/enterprise-provider.service";
+} from "./enterprise-provider.service";
 
 export class EnterpriseIntegrationService {
 	public static listProviderConnections(org_id: string) {
@@ -428,7 +428,7 @@ export class EnterpriseIntegrationService {
 			updated_at: now,
 		}).executeTakeFirstOrThrow();
 
-		const { EnterpriseSyncService } = await import("@/services/enterprise-sync.service");
+		const { EnterpriseSyncService } = await import("./enterprise-sync.service");
 		await EnterpriseSyncService.executeRun(run.id);
 
 		return db

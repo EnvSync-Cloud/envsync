@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { LicenseStateService } from "@/services/license-state.service";
+import { LicenseStateService } from "envsync-api/ports/services";
 
 export class LicenseController {
 	public static readonly status = async (c: Context) => {

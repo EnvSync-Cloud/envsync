@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 
-import { assertEntitled } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "envsync-api/ports/helpers";
 import { DynamicSecretService } from "../services/dynamic_secret.service";
-import { AuditLogService } from "@/services/audit_log.service";
+import { AuditLogService } from "envsync-api/ports/services";
 
 export class DynamicSecretController {
 	// ── Engines ────────────────────────────────────────────────────────────

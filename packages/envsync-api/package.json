@@ -11,7 +11,9 @@
     "./create-management-app": "./src/public/create-management-app.ts",
     "./license": "./src/public/license.ts",
     "./instrumentation": "./src/instrumentation.ts",
-    "./factory": "./src/app/factory.ts"
+    "./factory": "./src/app/factory.ts",
+    "./ports": "./src/public/ports/index.ts",
+    "./ports/*": "./src/public/ports/*.ts"
   },
   "scripts": {
     "build": "bun run builder.ts",

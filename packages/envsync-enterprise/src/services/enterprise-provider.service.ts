@@ -1,4 +1,4 @@
-import { ValidationError } from "@/libs/errors";
+import { ValidationError } from "envsync-api/ports/errors";
 
 export const enterpriseProviders = [
 	"github",

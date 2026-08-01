@@ -1,14 +1,14 @@
 import { type Selectable } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 
-import { cacheAside, invalidateCache } from "@/helpers/cache";
-import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { clearJwksCache } from "@/helpers/oidc";
-import { DB } from "@/libs/db";
-import { orNotFound } from "@/libs/errors";
-import { RoleService } from "@/services/role.service";
-import { AuthorizationService } from "@/services/authorization.service";
-import type { Database } from "@/types/db";
+import { cacheAside, invalidateCache } from "envsync-api/ports/helpers";
+import { CacheKeys, CacheTTL } from "envsync-api/ports/helpers";
+import { clearJwksCache } from "envsync-api/ports/helpers";
+import { DB } from "envsync-api/ports/db";
+import { orNotFound } from "envsync-api/ports/errors";
+import { RoleService } from "envsync-api/ports/services";
+import { AuthorizationService } from "envsync-api/ports/services";
+import type { Database } from "envsync-api/ports/types-db";
 
 type OidcProviderRow = Selectable<Database["oidc_providers"]>;
 

@@ -3,11 +3,11 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { EnterpriseController } from "../controllers/enterprise.controller";
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { cliMiddleware } from "@/middlewares/cli.middleware";
-import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
-import { requirePermission } from "@/middlewares/permission.middleware";
-import { errorResponseSchema } from "@/validators/common";
+import { authMiddleware } from "envsync-api/ports/middlewares";
+import { cliMiddleware } from "envsync-api/ports/middlewares";
+import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { requirePermission } from "envsync-api/ports/middlewares";
+import { errorResponseSchema } from "envsync-api/ports/validators-common";
 import {
 	createEnvTypeMappingRequestSchema,
 	createIntegrationBindingRequestSchema,

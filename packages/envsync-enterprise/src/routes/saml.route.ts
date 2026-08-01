@@ -3,9 +3,9 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { SamlController } from "../controllers/saml.controller";
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
-import { requirePermission } from "@/middlewares/permission.middleware";
+import { authMiddleware } from "envsync-api/ports/middlewares";
+import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { requirePermission } from "envsync-api/ports/middlewares";
 import {
 	createSamlProviderRequestSchema,
 	samlProviderResponseSchema,
@@ -14,7 +14,7 @@ import {
 	samlSsoRequestSchema,
 	samlSsoResponseSchema,
 } from "../validators/saml.validator";
-import { errorResponseSchema } from "@/validators/common";
+import { errorResponseSchema } from "envsync-api/ports/validators-common";
 
 const app = new Hono();
 
