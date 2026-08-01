@@ -206,7 +206,8 @@ export class RotationService {
 
 		// Store the new credential as the variable value via SecretService
 		// This integrates with the existing secret management system
-		const { SecretService } = await import("./secret.service");
+		// SecretService lives in envsync-api (core); resolve via @/ alias (management-api esbuild plugin).
+		const { SecretService } = await import("@/services/secret.service");
 
 		// Check if the secret exists
 		const existingSecret = await SecretService.getSecret({
