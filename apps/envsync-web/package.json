@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:oss": "VITE_SERVER_LICENSE=oss vite build",
     "build:enterprise": "VITE_SERVER_LICENSE=enterprise vite build",
+    "build:hosted": "VITE_SERVER_LICENSE=enterprise vite build",
     "build:dev": "vite build --mode development",
     "check:auth": "bun run scripts/check-no-direct-use-auth.ts",
     "lint": "eslint .",
