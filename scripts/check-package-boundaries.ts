@@ -29,14 +29,20 @@ for (const file of fs.readdirSync(managementSrc)) {
 }
 ok("management-api has no ../../envsync-api relative imports");
 
-// 2) envsync-api production deps exclude envsync-enterprise
+// 2) envsync-api must not depend on envsync-enterprise (prod or dev).
+// Monorepo re-export shims use relative paths only — a package.json edge creates a
+// Turbo cycle with envsync-enterprise's peer/devDep on envsync-api.
 const apiPkg = JSON.parse(
 	fs.readFileSync(path.join(root, "packages/envsync-api/package.json"), "utf8"),
 ) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
 if (apiPkg.dependencies?.["envsync-enterprise"]) {
 	fail("envsync-api production dependencies must not include envsync-enterprise");
+} else if (apiPkg.devDependencies?.["envsync-enterprise"]) {
+	fail(
+		"envsync-api devDependencies must not include envsync-enterprise (Turbo cycle; use relative re-export shims only)",
+	);
 } else {
-	ok("envsync-api production deps exclude envsync-enterprise");
+	ok("envsync-api package.json has no envsync-enterprise dependency (prod or dev)");
 }
 
 // 3) management-api depends on enterprise package

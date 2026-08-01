@@ -78,7 +78,6 @@
     "typescript": "^5.0.0"
   },
   "devDependencies": {
-    "envsync-enterprise": "workspace:*",
     "@bravo68web/prettier-config": "^1.2.6",
     "@types/bun": "latest",
     "@types/glob": "^8.1.0",
