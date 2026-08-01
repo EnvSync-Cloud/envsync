@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — hardening H3 (EE extraction)
+
+### Changed
+
+- Proprietary package `envsync-enterprise` owns enterprise integration/sync/provider
+  services and certificate verifier (physical move from `envsync-api`).
+- `envsync-api` keeps thin monorepo re-export shims (no package.json dependency).
+- Enterprise sync worker background entry owned by `envsync-enterprise`.
+
+### Deferred
+
+- OIDC/SAML/rotation/dyn-secret service+route move; migration stream split.
+
+---
+
 ## Unreleased — hardening H2 (naming)
 
 ### Changed

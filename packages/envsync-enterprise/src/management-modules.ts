@@ -1,10 +1,12 @@
 import type { ApiModule } from "envsync-kernel";
 
 import { managementRouteLoaders as L } from "envsync-api/management-route-loaders";
+import { startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
 
 /**
- * Canonical management / enterprise API module surface (D5).
+ * Canonical management / enterprise API module surface (D5 / H3).
  * Wired by `envsync-management-api` via `registerManagementModules`.
+ * Background workers for enterprise sync are owned by this package (H3).
  */
 export const enterpriseManagementModules: ApiModule[] = [
 	{
@@ -16,13 +18,13 @@ export const enterpriseManagementModules: ApiModule[] = [
 		name: "license",
 		mountPath: "/license",
 		createRouter: L.license,
-		registerBackgroundHandlers: L.startLicenseHeartbeat,
+		registerBackgroundHandlers: startLicenseHeartbeat,
 	},
 	{
 		name: "enterprise",
 		mountPath: "/enterprise",
 		createRouter: L.enterprise,
-		registerBackgroundHandlers: L.startEnterpriseSync,
+		registerBackgroundHandlers: startEnterpriseSyncWorker,
 	},
 	{
 		name: "system",

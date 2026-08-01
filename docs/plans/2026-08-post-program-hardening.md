@@ -272,8 +272,9 @@ Does **not** block Hosted cutover.
 
 ### Sprint C (architecture depth)
 
-- [ ] H3.1 inventory  
-- [ ] H3.2–H3.3 first EE service move  
+- [x] H3.1 inventory — [phase-h3/README.md](./phase-h3/README.md)  
+- [x] H3.2–H3.3 first EE service move (integration/sync/provider + cert verifier)  
+- [ ] H3.4 migration streams / remaining OIDC–rotation move  
 - [ ] H4.1 issuer JWT (private)  
 
 ### Sprint D (design system)
