@@ -6,6 +6,10 @@
   "bin": {
     "envsync-deploy": "dist/index.js"
   },
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "README.md"

@@ -1,8 +1,9 @@
 import { defineConfig } from "tsup";
-import { fileURLToPath } from "node:url";
 
-const deployCoreSource = fileURLToPath(new URL("../deploy-core/src/index.ts", import.meta.url));
-
+/**
+ * Enterprise deploy CLI: thin entry that forces edition=enterprise and loads
+ * the OSS engine via `@envsync-cloud/deploy/cli` (open-core: EE → OSS).
+ */
 export default defineConfig({
 	entry: ["src/index.ts"],
 	format: ["esm"],
@@ -14,16 +15,7 @@ export default defineConfig({
 	clean: true,
 	sourcemap: false,
 	dts: false,
-	esbuildPlugins: [
-		{
-			name: "workspace-deploy-core-source",
-			setup(build) {
-				build.onResolve({ filter: /^@envsync-cloud\/deploy-core$/ }, () => ({
-					path: deployCoreSource,
-				}));
-			},
-		},
-	],
+	external: ["chalk", "yaml", "zod", "@envsync-cloud/deploy", "@envsync-cloud/deploy/cli"],
 	banner: {
 		js: "#!/usr/bin/env node",
 	},

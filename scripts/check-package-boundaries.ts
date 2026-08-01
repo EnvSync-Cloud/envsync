@@ -259,6 +259,84 @@ if (webPkg.dependencies?.["envsync-enterprise-web"]) {
 	ok("envsync-web keeps envsync-enterprise-web as devDependency only");
 }
 
+// 13) P0: envsync-enterprise must not relative-import envsync-api/src (monorepo piggyback)
+function walkTsFiles(dir: string, out: string[] = []): string[] {
+	if (!fs.existsSync(dir)) return out;
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		const full = path.join(dir, entry.name);
+		if (entry.isDirectory()) walkTsFiles(full, out);
+		else if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) out.push(full);
+	}
+	return out;
+}
+const eeSrcRoot = path.join(root, "packages/envsync-enterprise/src");
+const relativeApiPiggyback =
+	/\.\.\/\.\.\/envsync-api\/|envsync-api\/src\/|from\s+["']\.\.\/\.\.\/envsync-api/;
+let eeRelativeHits = 0;
+for (const file of walkTsFiles(eeSrcRoot)) {
+	const text = fs.readFileSync(file, "utf8");
+	if (relativeApiPiggyback.test(text)) {
+		fail(`envsync-enterprise relative/src piggyback: ${path.relative(root, file)}`);
+		eeRelativeHits++;
+	}
+}
+if (eeRelativeHits === 0) {
+	ok("envsync-enterprise has no relative monorepo imports into envsync-api/src");
+}
+// Background must use public package export for license heartbeat
+const eeBackground = fs.readFileSync(path.join(eeSrcRoot, "background.ts"), "utf8");
+const eeBackgroundCode = eeBackground
+	.split("\n")
+	.filter(line => !line.trim().startsWith("*") && !line.trim().startsWith("//"))
+	.join("\n");
+if (!eeBackground.includes("envsync-api/license") || relativeApiPiggyback.test(eeBackgroundCode)) {
+	fail("envsync-enterprise background.ts must start license heartbeat via envsync-api/license only");
+} else {
+	ok("envsync-enterprise license heartbeat uses public envsync-api/license export");
+}
+const eeCa = path.join(eeSrcRoot, "assets/license/envsync-enterprise-root-ca.pem");
+if (!fs.existsSync(eeCa)) {
+	fail("envsync-enterprise must ship envsync-enterprise-root-ca.pem under src/assets/license");
+} else {
+	ok("envsync-enterprise owns bundled enterprise root CA PEM");
+}
+
+// 14) P0: OSS deploy owns the engine; must not import deploy-cli
+const deploySrc = path.join(root, "packages/deploy/src");
+const deployIndex = fs.readFileSync(path.join(deploySrc, "index.ts"), "utf8");
+const deployCliEngine = path.join(deploySrc, "cli.ts");
+const deployImportPiggyback = /from\s+["'][^"']*deploy-cli|import\s*\(\s*["'][^"']*deploy-cli|packages\/deploy-cli/;
+if (!fs.existsSync(deployCliEngine)) {
+	fail("packages/deploy must own src/cli.ts (deploy engine source of truth)");
+} else if (deployImportPiggyback.test(deployIndex)) {
+	fail("packages/deploy must not import packages/deploy-cli");
+} else {
+	ok("OSS deploy owns cli.ts and does not import deploy-cli");
+}
+const deployPkg = JSON.parse(
+	fs.readFileSync(path.join(root, "packages/deploy/package.json"), "utf8"),
+) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+if (
+	deployPkg.dependencies?.["@envsync-cloud/deploy-enterprise"] ||
+	deployPkg.devDependencies?.["@envsync-cloud/deploy-enterprise"]
+) {
+	fail("OSS deploy must not depend on deploy-enterprise");
+}
+const deployCliPkg = JSON.parse(
+	fs.readFileSync(path.join(root, "packages/deploy-cli/package.json"), "utf8"),
+) as { dependencies?: Record<string, string> };
+if (!deployCliPkg.dependencies?.["@envsync-cloud/deploy"]) {
+	fail("deploy-enterprise (deploy-cli) must depend on @envsync-cloud/deploy (EE → OSS)");
+} else {
+	ok("deploy-enterprise depends on OSS @envsync-cloud/deploy (open-core direction)");
+}
+const deployCliEntry = fs.readFileSync(path.join(root, "packages/deploy-cli/src/index.ts"), "utf8");
+if (!deployCliEntry.includes("@envsync-cloud/deploy/cli") || deployCliEntry.split("\n").length > 40) {
+	fail("deploy-cli entry must be a thin wrapper importing @envsync-cloud/deploy/cli");
+} else {
+	ok("deploy-cli is a thin EE entry over OSS deploy engine");
+}
+
 if (failed) {
 	process.exit(1);
 }

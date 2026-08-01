@@ -204,6 +204,7 @@
         "envsync-deploy-enterprise": "./dist/index.js",
       },
       "dependencies": {
+        "@envsync-cloud/deploy": "workspace:*",
         "chalk": "^5.6.2",
         "yaml": "^1.10.2",
       },

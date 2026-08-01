@@ -1,36 +1,36 @@
-# `@envsync-cloud/deploy`
+# @envsync-cloud/deploy
 
-Public **OSS** self-host deploy CLI for EnvSync on Docker Swarm.
+**License:** MIT  
+**Binary:** `envsync-deploy`
+
+Public OSS CLI for self-hosted EnvSync on Docker Swarm.
+
+## Independence (no piggyback)
+
+This package **owns** the deploy engine (`src/cli.ts` + helpers). It does **not** import
+or spawn `packages/deploy-cli` / `@envsync-cloud/deploy-enterprise`.
+
+| Package | Role |
+|---------|------|
+| `@envsync-cloud/deploy` | OSS engine + `envsync-deploy` bin |
+| `@envsync-cloud/deploy-enterprise` | Thin EE entry: forces `edition=enterprise`, depends on this package |
+| `@envsync-cloud/deploy-core` | Shared plan/schema primitives |
 
 ## Install
 
 ```bash
-npx @envsync-cloud/deploy preinstall
-npx @envsync-cloud/deploy setup
-npx @envsync-cloud/deploy bootstrap
-npx @envsync-cloud/deploy deploy
-npx @envsync-cloud/deploy org create --interactive
+npm i -g @envsync-cloud/deploy
+envsync-deploy --help
 ```
 
-Binary: `envsync-deploy`
+## Enterprise
 
-## What this package includes
+Private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) wraps
+this engine with enterprise edition forced. Open-core direction: **EE → OSS**, never reverse.
 
-- Full OSS lifecycle: preinstall, setup, bootstrap, deploy, health, backup, org create/status
-- Forced edition: **oss** (no management API, no landing, no enterprise license commands)
-- Dashboard image: `envsync-web-oss-static`
-- Setup-token first org create (no public signup)
+## Build
 
-## What it does **not** include
-
-- Enterprise license certificate issue/renew
-- Management API topology
-- Marketing landing service
-
-For Enterprise self-host, use the private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`).
-
-## Packaging
-
-This package **bundles** the deploy engine at build time. The published tarball is self-contained and does **not** spawn monorepo paths into `deploy-cli` sources.
-
-See `docs/plans/2026-08-no-piggyback-program.md` Phase 3.
+```bash
+bun run --filter @envsync-cloud/deploy build
+bun run --filter @envsync-cloud/deploy test
+```

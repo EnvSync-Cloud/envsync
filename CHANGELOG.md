@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — no-piggyback P0 (graph honesty)
+
+### Fixed
+
+- **Deploy:** OSS `@envsync-cloud/deploy` owns the engine (`src/cli.ts`); EE package is a thin
+  wrapper depending on OSS (never reverse import of `deploy-cli` from OSS).
+- **Enterprise:** `background.ts` starts license heartbeat via `envsync-api/license` public
+  export; root CA PEM ships in `envsync-enterprise` assets.
+- **CI:** `check:boundaries` bans enterprise→api relative monorepo paths and OSS→EE deploy edges.
+
+### Not yet
+
+- Management routes still in core; enterprise `@/*` still aliases into api src; envsync-ui still tokens-only.
+
+---
+
 ## Unreleased — E2E pack (create-org channel + enterprise routes)
 
 ### Added
