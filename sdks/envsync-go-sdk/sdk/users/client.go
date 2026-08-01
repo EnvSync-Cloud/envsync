@@ -223,7 +223,7 @@ func (c *Client) UpdateUser(
 }
 
 // Update a user's role (Admin only)
-func (c *Client) UpdateRole(
+func (c *Client) UpdateUserRole(
 	ctx context.Context,
 	id string,
 	request *sdk.UpdateRoleRequest,

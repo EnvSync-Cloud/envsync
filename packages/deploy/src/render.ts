@@ -155,7 +155,6 @@ function domainMap(rootDomain: string) {
 		landing: rootDomain,
 		app: `app.${rootDomain}`,
 		api: `api.${rootDomain}`,
-		manage_api: `manage-api.${rootDomain}`,
 		auth: `auth.${rootDomain}`,
 		obs: `obs.${rootDomain}`,
 		mail: `mail.${rootDomain}`,
@@ -304,7 +303,7 @@ export function buildRuntimeEnv(
 		OPENFGA_STORE_ID: generated.openfga.store_id,
 		OPENFGA_MODEL_ID: generated.openfga.model_id,
 		OPENFGA_DB_PASSWORD: generated.secrets.openfga_db_password,
-		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.manage_api),
+		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.api, "/api/v1/manage"),
 		CLICKSTACK_OPERATOR_EMAIL: generated.clickstack.operator_email,
 		CLICKSTACK_OPERATOR_PASSWORD: generated.clickstack.operator_password,
 		CLICKSTACK_ACCESS_KEY: generated.clickstack.access_key,
@@ -470,16 +469,6 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 		"      loadBalancer:",
 		"        servers:",
 		"          - url: http://api_maintenance:8080",
-		...(managementEnabled ? [
-			"    envsync-management-api:",
-			"      loadBalancer:",
-			"        healthCheck:",
-			"          path: /health",
-			"          interval: 5s",
-			"          timeout: 3s",
-			"        servers:",
-			`          - url: http://envsync-management-api:${config.services.management_api_port}`,
-		] : []),
 		...(landingEnabled ? [
 			"    landing:",
 			"      loadBalancer:",
@@ -503,14 +492,6 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 			"    landing-router:",
 			`      rule: Host(\`${hosts.landing}\`)`,
 			"      service: landing",
-			"      entryPoints: [websecure]",
-			"      tls:",
-			"        certResolver: letsencrypt",
-		] : []),
-		...(managementEnabled ? [
-			"    management-api-router:",
-			`      rule: Host(\`${hosts.manage_api}\`)`,
-			"      service: envsync-management-api",
 			"      entryPoints: [websecure]",
 			"      tls:",
 			"        certResolver: letsencrypt",
@@ -597,10 +578,12 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 	const otelEndpoint = publicHttpsUrl(config, hosts.obs);
 	const managementApiEnabled = !isOssConfig(config);
 	const activeReleaseVersion = generated.deployment.slots[generated.deployment.active_slot].release_version || config.release.version;
-	const managementApiUrl = managementApiEnabled ? publicHttpsUrl(config, hosts.manage_api) : "";
+	const apiBaseUrl = publicHttpsUrl(config, hosts.api);
+	// Recommended: manage routes live on the core API under /api/v1/manage/{module}/...
+	const managementApiUrl = managementApiEnabled ? `${apiBaseUrl.replace(/\/$/, "")}/api/v1/manage` : "";
 	const edition = isOssConfig(config) ? "oss" : "enterprise";
 	return `window.__ENVSYNC_RUNTIME_CONFIG__ = ${JSON.stringify({
-		apiBaseUrl: publicHttpsUrl(config, hosts.api),
+		apiBaseUrl,
 		appBaseUrl: publicHttpsUrl(config, hosts.app),
 		authBaseUrl: publicHttpsUrl(config, hosts.auth),
 		managementApiUrl,
@@ -1047,17 +1030,6 @@ ${renderEnvList({
       - source: otel_agent_conf
         target: /etc/otel-agent.yaml
     networks: [envsync]
-${includeRuntimeInfra && managementEnabled ? `
-
-  envsync-management-api:
-    image: ${config.images.management_api}
-    environment:
-${renderEnvList({
-		...apiEnvironment,
-		PORT: `${config.services.management_api_port}`,
-	})}
-${apiLicenseVolume}
-    networks: [envsync]` : ""}
 ${includeAppServices ? `
 
   api_maintenance:

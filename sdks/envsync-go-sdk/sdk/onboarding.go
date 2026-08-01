@@ -9,22 +9,173 @@ import (
 )
 
 type AcceptOrgInviteRequest struct {
-	OrgData  *AcceptOrgInviteRequestOrgData  `json:"org_data,omitempty" url:"-"`
-	UserData *AcceptOrgInviteRequestUserData `json:"user_data,omitempty" url:"-"`
+	OrgData  *AcceptOrgInviteRequestOrgData  `json:"org_data" url:"org_data"`
+	UserData *AcceptOrgInviteRequestUserData `json:"user_data" url:"user_data"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
 }
 
-type AcceptUserInviteRequest struct {
-	FullName string `json:"full_name" url:"-"`
-	Password string `json:"password" url:"-"`
+func (a *AcceptOrgInviteRequest) GetOrgData() *AcceptOrgInviteRequestOrgData {
+	if a == nil {
+		return nil
+	}
+	return a.OrgData
 }
 
-type CreateOrgInviteRequest struct {
-	Email string `json:"email" url:"-"`
+func (a *AcceptOrgInviteRequest) GetUserData() *AcceptOrgInviteRequestUserData {
+	if a == nil {
+		return nil
+	}
+	return a.UserData
 }
 
-type CreateUserInviteRequest struct {
-	Email  string `json:"email" url:"-"`
-	RoleId string `json:"role_id" url:"-"`
+func (a *AcceptOrgInviteRequest) GetExtraProperties() map[string]interface{} {
+	return a.extraProperties
+}
+
+func (a *AcceptOrgInviteRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler AcceptOrgInviteRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = AcceptOrgInviteRequest(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *AcceptOrgInviteRequest) String() string {
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+type AcceptOrgInviteRequestOrgData struct {
+	Name    string `json:"name" url:"name"`
+	Size    string `json:"size" url:"size"`
+	Website string `json:"website" url:"website"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *AcceptOrgInviteRequestOrgData) GetName() string {
+	if a == nil {
+		return ""
+	}
+	return a.Name
+}
+
+func (a *AcceptOrgInviteRequestOrgData) GetSize() string {
+	if a == nil {
+		return ""
+	}
+	return a.Size
+}
+
+func (a *AcceptOrgInviteRequestOrgData) GetWebsite() string {
+	if a == nil {
+		return ""
+	}
+	return a.Website
+}
+
+func (a *AcceptOrgInviteRequestOrgData) GetExtraProperties() map[string]interface{} {
+	return a.extraProperties
+}
+
+func (a *AcceptOrgInviteRequestOrgData) UnmarshalJSON(data []byte) error {
+	type unmarshaler AcceptOrgInviteRequestOrgData
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = AcceptOrgInviteRequestOrgData(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *AcceptOrgInviteRequestOrgData) String() string {
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+type AcceptOrgInviteRequestUserData struct {
+	FullName string `json:"full_name" url:"full_name"`
+	Password string `json:"password" url:"password"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *AcceptOrgInviteRequestUserData) GetFullName() string {
+	if a == nil {
+		return ""
+	}
+	return a.FullName
+}
+
+func (a *AcceptOrgInviteRequestUserData) GetPassword() string {
+	if a == nil {
+		return ""
+	}
+	return a.Password
+}
+
+func (a *AcceptOrgInviteRequestUserData) GetExtraProperties() map[string]interface{} {
+	return a.extraProperties
+}
+
+func (a *AcceptOrgInviteRequestUserData) UnmarshalJSON(data []byte) error {
+	type unmarshaler AcceptOrgInviteRequestUserData
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = AcceptOrgInviteRequestUserData(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *AcceptOrgInviteRequestUserData) String() string {
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
 }
 
 type AcceptOrgInviteResponse struct {
@@ -156,6 +307,60 @@ func (a *AcceptOrgInviteResponseGeneratedCertificateBundle) UnmarshalJSON(data [
 }
 
 func (a *AcceptOrgInviteResponseGeneratedCertificateBundle) String() string {
+	if len(a.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(a); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", a)
+}
+
+type AcceptUserInviteRequest struct {
+	FullName string `json:"full_name" url:"full_name"`
+	Password string `json:"password" url:"password"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (a *AcceptUserInviteRequest) GetFullName() string {
+	if a == nil {
+		return ""
+	}
+	return a.FullName
+}
+
+func (a *AcceptUserInviteRequest) GetPassword() string {
+	if a == nil {
+		return ""
+	}
+	return a.Password
+}
+
+func (a *AcceptUserInviteRequest) GetExtraProperties() map[string]interface{} {
+	return a.extraProperties
+}
+
+func (a *AcceptUserInviteRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler AcceptUserInviteRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*a = AcceptUserInviteRequest(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *a)
+	if err != nil {
+		return err
+	}
+	a.extraProperties = extraProperties
+	a.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (a *AcceptUserInviteRequest) String() string {
 	if len(a.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
 			return value
@@ -307,6 +512,52 @@ func (a *AcceptUserInviteResponseGeneratedCertificateBundle) String() string {
 	return fmt.Sprintf("%#v", a)
 }
 
+type CreateOrgInviteRequest struct {
+	Email string `json:"email" url:"email"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (c *CreateOrgInviteRequest) GetEmail() string {
+	if c == nil {
+		return ""
+	}
+	return c.Email
+}
+
+func (c *CreateOrgInviteRequest) GetExtraProperties() map[string]interface{} {
+	return c.extraProperties
+}
+
+func (c *CreateOrgInviteRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateOrgInviteRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateOrgInviteRequest(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *c)
+	if err != nil {
+		return err
+	}
+	c.extraProperties = extraProperties
+	c.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateOrgInviteRequest) String() string {
+	if len(c.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
 type CreateOrgInviteResponse struct {
 	Message string `json:"message" url:"message"`
 
@@ -342,6 +593,60 @@ func (c *CreateOrgInviteResponse) UnmarshalJSON(data []byte) error {
 }
 
 func (c *CreateOrgInviteResponse) String() string {
+	if len(c.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
+}
+
+type CreateUserInviteRequest struct {
+	Email  string `json:"email" url:"email"`
+	RoleId string `json:"role_id" url:"role_id"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (c *CreateUserInviteRequest) GetEmail() string {
+	if c == nil {
+		return ""
+	}
+	return c.Email
+}
+
+func (c *CreateUserInviteRequest) GetRoleId() string {
+	if c == nil {
+		return ""
+	}
+	return c.RoleId
+}
+
+func (c *CreateUserInviteRequest) GetExtraProperties() map[string]interface{} {
+	return c.extraProperties
+}
+
+func (c *CreateUserInviteRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler CreateUserInviteRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CreateUserInviteRequest(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *c)
+	if err != nil {
+		return err
+	}
+	c.extraProperties = extraProperties
+	c.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CreateUserInviteRequest) String() string {
 	if len(c.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
 			return value
@@ -725,6 +1030,52 @@ func (g *GetUserInviteByTokenResponseInvite) String() string {
 	return fmt.Sprintf("%#v", g)
 }
 
+type UpdateUserInviteRequest struct {
+	RoleId string `json:"role_id" url:"role_id"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (u *UpdateUserInviteRequest) GetRoleId() string {
+	if u == nil {
+		return ""
+	}
+	return u.RoleId
+}
+
+func (u *UpdateUserInviteRequest) GetExtraProperties() map[string]interface{} {
+	return u.extraProperties
+}
+
+func (u *UpdateUserInviteRequest) UnmarshalJSON(data []byte) error {
+	type unmarshaler UpdateUserInviteRequest
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*u = UpdateUserInviteRequest(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *u)
+	if err != nil {
+		return err
+	}
+	u.extraProperties = extraProperties
+	u.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (u *UpdateUserInviteRequest) String() string {
+	if len(u.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(u.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(u); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", u)
+}
+
 type UpdateUserInviteResponse struct {
 	Message string `json:"message" url:"message"`
 
@@ -769,124 +1120,4 @@ func (u *UpdateUserInviteResponse) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", u)
-}
-
-type AcceptOrgInviteRequestOrgData struct {
-	Name    string `json:"name" url:"name"`
-	Size    string `json:"size" url:"size"`
-	Website string `json:"website" url:"website"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (a *AcceptOrgInviteRequestOrgData) GetName() string {
-	if a == nil {
-		return ""
-	}
-	return a.Name
-}
-
-func (a *AcceptOrgInviteRequestOrgData) GetSize() string {
-	if a == nil {
-		return ""
-	}
-	return a.Size
-}
-
-func (a *AcceptOrgInviteRequestOrgData) GetWebsite() string {
-	if a == nil {
-		return ""
-	}
-	return a.Website
-}
-
-func (a *AcceptOrgInviteRequestOrgData) GetExtraProperties() map[string]interface{} {
-	return a.extraProperties
-}
-
-func (a *AcceptOrgInviteRequestOrgData) UnmarshalJSON(data []byte) error {
-	type unmarshaler AcceptOrgInviteRequestOrgData
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*a = AcceptOrgInviteRequestOrgData(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *a)
-	if err != nil {
-		return err
-	}
-	a.extraProperties = extraProperties
-	a.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (a *AcceptOrgInviteRequestOrgData) String() string {
-	if len(a.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(a); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", a)
-}
-
-type AcceptOrgInviteRequestUserData struct {
-	FullName string `json:"full_name" url:"full_name"`
-	Password string `json:"password" url:"password"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (a *AcceptOrgInviteRequestUserData) GetFullName() string {
-	if a == nil {
-		return ""
-	}
-	return a.FullName
-}
-
-func (a *AcceptOrgInviteRequestUserData) GetPassword() string {
-	if a == nil {
-		return ""
-	}
-	return a.Password
-}
-
-func (a *AcceptOrgInviteRequestUserData) GetExtraProperties() map[string]interface{} {
-	return a.extraProperties
-}
-
-func (a *AcceptOrgInviteRequestUserData) UnmarshalJSON(data []byte) error {
-	type unmarshaler AcceptOrgInviteRequestUserData
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*a = AcceptOrgInviteRequestUserData(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *a)
-	if err != nil {
-		return err
-	}
-	a.extraProperties = extraProperties
-	a.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (a *AcceptOrgInviteRequestUserData) String() string {
-	if len(a.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(a.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(a); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", a)
-}
-
-type UpdateUserInviteRequest struct {
-	RoleId string `json:"role_id" url:"-"`
 }

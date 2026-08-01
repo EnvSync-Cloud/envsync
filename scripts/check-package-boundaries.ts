@@ -1,6 +1,6 @@
 /**
- * Phase 5 CI guard: management-api must not piggyback on envsync-api via relative paths;
- * core envsync-api production deps must not include envsync-enterprise.
+ * Package boundary CI guards (no-piggyback + open-core).
+ * Manage surface is on core API under /api/v1/manage — no envsync-management-api process.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -17,17 +17,20 @@ function ok(message: string) {
 	console.log(`✓ ${message}`);
 }
 
-// 1) management-api src: no relative envsync-api imports
-const managementSrc = path.join(root, "packages/envsync-management-api/src");
-const piggybackRe = /from\s+["']\.\.\/\.\.\/envsync-api\//;
-for (const file of fs.readdirSync(managementSrc)) {
-	if (!file.endsWith(".ts")) continue;
-	const text = fs.readFileSync(path.join(managementSrc, file), "utf8");
-	if (piggybackRe.test(text)) {
-		fail(`management-api relative import in src/${file}`);
-	}
+// 1) Retired second process + separate management SDKs must stay gone
+if (fs.existsSync(path.join(root, "packages/envsync-management-api"))) {
+	fail("packages/envsync-management-api was removed; manage is on core API (/api/v1/manage)");
+} else {
+	ok("envsync-management-api package is removed (unified manage on core)");
 }
-ok("management-api has no ../../envsync-api relative imports");
+if (
+	fs.existsSync(path.join(root, "sdks/envsync-management-ts-sdk")) ||
+	fs.existsSync(path.join(root, "sdks/envsync-management-go-sdk"))
+) {
+	fail("management SDKs were merged into core envsync-ts-sdk / envsync-go-sdk");
+} else {
+	ok("separate management SDKs are removed (clients use core SDKs)");
+}
 
 // 2) envsync-api must not depend on envsync-enterprise (prod or dev).
 // Monorepo re-export shims use relative paths only — a package.json edge creates a
@@ -45,14 +48,13 @@ if (apiPkg.dependencies?.["envsync-enterprise"]) {
 	ok("envsync-api package.json has no envsync-enterprise dependency (prod or dev)");
 }
 
-// 3) management-api depends on enterprise package
-const mgmtPkg = JSON.parse(
-	fs.readFileSync(path.join(root, "packages/envsync-management-api/package.json"), "utf8"),
-) as { dependencies?: Record<string, string> };
-if (!mgmtPkg.dependencies?.["envsync-enterprise"]) {
-	fail("envsync-management-api must depend on envsync-enterprise");
+// 3) Enterprise API bundle entry exists (docker/api-enterprise.Dockerfile)
+const eeEntry = path.join(root, "packages/envsync-api/src/entrypoint.enterprise.ts");
+const eeDockerfile = path.join(root, "docker/api-enterprise.Dockerfile");
+if (!fs.existsSync(eeEntry) || !fs.existsSync(eeDockerfile)) {
+	fail("enterprise API entrypoint + docker/api-enterprise.Dockerfile required for EE image");
 } else {
-	ok("envsync-management-api depends on envsync-enterprise");
+	ok("enterprise API bundle entry + Dockerfile present");
 }
 
 // 4) enterprise package has proprietary LICENSE
@@ -367,19 +369,6 @@ if (!mgmtModules.includes("./routes/oidc.route") || !mgmtModules.includes("./rou
 } else {
 	ok("P1: EE HTTP routes owned by envsync-enterprise management modules");
 }
-const mgmtEntry = fs.readFileSync(
-	path.join(root, "packages/envsync-management-api/src/entrypoint.ts"),
-	"utf8",
-);
-const mgmtCreateApp = path.join(root, "packages/envsync-management-api/src/create-app.ts");
-if (!fs.existsSync(mgmtCreateApp)) {
-	fail("P1: envsync-management-api must own create-app.ts");
-} else if (mgmtEntry.includes("envsync-api/create-management-app")) {
-	fail("P1: management entrypoint should use local createManagementApp, not only core re-export");
-} else {
-	ok("P1: management-api owns process create-app entry");
-}
-
 // 14) P0: OSS deploy owns the engine; must not import deploy-cli
 const deploySrc = path.join(root, "packages/deploy/src");
 const deployIndex = fs.readFileSync(path.join(deploySrc, "index.ts"), "utf8");

@@ -2,6 +2,12 @@
 
 The EnvSync API is the Bun + Hono backend in the monorepo. It handles auth, orgs, apps, envs, secrets, certificates, audit events, and CLI-facing workflows.
 
+**One process:** product API at `/api/*`. Enterprise manage modules (when enabled) mount at `/api/v1/manage/{module}/...` on the same server — license, integrations, rotation, OIDC/SAML, dynamic secrets, log forwarding. OSS images do not ship those modules.
+
+- OpenAPI: `http://api.lvh.me:4000/openapi` · docs UI: `/docs`
+- EE production image: monorepo `docker/api-enterprise.Dockerfile` (bundles `envsync-enterprise`)
+- Agents / structure: [AGENTS.md](./AGENTS.md)
+
 ## Local Development
 
 All local env is managed from the monorepo root.

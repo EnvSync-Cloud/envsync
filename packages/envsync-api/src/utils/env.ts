@@ -59,7 +59,8 @@ export const BaseEnvSchema = z.object({
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string().default("http://localhost:8080"),
-	MANAGEMENT_API_URL: z.string().default("http://localhost:4001"),
+	// OpenAPI server URL for legacy management process; product clients use /api/v1/manage on core.
+	MANAGEMENT_API_URL: z.string().default("http://localhost:4000/api/v1/manage"),
 	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
 	MANAGEMENT_API_PORT: z.string().default("4001"),
 	// Default enterprise favors Hosted/local EE dev. Self-host OSS must set oss explicitly.

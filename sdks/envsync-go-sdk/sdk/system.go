@@ -8,252 +8,6 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
-type LicenseState struct {
-	Status                       LicenseStateStatus `json:"status" url:"status"`
-	LeaseExpiresAt               *string            `json:"lease_expires_at,omitempty" url:"lease_expires_at,omitempty"`
-	LastVerifiedAt               *string            `json:"last_verified_at,omitempty" url:"last_verified_at,omitempty"`
-	LastErrorCode                *string            `json:"last_error_code,omitempty" url:"last_error_code,omitempty"`
-	LastErrorMessage             *string            `json:"last_error_message,omitempty" url:"last_error_message,omitempty"`
-	ValidationMode               *string            `json:"validation_mode,omitempty" url:"validation_mode,omitempty"`
-	CertificateSerialHex         *string            `json:"certificate_serial_hex,omitempty" url:"certificate_serial_hex,omitempty"`
-	CertificateFingerprintSha256 *string            `json:"certificate_fingerprint_sha256,omitempty" url:"certificate_fingerprint_sha256,omitempty"`
-	CertificateSubject           *string            `json:"certificate_subject,omitempty" url:"certificate_subject,omitempty"`
-	CertificateIssuer            *string            `json:"certificate_issuer,omitempty" url:"certificate_issuer,omitempty"`
-	CertificateExpiresAt         *string            `json:"certificate_expires_at,omitempty" url:"certificate_expires_at,omitempty"`
-	RootCaFingerprintSha256      *string            `json:"root_ca_fingerprint_sha256,omitempty" url:"root_ca_fingerprint_sha256,omitempty"`
-	ValidatedAt                  *string            `json:"validated_at,omitempty" url:"validated_at,omitempty"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (l *LicenseState) GetStatus() LicenseStateStatus {
-	if l == nil {
-		return ""
-	}
-	return l.Status
-}
-
-func (l *LicenseState) GetLeaseExpiresAt() *string {
-	if l == nil {
-		return nil
-	}
-	return l.LeaseExpiresAt
-}
-
-func (l *LicenseState) GetLastVerifiedAt() *string {
-	if l == nil {
-		return nil
-	}
-	return l.LastVerifiedAt
-}
-
-func (l *LicenseState) GetLastErrorCode() *string {
-	if l == nil {
-		return nil
-	}
-	return l.LastErrorCode
-}
-
-func (l *LicenseState) GetLastErrorMessage() *string {
-	if l == nil {
-		return nil
-	}
-	return l.LastErrorMessage
-}
-
-func (l *LicenseState) GetValidationMode() *string {
-	if l == nil {
-		return nil
-	}
-	return l.ValidationMode
-}
-
-func (l *LicenseState) GetCertificateSerialHex() *string {
-	if l == nil {
-		return nil
-	}
-	return l.CertificateSerialHex
-}
-
-func (l *LicenseState) GetCertificateFingerprintSha256() *string {
-	if l == nil {
-		return nil
-	}
-	return l.CertificateFingerprintSha256
-}
-
-func (l *LicenseState) GetCertificateSubject() *string {
-	if l == nil {
-		return nil
-	}
-	return l.CertificateSubject
-}
-
-func (l *LicenseState) GetCertificateIssuer() *string {
-	if l == nil {
-		return nil
-	}
-	return l.CertificateIssuer
-}
-
-func (l *LicenseState) GetCertificateExpiresAt() *string {
-	if l == nil {
-		return nil
-	}
-	return l.CertificateExpiresAt
-}
-
-func (l *LicenseState) GetRootCaFingerprintSha256() *string {
-	if l == nil {
-		return nil
-	}
-	return l.RootCaFingerprintSha256
-}
-
-func (l *LicenseState) GetValidatedAt() *string {
-	if l == nil {
-		return nil
-	}
-	return l.ValidatedAt
-}
-
-func (l *LicenseState) GetExtraProperties() map[string]interface{} {
-	return l.extraProperties
-}
-
-func (l *LicenseState) UnmarshalJSON(data []byte) error {
-	type unmarshaler LicenseState
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*l = LicenseState(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *l)
-	if err != nil {
-		return err
-	}
-	l.extraProperties = extraProperties
-	l.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (l *LicenseState) String() string {
-	if len(l.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(l); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", l)
-}
-
-type LicenseStateStatus string
-
-const (
-	LicenseStateStatusUnknown  LicenseStateStatus = "unknown"
-	LicenseStateStatusActive   LicenseStateStatus = "active"
-	LicenseStateStatusInactive LicenseStateStatus = "inactive"
-	LicenseStateStatusExpired  LicenseStateStatus = "expired"
-	LicenseStateStatusError    LicenseStateStatus = "error"
-	LicenseStateStatusLocked   LicenseStateStatus = "locked"
-)
-
-func NewLicenseStateStatusFromString(s string) (LicenseStateStatus, error) {
-	switch s {
-	case "unknown":
-		return LicenseStateStatusUnknown, nil
-	case "active":
-		return LicenseStateStatusActive, nil
-	case "inactive":
-		return LicenseStateStatusInactive, nil
-	case "expired":
-		return LicenseStateStatusExpired, nil
-	case "error":
-		return LicenseStateStatusError, nil
-	case "locked":
-		return LicenseStateStatusLocked, nil
-	}
-	var t LicenseStateStatus
-	return "", fmt.Errorf("%s is not a valid %T", s, t)
-}
-
-func (l LicenseStateStatus) Ptr() *LicenseStateStatus {
-	return &l
-}
-
-type LicenseStatusResponse struct {
-	Required bool          `json:"required" url:"required"`
-	Locked   bool          `json:"locked" url:"locked"`
-	Reason   *string       `json:"reason,omitempty" url:"reason,omitempty"`
-	State    *LicenseState `json:"state" url:"state"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (l *LicenseStatusResponse) GetRequired() bool {
-	if l == nil {
-		return false
-	}
-	return l.Required
-}
-
-func (l *LicenseStatusResponse) GetLocked() bool {
-	if l == nil {
-		return false
-	}
-	return l.Locked
-}
-
-func (l *LicenseStatusResponse) GetReason() *string {
-	if l == nil {
-		return nil
-	}
-	return l.Reason
-}
-
-func (l *LicenseStatusResponse) GetState() *LicenseState {
-	if l == nil {
-		return nil
-	}
-	return l.State
-}
-
-func (l *LicenseStatusResponse) GetExtraProperties() map[string]interface{} {
-	return l.extraProperties
-}
-
-func (l *LicenseStatusResponse) UnmarshalJSON(data []byte) error {
-	type unmarshaler LicenseStatusResponse
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*l = LicenseStatusResponse(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *l)
-	if err != nil {
-		return err
-	}
-	l.extraProperties = extraProperties
-	l.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (l *LicenseStatusResponse) String() string {
-	if len(l.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(l); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", l)
-}
-
 type SystemStatusResponse struct {
 	System  *SystemStatusState     `json:"system" url:"system"`
 	License *LicenseStatusResponse `json:"license" url:"license"`
@@ -309,14 +63,18 @@ func (s *SystemStatusResponse) String() string {
 }
 
 type SystemStatusState struct {
-	Edition                   SystemStatusStateEdition `json:"edition" url:"edition"`
-	SingleOrgMode             bool                     `json:"single_org_mode" url:"single_org_mode"`
-	ManagementEnabled         bool                     `json:"management_enabled" url:"management_enabled"`
-	ObservabilityEnabled      bool                     `json:"observability_enabled" url:"observability_enabled"`
-	ManagementWebEnabled      bool                     `json:"management_web_enabled" url:"management_web_enabled"`
-	LandingEnabled            bool                     `json:"landing_enabled" url:"landing_enabled"`
-	FirstBootstrapCompletedAt *string                  `json:"first_bootstrap_completed_at,omitempty" url:"first_bootstrap_completed_at,omitempty"`
-	OrgCount                  float64                  `json:"org_count" url:"org_count"`
+	Edition                   SystemStatusStateEdition         `json:"edition" url:"edition"`
+	DeploymentMode            *SystemStatusStateDeploymentMode `json:"deployment_mode,omitempty" url:"deployment_mode,omitempty"`
+	SingleOrgMode             bool                             `json:"single_org_mode" url:"single_org_mode"`
+	MaxOrgs                   *float64                         `json:"max_orgs,omitempty" url:"max_orgs,omitempty"`
+	PublicSignupEnabled       *bool                            `json:"public_signup_enabled,omitempty" url:"public_signup_enabled,omitempty"`
+	CanCreateOrganization     *bool                            `json:"can_create_organization,omitempty" url:"can_create_organization,omitempty"`
+	ManagementEnabled         bool                             `json:"management_enabled" url:"management_enabled"`
+	ObservabilityEnabled      bool                             `json:"observability_enabled" url:"observability_enabled"`
+	ManagementWebEnabled      bool                             `json:"management_web_enabled" url:"management_web_enabled"`
+	LandingEnabled            bool                             `json:"landing_enabled" url:"landing_enabled"`
+	FirstBootstrapCompletedAt *string                          `json:"first_bootstrap_completed_at,omitempty" url:"first_bootstrap_completed_at,omitempty"`
+	OrgCount                  float64                          `json:"org_count" url:"org_count"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -329,11 +87,39 @@ func (s *SystemStatusState) GetEdition() SystemStatusStateEdition {
 	return s.Edition
 }
 
+func (s *SystemStatusState) GetDeploymentMode() *SystemStatusStateDeploymentMode {
+	if s == nil {
+		return nil
+	}
+	return s.DeploymentMode
+}
+
 func (s *SystemStatusState) GetSingleOrgMode() bool {
 	if s == nil {
 		return false
 	}
 	return s.SingleOrgMode
+}
+
+func (s *SystemStatusState) GetMaxOrgs() *float64 {
+	if s == nil {
+		return nil
+	}
+	return s.MaxOrgs
+}
+
+func (s *SystemStatusState) GetPublicSignupEnabled() *bool {
+	if s == nil {
+		return nil
+	}
+	return s.PublicSignupEnabled
+}
+
+func (s *SystemStatusState) GetCanCreateOrganization() *bool {
+	if s == nil {
+		return nil
+	}
+	return s.CanCreateOrganization
 }
 
 func (s *SystemStatusState) GetManagementEnabled() bool {
@@ -408,6 +194,28 @@ func (s *SystemStatusState) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", s)
+}
+
+type SystemStatusStateDeploymentMode string
+
+const (
+	SystemStatusStateDeploymentModeHosted     SystemStatusStateDeploymentMode = "hosted"
+	SystemStatusStateDeploymentModeSelfhosted SystemStatusStateDeploymentMode = "selfhosted"
+)
+
+func NewSystemStatusStateDeploymentModeFromString(s string) (SystemStatusStateDeploymentMode, error) {
+	switch s {
+	case "hosted":
+		return SystemStatusStateDeploymentModeHosted, nil
+	case "selfhosted":
+		return SystemStatusStateDeploymentModeSelfhosted, nil
+	}
+	var t SystemStatusStateDeploymentMode
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (s SystemStatusStateDeploymentMode) Ptr() *SystemStatusStateDeploymentMode {
+	return &s
 }
 
 type SystemStatusStateEdition string

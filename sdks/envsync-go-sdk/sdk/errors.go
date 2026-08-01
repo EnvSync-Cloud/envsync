@@ -31,7 +31,7 @@ func (b *BadRequestError) Unwrap() error {
 	return b.APIError
 }
 
-// Workspace slug conflict
+// Organization slug conflict or org limit reached
 type ConflictError struct {
 	*core.APIError
 	Body *ErrorResponse
@@ -55,7 +55,7 @@ func (c *ConflictError) Unwrap() error {
 	return c.APIError
 }
 
-// Enterprise edition required
+// Not allowed on this deployment (e.g. self-host)
 type ForbiddenError struct {
 	*core.APIError
 	Body *ErrorResponse

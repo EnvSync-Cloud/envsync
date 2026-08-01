@@ -1,6 +1,7 @@
+import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
 import { runtimeConfig } from "@shell/utils/runtime-config";
 
-let managementSdkPromise: Promise<import("@envsync-cloud/envsync-management-ts-sdk").EnvSyncManagementAPISDK> | null = null;
+let apiSdk: EnvSyncAPISDK | null = null;
 
 function readCookie(name: string) {
   if (typeof document === "undefined") return null;
@@ -15,7 +16,10 @@ function isUnsafeMethod(method: string) {
 }
 
 export function isEnterpriseUiEnabled() {
-  return runtimeConfig.edition === "enterprise" && Boolean(runtimeConfig.managementApiUrl);
+  // Manage routes live on the core API process under /api/v1/manage/...
+  return (
+    runtimeConfig.managementEnabled === true || runtimeConfig.edition === "enterprise"
+  );
 }
 
 export function enterpriseErrorMessage(error: unknown) {
@@ -31,27 +35,29 @@ export function enterpriseErrorMessage(error: unknown) {
   return "Enterprise request failed";
 }
 
-export async function getManagementSDK() {
-  if (!runtimeConfig.managementApiUrl) {
-    throw new Error("Management API URL is not configured.");
-  }
+/**
+ * Same origin as product API. Manage operations use paths under /api/v1/manage/...
+ * (generated into EnvSyncAPISDK).
+ */
+export function getEnterpriseSDK(): EnvSyncAPISDK {
+  if (!apiSdk) {
+    const resolveHeaders = async (options: { method: string }) => {
+      if (!isUnsafeMethod(options.method)) return {};
+      const csrfToken = readCookie("envsync_csrf");
+      return csrfToken ? { "X-CSRF-Token": csrfToken } : {};
+    };
 
-  if (!managementSdkPromise) {
-    managementSdkPromise = import("@envsync-cloud/envsync-management-ts-sdk").then(({ EnvSyncManagementAPISDK }) => {
-      const resolveHeaders = async (options: { method: string }) => {
-        if (!isUnsafeMethod(options.method)) return {};
-        const csrfToken = readCookie("envsync_csrf");
-        return csrfToken ? { "X-CSRF-Token": csrfToken } : {};
-      };
-
-      return new EnvSyncManagementAPISDK({
-        BASE: runtimeConfig.managementApiUrl!,
-        WITH_CREDENTIALS: true,
-        CREDENTIALS: "include",
-        HEADERS: resolveHeaders,
-      });
+    apiSdk = new EnvSyncAPISDK({
+      BASE: runtimeConfig.apiBaseUrl,
+      WITH_CREDENTIALS: true,
+      CREDENTIALS: "include",
+      HEADERS: resolveHeaders,
     });
   }
+  return apiSdk;
+}
 
-  return managementSdkPromise;
+/** @deprecated Prefer getEnterpriseSDK — same client after SDK merge. */
+export function getManagementSDK(): Promise<EnvSyncAPISDK> {
+  return Promise.resolve(getEnterpriseSDK());
 }

@@ -25,6 +25,14 @@ packages/envsync-enterprise-web (PROPRIETARY WebModule[] + pages)
 
 There is **no** separate `envsync-management-web` SPA or `/manage` merge step.
 
+## API client
+
+Uses **`@envsync-cloud/envsync-ts-sdk`** only (`getEnterpriseSDK()` in `src/api/client.ts`).
+
+- `BASE` = shell `runtimeConfig.apiBaseUrl` (API origin)
+- Manage calls use generated paths under `/api/v1/manage/...` (license, enterprise, …)
+- Do not depend on `@envsync-cloud/envsync-management-ts-sdk` (removed)
+
 ## Shell coupling
 
 Pages import shell chrome via the `@shell/*` alias (configured in the web Vite

@@ -2,14 +2,15 @@
 
 **License:** MIT
 
-Shared primitives used by `envsync-api` (core process) and `envsync-enterprise` / `envsync-management-api` (enterprise process).
+Shared primitives used by `envsync-api` and `envsync-enterprise`.
 
-## Scope (Phase 5)
+## Scope
 
 - HTTP/domain error types (`AppError`, `ForbiddenError`, …)
-- `ApiModule` / `ApiSurface` contracts for modular route registration
+- `ApiModule` / `ApiSurface` / `ModuleRegistry` / `mountModules` for modular route registration
+- Core vs management module bags; product mounts manage bag at `/api/v1/manage`
 
 ## Non-goals
 
-- Database drivers, full env schema, domain services (see future `envsync-core-domain`)
-- Enterprise feature implementations (live in `envsync-enterprise` + still-migrating paths in `envsync-api`)
+- Database drivers, full env schema, domain services
+- Enterprise feature implementations (live in `envsync-enterprise`)

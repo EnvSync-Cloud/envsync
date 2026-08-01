@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )

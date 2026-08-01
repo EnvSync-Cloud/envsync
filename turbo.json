@@ -14,10 +14,6 @@
             "cache": false,
             "persistent": true
         },
-        "envsync-management-api#dev": {
-            "cache": false,
-            "persistent": true
-        },
         "envsync-landing#dev": {
             "cache": false,
             "persistent": true

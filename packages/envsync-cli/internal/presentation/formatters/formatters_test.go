@@ -10,7 +10,7 @@ import (
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
-	managementsdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	managementsdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
 
 // ---------------------------------------------------------------------------

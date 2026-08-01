@@ -100,7 +100,7 @@ export class UsersService {
      * @returns UserResponse User role updated successfully
      * @throws ApiError
      */
-    public updateRole(
+    public updateUserRole(
         id: string,
         requestBody?: UpdateRoleRequest,
     ): CancelablePromise<UserResponse> {

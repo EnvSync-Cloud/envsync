@@ -85,9 +85,6 @@ jobs:
       - name: Run mock tests
         run: bun run test:mock
         working-directory: packages/envsync-api
-      - name: Management API boundary tests
-        run: bun test
-        working-directory: packages/envsync-management-api
 
   test-e2e:
     name: E2E Tests
@@ -145,9 +142,6 @@ jobs:
       - name: Build TypeScript SDK
         run: bun run --filter @envsync-cloud/envsync-ts-sdk build
 
-      - name: Build Management TypeScript SDK
-        run: bun run --filter @envsync-cloud/envsync-management-ts-sdk build
-
       - name: Prepare E2E environment
         run: |
           cp .env.example .env
@@ -165,9 +159,6 @@ jobs:
           nohup bun run --filter envsync-api dev > /tmp/envsync-api.log 2>&1 &
           echo $! > /tmp/envsync-api.pid
 
-          nohup bun run --filter envsync-management-api dev > /tmp/envsync-management-api.log 2>&1 &
-          echo $! > /tmp/envsync-management-api.pid
-
           nohup bun run --filter envsync-web dev > /tmp/envsync-web.log 2>&1 &
           echo $! > /tmp/envsync-web.pid
 
@@ -180,7 +171,6 @@ jobs:
         run: |
           for url in \
             "http://api.lvh.me:4000/health" \
-            "http://localhost:4001/health" \
             "http://app.lvh.me:8001" \
             "http://localhost:8002" \
             "http://localhost:8025"
@@ -193,7 +183,7 @@ jobs:
 
               if [ "$i" -eq 90 ]; then
                 echo "service did not become ready: $url"
-                for logfile in /tmp/envsync-api.log /tmp/envsync-management-api.log /tmp/envsync-web.log /tmp/envsync-landing.log; do
+                for logfile in /tmp/envsync-api.log /tmp/envsync-web.log /tmp/envsync-landing.log; do
                   if [ -f "$logfile" ]; then
                     echo "===== $logfile ====="
                     tail -n 200 "$logfile" || true

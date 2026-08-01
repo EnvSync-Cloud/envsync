@@ -14,20 +14,23 @@ Backend API for the EnvSync platform.
 
 ## Architecture
 
+**Single process.** Product routes mount at `/api/*`. When management is enabled and enterprise modules are registered, manage routes mount at `/api/v1/manage/{module}/...` on the same app. There is no `envsync-management-api` package.
+
 ```
 src/
-  entrypoint.ts          # app entry point
-  routes/index.ts        # route registration (each domain has its own router)
-  controllers/           # request handlers
-  services/              # business logic
-  libs/                  # integrations (DB, miniKMS, Cache, OpenFGA, S3, Mail, Webhooks)
-  validators/            # Zod schemas for request validation
-  middlewares/            # Hono middleware
-  helpers/               # shared utilities
-  types/                 # TypeScript types
-  utils/env.ts           # Zod-validated env config — add new env vars here
-  scripts/migrations/    # Kysely database migrations
+  entrypoint.ts              # OSS / local entry
+  entrypoint.enterprise.ts   # EE image entry (registers enterprise modules first)
+  app/factory.ts             # createApiApp — core + optional manage mount
+  modules/load-modules.ts    # ModuleRegistry bags; tryRegisterEnterpriseManageModules
+  routes/                    # core product routers
+  controllers/               # request handlers
+  services/                  # business logic (+ thin re-exports of some EE services)
+  libs/                      # DB, miniKMS, Cache, OpenFGA, S3, Mail, OpenAPI helpers
+  public/ports/              # stable imports for envsync-enterprise
+  utils/env.ts               # Zod-validated env config
 ```
+
+OpenAPI: `GET /openapi` (unique operationIds via `libs/openapi-disambiguate.ts`). Export for SDKs: `bun run scripts/export-openapi.ts`.
 
 ## Key libs
 
@@ -43,8 +46,9 @@ src/
 | `bun run build` | Build via esbuild (`builder.ts`) to `dist/` |
 | `bun run start` | Run production server |
 | `bun run db migrate` | Run database migrations |
-| `bun test tests/mock` | Unit tests (mocked miniKMS/DB) |
-| `TEST_MODE=e2e bun test tests/e2e` | E2e tests (requires running services) |
+| `bun test tests/mock` | Unit tests |
+| `bun run scripts/export-openapi.ts` | Unified OpenAPI for SDK codegen |
+| `bun run builder.enterprise.ts` | Bundle EE entry for `docker/api-enterprise.Dockerfile` |
 
 ## CLI scripts
 

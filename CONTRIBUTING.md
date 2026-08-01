@@ -21,12 +21,11 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 ### No-piggyback program (active)
 
-When working on tenancy, deploy CLI split, management API, licensing, or FE edition isolation:
+When working on tenancy, deploy CLI split, manage surface, licensing, or FE edition isolation:
 
-- Plan: [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md)
-- Hardening: [docs/plans/2026-08-post-program-hardening.md](./docs/plans/2026-08-post-program-hardening.md)
-- ADR: [docs/adr/0001-no-piggyback-program.md](./docs/adr/0001-no-piggyback-program.md)
-- Track: `feat/the-big-update` with phase branches `feat/the-big-update-pN` / hardening `feat/the-big-update-hN`
+- Track: `feat/the-big-update` (phase branches as needed)
+- Product matrix: [EDITIONING.md](./EDITIONING.md), [SELFHOSTING.md](./SELFHOSTING.md), root [AGENTS.md](./AGENTS.md)
+- Local planning notes may live under `docs/` (gitignored — not required for OSS clone)
 
 ### Deployment mode & edition footguns
 
@@ -47,7 +46,7 @@ ENVSYNC_EDITION=oss          # or enterprise for licensed EE
 # EE self-host also needs entitlement verify + setup token / deploy CLI for org create
 ```
 
-See [docs/SUPPORT.md](./docs/SUPPORT.md) and [docs/LICENSE-RUNBOOK.md](./docs/LICENSE-RUNBOOK.md).
+See [EDITIONING.md](./EDITIONING.md) and [SELFHOSTING.md](./SELFHOSTING.md) (enterprise license install notes for self-host).
 
 ## API / Backend Changes (`packages/envsync-api/`)
 
@@ -110,12 +109,12 @@ EnvSync is a **public dual-license monorepo** (not private-superset-only). See:
 
 - [LICENSE](./LICENSE) — MIT default + proprietary carve-out  
 - [EDITIONING.md](./EDITIONING.md) — product matrix and package graph  
-- [docs/SUPPORT.md](./docs/SUPPORT.md) — Hosted / OSS SH / EE SH support matrix  
+- [SELFHOSTING.md](./SELFHOSTING.md) — self-host deploy / org bootstrap  
 
 ### Proprietary paths
 
 Code under `packages/envsync-enterprise`, `packages/envsync-enterprise-web`,
-`packages/envsync-management-api`, and `packages/deploy-cli` (enterprise deploy)
+`packages/envsync-enterprise` / `envsync-enterprise-web`, and `packages/deploy-cli` (enterprise deploy)
 is **proprietary**. By contributing to those paths you grant EnvSync Cloud the
 right to use, modify, and distribute your contribution under the EnvSync
 Enterprise License (and to relicense as needed for the product).
@@ -127,7 +126,8 @@ MIT-path contributions remain under MIT.
 - Do not add proprietary packages as **production** dependencies of MIT packages
   (CI: `bun run check:boundaries`). `envsync-enterprise-web` is a **devDependency**
   of `envsync-web` (Vite resolves it only for enterprise/hosted builds).
-- Do not reintroduce `apps/envsync-management-web` or monorepo spawn shims for OSS deploy.
+- Do not reintroduce `apps/envsync-management-web`, `envsync-management-api`, or `sdks/envsync-management-*`.
+- Do not reintroduce monorepo spawn shims for OSS deploy.
 - Prefer **Organization** in user-facing copy; org create API is
   `POST /auth/create-organization` only.
 - Self-host multi-org limits come from **entitlement claims**; do not rely on

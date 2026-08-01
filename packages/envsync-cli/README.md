@@ -18,10 +18,11 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 
 ## 🛠️ Tech Stack
 
-- **Go** - High-performance systems language
-- **urfave/cli** - Feature-rich CLI framework
-- **Uber Zap** - Structured logging
-- **Auth0** - Authentication and authorization
+- **Go** — CLI binary
+- **urfave/cli** — command framework
+- **envsync-go-sdk** — HTTP client (product + Enterprise manage on one API origin)
+- **Uber Zap** — structured logging
+- Auth against EnvSync API / Keycloak (not Auth0)
 
 ## 🚀 Installation
 
@@ -390,4 +391,4 @@ Built with ❤️ by the EnvSync team
 
 EnvSync uses **Organization** as the tenant boundary (not “workspace”).
 Self-host multi-org is license-gated and provisioned via enterprise deploy/operator
-paths—not the dashboard. See `EDITIONING.md` and `docs/SUPPORT.md` in the monorepo root.
+paths—not the dashboard. See monorepo root `EDITIONING.md` and `SELFHOSTING.md`.

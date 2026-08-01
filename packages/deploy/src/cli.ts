@@ -180,7 +180,6 @@ const NETUTILS_EXPOSE_ALL_PORTS: readonly NetutilsExposeAllSpec[] = [
 	{ service: "postgres", service_port: 5432, protocol: "tcp" },
 	{ service: "envsync_api_blue", service_port: 4000, protocol: "tcp" },
 	{ service: "envsync_api_green", service_port: 4000, protocol: "tcp" },
-	{ service: "envsync-management-api", service_port: 4001, protocol: "tcp" },
 	{ service: "keycloak", service_port: 8080, protocol: "tcp" },
 	{ service: "openfga", service_port: 8090, protocol: "tcp" },
 	{ service: "minikms", service_port: 50051, protocol: "tcp" },
@@ -388,6 +387,8 @@ const DEFAULT_SOURCE_REPO_URL = "https://github.com/EnvSync-Cloud/envsync.git";
 const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
 const MANAGED_VERSIONED_IMAGE_PREFIXES = {
 	api: "ghcr.io/envsync-cloud/envsync-api:",
+	api_enterprise: "ghcr.io/envsync-cloud/envsync-api-enterprise:",
+	// Retired second process — kept so old deploy.yaml image strings still parse as "managed".
 	management_api: "ghcr.io/envsync-cloud/envsync-management-api:",
 	keycloak: "envsync-keycloak:",
 	web: "ghcr.io/envsync-cloud/envsync-web-static:",
@@ -966,7 +967,6 @@ function domainMap(rootDomain: string) {
 		landing: rootDomain,
 		app: `app.${rootDomain}`,
 		api: `api.${rootDomain}`,
-		manage_api: `manage-api.${rootDomain}`,
 		auth: `auth.${rootDomain}`,
 		obs: `obs.${rootDomain}`,
 		mail: `mail.${rootDomain}`,
@@ -1209,9 +1209,15 @@ function versionedImages(version: string, edition: "oss" | "enterprise" = "enter
 		edition === "oss"
 			? `ghcr.io/envsync-cloud/envsync-web-oss-static:${version}`
 			: `ghcr.io/envsync-cloud/envsync-web-static:${version}`;
+	// Enterprise API image bundles manage surface (/api/v1/manage); no second process.
+	const api =
+		edition === "oss"
+			? `ghcr.io/envsync-cloud/envsync-api:${version}`
+			: `ghcr.io/envsync-cloud/envsync-api-enterprise:${version}`;
 	return {
-		api: `ghcr.io/envsync-cloud/envsync-api:${version}`,
-		management_api: `ghcr.io/envsync-cloud/envsync-management-api:${version}`,
+		api,
+		// Deprecated field: kept for older deploy.yaml keys; unused by stack render.
+		management_api: api,
 		keycloak: `envsync-keycloak:${version}`,
 		web,
 		landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
@@ -1241,6 +1247,12 @@ function isManagedVersionedImage(
 ) {
 	if (typeof image !== "string") {
 		return false;
+	}
+	if (key === "api") {
+		return (
+			image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES.api)
+			|| image.startsWith(MANAGED_VERSIONED_IMAGE_PREFIXES.api_enterprise)
+		);
 	}
 	if (key === "web") {
 		return (

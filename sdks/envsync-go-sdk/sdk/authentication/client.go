@@ -75,8 +75,7 @@ func (c *Client) Whoami(
 	return response, nil
 }
 
-// CreateOrganization creates a new organization for the current hosted web session and switches into it.
-// Hosted only; self-host deployments return 403.
+// Create a new organization for the current hosted web session and switch into it. Hosted only; self-host always 403.
 func (c *Client) CreateOrganization(
 	ctx context.Context,
 	request *sdk.CreateOrganizationRequest,
@@ -136,16 +135,6 @@ func (c *Client) CreateOrganization(
 		return nil, err
 	}
 	return response, nil
-}
-
-// CreateWorkspace is deprecated: use CreateOrganization.
-// Calls POST /api/auth/create-organization (create-workspace API route was removed in Phase 7).
-func (c *Client) CreateWorkspace(
-	ctx context.Context,
-	request *sdk.CreateOrganizationRequest,
-	opts ...option.RequestOption,
-) (*sdk.WhoAmIResponse, error) {
-	return c.CreateOrganization(ctx, request, opts...)
 }
 
 // Switch the active organization membership for the current web session

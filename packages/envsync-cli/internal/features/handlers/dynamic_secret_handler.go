@@ -7,7 +7,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/dynamic_secret"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"

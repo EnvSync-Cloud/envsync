@@ -42,7 +42,11 @@ src/
 
 ## SDK
 
-Uses `@envsync-cloud/envsync-ts-sdk` (workspace link) for API types and client. Import types and API client from the SDK — do not duplicate API types locally.
+Uses **`@envsync-cloud/envsync-ts-sdk` only** (workspace link) for API types and client — product and Enterprise manage routes. Do not introduce a second management SDK.
+
+- Shell client: `src/api/base.ts` → `getSDK()` with API origin as `BASE`
+- EE pages: `envsync-enterprise-web` → same package, manage paths under `/api/v1/manage/...`
+- Builds: `build:oss` (no EE modules), `build:enterprise` / `build:hosted` (inject enterprise-web)
 
 ## Conventions
 

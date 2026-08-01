@@ -1,8 +1,10 @@
 # envsync-go-sdk
 
-This is generated SDK for EnvSync API developed by EnvSync Cloud
+Generated Go client for the EnvSync API (Fern). Covers **product** routes (`/api/...`) and **Enterprise manage** routes (`/api/v1/manage/...`) on a **single** API origin.
 
-## envsync-cloud
+Do not hand-edit `sdk/` — regenerate from monorepo OpenAPI (`packages/envsync-api/scripts/export-openapi.ts` → copy `openapi.json` here → `./generator.sh`).
+
+There is no separate `envsync-management-go-sdk`.
 
 ## Multi-Org Bearer Token Usage
 
