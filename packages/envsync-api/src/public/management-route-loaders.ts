@@ -13,12 +13,12 @@ export const managementRouteLoaders = {
 	dynamicSecret: async () => (await import("@/routes/dynamic_secret.route")).default,
 	logForwarding: async () => (await import("@/routes/log-forwarding.route")).default,
 	startLicenseHeartbeat: async () => {
-		const { LicenseStateService } = await import("@/services/license-state.service");
-		await LicenseStateService.startHeartbeat();
+		const { startLicenseHeartbeat } = await import("./license");
+		await startLicenseHeartbeat();
 	},
 	/**
-	 * @deprecated H3: prefer `envsync-enterprise` `startEnterpriseSyncWorker`.
-	 * Kept for loaders/tests that still import management-route-loaders.
+	 * @deprecated Prefer `envsync-enterprise` `startEnterpriseSyncWorker` from the EE package.
+	 * Kept for loaders/tests; monorepo path only until EE routes leave core (P1).
 	 */
 	startEnterpriseSync: async () => {
 		const { startEnterpriseSyncWorker } = await import("../../../envsync-enterprise/src/background.ts");

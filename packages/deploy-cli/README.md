@@ -1,33 +1,31 @@
-# `@envsync-cloud/deploy-enterprise`
+# @envsync-cloud/deploy-enterprise
 
-**Private** Enterprise self-host deploy CLI for EnvSync on Docker Swarm.
+**License:** Proprietary (UNLICENSED)  
+**Binary:** `envsync-deploy-enterprise`  
+**Private registry:** GitHub Packages
 
-> Published to GitHub Packages (`npm.pkg.github.com`), not the public npm registry.
+Enterprise self-host deploy CLI. **Thin wrapper** over the MIT engine in
+`@envsync-cloud/deploy` — does not host a parallel codebase.
 
-## Install (private registry)
-
-```bash
-# configure @envsync-cloud scope for GitHub Packages, then:
-npx @envsync-cloud/deploy-enterprise preinstall
-npx @envsync-cloud/deploy-enterprise setup
-npx @envsync-cloud/deploy-enterprise bootstrap
-npx @envsync-cloud/deploy-enterprise deploy
-npx @envsync-cloud/deploy-enterprise org create --interactive
+```text
+packages/deploy (OSS engine)  ←──  packages/deploy-cli (this package, EE entry)
 ```
 
-Binary: `envsync-deploy-enterprise`
+```ts
+process.env.ENVSYNC_DEPLOY_FORCE_EDITION = "enterprise";
+await import("@envsync-cloud/deploy/cli");
+```
 
-## Product scope
+## Install (private)
 
-- Enterprise edition topology (management API, license mounts)
-- Landing **omitted** by default (Hosted-only marketing)
-- License certificate issue / renew / validate
-- Org create via setup token (CLI only; no dashboard org factory)
+```bash
+npm i -g @envsync-cloud/deploy-enterprise --registry=https://npm.pkg.github.com
+envsync-deploy-enterprise --help
+```
 
-## OSS operators
+## Build
 
-Use public **`@envsync-cloud/deploy`** (`envsync-deploy`) instead.
-
-## Monorepo layout
-
-Sources remain under `packages/deploy-cli/` for historical paths; the npm package name is `@envsync-cloud/deploy-enterprise`.
+```bash
+bun run --filter @envsync-cloud/deploy build
+bun run --filter @envsync-cloud/deploy-enterprise build
+```

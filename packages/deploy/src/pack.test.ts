@@ -39,12 +39,15 @@ describe("deploy package artifact (OSS)", () => {
 		expect(filePaths.some(file => file.startsWith("src/"))).toBe(false);
 	});
 
-	test("built dist is self-contained (no monorepo spawn path)", () => {
+	test("built dist owns the engine (no import of deploy-cli / monorepo spawn)", () => {
 		const packageDir = path.resolve(import.meta.dir, "..");
 		const dist = fs.readFileSync(path.join(packageDir, "dist", "index.js"), "utf8");
+		const cli = fs.readFileSync(path.join(packageDir, "dist", "cli.js"), "utf8");
 		expect(dist).toContain('ENVSYNC_DEPLOY_FORCE_EDITION = "oss"');
-		expect(dist).not.toContain("packages/deploy-cli/src/index.ts");
+		expect(dist).not.toContain("packages/deploy-cli");
 		expect(dist).not.toContain('spawnSync("bun"');
-		expect(dist).toContain("envsync-web-oss-static");
+		expect(cli).toContain("envsync-web-oss-static");
+		// Source of truth is packages/deploy/src/cli.ts, not deploy-cli
+		expect(fs.existsSync(path.join(packageDir, "src", "cli.ts"))).toBe(true);
 	});
 });

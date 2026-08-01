@@ -9,6 +9,7 @@
     "./management-route-loaders": "./src/public/management-route-loaders.ts",
     "./bootstrap": "./src/public/bootstrap.ts",
     "./create-management-app": "./src/public/create-management-app.ts",
+    "./license": "./src/public/license.ts",
     "./instrumentation": "./src/instrumentation.ts",
     "./factory": "./src/app/factory.ts"
   },

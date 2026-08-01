@@ -51,9 +51,9 @@ function readIfExists(filePath?: string) {
 }
 
 function bundledRootCaPem() {
-	// PEM still ships with envsync-api assets (H3); verifier lives in envsync-enterprise.
+	// Owned by envsync-enterprise (no monorepo path into envsync-api assets).
 	return fs.readFileSync(
-		path.join(import.meta.dir, "../../../envsync-api/src/assets/license/envsync-enterprise-root-ca.pem"),
+		path.join(import.meta.dir, "../assets/license/envsync-enterprise-root-ca.pem"),
 		"utf8",
 	);
 }
