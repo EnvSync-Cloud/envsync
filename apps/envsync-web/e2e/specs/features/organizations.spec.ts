@@ -19,7 +19,7 @@ test.describe("organization switcher", () => {
   test("creates a new organization from the enterprise header switcher and can switch back", async ({ page, makeName }) => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     const originalSession = await getAuthSession(page);
-    const organizationName = makeName("Workspace");
+    const organizationName = makeName("Org");
 
     await page.getByTestId("organization-switcher-trigger").click();
     await expect(page.getByTestId("create-organization-action")).toBeVisible();
