@@ -16,8 +16,12 @@ export const managementRouteLoaders = {
 		const { LicenseStateService } = await import("@/services/license-state.service");
 		await LicenseStateService.startHeartbeat();
 	},
+	/**
+	 * @deprecated H3: prefer `envsync-enterprise` `startEnterpriseSyncWorker`.
+	 * Kept for loaders/tests that still import management-route-loaders.
+	 */
 	startEnterpriseSync: async () => {
-		const { EnterpriseSyncService } = await import("@/services/enterprise-sync.service");
-		EnterpriseSyncService.startWorker();
+		const { startEnterpriseSyncWorker } = await import("../../../envsync-enterprise/src/background.ts");
+		await startEnterpriseSyncWorker();
 	},
 } as const;

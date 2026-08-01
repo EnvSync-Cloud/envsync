@@ -165,6 +165,41 @@ if (goAuth.includes('"/api/auth/create-workspace"') || goAuth.includes("'/api/au
 	ok("envsync-go-sdk uses create-organization path");
 }
 
+// 11) H3: enterprise integration services live under envsync-enterprise
+const eeServicesDir = path.join(root, "packages/envsync-enterprise/src/services");
+const requiredEeServices = [
+	"enterprise-sync.service.ts",
+	"enterprise-integration.service.ts",
+	"enterprise-provider.service.ts",
+	"enterprise-provider-sync.service.ts",
+	"enterprise-certificate-verifier.service.ts",
+];
+for (const name of requiredEeServices) {
+	const eePath = path.join(eeServicesDir, name);
+	const apiShim = path.join(root, "packages/envsync-api/src/services", name);
+	if (!fs.existsSync(eePath)) {
+		fail(`H3: missing envsync-enterprise service ${name}`);
+	} else if (!fs.existsSync(apiShim)) {
+		fail(`H3: missing envsync-api re-export shim for ${name}`);
+	} else {
+		const shim = fs.readFileSync(apiShim, "utf8");
+		if (!shim.includes("envsync-enterprise") || shim.split("\n").length > 20) {
+			// Shim should be a thin re-export, not a full copy of implementation
+			if (!shim.includes("export * from")) {
+				fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
+			}
+		}
+	}
+}
+if (fs.existsSync(path.join(eeServicesDir, "enterprise-sync.service.ts"))) {
+	const impl = fs.readFileSync(path.join(eeServicesDir, "enterprise-sync.service.ts"), "utf8");
+	if (impl.includes("export class EnterpriseSyncService") || impl.includes("class EnterpriseSyncService")) {
+		ok("H3: enterprise-sync implementation owned by envsync-enterprise");
+	} else {
+		fail("H3: enterprise-sync.service.ts in enterprise package looks empty/wrong");
+	}
+}
+
 if (failed) {
 	process.exit(1);
 }

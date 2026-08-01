@@ -4,15 +4,27 @@
 
 ## Role
 
-Owns the **management API module registry** (Phase 5 / D5): which routes and background workers the management process mounts (license heartbeat, enterprise sync, OIDC/SAML, rotation, etc.).
+Owns the **management API module registry** and (H3+) **enterprise integration/sync services**.
 
 ```text
 envsync-kernel (MIT)
        ↑
-  envsync-api (MIT core process)
+  envsync-api (MIT) — core process; thin re-exports for moved EE services
        ↑
-envsync-enterprise (PROPRIETARY modules) ──► envsync-management-api (process)
+envsync-enterprise (PROPRIETARY) — modules + EE services
+       ↑
+envsync-management-api (process)
 ```
+
+## What lives here (H3)
+
+| Path | Contents |
+|------|----------|
+| `src/management-modules.ts` | Management HTTP module registry |
+| `src/background.ts` | Enterprise sync worker + license heartbeat wiring |
+| `src/services/enterprise-*.service.ts` | Integration, provider catalog, provider sync, org sync, cert verifier |
+
+Still in `envsync-api` (shared with core gates / lock middleware): entitlement, license-state, OIDC/SAML/rotation/dyn-secret engines, EE HTTP routes/controllers.
 
 ## Usage
 
@@ -21,9 +33,8 @@ import { registerManagementModules } from "envsync-api/modules";
 import { enterpriseManagementModules } from "envsync-enterprise";
 
 registerManagementModules(enterpriseManagementModules);
-// then create management app / start process
 ```
 
-## Migration note
+## Path alias
 
-Route/service implementations still largely live under `packages/envsync-api/src` and are loaded via `envsync-api` public loaders. Physical move of EE services into this package continues in follow-up slices (migrations stream split, core-domain extraction).
+Services import core infrastructure via `@/*` → `packages/envsync-api/src/*` (see `tsconfig.json`). Management API bundler resolves the same alias.

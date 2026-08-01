@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ESNext",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../envsync-api/src/*"]
+    }
   },
   "include": ["src/**/*"]
 }
