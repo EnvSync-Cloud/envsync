@@ -280,7 +280,7 @@ Does **not** block Hosted cutover.
 
 ### Sprint D (design system)
 
-- [ ] H5.1–H5.3 envsync-ui  
+- [x] H5.1–H5.3 envsync-ui — [phase-h5/README.md](./phase-h5/README.md)
 
 ---
 
