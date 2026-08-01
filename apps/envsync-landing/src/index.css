@@ -1,87 +1,8 @@
+@import "envsync-ui/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 15%;
-    --card: 60 20% 99%;
-    --card-foreground: 0 0% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
-    --primary: 153 74% 44%;
-    --primary-foreground: 150 46% 5%;
-    --primary-hover: 153 76% 38%;
-    --secondary: 60 20% 99%;
-    --secondary-foreground: 0 0% 15%;
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 44%;
-    --text-tertiary: 0 0% 42%;
-    --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 15%;
-    --accent-ink: 154 78% 27%;
-    --accent-tint: 153 74% 44%;
-    --accent-surface: 155 58% 94%;
-    --accent-outline: 153 74% 44%;
-    --destructive: 357 63% 44%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 94%;
-    --input: 0 0% 90%;
-    --ring: 153 74% 44%;
-    --radius: 0.5rem;
-    --hero-text: 0 0% 100%;
-    --status-warning: 26 90% 37%;
-    --warning-foreground: 0 0% 100%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 15%;
-    --sidebar-primary: 153 74% 44%;
-    --sidebar-primary-foreground: 150 46% 5%;
-    --sidebar-accent: 0 0% 94%;
-    --sidebar-accent-foreground: 0 0% 15%;
-    --sidebar-border: 0 0% 94%;
-    --sidebar-ring: 153 74% 44%;
-  }
-
-  .dark {
-    --background: 223 23% 6%;
-    --foreground: 210 20% 96%;
-    --card: 216 24% 8%;
-    --card-foreground: 210 20% 96%;
-    --popover: 217 24% 11%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 153 74% 44%;
-    --primary-foreground: 150 46% 5%;
-    --primary-hover: 153 70% 51%;
-    --secondary: 216 24% 8%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 218 21% 15%;
-    --muted-foreground: 215 11% 66%;
-    --text-tertiary: 215 11% 62%;
-    --accent: 218 21% 15%;
-    --accent-foreground: 210 20% 96%;
-    --accent-ink: 153 70% 51%;
-    --accent-tint: 153 74% 44%;
-    --accent-surface: 170 39% 9%;
-    --accent-outline: 153 74% 44%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 218 21% 15%;
-    --input: 216 18% 22%;
-    --ring: 153 74% 44%;
-    --hero-text: 0 0% 100%;
-    --status-warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --sidebar-background: 223 23% 6%;
-    --sidebar-foreground: 210 20% 96%;
-    --sidebar-primary: 153 74% 44%;
-    --sidebar-primary-foreground: 150 46% 5%;
-    --sidebar-accent: 218 21% 15%;
-    --sidebar-accent-foreground: 210 20% 96%;
-    --sidebar-border: 218 21% 15%;
-    --sidebar-ring: 153 74% 44%;
-  }
-}
 
 @layer base {
   * {

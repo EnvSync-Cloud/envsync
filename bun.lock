@@ -45,6 +45,7 @@
         "clsx": "^2.1.1",
         "date-fns": "^3.6.0",
         "dotenv": "^17.0.1",
+        "envsync-ui": "workspace:*",
         "lucide-react": "^0.462.0",
         "next-themes": "^0.3.0",
         "react": "^18.3.1",
@@ -140,6 +141,7 @@
         "date-fns": "^3.6.0",
         "embla-carousel-react": "^8.6.0",
         "envsync-enterprise-web": "workspace:*",
+        "envsync-ui": "workspace:*",
         "lucide-react": "^0.462.0",
         "next-themes": "^0.3.0",
         "nuqs": "^2.4.3",
@@ -358,6 +360,17 @@
       },
       "peerDependencies": {
         "typescript": "^5.0.0",
+      },
+    },
+    "packages/envsync-ui": {
+      "name": "envsync-ui",
+      "version": "0.11.0",
+      "devDependencies": {
+        "tailwindcss": "^3.4.17",
+        "typescript": "^5.8.3",
+      },
+      "peerDependencies": {
+        "tailwindcss": "^3.4.0",
       },
     },
     "packages/license-server": {
@@ -1495,6 +1508,8 @@
     "envsync-landing": ["envsync-landing@workspace:apps/envsync-landing"],
 
     "envsync-management-api": ["envsync-management-api@workspace:packages/envsync-management-api"],
+
+    "envsync-ui": ["envsync-ui@workspace:packages/envsync-ui"],
 
     "envsync-web": ["envsync-web@workspace:apps/envsync-web"],
 

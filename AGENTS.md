@@ -18,6 +18,7 @@ Prefer **Organization** in product UI; org create is `POST /auth/create-organiza
 
 - `packages/envsync-api/` — Backend API (Hono + Bun)
 - `packages/envsync-cli/` — CLI client (Go)
+- `packages/envsync-ui/` — Shared MIT design tokens + Tailwind preset (web, landing, EE modules)
 - `packages/envsync-kernel/` — Shared MIT kernel (errors, ApiModule types)
 - `packages/envsync-enterprise/` — Proprietary management module registry + EE surface
 - `packages/envsync-enterprise-web/` — Proprietary dashboard WebModule[] + integrations pages (injected into envsync-web)

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — hardening H5 (design tokens)
+
+### Added
+
+- **`packages/envsync-ui`**: shared CSS tokens + Tailwind preset (MIT).
+- `envsync-web` and `envsync-landing` consume `envsync-ui` instead of forked token blocks.
+
+---
+
 ## Unreleased — hardening H4 (license issuer)
 
 ### Changed
