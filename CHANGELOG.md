@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — hardening H1 (Hosted cutover)
+
+### Fixed
+
+- **Hosted FE deploy** (`.github/workflows/deploy-fe.yaml`) builds **`build:hosted`** (enterprise dashboard modules), not OSS stub.
+- Path filter includes `packages/envsync-enterprise-web/**`.
+- **Public SDKs:** `createOrganization` → `POST /api/auth/create-organization`; deprecated `createWorkspace` wrappers call the new path (API no longer has create-workspace).
+
+### Verify
+
+- `bun run check:boundaries` asserts deploy-fe edition + SDK paths.
+
+---
+
 ## Unreleased — program track `feat/the-big-update` (Phase 7)
 
 ### Removed

@@ -129,6 +129,42 @@ if (authRoute.includes('"/create-workspace"') || authRoute.includes("'/create-wo
 	ok("create-workspace removed; create-organization present");
 }
 
+// 9) H1: Hosted FE deploy must not build OSS dashboard
+const deployFe = fs.readFileSync(path.join(root, ".github/workflows/deploy-fe.yaml"), "utf8");
+if (/bun run --filter envsync-web build:oss/.test(deployFe)) {
+	fail("deploy-fe.yaml must not use build:oss for Hosted web (use build:hosted or build:enterprise)");
+} else if (!/build:hosted|build:enterprise/.test(deployFe)) {
+	fail("deploy-fe.yaml must build Hosted web with enterprise modules (build:hosted or build:enterprise)");
+} else if (!deployFe.includes("envsync-enterprise-web")) {
+	fail("deploy-fe.yaml path filters should include packages/envsync-enterprise-web");
+} else {
+	ok("deploy-fe Hosted web uses enterprise/hosted build + enterprise-web path filter");
+}
+
+// 10) H1: SDK clients must not call removed create-workspace URL
+const tsAuth = fs.readFileSync(
+	path.join(root, "sdks/envsync-ts-sdk/src/services/AuthenticationService.ts"),
+	"utf8",
+);
+const goAuth = fs.readFileSync(
+	path.join(root, "sdks/envsync-go-sdk/sdk/authentication/client.go"),
+	"utf8",
+);
+if (tsAuth.includes("url: '/api/auth/create-workspace'") || tsAuth.includes('url: "/api/auth/create-workspace"')) {
+	fail("envsync-ts-sdk must not POST /api/auth/create-workspace");
+} else if (!tsAuth.includes("/api/auth/create-organization")) {
+	fail("envsync-ts-sdk must call /api/auth/create-organization");
+} else {
+	ok("envsync-ts-sdk uses create-organization path");
+}
+if (goAuth.includes('"/api/auth/create-workspace"') || goAuth.includes("'/api/auth/create-workspace'")) {
+	fail("envsync-go-sdk must not POST /api/auth/create-workspace");
+} else if (!goAuth.includes("/api/auth/create-organization")) {
+	fail("envsync-go-sdk must call /api/auth/create-organization");
+} else {
+	ok("envsync-go-sdk uses create-organization path");
+}
+
 if (failed) {
 	process.exit(1);
 }

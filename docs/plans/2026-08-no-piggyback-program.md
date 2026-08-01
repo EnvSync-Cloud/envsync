@@ -1,8 +1,9 @@
 # EnvSync Program Plan: No Piggybacking
 
-**Status:** Complete for full-thread decisions — **Phase 0 complete on `feat/the-big-update-p0`; safe to start Phase 1**  
-**Date:** 2026-08-01 (amended same day: org channels, license ops, FE D9–D12)  
-**Track:** `feat/the-big-update` · phases `feat/the-big-update-pN`  
+**Status:** Decisions locked; **implementation P0–P7 complete on `feat/the-big-update`**.  
+**Follow-on:** [2026-08-post-program-hardening.md](./2026-08-post-program-hardening.md) (Hosted cutover H1, EE extraction H3, envsync-ui H5).  
+**Date:** 2026-08-01 (amended same day: org channels, license ops, FE D9–D12; post-review hardening plan same day)  
+**Track:** `feat/the-big-update` · phases `feat/the-big-update-pN` · hardening `feat/the-big-update-hN`  
 **Scope:** Tenancy, org-create channels, deploy CLIs, management API, licensing, landing, dual-license monorepo, FE injection, design tokens  
 
 **Thread completeness:** This document is the single source of truth for every product decision from the end-to-end audit through FE amendments. See **§0.6 Decision coverage checklist**.  

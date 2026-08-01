@@ -3,6 +3,12 @@
 **Status:** Phase 6 product matrix (matches program plan §1.1).  
 **Edition details:** [EDITIONING.md](../EDITIONING.md)
 
+## Hosted dashboard build note
+
+Cloudflare Hosted web (`deploy-fe.yaml`) must use **`build:hosted` / enterprise modules** so Integrations, License, and Sync ops ship. Self-host OSS static images continue to use `build:oss` via the release image matrix.
+
+See [plans/phase-h1/README.md](./plans/phase-h1/README.md) for cutover order.
+
 ## Products
 
 | Capability | Hosted Enterprise | Self-host OSS | Self-host Enterprise |
