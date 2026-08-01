@@ -166,3 +166,7 @@ bun run selfhost:smoke:oss
 - [packages/deploy](./packages/deploy) — public OSS CLI (`@envsync-cloud/deploy`)
 - [packages/deploy-cli](./packages/deploy-cli) — enterprise sources published as `@envsync-cloud/deploy-enterprise`
 - [packages/envsync-keycloak-theme](./packages/envsync-keycloak-theme)
+
+## Enterprise license (self-host)
+
+See [docs/LICENSE-RUNBOOK.md](./docs/LICENSE-RUNBOOK.md) for entitlement JWT / certificate install and Hosted vs self-host policy.

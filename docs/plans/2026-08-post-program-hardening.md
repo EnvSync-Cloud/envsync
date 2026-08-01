@@ -275,7 +275,8 @@ Does **not** block Hosted cutover.
 - [x] H3.1 inventory — [phase-h3/README.md](./phase-h3/README.md)  
 - [x] H3.2–H3.3 first EE service move (integration/sync/provider + cert verifier)  
 - [ ] H3.4 migration streams / remaining OIDC–rotation move  
-- [ ] H4.1 issuer JWT (private)  
+- [x] H4.1 issuer JWT (EdDSA entitlement) — [phase-h4/README.md](./phase-h4/README.md)  
+- [x] H4.2–H4.4 runbooks + tests
 
 ### Sprint D (design system)
 
