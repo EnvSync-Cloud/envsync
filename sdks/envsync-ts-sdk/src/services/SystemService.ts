@@ -21,4 +21,18 @@ export class SystemService {
             },
         });
     }
+    /**
+     * Get Management System Status
+     * @returns SystemStatusResponse Management system status
+     * @throws ApiError
+     */
+    public manageGetManagementSystemStatus(): CancelablePromise<SystemStatusResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/api/v1/manage/system/status',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
 }

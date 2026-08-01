@@ -19,7 +19,6 @@
     "test": "bun test"
   },
   "peerDependencies": {
-    "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
     "@envsync-cloud/envsync-ts-sdk": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": ">=0.400.0",

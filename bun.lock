@@ -83,7 +83,6 @@
       "name": "envsync-web",
       "version": "0.11.0",
       "dependencies": {
-        "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
         "@envsync-cloud/envsync-ts-sdk": "workspace:*",
         "@fontsource/inter": "^5.2.5",
         "@fontsource/jetbrains-mono": "^5.2.5",
@@ -317,7 +316,6 @@
         "typescript": "^5.8.3",
       },
       "peerDependencies": {
-        "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
         "@envsync-cloud/envsync-ts-sdk": "workspace:*",
         "@tanstack/react-query": "^5.0.0",
         "lucide-react": ">=0.400.0",
@@ -344,23 +342,6 @@
     "packages/envsync-keycloak-theme": {
       "name": "@envsync-cloud/envsync-keycloak-theme",
       "version": "0.1.1",
-    },
-    "packages/envsync-management-api": {
-      "name": "envsync-management-api",
-      "version": "0.11.0",
-      "dependencies": {
-        "envsync-api": "workspace:*",
-        "envsync-enterprise": "workspace:*",
-        "envsync-kernel": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "latest",
-        "esbuild": "^0.25.5",
-        "glob": "^13.0.3",
-      },
-      "peerDependencies": {
-        "typescript": "^5.0.0",
-      },
     },
     "packages/envsync-ui": {
       "name": "envsync-ui",
@@ -394,18 +375,6 @@
         "jose": "^6.1.3",
         "reflect-metadata": "^0.2.2",
         "zod": "^3.25.50",
-      },
-    },
-    "sdks/envsync-management-ts-sdk": {
-      "name": "@envsync-cloud/envsync-management-ts-sdk",
-      "version": "0.11.0",
-      "devDependencies": {
-        "@types/bun": "latest",
-        "openapi-typescript-codegen": "^0.29.0",
-        "tsup": "^8.5.0",
-      },
-      "peerDependencies": {
-        "typescript": "^5",
       },
     },
     "sdks/envsync-ts-sdk": {
@@ -547,8 +516,6 @@
     "@envsync-cloud/deploy-enterprise": ["@envsync-cloud/deploy-enterprise@workspace:packages/deploy-cli"],
 
     "@envsync-cloud/envsync-keycloak-theme": ["@envsync-cloud/envsync-keycloak-theme@workspace:packages/envsync-keycloak-theme"],
-
-    "@envsync-cloud/envsync-management-ts-sdk": ["@envsync-cloud/envsync-management-ts-sdk@workspace:sdks/envsync-management-ts-sdk"],
 
     "@envsync-cloud/envsync-ts-sdk": ["@envsync-cloud/envsync-ts-sdk@workspace:sdks/envsync-ts-sdk"],
 
@@ -1517,8 +1484,6 @@
     "envsync-kernel": ["envsync-kernel@workspace:packages/envsync-kernel"],
 
     "envsync-landing": ["envsync-landing@workspace:apps/envsync-landing"],
-
-    "envsync-management-api": ["envsync-management-api@workspace:packages/envsync-management-api"],
 
     "envsync-ui": ["envsync-ui@workspace:packages/envsync-ui"],
 

@@ -3,10 +3,10 @@ import type {
   CreateProviderConnectionRequest,
   UpdateOrgSecretRequest,
   UpdateProviderConnectionRequest,
-} from "@envsync-cloud/envsync-management-ts-sdk";
+} from "@envsync-cloud/envsync-ts-sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { enterpriseErrorMessage, getManagementSDK, isEnterpriseUiEnabled } from "./client";
+import { enterpriseErrorMessage, getEnterpriseSDK, isEnterpriseUiEnabled } from "./client";
 import type {
   EnterpriseProvider,
   EnvTypeMapping,
@@ -19,7 +19,7 @@ import type {
 
 export async function listProviderConnections(): Promise<ProviderConnection[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseProviderConnections();
+    return await getEnterpriseSDK().enterprise.listEnterpriseProviderConnections();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -27,7 +27,7 @@ export async function listProviderConnections(): Promise<ProviderConnection[]> {
 
 export async function listOrgSecrets(): Promise<OrgSecret[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseOrgSecrets();
+    return await getEnterpriseSDK().enterprise.listEnterpriseOrgSecrets();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -35,7 +35,7 @@ export async function listOrgSecrets(): Promise<OrgSecret[]> {
 
 export async function listIntegrationBindings(appId: string): Promise<IntegrationBinding[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseIntegrationBindings(appId);
+    return await getEnterpriseSDK().enterprise.listEnterpriseIntegrationBindings(appId);
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -43,7 +43,7 @@ export async function listIntegrationBindings(appId: string): Promise<Integratio
 
 export async function listEnvTypeMappings(appId: string): Promise<EnvTypeMapping[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseEnvTypeMappings(appId);
+    return await getEnterpriseSDK().enterprise.listEnterpriseEnvTypeMappings(appId);
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -51,7 +51,7 @@ export async function listEnvTypeMappings(appId: string): Promise<EnvTypeMapping
 
 export async function listSyncRuns(): Promise<SyncRun[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseSyncRuns();
+    return await getEnterpriseSDK().enterprise.listEnterpriseSyncRuns();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -59,7 +59,7 @@ export async function listSyncRuns(): Promise<SyncRun[]> {
 
 export async function listSyncAuditEvents(syncRunId: string): Promise<SyncAuditEvent[]> {
   try {
-    return await (await getManagementSDK()).enterprise.listEnterpriseSyncAuditEvents(syncRunId);
+    return await getEnterpriseSDK().enterprise.listEnterpriseSyncAuditEvents(syncRunId);
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -67,7 +67,8 @@ export async function listSyncAuditEvents(syncRunId: string): Promise<SyncAuditE
 
 export async function getManagementSystemStatus() {
   try {
-    return await (await getManagementSDK()).system.getManagementSystemStatus();
+    // Prefer manage surface path (enterprise install/license view).
+    return await getEnterpriseSDK().system.manageGetManagementSystemStatus();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -75,7 +76,7 @@ export async function getManagementSystemStatus() {
 
 export async function getLicenseStatus() {
   try {
-    return await (await getManagementSDK()).license.getManagementLicenseStatus();
+    return await getEnterpriseSDK().license.getManagementLicenseStatus();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -83,7 +84,7 @@ export async function getLicenseStatus() {
 
 export async function activateLicense() {
   try {
-    return await (await getManagementSDK()).license.activateManagementLicense();
+    return await getEnterpriseSDK().license.activateManagementLicense();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -91,7 +92,7 @@ export async function activateLicense() {
 
 export async function verifyLicense() {
   try {
-    return await (await getManagementSDK()).license.verifyManagementLicense();
+    return await getEnterpriseSDK().license.verifyManagementLicense();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -116,7 +117,7 @@ export function useCreateProviderConnection() {
       metadata?: Record<string, unknown>;
     }) => {
       try {
-        return await (await getManagementSDK()).enterprise.createEnterpriseProviderConnection({
+        return await getEnterpriseSDK().enterprise.createEnterpriseProviderConnection({
           provider_type: payload.provider_type as CreateProviderConnectionRequest.provider_type,
           name: payload.name,
           status: payload.status as CreateProviderConnectionRequest.status | undefined,
@@ -144,7 +145,7 @@ export function useUpdateProviderConnection() {
       metadata?: Record<string, unknown>;
     }) => {
       try {
-        return await (await getManagementSDK()).enterprise.updateEnterpriseProviderConnection(payload.id, {
+        return await getEnterpriseSDK().enterprise.updateEnterpriseProviderConnection(payload.id, {
           name: payload.name,
           status: payload.status as UpdateProviderConnectionRequest.status | undefined,
           auth_config: payload.auth_config,
@@ -178,7 +179,7 @@ export function useCreateOrgSecret() {
       metadata?: Record<string, unknown>;
     }) => {
       try {
-        return await (await getManagementSDK()).enterprise.createEnterpriseOrgSecret(
+        return await getEnterpriseSDK().enterprise.createEnterpriseOrgSecret(
           payload as CreateOrgSecretRequest,
         );
       } catch (error) {
@@ -201,7 +202,7 @@ export function useUpdateOrgSecret() {
       metadata?: Record<string, unknown>;
     }) => {
       try {
-        return await (await getManagementSDK()).enterprise.updateEnterpriseOrgSecret(payload.id, {
+        return await getEnterpriseSDK().enterprise.updateEnterpriseOrgSecret(payload.id, {
           value: payload.value,
           description: payload.description,
           metadata: payload.metadata,
@@ -238,7 +239,7 @@ export function useCreateIntegrationBinding(appId?: string) {
     }) => {
       if (!appId) throw new Error("appId is required");
       try {
-        return await (await getManagementSDK()).enterprise.createEnterpriseIntegrationBinding(appId, {
+        return await getEnterpriseSDK().enterprise.createEnterpriseIntegrationBinding(appId, {
           provider_connection_id: payload.provider_connection_id,
           provider_type: payload.provider_type as CreateProviderConnectionRequest.provider_type,
           is_enabled: payload.is_enabled,
@@ -264,7 +265,7 @@ export function useUpdateIntegrationBinding(appId?: string) {
     }) => {
       if (!appId) throw new Error("appId is required");
       try {
-        return await (await getManagementSDK()).enterprise.updateEnterpriseIntegrationBinding(appId, payload.id, {
+        return await getEnterpriseSDK().enterprise.updateEnterpriseIntegrationBinding(appId, payload.id, {
           is_enabled: payload.is_enabled,
           metadata: payload.metadata,
         });
@@ -302,7 +303,7 @@ export function useCreateEnvTypeMapping(appId?: string) {
     }) => {
       if (!appId) throw new Error("appId is required");
       try {
-        return await (await getManagementSDK()).enterprise.createEnterpriseEnvTypeMapping(appId, payload);
+        return await getEnterpriseSDK().enterprise.createEnterpriseEnvTypeMapping(appId, payload);
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -325,7 +326,7 @@ export function useUpdateEnvTypeMapping(appId?: string) {
     }) => {
       if (!appId) throw new Error("appId is required");
       try {
-        return await (await getManagementSDK()).enterprise.updateEnterpriseEnvTypeMapping(appId, payload.id, {
+        return await getEnterpriseSDK().enterprise.updateEnterpriseEnvTypeMapping(appId, payload.id, {
           target_identifier: payload.target_identifier,
           branch_ref: payload.branch_ref,
           path_prefix: payload.path_prefix,
@@ -361,7 +362,7 @@ export function useCreateManualSyncRun() {
       metadata?: Record<string, unknown>;
     }) => {
       try {
-        return await (await getManagementSDK()).enterprise.createEnterpriseManualSyncRun({
+        return await getEnterpriseSDK().enterprise.createEnterpriseManualSyncRun({
           app_id: payload.app_id,
           provider_type: payload.provider_type as CreateProviderConnectionRequest.provider_type,
           metadata: payload.metadata,

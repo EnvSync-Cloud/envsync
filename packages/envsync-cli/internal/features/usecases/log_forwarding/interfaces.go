@@ -3,7 +3,7 @@ package log_forwarding
 import (
 	"context"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
 
 // CreateLogForwardingConfigUseCase defines the interface for creating log forwarding configs

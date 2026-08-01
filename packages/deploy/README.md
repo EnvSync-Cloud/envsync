@@ -28,6 +28,8 @@ envsync-deploy --help
 Private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) wraps
 this engine with enterprise edition forced. Open-core direction: **EE → OSS**, never reverse.
 
+Enterprise stacks run a **single API service** with manage routes at `/api/v1/manage/...` on the API host (no separate management-api container). Frontend `managementApiUrl` points at `{apiBaseUrl}/api/v1/manage`.
+
 ## Build
 
 ```bash

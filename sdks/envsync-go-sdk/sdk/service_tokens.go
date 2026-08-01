@@ -118,52 +118,6 @@ func (c *CreateServiceTokenResponse) String() string {
 	return fmt.Sprintf("%#v", c)
 }
 
-type ErrorResponse struct {
-	Error string `json:"error" url:"error"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (e *ErrorResponse) GetError() string {
-	if e == nil {
-		return ""
-	}
-	return e.Error
-}
-
-func (e *ErrorResponse) GetExtraProperties() map[string]interface{} {
-	return e.extraProperties
-}
-
-func (e *ErrorResponse) UnmarshalJSON(data []byte) error {
-	type unmarshaler ErrorResponse
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*e = ErrorResponse(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *e)
-	if err != nil {
-		return err
-	}
-	e.extraProperties = extraProperties
-	e.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (e *ErrorResponse) String() string {
-	if len(e.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(e.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(e); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", e)
-}
-
 type ServiceTokenPermissions struct {
 	Read  bool `json:"read" url:"read"`
 	Write bool `json:"write" url:"write"`

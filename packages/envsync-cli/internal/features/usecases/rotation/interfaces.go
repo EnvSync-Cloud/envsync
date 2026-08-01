@@ -3,7 +3,7 @@ package rotation
 import (
 	"context"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
 
 type ListPoliciesUseCase interface {

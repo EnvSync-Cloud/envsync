@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { enterpriseManagementModules } from "envsync-enterprise";
 
 import { createApiApp } from "@/app/factory";
-import { registerManagementModules } from "@/modules/load-modules";
+import { MANAGE_API_PREFIX, registerManagementModules } from "@/modules/load-modules";
 import { LicenseStateService } from "@/services/license-state.service";
 import { SystemStateService } from "@/services/system-state.service";
 
@@ -22,8 +22,8 @@ afterEach(() => {
 	SystemStateService.getSystemStatus = originalGetSystemStatus;
 });
 
-describe("management surface license and system routes", () => {
-	test("GET /api/system/status returns install and license state", async () => {
+describe("management process surface (/api/v1/manage/...)", () => {
+	test(`GET ${MANAGE_API_PREFIX}/system/status returns install and license state`, async () => {
 		SystemStateService.getSystemStatus = async () => ({
 			id: "default",
 			edition: "enterprise",
@@ -55,7 +55,9 @@ describe("management surface license and system routes", () => {
 			},
 		});
 
-		const response = await managementApp.request("http://localhost/api/system/status");
+		const response = await managementApp.request(
+			`http://localhost${MANAGE_API_PREFIX}/system/status`,
+		);
 		expect(response.status).toBe(200);
 
 		const body = await response.json() as {
@@ -89,8 +91,8 @@ describe("management surface license and system routes", () => {
 		});
 
 		const [licenseStatus, enterpriseProviders] = await Promise.all([
-			managementApp.request("http://localhost/api/license/status"),
-			managementApp.request("http://localhost/api/enterprise/providers"),
+			managementApp.request(`http://localhost${MANAGE_API_PREFIX}/license/status`),
+			managementApp.request(`http://localhost${MANAGE_API_PREFIX}/enterprise/providers`),
 		]);
 
 		expect(licenseStatus.status).toBe(200);
@@ -104,7 +106,7 @@ describe("management surface license and system routes", () => {
 		});
 	});
 
-	test("POST /api/license/activate and /verify delegate to the service", async () => {
+	test(`POST ${MANAGE_API_PREFIX}/license/activate and /verify delegate to the service`, async () => {
 		const activatedState = {
 			id: "default",
 			status: "active" as const,
@@ -132,8 +134,12 @@ describe("management surface license and system routes", () => {
 		LicenseStateService.verifyLicenseNow = async () => verifiedState;
 
 		const [activateResponse, verifyResponse] = await Promise.all([
-			managementApp.request("http://localhost/api/license/activate", { method: "POST" }),
-			managementApp.request("http://localhost/api/license/verify", { method: "POST" }),
+			managementApp.request(`http://localhost${MANAGE_API_PREFIX}/license/activate`, {
+				method: "POST",
+			}),
+			managementApp.request(`http://localhost${MANAGE_API_PREFIX}/license/verify`, {
+				method: "POST",
+			}),
 		]);
 
 		expect(activateResponse.status).toBe(200);

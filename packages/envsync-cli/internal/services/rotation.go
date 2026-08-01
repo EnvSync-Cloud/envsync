@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
-	"github.com/envsync-cloud/envsync-management-go-sdk/sdk/rotation"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/rotation"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 )

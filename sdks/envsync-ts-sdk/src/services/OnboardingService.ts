@@ -212,4 +212,197 @@ export class OnboardingService {
             },
         });
     }
+    /**
+     * Create Organization Invite
+     * Create an organization invite
+     * @param requestBody
+     * @returns CreateOrgInviteResponse Successful greeting response
+     * @throws ApiError
+     */
+    public manageCreateOrgInvite(
+        requestBody?: CreateOrgInviteRequest,
+    ): CancelablePromise<CreateOrgInviteResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/v1/manage/onboarding/org',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get Organization Invite by Code
+     * Get organization invite by code
+     * @param inviteCode
+     * @returns GetOrgInviteByCodeResponse Organization invite retrieved successfully
+     * @throws ApiError
+     */
+    public manageGetOrgInviteByCode(
+        inviteCode: string,
+    ): CancelablePromise<GetOrgInviteByCodeResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/api/v1/manage/onboarding/org/{invite_code}',
+            path: {
+                'invite_code': inviteCode,
+            },
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Accept Organization Invite
+     * Accept organization invite
+     * @param inviteCode
+     * @param requestBody
+     * @returns AcceptOrgInviteResponse Organization invite accepted successfully
+     * @throws ApiError
+     */
+    public manageAcceptOrgInvite(
+        inviteCode: string,
+        requestBody?: AcceptOrgInviteRequest,
+    ): CancelablePromise<AcceptOrgInviteResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/api/v1/manage/onboarding/org/{invite_code}/accept',
+            path: {
+                'invite_code': inviteCode,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get User Invite by Code
+     * Get user invite by code
+     * @param inviteCode
+     * @returns GetUserInviteByTokenResponse User invite retrieved successfully
+     * @throws ApiError
+     */
+    public manageGetUserInviteByCode(
+        inviteCode: string,
+    ): CancelablePromise<GetUserInviteByTokenResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/api/v1/manage/onboarding/user/{invite_code}',
+            path: {
+                'invite_code': inviteCode,
+            },
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Update User Invite
+     * Update user invite
+     * @param inviteCode
+     * @param requestBody
+     * @returns UpdateUserInviteResponse User invite updated successfully
+     * @throws ApiError
+     */
+    public manageUpdateUserInvite(
+        inviteCode: string,
+        requestBody?: UpdateUserInviteRequest,
+    ): CancelablePromise<UpdateUserInviteResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/api/v1/manage/onboarding/user/{invite_code}',
+            path: {
+                'invite_code': inviteCode,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Accept User Invite
+     * Accept user invite
+     * @param inviteCode
+     * @param requestBody
+     * @returns AcceptUserInviteResponse User invite accepted successfully
+     * @throws ApiError
+     */
+    public manageAcceptUserInvite(
+        inviteCode: string,
+        requestBody?: AcceptUserInviteRequest,
+    ): CancelablePromise<AcceptUserInviteResponse> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/api/v1/manage/onboarding/user/{invite_code}/accept',
+            path: {
+                'invite_code': inviteCode,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create User Invite
+     * Create a user invite
+     * @param requestBody
+     * @returns CreateUserInviteResponse User invite created successfully
+     * @throws ApiError
+     */
+    public manageCreateUserInvite(
+        requestBody?: CreateUserInviteRequest,
+    ): CancelablePromise<CreateUserInviteResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/v1/manage/onboarding/user',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get All User Invites
+     * Get all user invites
+     * @returns GetUserInviteByTokenResponse User invites retrieved successfully
+     * @throws ApiError
+     */
+    public manageGetAllUserInvites(): CancelablePromise<GetUserInviteByTokenResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/api/v1/manage/onboarding/user',
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Delete User Invite
+     * Delete user invite
+     * @param inviteId
+     * @returns DeleteUserInviteResponse User invite deleted successfully
+     * @throws ApiError
+     */
+    public manageDeleteUserInvite(
+        inviteId: string,
+    ): CancelablePromise<DeleteUserInviteResponse> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/api/v1/manage/onboarding/user/{invite_id}',
+            path: {
+                'invite_id': inviteId,
+            },
+            errors: {
+                500: `Internal server error`,
+            },
+        });
+    }
 }

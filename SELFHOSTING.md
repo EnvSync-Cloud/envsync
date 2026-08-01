@@ -19,11 +19,13 @@ For **Enterprise** self-host, use the private package `@envsync-cloud/deploy-ent
 Recommended public hosts:
 
 - `app.<root-domain>` for the dashboard
-- `api.<root-domain>` for the API
+- `api.<root-domain>` for the API (product **and** Enterprise manage at `/api/v1/manage/...`)
 - `auth.<root-domain>` for Keycloak
 - `obs.<root-domain>` for ClickStack (if observability enabled)
 - `s3.<root-domain>` for the S3-compatible API
 - `console.s3.<root-domain>` for the object storage console
+
+There is **no** separate `manage-api.<root-domain>` service. Enterprise self-host uses the enterprise API image (`envsync-api-enterprise`) with manage routes on the same API host.
 
 Self-host does **not** require a marketing landing host. Public signup is Hosted-only.
 
@@ -169,4 +171,4 @@ bun run selfhost:smoke:oss
 
 ## Enterprise license (self-host)
 
-See [docs/LICENSE-RUNBOOK.md](./docs/LICENSE-RUNBOOK.md) for entitlement JWT / certificate install and Hosted vs self-host policy.
+Enterprise self-host requires a valid license install (entitlement JWT and/or certificate bundle under the paths configured by deploy). Verify with the enterprise deploy CLI and license controls in the dashboard (`/organisation/license`). Hosted SaaS uses platform billing instead of customer-side license files.

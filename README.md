@@ -62,22 +62,25 @@ envsync push --env staging
 
 ## Architecture
 
+**One API process** serves both product routes (`/api/...`) and, when Enterprise modules are enabled, manage routes (`/api/v1/manage/{module}/...`). There is no separate management API process or management SDK package.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                    EnvSync Platform                          │
 ├──────────────────────────────────────────────────────────────┤
-│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs                │
-│  (React + Vite)   │  (Go)          │  (TypeScript, Go)       │
+│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs (TS + Go)      │
+│  (React + Vite)   │  (Go)          │  core + manage paths    │
 └─────────┬─────────┴───────┬────────┴──────────┬──────────────┘
           │                 │                   │
           ▼                 ▼                   ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      Core API                               │
-│              (Bun + Hono + PostgreSQL)                      │
+│              Single API process (Bun + Hono)                │
+│         /api/*  ·  /api/v1/manage/* (Enterprise)            │
 ├─────────────────────────────────────────────────────────────┤
-│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations           │
-│  📋 Variables  │  ⏰ Dynamic    │  📊 Audit Logs             │
-│  🔑 OIDC/SAML  │  📤 Log Fwd    │  🪝 Webhooks               │
+│  🔐 Secrets    │  🔄 Rotation*  │  🌐 Integrations*          │
+│  📋 Variables  │  ⏰ Dynamic*   │  📊 Audit Logs             │
+│  🔑 OIDC/SAML* │  📤 Log Fwd*   │  🪝 Webhooks               │
+│  (* Enterprise manage surface under /api/v1/manage)         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,15 +113,22 @@ envsync push --env staging
 
 | Path | Purpose |
 |------|---------|
-| `packages/envsync-api` | Bun + Hono API |
+| `packages/envsync-api` | Bun + Hono API (product + optional manage surface) |
+| `packages/envsync-enterprise` | Proprietary EE modules/routes (mounted at `/api/v1/manage`) |
+| `packages/envsync-enterprise-web` | Proprietary dashboard modules (injected into web) |
 | `packages/envsync-cli` | Go CLI |
-| `apps/envsync-web` | React dashboard |
-| `apps/envsync-landing` | Landing page |
+| `packages/envsync-kernel` | Shared MIT kernel (errors, `ApiModule`) |
+| `packages/envsync-ui` | Shared MIT UI tokens/primitives |
+| `apps/envsync-web` | React dashboard shell |
+| `apps/envsync-landing` | Marketing landing (Hosted) |
 | `packages/deploy` | Public OSS self-host CLI (`@envsync-cloud/deploy`) |
-| `packages/deploy-cli` | Enterprise self-host CLI sources → `@envsync-cloud/deploy-enterprise` (private) |
+| `packages/deploy-cli` | EE deploy entry → `@envsync-cloud/deploy-enterprise` (private) |
 | `packages/envsync-keycloak-theme` | Custom Keycloak theme |
-| `sdks/` | Generated TypeScript and Go SDKs |
+| `sdks/envsync-ts-sdk` | Generated TypeScript SDK (core + manage) |
+| `sdks/envsync-go-sdk` | Generated Go SDK (core + manage) |
 | `scripts/` | Local bootstrap and helper scripts |
+
+Editions / dual license: [EDITIONING.md](./EDITIONING.md) · self-host: [SELFHOSTING.md](./SELFHOSTING.md).
 
 ---
 
@@ -185,20 +195,26 @@ envsync run -- npm start
 
 ## SDKs
 
+One TypeScript package and one Go package cover **both** product and Enterprise manage routes. Set `BASE` / base URL to the **API origin** only (not a separate manage host).
+
 ### TypeScript
 ```typescript
 import { EnvSyncAPISDK } from '@envsync-cloud/envsync-ts-sdk';
 
 const sdk = new EnvSyncAPISDK({ BASE: 'https://api.envsync.cloud' });
 const secrets = await sdk.secrets.getSecrets({ app_id: 'my-app' });
+// Enterprise (when enabled): sdk.license.*, sdk.enterprise.*, … under /api/v1/manage
 ```
 
 ### Go
 ```go
-import "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+import (
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
+	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
+)
 
-client := sdk.NewClient("https://api.envsync.cloud")
-secrets, err := client.Secrets.GetSecrets(ctx, "my-app")
+c := client.NewClient(option.WithBaseURL("https://api.envsync.cloud"))
+// Product + manage packages on the same client (e.g. c.License, c.Enterprise)
 ```
 
 ---

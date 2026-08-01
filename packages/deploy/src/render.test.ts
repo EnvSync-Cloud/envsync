@@ -179,7 +179,7 @@ describe("buildRuntimeEnv", () => {
 		expect(runtimeEnv.KEYCLOAK_WEB_CLIENT_SECRET).toBe("web-client-secret");
 		expect(runtimeEnv.OPENFGA_STORE_ID).toBe("store_123");
 		expect(runtimeEnv.DASHBOARD_URL).toBe("https://app.enterprise.example.com");
-		expect(runtimeEnv.MANAGEMENT_API_URL).toBe("https://manage-api.enterprise.example.com");
+		expect(runtimeEnv.MANAGEMENT_API_URL).toBe("https://api.enterprise.example.com/api/v1/manage");
 		expect(runtimeEnv.ENVSYNC_LICENSE_SERVER_URL).toBe("https://license.envsync.cloud");
 		expect(runtimeEnv.ENVSYNC_LICENSE_KEY).toBe("envsync-enterprise-key");
 		expect(runtimeEnv.ENVSYNC_INSTALL_FINGERPRINT).toBe("envsync-b3bb411825372842f0fbdfacde54b5d8");
@@ -208,7 +208,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
-		expect(stackFull).toContain("envsync-management-api");
+		expect(stackFull).not.toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
@@ -228,7 +228,7 @@ describe("renderTraefikDynamicConfig", () => {
 		const traefik = renderTraefikDynamicConfig(config, generated);
 		expect(traefik).toContain("Host(`app.enterprise.example.com`)");
 		expect(traefik).toContain("Host(`api.enterprise.example.com`)");
-		expect(traefik).toContain("Host(`manage-api.enterprise.example.com`)");
+		expect(traefik).not.toContain("Host(`manage-api.enterprise.example.com`)");
 		// Apex landing host is Hosted-only; self-host stack does not route marketing site.
 		expect(traefik).not.toContain("Host(`enterprise.example.com`)");
 		expect(traefik).toContain("obs.enterprise.example.com");
@@ -249,7 +249,7 @@ describe("renderFrontendRuntimeConfig", () => {
 	test("sets correct runtime URLs and release metadata", () => {
 		const frontendRuntime = renderFrontendRuntimeConfig(config, generated);
 		expect(frontendRuntime).toContain("https://api.enterprise.example.com");
-		expect(frontendRuntime).toContain("\"managementApiUrl\": \"https://manage-api.enterprise.example.com\"");
+		expect(frontendRuntime).toContain("\"managementApiUrl\": \"https://api.enterprise.example.com/api/v1/manage\"");
 		expect(frontendRuntime).toContain("\"activeApiSlot\": \"blue\"");
 		expect(frontendRuntime).toContain("\"releaseVersion\": \"0.8.7\"");
 		expect(frontendRuntime).toContain("\"deploymentMode\": \"selfhosted\"");

@@ -1,8 +1,10 @@
 # `@envsync-cloud/envsync-ts-sdk`
 
-TypeScript SDK for the EnvSync API.
+TypeScript SDK for the EnvSync API (core product + Enterprise manage surface).
 
 This package provides the generated fetch-based client, models, and service types for interacting with EnvSync from browser or server-side TypeScript applications.
+
+**Enterprise manage** routes are on the same API process under `/api/v1/manage/{module}/...` (e.g. `sdk.license.getManagementLicenseStatus()`). Set `BASE` to the API origin only (not a separate manage host).
 
 ## Install
 
@@ -29,6 +31,9 @@ const sdk = new EnvSyncAPISDK({
 });
 
 const apps = await sdk.applications.getApps();
+
+// Enterprise (when management is enabled on the deployment):
+// const license = await sdk.license.getManagementLicenseStatus();
 
 console.log(apps);
 ```
@@ -77,12 +82,18 @@ The package exports:
 
 ## Regeneration
 
-The source for this package is generated from the EnvSync API OpenAPI spec.
+Generated from the **unified** monorepo OpenAPI (`GET /openapi` with unique operationIds).
 
-- Regenerate locally with `bun run generate:local`
-- Build with `bun run build`
+```bash
+# From monorepo (default: runs export-openapi.ts with EE modules when available)
+cd sdks/envsync-ts-sdk
+bun run generate:local   # writes openapi.json + regenerates src/
+bun run build
+```
 
-Do not hand-edit generated source under `src/`; regeneration will overwrite it.
+Overrides: `OPENAPI_SPEC=...` or `ENVSYNC_API_URL=http://localhost:4000`.
+
+Do not hand-edit generated source under `src/`. Do not reintroduce a management-only TS SDK package.
 
 ## Links
 

@@ -12,9 +12,6 @@ type CreateOrganizationRequest struct {
 	Name string `json:"name" url:"-"`
 }
 
-// CreateWorkspaceRequest is deprecated: use CreateOrganizationRequest.
-type CreateWorkspaceRequest = CreateOrganizationRequest
-
 type SwitchOrgRequest struct {
 	OrgId string `json:"org_id" url:"-"`
 }

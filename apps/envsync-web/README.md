@@ -1,9 +1,12 @@
-# EnvSync Web 🌐
+# EnvSync Web
 
-The web dashboard for [EnvSync Cloud](https://github.com/envsync-cloud) - seamlessly sync your environment configurations across web applications.
+Dashboard shell for EnvSync (React + Vite). Lives in the monorepo at `apps/envsync-web`.
 
-> **Built with [Loveable](https://loveable.dev)** ❤️  
-> A modern React frontend for managing your environment variables with style.
+- **OSS build:** `bun run build:oss` — no enterprise modules  
+- **Enterprise / Hosted:** `build:enterprise` / `build:hosted` — injects `packages/envsync-enterprise-web`  
+- **API client:** `@envsync-cloud/envsync-ts-sdk` only (`BASE` = API origin; manage under `/api/v1/manage`)
+
+Agent notes: [AGENTS.md](./AGENTS.md)
 
 ## ✨ What is EnvSync?
 
@@ -30,30 +33,14 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 
 ### Installation
 
-```bash
-git clone https://github.com/envsync-cloud/envsync-web.git
-cd envsync-web
-```
+From monorepo root:
 
 ```bash
 bun install
+bun run --filter envsync-web dev
 ```
 
-### Environment Setup
-
-Create a `.env` file:
-
-```env
-VITE_API_BASE_URL=https://api.envsync.cloud
-```
-
-### Development
-
-```bash
-bun dev
-```
-
-Visit `http://localhost:8080` to see your EnvSync dashboard! 🎉
+Local dashboard: `http://app.lvh.me:8001` (see root README). Prefer monorepo `.env` / `public/runtime-config.js` over a standalone clone.
 
 ## 📝 Available Scripts
 

@@ -24,8 +24,7 @@ export class AuthenticationService {
     }
     /**
      * Create Organization
-     * Create a new organization for the current hosted web session and switch into it.
-     * Hosted only; self-host deployments return 403.
+     * Create a new organization for the current hosted web session and switch into it. Hosted only; self-host always 403.
      * @param requestBody
      * @returns WhoAmIResponse Organization created successfully
      * @throws ApiError
@@ -43,21 +42,10 @@ export class AuthenticationService {
             errors: {
                 400: `Invalid request`,
                 401: `Cookie session required`,
-                403: `Not allowed on this deployment`,
+                403: `Not allowed on this deployment (e.g. self-host)`,
                 409: `Organization slug conflict or org limit reached`,
             },
         });
-    }
-    /**
-     * @deprecated Use {@link createOrganization}. Calls POST /api/auth/create-organization
-     * (API route create-workspace was removed in Phase 7).
-     */
-    public createWorkspace(
-        requestBody?: {
-            name: string;
-        },
-    ): CancelablePromise<WhoAmIResponse> {
-        return this.createOrganization(requestBody);
     }
     /**
      * Switch Active Organization

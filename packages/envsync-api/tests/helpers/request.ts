@@ -32,16 +32,28 @@ export async function testRequest(
 		ensureE2EEnv();
 	}
 	const { surface = "core", method = "GET", headers = {}, body, token, apiKey, query } = options;
-	const app = surface === "management"
-		? (await import("@/app/management")).managementApp
-		: (await import("@/app")).app;
+	// Unified manage surface is on the core process under /api/v1/manage.
+	const { MANAGE_API_PREFIX, tryRegisterEnterpriseManageModules } = await import(
+		"@/modules/load-modules"
+	);
+	let requestPath = path;
+	if (surface === "management") {
+		await tryRegisterEnterpriseManageModules();
+		// Rewrite /api/foo → /api/v1/manage/foo for unified mount
+		if (requestPath === "/api" || requestPath.startsWith("/api/")) {
+			requestPath = `${MANAGE_API_PREFIX}${requestPath.slice("/api".length)}` || MANAGE_API_PREFIX;
+		} else if (!requestPath.startsWith(MANAGE_API_PREFIX)) {
+			requestPath = `${MANAGE_API_PREFIX}${requestPath.startsWith("/") ? "" : "/"}${requestPath}`;
+		}
+	}
+	const app = (await import("@/app")).app;
 
 	const reqHeaders: Record<string, string> = { ...headers };
 	if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
 	if (apiKey) reqHeaders["X-API-Key"] = apiKey;
 	if (body && !reqHeaders["Content-Type"]) reqHeaders["Content-Type"] = "application/json";
 
-	let url = `http://localhost${path}`;
+	let url = `http://localhost${requestPath}`;
 	if (query) {
 		const qs = new URLSearchParams(query).toString();
 		url += `?${qs}`;

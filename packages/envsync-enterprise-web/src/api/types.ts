@@ -5,7 +5,7 @@ import type {
   ProviderConnection,
   SyncAuditEvent,
   SyncRun,
-} from "@envsync-cloud/envsync-management-ts-sdk";
+} from "@envsync-cloud/envsync-ts-sdk";
 
 export type EnterpriseProvider =
   | "github"

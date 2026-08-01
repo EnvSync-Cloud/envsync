@@ -49,7 +49,8 @@ from EnvSync Cloud. See the LICENSE file inside each package for terms:
 |------|---------|
 | `packages/envsync-enterprise/` | Management module registry + EE API surface |
 | `packages/envsync-enterprise-web/` | Enterprise dashboard modules |
-| `packages/envsync-management-api/` | Management API process entrypoint |
+| _(retired)_ `packages/envsync-management-api/` | Removed — manage is `/api/v1/manage` on core API |
+| _(retired)_ `sdks/envsync-management-*-sdk/` | Removed — use core `envsync-ts-sdk` / `envsync-go-sdk` |
 | `packages/deploy-cli/` | Published as `@envsync-cloud/deploy-enterprise` |
 
 Enterprise source may appear in this **public monorepo** for transparency and

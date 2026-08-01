@@ -1,9 +1,6 @@
-# EnvSync Landing 🚀
+# EnvSync Landing
 
-The official landing page for [EnvSync Cloud](https://envsync.cloud) - seamlessly sync your environment configurations across web applications.
-
-> **Built with [Loveable](https://loveable.dev)** ❤️  
-> A modern, responsive landing page showcasing the power of environment synchronization.
+Marketing / Hosted signup site (`apps/envsync-landing`). **Hosted-only** — not deployed on self-host OSS or Enterprise stacks (see [EDITIONING.md](../../EDITIONING.md)).
 
 ## ✨ What is EnvSync?
 
@@ -30,13 +27,11 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 
 ### Installation
 
-```bash
-git clone https://github.com/EnvSync-Cloud/envsync-landing.git
-cd envsync-landing
-```
+From monorepo root:
 
 ```bash
 bun install
+bun run --filter envsync-landing dev
 ```
 
 ### Environment Setup

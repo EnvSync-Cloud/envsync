@@ -25,11 +25,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build SDK
+      - name: Build TypeScript SDK
         run: bun run --filter @envsync-cloud/envsync-ts-sdk build
-
-      - name: Build Management SDK
-        run: bun run --filter @envsync-cloud/envsync-management-ts-sdk build
 
       # Hosted SaaS must ship enterprise dashboard modules (integrations, license, sync).
       # Self-host OSS static images use build:oss via release.yml — do not change that path here.

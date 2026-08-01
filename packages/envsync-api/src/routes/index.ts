@@ -1,14 +1,12 @@
 import { Hono } from "hono";
+import { mountModules } from "envsync-kernel";
+
 import { loadApiModules } from "@/modules/load-modules";
 import type { ApiSurface } from "@/modules/types";
 
 export async function createApiRoutes(surface: ApiSurface = "core") {
 	const app = new Hono();
-
-	for (const module of loadApiModules(surface)) {
-		app.route(module.mountPath, await module.createRouter());
-	}
-
+	await mountModules(app, loadApiModules(surface));
 	return app;
 }
 

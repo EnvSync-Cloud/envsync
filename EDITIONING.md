@@ -15,13 +15,15 @@ proprietary license; OSS builds must not depend on them.
 | First org | Landing / hosted dashboard | Bootstrap / OSS deploy CLI | EE deploy CLI |
 | Further orgs | Dashboard **Organization** create | Never | EE deploy CLI + entitlement |
 | Landing service | Separate (Cloudflare) | No | No |
-| Management API process | EnvSync-operated | No | Yes |
+| Manage surface (`/api/v1/manage`) | Same core API process | No | Same core API (EE image / modules) |
+| Separate management API process | **No** | No | **No** (removed) |
 | License authority | Platform billing | N/A | Entitlement JWT / cert (public verify key) |
 | Deploy tool | N/A | `@envsync-cloud/deploy` | `@envsync-cloud/deploy-enterprise` |
 | Dashboard | `envsync-web` + EE modules | `envsync-web` OSS build | `envsync-web` EE build |
-| Management SPA | **None** (deleted) | None | None |
+| SDKs | Core TS/Go only | Core TS/Go | Core TS/Go (manage paths included) |
+| Management SPA | **None** | None | None |
 
-Full program decisions: [docs/plans/2026-08-no-piggyback-program.md](./docs/plans/2026-08-no-piggyback-program.md).
+Agent-facing product facts: root [AGENTS.md](./AGENTS.md). Detailed planning notes under local `docs/` are gitignored.
 
 ## Package graph (simplified)
 
@@ -36,7 +38,7 @@ MIT
 PROPRIETARY
   envsync-enterprise       (management modules + EE services/engines/migrations)
   envsync-enterprise-web   (dashboard WebModule[] + pages)
-  envsync-management-api   (management process)
+  (manage surface on core API: /api/v1/manage — no second process)
   deploy-cli               (npm: deploy-enterprise)
 ```
 

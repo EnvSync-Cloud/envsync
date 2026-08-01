@@ -37,6 +37,8 @@ declare global {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+/** Unified manage surface on the core API process (no separate manage-api host). */
+const MANAGE_API_PATH = "/api/v1/manage";
 const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"
   ? "oss"
   : import.meta.env.VITE_SERVER_LICENSE === "enterprise"
@@ -45,13 +47,20 @@ const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"
       ? "oss"
       : "enterprise";
 
+function defaultManagementApiUrl(apiBaseUrl: string): string {
+  if (import.meta.env.VITE_MANAGEMENT_API_URL) {
+    return import.meta.env.VITE_MANAGEMENT_API_URL;
+  }
+  return `${apiBaseUrl.replace(/\/$/, "")}${MANAGE_API_PATH}`;
+}
+
 function inferFallbackRuntimeConfig(): RuntimeConfig {
   if (typeof window === "undefined") {
     return {
       apiBaseUrl: defaultApiBaseUrl,
       appBaseUrl: "http://app.lvh.me:8001",
       authBaseUrl: "http://auth.lvh.me:8080",
-      managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || "http://manage-api.lvh.me:4001",
+      managementApiUrl: defaultManagementApiUrl(defaultApiBaseUrl),
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
       apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,
@@ -82,7 +91,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     apiBaseUrl,
     appBaseUrl: host.startsWith("app.") ? origin : `${protocol}//app.${rootHost}`,
     authBaseUrl: `${protocol}//auth.${rootHost}`,
-    managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || `${protocol}//manage-api.${rootHost}`,
+    managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
     keycloakRealm: "envsync",
     webClientId: "envsync-web",
     apiDocsUrl: `${apiBaseUrl}/docs`,

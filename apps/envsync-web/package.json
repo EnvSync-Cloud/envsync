@@ -33,7 +33,6 @@
   "dependencies": {
     "@fontsource/inter": "^5.2.5",
     "@fontsource/jetbrains-mono": "^5.2.5",
-    "@envsync-cloud/envsync-management-ts-sdk": "workspace:*",
     "@envsync-cloud/envsync-ts-sdk": "workspace:*",
     "@hookform/resolvers": "^3.10.0",
     "@hyperdx/browser": "^0.22.0",

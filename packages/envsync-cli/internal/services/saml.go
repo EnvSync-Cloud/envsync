@@ -6,7 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
 
-	sdk "github.com/envsync-cloud/envsync-management-go-sdk/sdk"
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
 
 type SamlService interface {
