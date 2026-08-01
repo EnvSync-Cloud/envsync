@@ -7,12 +7,15 @@
 
 | ID | Change |
 |----|--------|
-| H4.1 | License-server `signed_lease` is **EdDSA entitlement JWT** when Ed25519 private key is configured (claims: `features`, `max_orgs`, `install_fingerprint`, `iss=envsync-license-server`) |
-| H4.1 | License generate accepts `features` / `max_orgs`; store columns `features_json`, `max_orgs` |
-| H4.1 | `/health` reports `entitlement_issuer_ready` |
-| H4.2 | Hosted policy documented in [docs/LICENSE-RUNBOOK.md](../../LICENSE-RUNBOOK.md) |
+| H4.1 | **Private** license-server: EdDSA entitlement JWT as `signed_lease` (see [PRIVATE_LICENSE_SERVER_PATCH.md](./PRIVATE_LICENSE_SERVER_PATCH.md); package is **gitignored** — apply to private repo) |
+| H4.1 | Local monorepo scaffold (if present under `packages/license-server/`) was updated for EdDSA + features/max_orgs; not committed publicly |
+| H4.2 | Hosted policy: [docs/LICENSE-RUNBOOK.md](../../LICENSE-RUNBOOK.md) |
 | H4.3 | Self-host online/offline install flows documented |
-| H4.4 | Unit tests: JWT verifies with API public key; hosted still bypasses without JWT |
+| H4.4 | Public unit tests: JWT claim shape + feature gates; hosted bypass |
+
+## Important
+
+`packages/license-server` is listed in **root `.gitignore`**. Issuer code changes stay on the private license-server deployment path. Public monorepo ships **verify path + docs + tests**.
 
 ## Issuer key material
 
