@@ -1,11 +1,27 @@
 # EnvSync support matrix
 
-**Status:** Phase 6 product matrix (matches program plan §1.1).  
-**Edition details:** [EDITIONING.md](../EDITIONING.md)
+**Status:** Post–no-piggyback product matrix (program §1.1 + hardening H1–H6).  
+**Edition details:** [EDITIONING.md](../EDITIONING.md)  
+**Hardening plan:** [plans/2026-08-post-program-hardening.md](./plans/2026-08-post-program-hardening.md)
 
-## Hosted dashboard build note
+## Hosted vs self-host edition matrix (quick)
 
-Cloudflare Hosted web (`deploy-fe.yaml`) must use **`build:hosted` / enterprise modules** so Integrations, License, and Sync ops ship. Self-host OSS static images continue to use `build:oss` via the release image matrix.
+| Dimension | Hosted (SaaS) | Self-host OSS | Self-host Enterprise |
+|-----------|---------------|---------------|----------------------|
+| `ENVSYNC_DEPLOYMENT_MODE` | `hosted` | `selfhosted` | `selfhosted` |
+| `ENVSYNC_EDITION` | `enterprise` | `oss` | `enterprise` |
+| FE web build | **`build:hosted`** (= enterprise modules) | `build:oss` | `build:enterprise` |
+| Org create (dashboard) | Yes — `POST /auth/create-organization` | Never | Never |
+| Org create (operator) | Platform / landing | First-boot / OSS deploy CLI | EE deploy CLI + claims |
+| License enforcement | Platform (entitlement bypass for multi-org) | N/A | Entitlement JWT verify |
+| Management process | Platform-operated | Not included | Separate management API |
+
+### Hosted dashboard build (do not regress)
+
+Cloudflare Hosted web (`.github/workflows/deploy-fe.yaml`) **must** use **`bun run --filter envsync-web build:hosted`** (or `build:enterprise`) so Integrations, License, and Sync ops ship.  
+Self-host OSS static images continue to use **`build:oss`** via the release image matrix — that path is intentional and separate.
+
+CI enforces the Hosted job does not call `build:oss` (`bun run check:boundaries`).
 
 See [plans/phase-h1/README.md](./plans/phase-h1/README.md) for cutover order.
 
@@ -26,7 +42,7 @@ See [plans/phase-h1/README.md](./plans/phase-h1/README.md) for cutover order.
 | License | Platform billing | N/A | File / JWT under install + public key verify |
 | Deploy CLI | N/A | `@envsync-cloud/deploy` | `@envsync-cloud/deploy-enterprise` |
 | EE features (OIDC, SAML, rotation, dyn secrets, integrations, …) | Platform | Not available | Requires edition + (if enforced) entitlement features |
-| Dashboard shell | `envsync-web` + EE modules | `envsync-web` OSS build | `envsync-web` EE build |
+| Dashboard shell | `envsync-web` + EE modules (`build:hosted`) | `envsync-web` OSS build | `envsync-web` EE build |
 | Separate management SPA | No | No | No |
 
 ## Support channels (indicative)

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — hardening H6 (docs + CI hygiene)
+
+### Changed
+
+- Program plan status points at completed hardening H1–H6; remaining ops listed.
+- `docs/SUPPORT.md`: Hosted vs self-host edition matrix; Hosted FE must use `build:hosted`.
+- `CONTRIBUTING.md`: deployment mode / edition footguns (enterprise default; missing mode → hosted).
+- `envsync-web`: `envsync-enterprise-web` is a **devDependency** (OSS purity); CI boundary check.
+
+---
+
 ## Unreleased — hardening H5 (design tokens)
 
 ### Added
