@@ -266,7 +266,7 @@ Does **not** block Hosted cutover.
 
 ### Sprint B (hygiene)
 
-- [ ] H2 naming  
+- [x] H2 naming (`feat/the-big-update-h2`)  
 - [ ] H6.1 program plan status  
 - [ ] H6.5 footgun docs  
 

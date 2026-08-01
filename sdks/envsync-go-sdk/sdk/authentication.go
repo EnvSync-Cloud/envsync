@@ -8,9 +8,12 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
-type CreateWorkspaceRequest struct {
+type CreateOrganizationRequest struct {
 	Name string `json:"name" url:"-"`
 }
+
+// CreateWorkspaceRequest is deprecated: use CreateOrganizationRequest.
+type CreateWorkspaceRequest = CreateOrganizationRequest
 
 type SwitchOrgRequest struct {
 	OrgId string `json:"org_id" url:"-"`

@@ -4,7 +4,7 @@ import { UserService } from "@/services/user.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
-import { WorkspaceProvisioningService } from "@/services/workspace-provisioning.service";
+import { OrganizationProvisioningService } from "@/services/organization-provisioning.service";
 import { readAccessToken, setActiveMembershipCookie } from "@/helpers/web-auth";
 
 async function buildSessionPayload(userId: string) {
@@ -126,8 +126,8 @@ export class AuthController {
 			return c.json({ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" }, 400);
 		}
 
-		const result = await WorkspaceProvisioningService.createWorkspaceForExistingIdentity({
-			workspaceName: payload.name,
+		const result = await OrganizationProvisioningService.createOrganizationForExistingIdentity({
+			organizationName: payload.name,
 			authServiceId: currentUser.auth_service_id,
 			currentUserId: currentUser.id,
 			source: "hosted_dashboard",

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — hardening H2 (naming)
+
+### Changed
+
+- API: `OrganizationProvisioningService.createOrganizationForExistingIdentity` (was WorkspaceProvisioning*).
+- Web: `CreateOrganizationDialog`; e2e `organizations.spec.ts`.
+- Go SDK: `CreateOrganizationRequest` type alias for request body.
+
+---
+
 ## Unreleased — hardening H1 (Hosted cutover)
 
 ### Fixed

@@ -79,7 +79,7 @@ func (c *Client) Whoami(
 // Hosted only; self-host deployments return 403.
 func (c *Client) CreateOrganization(
 	ctx context.Context,
-	request *sdk.CreateWorkspaceRequest,
+	request *sdk.CreateOrganizationRequest,
 	opts ...option.RequestOption,
 ) (*sdk.WhoAmIResponse, error) {
 	options := core.NewRequestOptions(opts...)
@@ -142,7 +142,7 @@ func (c *Client) CreateOrganization(
 // Calls POST /api/auth/create-organization (create-workspace API route was removed in Phase 7).
 func (c *Client) CreateWorkspace(
 	ctx context.Context,
-	request *sdk.CreateWorkspaceRequest,
+	request *sdk.CreateOrganizationRequest,
 	opts ...option.RequestOption,
 ) (*sdk.WhoAmIResponse, error) {
 	return c.CreateOrganization(ctx, request, opts...)

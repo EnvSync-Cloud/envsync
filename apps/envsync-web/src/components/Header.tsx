@@ -30,7 +30,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { CreateWorkspaceDialog } from "@/components/auth/CreateWorkspaceDialog";
+import { CreateOrganizationDialog } from "@/components/auth/CreateOrganizationDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const Header = () => {
@@ -290,7 +290,7 @@ export const Header = () => {
         </div>
         </div>
       </header>
-      <CreateWorkspaceDialog
+      <CreateOrganizationDialog
         open={createOrganizationOpen}
         onOpenChange={setCreateOrganizationOpen}
       />
