@@ -370,13 +370,15 @@ export class EditionPolicyService {
 	/**
 	 * Web channels on self-host always max 1 effectively via channel deny.
 	 * CLI uses entitlement max_orgs (or support override) on self-host.
+	 * Hosted (not single_org_mode): unlimited for all channels — including CLI/dev
+	 * bootstrap used by UI harness and create-dev-user seeds.
 	 */
 	private static getMaxOrgsForChannel(channel: OrgProvisionSource): number | null {
+		// Hosted multi-tenant SaaS: no org cap (null). Do not collapse null → 1.
+		if (this.isHosted() && !this.isSingleOrgMode()) {
+			return null;
+		}
 		if (channel === "hosted_signup" || channel === "hosted_dashboard") {
-			// Hosted unlimited unless single_org_mode forced
-			if (this.isHosted() && !this.isSingleOrgMode()) {
-				return null;
-			}
 			return this.getMaxOrgs() ?? 1;
 		}
 		if (channel === "selfhost_cli" || channel === "selfhost_bootstrap" || channel === "dev") {

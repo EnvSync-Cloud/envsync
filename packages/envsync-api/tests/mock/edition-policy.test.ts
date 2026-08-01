@@ -114,4 +114,19 @@ describe("EditionPolicyService channel matrix", () => {
 		expect(snap.public_signup_enabled).toBe(false);
 		expect(snap.max_orgs).toBe(1);
 	});
+
+	test("hosted allows multi-org via CLI/dev bootstrap (UI harness)", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+			single_org_mode: false,
+		});
+		// Regression: getMaxOrgs() is null on hosted; must not collapse to 1 for cli_bootstrap.
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "cli_bootstrap", orgCount: 5 }),
+		).not.toThrow();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_dashboard", orgCount: 5 }),
+		).not.toThrow();
+	});
 });
