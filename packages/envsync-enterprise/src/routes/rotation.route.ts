@@ -4,7 +4,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
-import { RotationController } from "@/controllers/rotation.controller";
+import { RotationController } from "../controllers/rotation.controller";
 import {
 	createRotationPolicySchema,
 	updateRotationPolicySchema,
@@ -15,7 +15,7 @@ import {
 	revokeOldCredentialResponseSchema,
 	rotationIdParamSchema,
 	getRotationPoliciesQuerySchema,
-} from "@/validators/rotation.validator";
+} from "../validators/rotation.validator";
 import { errorResponseSchema } from "@/validators/common";
 
 const app = new Hono();

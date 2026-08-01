@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import { EnterpriseController } from "@/controllers/enterprise.controller";
+import { EnterpriseController } from "../controllers/enterprise.controller";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
 import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
@@ -31,7 +31,7 @@ import {
 	updateIntegrationBindingRequestSchema,
 	updateOrgSecretRequestSchema,
 	updateProviderConnectionRequestSchema,
-} from "@/validators/enterprise.validator";
+} from "../validators/enterprise.validator";
 
 const app = new Hono();
 

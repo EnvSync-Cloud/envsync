@@ -1,7 +1,7 @@
 import { type Context } from "hono";
 
 import { assertEntitled } from "@/helpers/enterprise-guard";
-import { OidcService } from "@/services/oidc.service";
+import { OidcService } from "../services/oidc.service";
 import { AuditLogService } from "@/services/audit_log.service";
 
 export class OidcController {

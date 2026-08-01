@@ -1,10 +1,9 @@
 /**
- * Library export for the management process.
- * Prefer running `src/entrypoint.ts` as the server.
+ * Public surface for the management process package.
  *
- * Callers that import `app` must register enterprise modules first:
+ * Callers that import `createManagementApp` must register enterprise modules first:
  *   registerManagementModules(enterpriseManagementModules)
  */
-export { createManagementApp as createApp } from "envsync-api/create-management-app";
+export { createManagementApp } from "./create-app";
 export { enterpriseManagementModules } from "envsync-enterprise";
 export { registerManagementModules } from "envsync-api/modules";

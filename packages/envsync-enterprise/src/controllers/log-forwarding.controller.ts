@@ -2,7 +2,7 @@ import { type Context } from "hono";
 
 import { assertEntitled } from "@/helpers/enterprise-guard";
 import { AuditLogService } from "@/services/audit_log.service";
-import { LogForwardingService } from "@/services/log-forwarding.service";
+import { LogForwardingService } from "../services/log-forwarding.service";
 
 export class LogForwardingController {
     public static readonly createConfig = async (c: Context) => {

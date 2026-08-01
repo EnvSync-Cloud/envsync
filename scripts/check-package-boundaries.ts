@@ -301,6 +301,51 @@ if (!fs.existsSync(eeCa)) {
 	ok("envsync-enterprise owns bundled enterprise root CA PEM");
 }
 
+// 15) P1: EE HTTP surface (routes/controllers) lives under envsync-enterprise
+const eeHttpRoutes = [
+	"enterprise.route.ts",
+	"oidc.route.ts",
+	"saml.route.ts",
+	"rotation.route.ts",
+	"dynamic_secret.route.ts",
+	"log-forwarding.route.ts",
+	"license.route.ts",
+];
+const eeRoutesDir = path.join(root, "packages/envsync-enterprise/src/routes");
+const apiRoutesDir = path.join(root, "packages/envsync-api/src/routes");
+for (const name of eeHttpRoutes) {
+	if (!fs.existsSync(path.join(eeRoutesDir, name))) {
+		fail(`P1: missing envsync-enterprise route ${name}`);
+	}
+	if (fs.existsSync(path.join(apiRoutesDir, name))) {
+		fail(`P1: envsync-api must not ship EE route ${name} (moved to envsync-enterprise)`);
+	}
+}
+const mgmtModules = fs.readFileSync(
+	path.join(root, "packages/envsync-enterprise/src/management-modules.ts"),
+	"utf8",
+);
+if (mgmtModules.includes("L.oidc") || mgmtModules.includes("L.enterprise") || mgmtModules.includes("L.license")) {
+	fail("P1: enterpriseManagementModules must load EE routes from local ./routes, not api loaders");
+}
+if (!mgmtModules.includes("./routes/oidc.route") || !mgmtModules.includes("./routes/enterprise.route")) {
+	fail("P1: enterpriseManagementModules must import local EE route modules");
+} else {
+	ok("P1: EE HTTP routes owned by envsync-enterprise management modules");
+}
+const mgmtEntry = fs.readFileSync(
+	path.join(root, "packages/envsync-management-api/src/entrypoint.ts"),
+	"utf8",
+);
+const mgmtCreateApp = path.join(root, "packages/envsync-management-api/src/create-app.ts");
+if (!fs.existsSync(mgmtCreateApp)) {
+	fail("P1: envsync-management-api must own create-app.ts");
+} else if (mgmtEntry.includes("envsync-api/create-management-app")) {
+	fail("P1: management entrypoint should use local createManagementApp, not only core re-export");
+} else {
+	ok("P1: management-api owns process create-app entry");
+}
+
 // 14) P0: OSS deploy owns the engine; must not import deploy-cli
 const deploySrc = path.join(root, "packages/deploy/src");
 const deployIndex = fs.readFileSync(path.join(deploySrc, "index.ts"), "utf8");

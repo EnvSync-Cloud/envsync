@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { assertEntitled } from "@/helpers/enterprise-guard";
-import { DynamicSecretService } from "@/services/dynamic_secret.service";
+import { DynamicSecretService } from "../services/dynamic_secret.service";
 import { AuditLogService } from "@/services/audit_log.service";
 
 export class DynamicSecretController {

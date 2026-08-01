@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import { SamlController } from "@/controllers/saml.controller";
+import { SamlController } from "../controllers/saml.controller";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
@@ -13,7 +13,7 @@ import {
 	updateSamlProviderRequestSchema,
 	samlSsoRequestSchema,
 	samlSsoResponseSchema,
-} from "@/validators/saml.validator";
+} from "../validators/saml.validator";
 import { errorResponseSchema } from "@/validators/common";
 
 const app = new Hono();
