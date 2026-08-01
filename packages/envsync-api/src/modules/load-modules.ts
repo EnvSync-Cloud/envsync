@@ -51,7 +51,20 @@ export function collectEnvSchemaExtensions(
 		});
 }
 
-export function collectMigrationDirectories(baseDirectories: string[] = [], modules: ApiModule[] = loadApiModules()): string[] {
+/**
+ * Collect migration folders from base dirs + modules.
+ * When management modules are registered (management process), their
+ * `migrationDirectories` are merged so EE schema can load from envsync-enterprise.
+ * Core process still applies EE migrations via re-export shims under
+ * `envsync-api/.../migrations` (H3.4 dual path for one DB history).
+ */
+export function collectMigrationDirectories(
+	baseDirectories: string[] = [],
+	modules: ApiModule[] = [
+		...loadApiModules("core"),
+		...(registeredManagementModules ?? []),
+	],
+): string[] {
 	const directories = [
 		...baseDirectories,
 		...modules.flatMap(module => module.migrationDirectories?.() ?? []),

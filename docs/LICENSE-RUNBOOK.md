@@ -1,6 +1,7 @@
 # License runbook (Hosted + Self-host EE)
 
-**H4** — entitlement JWT issuance + ops. See also [SELFHOSTING.md](../SELFHOSTING.md) and program plan D20–D22.
+**H4** — entitlement JWT issuance + ops. See also [SELFHOSTING.md](../SELFHOSTING.md) and program plan D20–D22.  
+**Private issuer deploy:** [LICENSE-SERVER-DEPLOY.md](./LICENSE-SERVER-DEPLOY.md)
 
 ## Hosted (EnvSync Cloud)
 

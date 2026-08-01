@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — hardening H7 (deferred close-out)
+
+### Added
+
+- **Hosted cutover:** [docs/HOSTED-CUTOVER.md](./docs/HOSTED-CUTOVER.md), `bun run check:hosted-cutover`
+- **License-server deploy:** [docs/LICENSE-SERVER-DEPLOY.md](./docs/LICENSE-SERVER-DEPLOY.md)
+
+### Changed
+
+- EE capability services moved to `envsync-enterprise`: OIDC, SAML, rotation, dynamic secrets,
+  log-forwarding, plus rotation/dynamic-secret engines (API keeps thin re-export shims).
+- EE migrations (019 integrations, 022 OIDC, 023 rotation/dyn secrets, 024 SAML/log-forwarding)
+  owned by `envsync-enterprise/src/migrations` with core migrator re-export shims.
+- Boundary CI asserts H7 service + migration ownership.
+
+---
+
 ## Unreleased — hardening H6 (docs + CI hygiene)
 
 ### Changed

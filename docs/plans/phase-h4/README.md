@@ -30,6 +30,7 @@
 - [x] EdDSA signed_lease claim shape matches EntitlementService  
 - [x] Hosted multi-org does not require customer JWT (test)  
 - [x] Self-host enforcement requires features under claims (test)  
+- [x] Deploy runbook — [docs/LICENSE-SERVER-DEPLOY.md](../../LICENSE-SERVER-DEPLOY.md)  
 - [ ] Live Hosted/prod license-server deploy with real keys (ops)  
 
 ## Verify

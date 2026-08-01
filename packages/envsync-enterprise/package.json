@@ -9,7 +9,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./modules": "./src/management-modules.ts",
-    "./services/*": "./src/services/*"
+    "./services/*": "./src/services/*",
+    "./migrations/*": "./src/migrations/*"
   },
   "files": [
     "src",

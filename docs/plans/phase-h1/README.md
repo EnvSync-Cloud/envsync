@@ -42,7 +42,8 @@ Self-host OSS images remain `build:oss` in `release.yml` — unchanged.
 - [x] deploy-fe not `build:oss`  
 - [x] SDK no live request URL `create-workspace`  
 - [x] boundary CI covers both  
-- [ ] Staging smoke after deploy (ops)  
+- [x] H1.4–H1.5 runbook + `scripts/hosted-cutover-check.ts` — [docs/HOSTED-CUTOVER.md](../../HOSTED-CUTOVER.md)  
+- [ ] Live staging sign-off (ops; set `HOSTED_SMOKE_BASE_URL` + token)  
 
 ## Verify
 

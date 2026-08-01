@@ -165,7 +165,7 @@ if (goAuth.includes('"/api/auth/create-workspace"') || goAuth.includes("'/api/au
 	ok("envsync-go-sdk uses create-organization path");
 }
 
-// 11) H3: enterprise integration services live under envsync-enterprise
+// 11) H3/H7: enterprise capability services live under envsync-enterprise
 const eeServicesDir = path.join(root, "packages/envsync-enterprise/src/services");
 const requiredEeServices = [
 	"enterprise-sync.service.ts",
@@ -173,6 +173,12 @@ const requiredEeServices = [
 	"enterprise-provider.service.ts",
 	"enterprise-provider-sync.service.ts",
 	"enterprise-certificate-verifier.service.ts",
+	// H7 capability extraction
+	"oidc.service.ts",
+	"saml.service.ts",
+	"rotation.service.ts",
+	"dynamic_secret.service.ts",
+	"log-forwarding.service.ts",
 ];
 for (const name of requiredEeServices) {
 	const eePath = path.join(eeServicesDir, name);
@@ -183,11 +189,11 @@ for (const name of requiredEeServices) {
 		fail(`H3: missing envsync-api re-export shim for ${name}`);
 	} else {
 		const shim = fs.readFileSync(apiShim, "utf8");
-		if (!shim.includes("envsync-enterprise") || shim.split("\n").length > 20) {
-			// Shim should be a thin re-export, not a full copy of implementation
-			if (!shim.includes("export * from")) {
-				fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
-			}
+		// Shim should be a thin re-export, not a full copy of implementation
+		if (!shim.includes("envsync-enterprise") || !shim.includes("export * from")) {
+			fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
+		} else if (shim.split("\n").filter(l => l.trim().length > 0).length > 12) {
+			fail(`H3: envsync-api ${name} shim looks too large (expected thin re-export)`);
 		}
 	}
 }
@@ -199,6 +205,39 @@ if (fs.existsSync(path.join(eeServicesDir, "enterprise-sync.service.ts"))) {
 		fail("H3: enterprise-sync.service.ts in enterprise package looks empty/wrong");
 	}
 }
+
+// H7: engines + EE migrations owned by envsync-enterprise
+const eeRotEngines = path.join(eeServicesDir, "rotation-engines", "index.ts");
+const eeDynEngines = path.join(eeServicesDir, "dynamic-secret-engines", "index.ts");
+if (!fs.existsSync(eeRotEngines) || !fs.existsSync(eeDynEngines)) {
+	fail("H7: rotation-engines and dynamic-secret-engines must live under envsync-enterprise");
+} else {
+	ok("H7: rotation + dynamic-secret engines owned by envsync-enterprise");
+}
+const eeMigrationsDir = path.join(root, "packages/envsync-enterprise/src/migrations");
+const requiredEeMigrations = [
+	"019_enterprise_integrations_foundation.ts",
+	"022_oidc_providers.ts",
+	"023_dynamic_secrets.ts",
+	"023_secret_rotation.ts",
+	"024_log_forwarding_configs.ts",
+	"024_saml_providers.ts",
+];
+for (const name of requiredEeMigrations) {
+	const eeMig = path.join(eeMigrationsDir, name);
+	const apiMig = path.join(root, "packages/envsync-api/src/libs/db/migrations", name);
+	if (!fs.existsSync(eeMig)) {
+		fail(`H3.4: missing envsync-enterprise migration ${name}`);
+	} else if (!fs.existsSync(apiMig)) {
+		fail(`H3.4: missing envsync-api migration re-export for ${name}`);
+	} else {
+		const shim = fs.readFileSync(apiMig, "utf8");
+		if (!shim.includes("envsync-enterprise") || !shim.includes("export { up, down }")) {
+			fail(`H3.4: ${name} in envsync-api must re-export up/down from envsync-enterprise`);
+		}
+	}
+}
+ok("H3.4: EE migrations owned by envsync-enterprise with core re-export shims");
 
 // 12) H6: envsync-web must not list proprietary EE web as a production dependency
 const webPkg = JSON.parse(

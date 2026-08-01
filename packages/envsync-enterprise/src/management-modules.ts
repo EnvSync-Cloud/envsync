@@ -7,6 +7,13 @@ import { startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
  * Canonical management / enterprise API module surface (D5 / H3).
  * Wired by `envsync-management-api` via `registerManagementModules`.
  * Background workers for enterprise sync are owned by this package (H3).
+ * Capability services (OIDC/SAML/rotation/dyn-secret/log-forwarding) live under `./services` (H7).
+ *
+ * H3.4 migrations: physical source of truth is `./migrations/*`. The core process
+ * migrator still discovers them via thin re-export shims under envsync-api so
+ * Kysely migration names stay unique and OSS/core auto-migrate history is stable.
+ * Do **not** also register `migrationDirectories` here while those shims exist
+ * (would duplicate names in CompositeMigrationProvider).
  */
 export const enterpriseManagementModules: ApiModule[] = [
 	{
