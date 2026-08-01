@@ -3,8 +3,8 @@ import { describeRoute } from "hono-openapi";
 import { resolver } from "hono-openapi/zod";
 
 import { LicenseController } from "../controllers/license.controller";
-import { errorResponseSchema } from "@/validators/common";
-import { licenseActionResponseSchema, licenseStatusResponseSchema } from "@/validators/license.validator";
+import { errorResponseSchema } from "envsync-api/ports/validators-common";
+import { licenseActionResponseSchema, licenseStatusResponseSchema } from "envsync-api/ports/validators-license";
 
 const app = new Hono();
 

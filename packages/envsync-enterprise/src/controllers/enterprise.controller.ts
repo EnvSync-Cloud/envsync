@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
-import { assertEntitled } from "@/helpers/enterprise-guard";
-import { AuditLogService } from "@/services/audit_log.service";
+import { assertEntitled } from "envsync-api/ports/helpers";
+import { AuditLogService } from "envsync-api/ports/services";
 import { EnterpriseIntegrationService } from "../services/enterprise-integration.service";
 import { EnterpriseProviderService } from "../services/enterprise-provider.service";
 

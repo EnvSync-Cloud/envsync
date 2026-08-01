@@ -301,6 +301,40 @@ if (!fs.existsSync(eeCa)) {
 	ok("envsync-enterprise owns bundled enterprise root CA PEM");
 }
 
+// 16) P2: enterprise must not use @/* path alias into envsync-api/src
+const eeTsconfig = JSON.parse(
+	fs.readFileSync(path.join(root, "packages/envsync-enterprise/tsconfig.json"), "utf8"),
+) as { compilerOptions?: { paths?: Record<string, string[]> } };
+const eePaths = eeTsconfig.compilerOptions?.paths ?? {};
+const atStar = eePaths["@/*"]?.[0] ?? "";
+if (atStar.includes("envsync-api")) {
+	fail("P2: envsync-enterprise tsconfig must not map @/* into envsync-api/src");
+}
+let eeAtImports = 0;
+for (const file of walkTsFiles(path.join(root, "packages/envsync-enterprise/src"))) {
+	const text = fs.readFileSync(file, "utf8");
+	if (/from\s+["']@\//.test(text) || /import\s*\(\s*["']@\//.test(text)) {
+		fail(`P2: envsync-enterprise still uses @/ deep import: ${path.relative(root, file)}`);
+		eeAtImports++;
+	}
+}
+if (eeAtImports === 0) {
+	ok("P2: envsync-enterprise has no @/ imports (uses envsync-api/ports)");
+}
+const portsIndex = path.join(root, "packages/envsync-api/src/public/ports/index.ts");
+if (!fs.existsSync(portsIndex)) {
+	fail("P2: missing envsync-api public ports surface");
+} else {
+	ok("P2: envsync-api/ports public surface present");
+}
+const uiButton = path.join(root, "packages/envsync-ui/src/components/button.tsx");
+const uiCn = path.join(root, "packages/envsync-ui/src/lib/cn.ts");
+if (!fs.existsSync(uiButton) || !fs.existsSync(uiCn)) {
+	fail("P2: envsync-ui must ship shared primitives (button) + cn util");
+} else {
+	ok("P2: envsync-ui includes cn + button/badge/card/input primitives");
+}
+
 // 15) P1: EE HTTP surface (routes/controllers) lives under envsync-enterprise
 const eeHttpRoutes = [
 	"enterprise.route.ts",

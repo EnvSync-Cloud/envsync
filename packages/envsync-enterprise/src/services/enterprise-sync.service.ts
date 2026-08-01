@@ -1,10 +1,10 @@
-import { DB } from "@/libs/db";
-import log, { LogTypes } from "@/libs/logger";
-import { NotFoundError, ValidationError } from "@/libs/errors";
-import { EnvService } from "@/services/env.service";
-import { EnterpriseProviderSyncService } from "@/services/enterprise-provider-sync.service";
-import { EnvTypeService } from "@/services/env_type.service";
-import { SecretService } from "@/services/secret.service";
+import { DB } from "envsync-api/ports/db";
+import log, { LogTypes } from "envsync-api/ports/logger";
+import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import { EnvService } from "envsync-api/ports/services";
+import { EnterpriseProviderSyncService } from "./enterprise-provider-sync.service";
+import { EnvTypeService } from "envsync-api/ports/services";
+import { SecretService } from "envsync-api/ports/services";
 
 import { EnterpriseProviderService, type EnterpriseProvider } from "./enterprise-provider.service";
 

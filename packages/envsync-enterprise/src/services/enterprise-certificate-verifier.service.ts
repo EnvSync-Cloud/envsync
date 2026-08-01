@@ -5,7 +5,7 @@ import path from "node:path";
 import "reflect-metadata";
 import * as x509 from "@peculiar/x509";
 
-import { config } from "@/utils/env";
+import { config } from "envsync-api/ports/env";
 
 export const ENTERPRISE_CERT_METADATA_OID = "1.3.6.1.4.1.58708.1.1";
 export const ENTERPRISE_CERT_EKU_OID = "1.3.6.1.4.1.58708.1.2";

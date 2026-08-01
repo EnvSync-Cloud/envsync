@@ -1,8 +1,8 @@
 import { type Context } from "hono";
 
-import { assertEntitled } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "envsync-api/ports/helpers";
 import { OidcService } from "../services/oidc.service";
-import { AuditLogService } from "@/services/audit_log.service";
+import { AuditLogService } from "envsync-api/ports/services";
 
 export class OidcController {
 	public static readonly createProvider = async (c: Context) => {

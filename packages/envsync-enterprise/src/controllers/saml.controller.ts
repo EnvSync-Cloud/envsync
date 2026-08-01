@@ -1,11 +1,11 @@
 import { type Context } from "hono";
 
-import { assertEntitled } from "@/helpers/enterprise-guard";
-import { setWebAuthCookies, setActiveMembershipCookie } from "@/helpers/web-auth";
+import { assertEntitled } from "envsync-api/ports/helpers";
+import { setWebAuthCookies, setActiveMembershipCookie } from "envsync-api/ports/helpers";
 import { SamlService } from "../services/saml.service";
-import { UserService } from "@/services/user.service";
-import { AuditLogService } from "@/services/audit_log.service";
-import { config } from "@/utils/env";
+import { UserService } from "envsync-api/ports/services";
+import { AuditLogService } from "envsync-api/ports/services";
+import { config } from "envsync-api/ports/env";
 
 // Derive SAML session signing key from environment
 function getSamlSessionSecret(): string {

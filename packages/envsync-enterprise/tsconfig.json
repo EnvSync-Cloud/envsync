@@ -12,7 +12,7 @@
     "verbatimModuleSyntax": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../envsync-api/src/*"]
+      "@enterprise/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"]

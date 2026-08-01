@@ -1,9 +1,9 @@
 import { type Context } from "hono";
-import { assertEntitled } from "@/helpers/enterprise-guard";
+import { assertEntitled } from "envsync-api/ports/helpers";
 import { RotationService } from "../services/rotation.service";
-import { AuditLogService } from "@/services/audit_log.service";
-import { AuthorizationService } from "@/services/authorization.service";
-import { EnvTypeService } from "@/services/env_type.service";
+import { AuditLogService } from "envsync-api/ports/services";
+import { AuthorizationService } from "envsync-api/ports/services";
+import { EnvTypeService } from "envsync-api/ports/services";
 
 export class RotationController {
 	public static readonly createPolicy = async (c: Context) => {

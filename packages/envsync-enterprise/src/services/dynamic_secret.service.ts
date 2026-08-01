@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { DB } from "@/libs/db";
-import { NotFoundError, ConflictError, ValidationError } from "@/libs/errors";
-import infoLogs, { LogTypes } from "@/libs/logger";
+import { DB } from "envsync-api/ports/db";
+import { NotFoundError, ConflictError, ValidationError } from "envsync-api/ports/errors";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 import { getEngine, listEngineTypes } from "./dynamic-secret-engines";
 

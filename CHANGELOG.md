@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — no-piggyback P2 (ports + design system start)
+
+### Added
+
+- **`envsync-api/ports`**: public surface for peer packages (DB, errors, logger, env,
+  middlewares, helpers, core services, validators). Enterprise must use these instead
+  of `@/` deep imports into `envsync-api/src`.
+- **`envsync-ui`**: shared `cn`, Button, Badge, Card, Input primitives (MIT).
+
+### Changed
+
+- `envsync-enterprise` no longer path-maps `@/*` into api source; all core access via ports.
+- Web `components/ui/{button,badge,card,input}` re-export from `envsync-ui`.
+
+### Still open
+
+- Full UI kit migration; DI beyond re-export ports; management app factory still shared.
+
+---
+
 ## Unreleased — no-piggyback P1 (management HTTP ownership)
 
 ### Changed

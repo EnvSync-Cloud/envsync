@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import infoLogs, { LogTypes } from "@/libs/logger";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 import type { CredentialResult, DynamicSecretEngineInterface, TemplateVars } from "./base";
 import { generatePassword, generateUsername, applyTemplate } from "./base";

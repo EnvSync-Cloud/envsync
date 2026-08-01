@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { DB, JsonValue } from "@/libs/db";
-import { orNotFound } from "@/libs/errors";
-import infoLogs, { LogTypes } from "@/libs/logger";
+import { DB, JsonValue } from "envsync-api/ports/db";
+import { orNotFound } from "envsync-api/ports/errors";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 export type ProviderType = "datadog" | "splunk" | "sumo-logic";
 

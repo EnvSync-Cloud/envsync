@@ -3,16 +3,16 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { LogForwardingController } from "../controllers/log-forwarding.controller";
-import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
-import { requirePermission } from "@/middlewares/permission.middleware";
+import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { requirePermission } from "envsync-api/ports/middlewares";
 import {
     createLogForwardingRequestSchema,
     logForwardingResponseSchema,
     logForwardingsResponseSchema,
 } from "../validators/log-forwarding.validator";
-import { errorResponseSchema } from "@/validators/common";
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { cliMiddleware } from "@/middlewares/cli.middleware";
+import { errorResponseSchema } from "envsync-api/ports/validators-common";
+import { authMiddleware } from "envsync-api/ports/middlewares";
+import { cliMiddleware } from "envsync-api/ports/middlewares";
 
 const app = new Hono();
 

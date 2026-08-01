@@ -1,6 +1,6 @@
 import { Kysely } from "kysely";
 
-import { type Database } from "@/types/db";
+import { type Database } from "envsync-api/ports/types-db";
 
 export async function up(db: Kysely<Database>): Promise<void> {
     await db.schema

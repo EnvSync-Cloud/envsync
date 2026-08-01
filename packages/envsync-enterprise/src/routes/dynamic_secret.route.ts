@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { enterpriseGuard } from "@/middlewares/enterprise.middleware";
-import { requirePermission } from "@/middlewares/permission.middleware";
-import { cliMiddleware } from "@/middlewares/cli.middleware";
+import { authMiddleware } from "envsync-api/ports/middlewares";
+import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { requirePermission } from "envsync-api/ports/middlewares";
+import { cliMiddleware } from "envsync-api/ports/middlewares";
 import { DynamicSecretController } from "../controllers/dynamic_secret.controller";
 import {
 	createDynamicSecretEngineRequestSchema,
@@ -18,7 +18,7 @@ import {
 	revokeLeaseResponseSchema,
 	cleanupResponseSchema,
 } from "../validators/dynamic_secret.validator";
-import { errorResponseSchema } from "@/validators/common";
+import { errorResponseSchema } from "envsync-api/ports/validators-common";
 
 const app = new Hono();
 

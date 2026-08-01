@@ -1,7 +1,7 @@
-import { DB } from "@/libs/db";
-import { NotFoundError, ConflictError } from "@/libs/errors";
-import { smartEncrypt, rsaLayerDecrypt } from "@/helpers/key-store";
-import { AppService } from "@/services/app.service";
+import { DB } from "envsync-api/ports/db";
+import { NotFoundError, ConflictError } from "envsync-api/ports/errors";
+import { smartEncrypt, rsaLayerDecrypt } from "envsync-api/ports/helpers";
+import { AppService } from "envsync-api/ports/services";
 
 import { getRotationEngine } from "./rotation-engines";
 
@@ -206,8 +206,8 @@ export class RotationService {
 
 		// Store the new credential as the variable value via SecretService
 		// This integrates with the existing secret management system
-		// SecretService lives in envsync-api (core); resolve via @/ alias (management-api esbuild plugin).
-		const { SecretService } = await import("@/services/secret.service");
+		// SecretService lives in core — access via public ports only.
+		const { SecretService } = await import("envsync-api/ports/services");
 
 		// Check if the secret exists
 		const existingSecret = await SecretService.getSecret({
