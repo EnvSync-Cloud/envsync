@@ -68,7 +68,7 @@ envsync push --env staging
 ┌──────────────────────────────────────────────────────────────┐
 │                    EnvSync Platform                          │
 ├──────────────────────────────────────────────────────────────┤
-│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs (TS + Go)      │
+│  🖥️  Dashboard    │  ⌨️  CLI       │  📦 SDKs (TS + Go)      │
 │  (React + Vite)   │  (Go)          │  core + manage paths    │
 └─────────┬─────────┴───────┬────────┴──────────┬──────────────┘
           │                 │                   │
@@ -77,10 +77,9 @@ envsync push --env staging
 │              Single API process (Bun + Hono)                │
 │         /api/*  ·  /api/v1/manage/* (Enterprise)            │
 ├─────────────────────────────────────────────────────────────┤
-│  🔐 Secrets    │  🔄 Rotation*  │  🌐 Integrations*          │
-│  📋 Variables  │  ⏰ Dynamic*   │  📊 Audit Logs             │
-│  🔑 OIDC/SAML* │  📤 Log Fwd*   │  🪝 Webhooks               │
-│  (* Enterprise manage surface under /api/v1/manage)         │
+│  🔐 Secrets    │  🔄 Rotation  │  🌐 Integrations          │
+│  📋 Variables  │  ⏰ Dynamic   │  📊 Audit Logs            │
+│  🔑 OIDC/SAML  │  📤 Log Fwd   │  🪝 Webhooks              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
