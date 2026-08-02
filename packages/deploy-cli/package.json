@@ -1,6 +1,6 @@
 {
   "name": "@envsync-cloud/deploy-enterprise",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "description": "Enterprise CLI for self-hosted EnvSync deployment on Docker Swarm (private package)",
   "type": "module",
   "bin": {
