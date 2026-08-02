@@ -10,7 +10,8 @@ COPY packages ./packages
 COPY sdks ./sdks
 COPY apps ./apps
 
-RUN bun install
+# --no-frozen-lockfile: GH Actions sets CI=true (Bun freezes the lockfile by default).
+RUN bun install --no-frozen-lockfile
 
 WORKDIR /app/packages/envsync-api
 RUN bun run builder.enterprise.ts

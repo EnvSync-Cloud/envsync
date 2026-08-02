@@ -3,9 +3,17 @@
   "version": "0.20.1",
   "private": true,
   "workspaces": [
-    "packages/*",
+    "apps/*",
     "sdks/*",
-    "apps/*"
+    "packages/deploy",
+    "packages/deploy-cli",
+    "packages/deploy-core",
+    "packages/envsync-api",
+    "packages/envsync-enterprise",
+    "packages/envsync-enterprise-web",
+    "packages/envsync-kernel",
+    "packages/envsync-keycloak-theme",
+    "packages/envsync-ui"
   ],
   "scripts": {
     "build": "turbo build",

@@ -10,7 +10,10 @@ COPY sdks ./sdks
 COPY apps ./apps
 
 # Production graph for the API process (+ workspace envsync-kernel).
-RUN bun install --production
+# --no-frozen-lockfile: GH Actions sets CI=true (Bun freezes the lockfile by default).
+# Workspace graph in the image may differ slightly from a local install with gitignored
+# private checkouts under packages/; never commit a lock rewrite from the image.
+RUN bun install --production --no-frozen-lockfile
 
 FROM oven/bun:1.3.9-alpine
 
