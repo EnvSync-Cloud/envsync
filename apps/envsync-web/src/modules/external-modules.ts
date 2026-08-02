@@ -1,12 +1,10 @@
 import type { WebModule } from "./types";
 
 /**
- * Public FOSS builds intentionally ship with no external modules.
+ * Reserved FOSS extension seam (empty in public monorepo).
  *
- * A private superset repo can replace this file with imports from
- * enterprise-only packages, for example:
- *
- * import { enterpriseWebModules } from "envsync-enterprise-web/modules";
- * export const externalWebModules = enterpriseWebModules;
+ * Enterprise modules are **not** loaded here — they come from the Vite alias
+ * `@enterprise-modules` → `envsync-enterprise-web` (enterprise) or
+ * `enterprise-modules.stub.ts` (OSS). One injection mechanism only (Phase 5b).
  */
 export const externalWebModules: WebModule[] = [];

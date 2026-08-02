@@ -5,6 +5,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { CertificateRoleMapper } from "@/services/certificate-role.mapper";
 import { CertificateService } from "@/services/certificate.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { EntitlementService } from "@/services/entitlement.service";
 import { InviteService } from "@/services/invite.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
@@ -30,17 +31,25 @@ export interface ProvisionOrganizationInput {
 }
 
 export class OrgProvisioningService {
-	public static async assertProvisioningAllowed() {
+	public static async assertProvisioningAllowed(source?: string) {
+		// Populate entitlement cache so getMaxOrgs can read verified claims (Phase 4).
+		await EntitlementService.resolve().catch(() => null);
+
 		const db = await DB.getInstance();
 		const countResult = await db
 			.selectFrom("orgs")
 			.select(({ fn }) => fn.count<string>("id").as("count"))
 			.executeTakeFirstOrThrow();
-		EditionPolicyService.assertOrgProvisioningAllowed(Number(countResult.count));
+		const orgCount = Number(countResult.count);
+		if (source) {
+			EditionPolicyService.assertCanProvisionOrg({ source, orgCount });
+			return;
+		}
+		EditionPolicyService.assertOrgProvisioningAllowed(orgCount);
 	}
 
 	public static async provisionOrganization(input: ProvisionOrganizationInput) {
-		await this.assertProvisioningAllowed();
+		await this.assertProvisioningAllowed(input.source);
 
 		const sagaCtx = { org_id: "", admin_role_id: "", user_id: "" };
 		let generatedBundle: {

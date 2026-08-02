@@ -23,27 +23,27 @@ export class AuthenticationService {
         });
     }
     /**
-     * Create Workspace
-     * Create a new workspace for the current enterprise web session and switch into it
+     * Create Organization
+     * Create a new organization for the current hosted web session and switch into it. Hosted only; self-host always 403.
      * @param requestBody
-     * @returns WhoAmIResponse Workspace created successfully
+     * @returns WhoAmIResponse Organization created successfully
      * @throws ApiError
      */
-    public createWorkspace(
+    public createOrganization(
         requestBody?: {
             name: string;
         },
     ): CancelablePromise<WhoAmIResponse> {
         return this.httpRequest.request({
             method: 'POST',
-            url: '/api/auth/create-workspace',
+            url: '/api/auth/create-organization',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request`,
                 401: `Cookie session required`,
-                403: `Enterprise edition required`,
-                409: `Workspace slug conflict`,
+                403: `Not allowed on this deployment (e.g. self-host)`,
+                409: `Organization slug conflict or org limit reached`,
             },
         });
     }

@@ -24,7 +24,7 @@ export const DangerZoneCard = ({
           <div>
             <h4 className="font-medium text-foreground">Leave Organization</h4>
             <p className="text-sm text-muted-foreground">
-              Remove your membership from the current organization. This ends your access to this workspace immediately.
+              Remove your membership from the current organization. This ends your access to this organization immediately.
             </p>
           </div>
           <Button

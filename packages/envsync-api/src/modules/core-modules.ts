@@ -106,4 +106,10 @@ export const coreApiModules: ApiModule[] = [
 		mountPath: "/system",
 		createRouter: async () => (await import("@/routes/system.route")).default,
 	},
+	{
+		// Operator self-host org create (Phase 1b). Auth: X-EnvSync-Setup-Token only.
+		name: "setup",
+		mountPath: "/setup",
+		createRouter: async () => (await import("@/routes/setup.route")).default,
+	},
 ];

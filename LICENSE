@@ -1,3 +1,13 @@
+# EnvSync dual license
+
+This monorepo contains both **open source (MIT)** and **proprietary enterprise**
+software (PostHog / Coder style). Copyright (c) 2026 EnvSync Cloud.
+
+## 1. MIT License (default for open-source paths)
+
+Unless a path is listed under **Proprietary** below, the software is licensed
+under the MIT License:
+
 MIT License
 
 Copyright (c) 2026 EnvSync Cloud
@@ -19,3 +29,46 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+### MIT packages (representative)
+
+- `packages/envsync-kernel`
+- `packages/envsync-api` (core product surface)
+- `packages/deploy`, `packages/deploy-core`
+- `apps/envsync-web` (dashboard shell)
+- `apps/envsync-landing`
+- Public SDKs under `sdks/` that are not management/enterprise-only
+
+## 2. Proprietary — EnvSync Enterprise License
+
+The following paths are **not** MIT. They are proprietary software. Production
+use requires a valid EnvSync enterprise subscription or other written license
+from EnvSync Cloud. See the LICENSE file inside each package for terms:
+
+| Path | Package |
+|------|---------|
+| `packages/envsync-enterprise/` | Management module registry + EE API surface |
+| `packages/envsync-enterprise-web/` | Enterprise dashboard modules |
+| _(retired)_ `packages/envsync-management-api/` | Removed — manage is `/api/v1/manage` on core API |
+| _(retired)_ `sdks/envsync-management-*-sdk/` | Removed — use core `envsync-ts-sdk` / `envsync-go-sdk` |
+| `packages/deploy-cli/` | Published as `@envsync-cloud/deploy-enterprise` |
+
+Enterprise source may appear in this **public monorepo** for transparency and
+contribution workflow. That does **not** grant a production enterprise license.
+Signing keys for entitlements live only on EnvSync’s private license-server.
+
+## 3. Contributions
+
+- Contributions to MIT paths are accepted under the MIT License.
+- Contributions to proprietary paths are accepted under terms that allow EnvSync
+  Cloud to include them under the EnvSync Enterprise License (see CONTRIBUTING.md).
+
+## 4. Product editions (non-legal summary)
+
+| Product | License | Notes |
+|---------|---------|--------|
+| Hosted EnvSync Cloud | Commercial SaaS | Platform-operated |
+| Self-host OSS | MIT | Single-org; public deploy CLI |
+| Self-host Enterprise | Proprietary + subscription | Verified entitlements; management process |
+
+See `EDITIONING.md` and `docs/SUPPORT.md` for the full support matrix.

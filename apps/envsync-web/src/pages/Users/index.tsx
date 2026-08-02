@@ -183,7 +183,7 @@ export const Users = () => {
         }
         stats={[
           { label: "Members", value: users.length, hint: "Current organization members" },
-          { label: "Active", value: activeMembers, hint: "Members active in the workspace", tone: activeMembers > 0 ? "success" : "default" },
+          { label: "Active", value: activeMembers, hint: "Members active in the organization", tone: activeMembers > 0 ? "success" : "default" },
           { label: "Privileged", value: adminMembers, hint: "Admin or master-level access", tone: adminMembers > 0 ? "warning" : "default" },
         ]}
         secondaryNav={

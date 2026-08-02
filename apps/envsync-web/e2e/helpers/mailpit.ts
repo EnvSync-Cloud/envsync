@@ -21,6 +21,7 @@ export interface MailpitAdapter {
 }
 
 const INVITE_PATTERNS = {
+	// Path is shared across landing (Hosted) and dashboard (self-host Phase 2).
 	org: /https?:\/\/[^\s"'<>]+\/onboarding\/accept-org-invite\/[A-Za-z0-9_-]+/i,
 	user: /https?:\/\/[^\s"'<>]+\/onboarding\/accept-user-invite\/[A-Za-z0-9_-]+/i,
 };

@@ -279,11 +279,11 @@ describe("multi-org cookie sessions", () => {
 		expect(whoAmIBody.user.org_id).toBe(secondarySeed.org.id);
 	});
 
-	test("creates a new workspace for the current enterprise identity and switches into it", async () => {
+	test("creates a new organization for the current enterprise identity and switches into it", async () => {
 		EditionPolicyService.setTestOverrides({ edition: "enterprise", single_org_mode: false });
 
 		const seed = await seedAuthOrg();
-		const createRes = await testRequest("/api/auth/create-workspace", {
+		const createRes = await testRequest("/api/auth/create-organization", {
 			method: "POST",
 			headers: {
 				Cookie: sessionCookie(seed.masterUser.token, seed.masterUser.id),
@@ -338,11 +338,14 @@ describe("multi-org cookie sessions", () => {
 		expect(whoAmIBody.org.id).toBe(createBody.org.id);
 	});
 
-	test("rejects workspace creation on oss editions", async () => {
-		EditionPolicyService.setTestOverrides({ edition: "oss" });
+	test("rejects organization creation on selfhosted deployments", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+		});
 		const seed = await seedAuthOrg();
 
-		const createRes = await testRequest("/api/auth/create-workspace", {
+		const createRes = await testRequest("/api/auth/create-organization", {
 			method: "POST",
 			headers: {
 				Cookie: sessionCookie(seed.masterUser.token, seed.masterUser.id),
@@ -355,7 +358,27 @@ describe("multi-org cookie sessions", () => {
 
 		expect(createRes.status).toBe(403);
 		const body = await createRes.json<{ code?: string }>();
-		expect(body.code).toBe("ENTERPRISE_REQUIRED");
+		expect(body.code).toBe("ORG_CREATE_CHANNEL_FORBIDDEN");
+	});
+
+	test("rejects organization creation on oss (selfhosted) editions", async () => {
+		EditionPolicyService.setTestOverrides({ edition: "oss", deployment_mode: "selfhosted" });
+		const seed = await seedAuthOrg();
+
+		const createRes = await testRequest("/api/auth/create-organization", {
+			method: "POST",
+			headers: {
+				Cookie: sessionCookie(seed.masterUser.token, seed.masterUser.id),
+				"X-CSRF-Token": "test-csrf-token",
+			},
+			body: {
+				name: "Should Fail",
+			},
+		});
+
+		expect(createRes.status).toBe(403);
+		const body = await createRes.json<{ code?: string }>();
+		expect(body.code).toBe("ORG_CREATE_CHANNEL_FORBIDDEN");
 	});
 });
 

@@ -1,15 +1,5 @@
-import type { Hono } from "hono";
-import type { ZodRawShape } from "zod";
-
-export type ApiSurface = "core" | "management";
-
-export type EnvSchemaExtension = ZodRawShape | (() => ZodRawShape);
-
-export interface ApiModule {
-	name: string;
-	mountPath: string;
-	createRouter: () => Promise<Hono> | Hono;
-	extendEnvSchema?: () => ZodRawShape;
-	migrationDirectories?: () => string[];
-	registerBackgroundHandlers?: () => Promise<void> | void;
-}
+/**
+ * Re-export module contracts from the MIT kernel (Phase 5).
+ * Prefer importing from `envsync-kernel` in new packages.
+ */
+export type { ApiModule, ApiSurface, EnvSchemaExtension } from "envsync-kernel";

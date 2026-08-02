@@ -87,8 +87,21 @@ export class SystemStateService {
 				.executeTakeFirstOrThrow(),
 		]);
 
+		const policy = EditionPolicyService.getPolicySnapshot();
+
 		return {
 			...installState,
+			// Live policy wins over persisted install_state for channel flags
+			edition: policy.edition,
+			single_org_mode: policy.single_org_mode,
+			management_enabled: policy.management_enabled,
+			observability_enabled: policy.observability_enabled,
+			management_web_enabled: policy.management_web_enabled,
+			landing_enabled: policy.landing_enabled,
+			deployment_mode: policy.deployment_mode,
+			max_orgs: policy.max_orgs,
+			public_signup_enabled: policy.public_signup_enabled,
+			can_create_organization: policy.can_create_organization,
 			org_count: Number(orgCountResult.count),
 		};
 	}

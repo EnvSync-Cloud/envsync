@@ -137,8 +137,9 @@ function validateEditionRules(config: DeployConfig, edition: DeployEdition) {
 		if (config.edition === "enterprise") {
 			errors.push("OSS deploy tooling cannot consume a config explicitly marked as enterprise.");
 		}
+		// Legacy flag: management surface is on core API; OSS must not enable it.
 		if (config.features.management_api === true) {
-			errors.push("OSS edition cannot enable management_api.");
+			errors.push("OSS edition cannot enable management_api (manage surface is enterprise-only on core API).");
 		}
 		if (config.features.landing === true) {
 			errors.push("OSS edition cannot enable landing.");
@@ -158,12 +159,9 @@ function validateEditionRules(config: DeployConfig, edition: DeployEdition) {
 		if (config.edition === "oss") {
 			errors.push("Enterprise deploy tooling cannot consume a config explicitly marked as oss.");
 		}
-		if (config.features.management_api === false) {
-			errors.push("Enterprise edition must enable management_api.");
-		}
-		if (config.features.landing === false) {
-			errors.push("Enterprise edition must enable landing.");
-		}
+		// features.management_api is legacy; manage mounts on core API when ENVSYNC_MANAGEMENT_ENABLED.
+		// Landing is Hosted-only marketing/signup (program plan Phase 2). Self-host must not require it.
+		// Optional branding: features.landing === true may re-enable later; default is off.
 		if (config.license.required === false) {
 			errors.push("Enterprise edition must require licensing.");
 		}
@@ -183,7 +181,8 @@ function validateEditionRules(config: DeployConfig, edition: DeployEdition) {
 function buildServicePlans(config: DeployConfig, edition: DeployEdition): ServicePlan[] {
 	const observabilityEnabled = config.observability.enabled ?? (edition === "enterprise");
 	const managementEnabled = edition === "enterprise";
-	const landingEnabled = edition === "enterprise";
+	// Hosted marketing/signup only — self-host topology omits landing by default (Phase 2).
+	const landingEnabled = config.features.landing === true;
 
 	return [
 		{ id: "api", enabled: true, tier: "core", reason: "Required in all editions.", image: config.images.api },
@@ -194,8 +193,8 @@ function buildServicePlans(config: DeployConfig, edition: DeployEdition): Servic
 		{ id: "openfga", enabled: true, tier: "core", reason: "Authorization service.", image: null },
 		{ id: "minikms", enabled: true, tier: "core", reason: "Secret encryption service.", image: null },
 		{ id: "keycloak", enabled: true, tier: "core", reason: "Authentication provider.", image: config.images.keycloak },
-		{ id: "management-api", enabled: managementEnabled, tier: "enterprise", reason: managementEnabled ? "Enterprise control plane API." : "Not deployed in OSS.", image: managementEnabled ? config.images.management_api : null },
-		{ id: "landing", enabled: landingEnabled, tier: "enterprise", reason: landingEnabled ? "Enterprise/public onboarding surface." : "Omitted in OSS.", image: landingEnabled ? config.images.landing : null },
+		// Manage surface lives on core API under /api/v1/manage (no second process).
+		{ id: "landing", enabled: landingEnabled, tier: "optional", reason: landingEnabled ? "Optional marketing surface (Hosted)." : "Omitted from self-host; user invites use dashboard.", image: landingEnabled ? config.images.landing : null },
 		{ id: "clickstack", enabled: observabilityEnabled, tier: observabilityEnabled ? "optional" : "optional", reason: observabilityEnabled ? "Observability enabled for this topology." : "Observability disabled.", image: observabilityEnabled ? config.images.clickstack : null },
 		{ id: "otel-agent", enabled: observabilityEnabled, tier: "optional", reason: observabilityEnabled ? "OTEL pipeline enabled for this topology." : "OTEL disabled.", image: observabilityEnabled ? config.images.otel_agent : null },
 	];
@@ -203,6 +202,7 @@ function buildServicePlans(config: DeployConfig, edition: DeployEdition): Servic
 
 function buildFrontendArtifacts(config: DeployConfig, edition: DeployEdition): FrontendArtifactPlan[] {
 	const enterprise = edition === "enterprise";
+	const landingEnabled = config.features.landing === true;
 
 	return [
 		{
@@ -218,8 +218,8 @@ function buildFrontendArtifacts(config: DeployConfig, edition: DeployEdition): F
 			package_name: "envsync-landing",
 			build_command: "bun run --filter envsync-landing build",
 			mount_path: "/",
-			included: enterprise,
-			image: enterprise ? config.images.landing : null,
+			included: landingEnabled,
+			image: landingEnabled ? config.images.landing : null,
 		},
 	];
 }
@@ -230,17 +230,21 @@ function buildRuntimeEnv(config: DeployConfig, edition: DeployEdition) {
 
 	return {
 		ENVSYNC_EDITION: edition,
+		ENVSYNC_DEPLOYMENT_MODE: "selfhosted",
 		ENVSYNC_OBSERVABILITY_ENABLED: String(observabilityEnabled),
 		ENVSYNC_MANAGEMENT_ENABLED: String(enterprise),
-		ENVSYNC_LANDING_ENABLED: String(enterprise),
-		ENVSYNC_SINGLE_ORG_MODE: String(edition === "oss"),
+		// Landing is Hosted-only (program plan D3 / Phase 1).
+		ENVSYNC_LANDING_ENABLED: "false",
+		ENVSYNC_SINGLE_ORG_MODE: "true",
+		// max_orgs: entitlement claims (Phase 4+); no product ENVSYNC_MAX_ORGS (Phase 7)
 		ENVSYNC_LICENSE_ENFORCEMENT: String(enterprise),
 		ENVSYNC_LICENSE_MODE: enterprise ? "certificate" : "none",
 		ENVSYNC_LICENSE_BUNDLE_PATH: enterprise ? "/etc/envsync/license/enterprise-license-bundle.json" : "",
 		ENVSYNC_LICENSE_CERT_PATH: enterprise ? "/etc/envsync/license/enterprise-cert.pem" : "",
 		ENVSYNC_LICENSE_KEY_PATH: enterprise ? "/etc/envsync/license/enterprise-key.pem" : "",
 		ENVSYNC_LICENSE_ROOT_CA_CERT_PATH: enterprise ? "/etc/envsync/license/root-ca.pem" : "",
-		MANAGEMENT_API_URL: enterprise ? `https://manage-api.${config.domain.root_domain}` : "",
+		// SDK/web BASE for manage routes on the core API process.
+		MANAGEMENT_API_URL: enterprise ? `https://api.${config.domain.root_domain}/api/v1/manage` : "",
 		ENVSYNC_LICENSE_SERVER_URL: enterprise ? (config.license.server_url ?? "") : "",
 		ENVSYNC_LICENSE_KEY: enterprise ? (config.license.key ?? "") : "",
 		ENVSYNC_INSTALL_FINGERPRINT: enterprise ? (config.license.install_fingerprint ?? "") : "",
@@ -259,7 +263,7 @@ function buildReleaseArtifacts(config: DeployConfig, edition: DeployEdition): Re
 			publish: edition === "oss",
 		},
 		{
-			name: "@envsync-cloud/deploy-cli",
+			name: "@envsync-cloud/deploy-enterprise",
 			registry: "github-packages",
 			edition: "enterprise",
 			publish: edition === "enterprise",
@@ -278,9 +282,9 @@ function buildReleaseArtifacts(config: DeployConfig, edition: DeployEdition): Re
 	if (edition === "enterprise") {
 		container_images.push(
 			{
-				name: "envsync-management-api",
-				image: config.images.management_api,
-				build_target: "packages/envsync-management-api",
+				name: "envsync-api-enterprise",
+				image: config.images.api,
+				build_target: "docker/api-enterprise.Dockerfile",
 				edition: "enterprise",
 			},
 			{

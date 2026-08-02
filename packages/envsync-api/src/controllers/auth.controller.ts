@@ -4,7 +4,7 @@ import { UserService } from "@/services/user.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
-import { WorkspaceProvisioningService } from "@/services/workspace-provisioning.service";
+import { OrganizationProvisioningService } from "@/services/organization-provisioning.service";
 import { readAccessToken, setActiveMembershipCookie } from "@/helpers/web-auth";
 
 async function buildSessionPayload(userId: string) {
@@ -45,6 +45,8 @@ async function buildSessionPayload(userId: string) {
 			},
 		];
 
+	const policy = EditionPolicyService.getPolicySnapshot();
+
 	return {
 		user,
 		org,
@@ -58,6 +60,10 @@ async function buildSessionPayload(userId: string) {
 			is_master: membership.role_id === role.id ? role.is_master : membership.is_master,
 		})),
 		active_membership_user_id: user.id,
+		deployment_mode: policy.deployment_mode,
+		max_orgs: policy.max_orgs,
+		public_signup_enabled: policy.public_signup_enabled,
+		can_create_organization: policy.can_create_organization,
 	};
 }
 
@@ -93,14 +99,22 @@ export class AuthController {
 		}
 	};
 
-	public static readonly createWorkspace = async (c: Context) => {
+	/**
+	 * Hosted-only org create for dashboard sessions.
+	 * Route: POST /auth/create-organization
+	 */
+	public static readonly createOrganization = async (c: Context) => {
 		if (!readAccessToken(c)) {
 			return c.json({ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" }, 401);
 		}
 
-		if (!EditionPolicyService.isEnterprise()) {
+		// Hosted-only channel (program plan §1.1a). Self-host never creates orgs via web.
+		if (!EditionPolicyService.canCreateOrganizationViaWeb()) {
 			return c.json(
-				{ error: "Workspace creation is available only on enterprise servers.", code: "ENTERPRISE_REQUIRED" },
+				{
+					error: "Organization creation is not allowed through the dashboard on this deployment.",
+					code: "ORG_CREATE_CHANNEL_FORBIDDEN",
+				},
 				403,
 			);
 		}
@@ -112,11 +126,11 @@ export class AuthController {
 			return c.json({ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" }, 400);
 		}
 
-		const result = await WorkspaceProvisioningService.createWorkspaceForExistingIdentity({
-			workspaceName: payload.name,
+		const result = await OrganizationProvisioningService.createOrganizationForExistingIdentity({
+			organizationName: payload.name,
 			authServiceId: currentUser.auth_service_id,
 			currentUserId: currentUser.id,
-			source: "workspace_switcher",
+			source: "hosted_dashboard",
 		});
 		setActiveMembershipCookie(c, result.user_id);
 		return c.json(await buildSessionPayload(result.user_id));

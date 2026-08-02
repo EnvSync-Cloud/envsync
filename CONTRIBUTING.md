@@ -13,10 +13,40 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 ## Development Workflow
 
-1. Fork the repo and create a branch from `main`
+1. Fork the repo and create a branch from `main` (or from the active program track branch when working on the no-piggyback rollout — see below)
 2. Branch naming: `feat/`, `fix/`, `chore/`, `docs/`
 3. Keep PRs focused — one feature or fix per PR
-4. Push and open a PR against `main`
+4. Push and open a PR against `main` (or the program track branch when directed)
+5. Use the [PR template](./.github/PULL_REQUEST_TEMPLATE.md) no-piggyback + org-create channel checks
+
+### No-piggyback program (active)
+
+When working on tenancy, deploy CLI split, manage surface, licensing, or FE edition isolation:
+
+- Track: `feat/the-big-update` (phase branches as needed)
+- Product matrix: [EDITIONING.md](./EDITIONING.md), deploy all editions: [DEPLOY.md](./DEPLOY.md), root [AGENTS.md](./AGENTS.md)
+- Local planning notes may live under `docs/` (gitignored — not required for OSS clone)
+
+### Deployment mode & edition footguns
+
+Local defaults favor Hosted-like development. That is intentional — and easy to misread as production self-host config.
+
+| Variable | Default / missing behavior | Footgun |
+|----------|----------------------------|---------|
+| `ENVSYNC_EDITION` | Defaults to **`enterprise`** in `env.ts` | An “OSS” mental model still loads enterprise edition flags unless you set `ENVSYNC_EDITION=oss`. |
+| `ENVSYNC_DEPLOYMENT_MODE` | **Optional.** If unset: OSS → `selfhosted`; enterprise → **`hosted`** | Self-host **enterprise** installs that omit the var behave as **Hosted** (multi-org SaaS policy, license bypass for multi-org). **Always set `ENVSYNC_DEPLOYMENT_MODE=selfhosted` for self-host.** |
+| Hosted FE build | CF `deploy-fe` must use **`build:hosted`** | Never point Hosted Cloudflare at `build:oss` — EE dashboard modules will be empty stubs. |
+| Org create API | `POST /auth/create-organization` only | Do not reintroduce `/auth/create-workspace`. |
+
+Self-host checklist:
+
+```bash
+ENVSYNC_DEPLOYMENT_MODE=selfhosted
+ENVSYNC_EDITION=oss          # or enterprise for licensed EE
+# EE self-host also needs entitlement verify + setup token / deploy CLI for org create
+```
+
+See [EDITIONING.md](./EDITIONING.md) and [SELFHOSTING.md](./SELFHOSTING.md) (enterprise license install notes for self-host).
 
 ## API / Backend Changes (`packages/envsync-api/`)
 
@@ -73,11 +103,37 @@ Use `bun run test:e2e` from the repo root. It runs `e2e-setup init` before invok
 - Register new dashboard routes and nav items via `src/modules/core-modules.ts`
 - Run `bun run lint` before pushing
 
-## Editions & Shared Shell
+## Editions & dual license
 
-- The public repo is the canonical FOSS shared shell.
-- Shared extension seams live in the `src/modules/` loaders for API and web.
-- If future enterprise work needs a seam, upstream the seam first and keep proprietary logic outside public packages.
+EnvSync is a **public dual-license monorepo** (not private-superset-only). See:
+
+- [LICENSE](./LICENSE) — MIT default + proprietary carve-out  
+- [EDITIONING.md](./EDITIONING.md) — product matrix and package graph  
+- [SELFHOSTING.md](./SELFHOSTING.md) — self-host deploy / org bootstrap  
+
+### Proprietary paths
+
+Code under `packages/envsync-enterprise`, `packages/envsync-enterprise-web`,
+`packages/envsync-enterprise` / `envsync-enterprise-web`, and `packages/deploy-cli` (enterprise deploy)
+is **proprietary**. By contributing to those paths you grant EnvSync Cloud the
+right to use, modify, and distribute your contribution under the EnvSync
+Enterprise License (and to relicense as needed for the product).
+
+MIT-path contributions remain under MIT.
+
+### Guardrails for contributors
+
+- Do not add proprietary packages as **production** dependencies of MIT packages
+  (CI: `bun run check:boundaries`). `envsync-enterprise-web` is a **devDependency**
+  of `envsync-web` (Vite resolves it only for enterprise/hosted builds).
+- Do not reintroduce `apps/envsync-management-web`, `envsync-management-api`, or `sdks/envsync-management-*`.
+- Do not reintroduce monorepo spawn shims for OSS deploy.
+- Prefer **Organization** in user-facing copy; org create API is
+  `POST /auth/create-organization` only.
+- Self-host multi-org limits come from **entitlement claims**; do not rely on
+  bare `ENVSYNC_MAX_ORGS` (support override only).
+- Shared extension seams live in API/web module loaders; keep core shells free of EE imports.
+- Shared design tokens live in MIT `envsync-ui` — do not fork `:root` / `.dark` blocks in apps.
 
 ## CLI Changes (`packages/envsync-cli/`)
 

@@ -1,10 +1,10 @@
 {
-  "name": "@envsync-cloud/deploy-cli",
-  "version": "0.11.0",
-  "description": "CLI for self-hosted EnvSync deployment on Docker Swarm",
+  "name": "@envsync-cloud/deploy-enterprise",
+  "version": "0.20.1",
+  "description": "Enterprise CLI for self-hosted EnvSync deployment on Docker Swarm (private package)",
   "type": "module",
   "bin": {
-    "envsync-deploy": "./dist/index.js"
+    "envsync-deploy-enterprise": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -18,7 +18,7 @@
     "build": "tsup --config tsup.config.ts",
     "prepack": "bun run build",
     "check:pack": "npm pack --dry-run",
-    "start": "bun run src/index.ts",
+    "start": "ENVSYNC_DEPLOY_FORCE_EDITION=enterprise bun run src/index.ts",
     "test": "bun run build && bun test"
   },
   "repository": {
@@ -31,16 +31,16 @@
     "url": "https://github.com/EnvSync-Cloud/envsync/issues"
   },
   "author": "EnvSync Cloud",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "keywords": [
     "envsync",
     "deploy",
     "self-hosted",
     "docker-swarm",
-    "cli",
-    "secrets"
+    "enterprise"
   ],
   "dependencies": {
+    "@envsync-cloud/deploy": "workspace:*",
     "chalk": "^5.6.2",
     "yaml": "^1.10.2"
   },
@@ -50,6 +50,7 @@
     "typescript": "^5.9.2"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
   }
 }

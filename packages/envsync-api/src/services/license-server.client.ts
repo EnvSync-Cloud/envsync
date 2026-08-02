@@ -34,7 +34,10 @@ export interface EnterpriseLicenseCertificateBundle {
 export interface LicenseVerificationResponse {
 	status: "active" | "inactive" | "expired" | "error" | "locked";
 	lease_expires_at?: string | null;
+	/** Entitlement JWT (EdDSA preferred) or legacy opaque lease */
 	signed_lease?: string | null;
+	/** Present when license-server H4+ issues EdDSA entitlement JWTs */
+	entitlement_alg?: "EdDSA" | "HS256" | string | null;
 	reason_code?: string | null;
 	message?: string | null;
 	license_key?: string | null;

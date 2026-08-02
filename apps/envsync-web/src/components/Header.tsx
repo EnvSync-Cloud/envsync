@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Fragment, useMemo, useState } from "react";
 import { logoutWebSession } from "@/api";
-import { runtimeConfig } from "@/utils/runtime-config";
+import { canCreateOrganizationInUi, runtimeConfig } from "@/utils/runtime-config";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -30,15 +30,15 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { CreateWorkspaceDialog } from "@/components/auth/CreateWorkspaceDialog";
+import { CreateOrganizationDialog } from "@/components/auth/CreateOrganizationDialog";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const Header = () => {
-  const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingWorkspace } = useAuthContext();
+  const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingOrganization } = useAuthContext();
   const breadcrumbs = useBreadcrumbs();
   const navigate = useNavigate();
   const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
   const activeMembership = useMemo(
     () =>
       memberships.find((membership) => membership.user_id === activeMembershipUserId)
@@ -49,6 +49,7 @@ export const Header = () => {
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
   const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
   const canSwitchOrganizations = runtimeConfig.edition === "enterprise";
+  const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
 
   const handleLogout = async () => {
     try {
@@ -70,7 +71,7 @@ export const Header = () => {
               <Popover open={orgSwitcherOpen} onOpenChange={setOrgSwitcherOpen}>
                 <PopoverTrigger asChild>
                   <button
-                    data-testid="workspace-switcher-trigger"
+                    data-testid="organization-switcher-trigger"
                     className="inline-flex items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-left text-primary-foreground transition-colors hover:border-primary/30 hover:bg-primary/14"
                   >
                     <span className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-primary/15">
@@ -81,7 +82,7 @@ export const Header = () => {
                         {activeOrgName}
                       </span>
                     </span>
-                    {isSwitchingOrg || isCreatingWorkspace ? (
+                    {isSwitchingOrg || isCreatingOrganization ? (
                       <Loader2 className="size-4 animate-spin text-primary/70" />
                     ) : (
                       <ChevronsUpDown className="size-4 text-primary/70" />
@@ -91,26 +92,26 @@ export const Header = () => {
                 <PopoverContent align="start" className="w-[340px] border-border bg-popover p-0">
                   <Command className="bg-transparent text-foreground">
                     <div className="border-b border-border px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active workspace</p>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active organization</p>
                       <p className="mt-1 truncate text-sm font-medium text-foreground">{activeOrgName}</p>
                       <p className="truncate text-xs text-tertiary">{activeRole}</p>
                     </div>
-                    <CommandInput placeholder="Search workspaces..." className="text-foreground placeholder:text-tertiary" />
+                    <CommandInput placeholder="Search organizations..." className="text-foreground placeholder:text-tertiary" />
                     <CommandList className="max-h-[320px]">
-                      <CommandEmpty className="text-tertiary">No workspaces found.</CommandEmpty>
-                      <CommandGroup heading="Your workspaces">
+                      <CommandEmpty className="text-tertiary">No organizations found.</CommandEmpty>
+                      <CommandGroup heading="Your organizations">
                         {memberships.map((membership) => {
                           const isActive = membership.user_id === activeMembershipUserId || membership.is_active;
                           return (
                             <CommandItem
                               key={membership.user_id}
-                              data-testid={`workspace-switcher-item-${membership.org_slug}`}
+                              data-testid={`organization-switcher-item-${membership.org_slug}`}
                               value={`${membership.org_name} ${membership.org_slug} ${membership.role_name}`}
                               onSelect={() => {
                                 setOrgSwitcherOpen(false);
                                 void switchOrg(membership.org_id);
                               }}
-                              disabled={isSwitchingOrg || isCreatingWorkspace}
+                              disabled={isSwitchingOrg || isCreatingOrganization}
                               className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-muted"
                             >
                               <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
@@ -129,24 +130,28 @@ export const Header = () => {
                           );
                         })}
                       </CommandGroup>
-                      <CommandSeparator className="bg-border" />
-                      <CommandGroup heading="Workspace">
-                        <CommandItem
-                          data-testid="create-workspace-action"
-                          value="create new workspace"
-                          onSelect={() => {
-                            setOrgSwitcherOpen(false);
-                            setCreateWorkspaceOpen(true);
-                          }}
-                          disabled={isSwitchingOrg || isCreatingWorkspace}
-                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
-                        >
-                          <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                            <Plus className="size-4" />
-                          </span>
-                          <span className="text-sm font-medium">+ Create new Workspace</span>
-                        </CommandItem>
-                      </CommandGroup>
+                      {canCreateOrganization && (
+                        <>
+                          <CommandSeparator className="bg-border" />
+                          <CommandGroup heading="Organization">
+                            <CommandItem
+                              data-testid="create-organization-action"
+                              value="create new organization"
+                              onSelect={() => {
+                                setOrgSwitcherOpen(false);
+                                setCreateOrganizationOpen(true);
+                              }}
+                              disabled={isSwitchingOrg || isCreatingOrganization}
+                              className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
+                            >
+                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                <Plus className="size-4" />
+                              </span>
+                              <span className="text-sm font-medium">+ Create organization</span>
+                            </CommandItem>
+                          </CommandGroup>
+                        </>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>
@@ -285,9 +290,9 @@ export const Header = () => {
         </div>
         </div>
       </header>
-      <CreateWorkspaceDialog
-        open={createWorkspaceOpen}
-        onOpenChange={setCreateWorkspaceOpen}
+      <CreateOrganizationDialog
+        open={createOrganizationOpen}
+        onOpenChange={setCreateOrganizationOpen}
       />
     </>
   );

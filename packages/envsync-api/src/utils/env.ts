@@ -59,17 +59,28 @@ export const BaseEnvSchema = z.object({
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string().default("http://localhost:8080"),
-	MANAGEMENT_API_URL: z.string().default("http://localhost:4001"),
+	// OpenAPI server URL for legacy management process; product clients use /api/v1/manage on core.
+	MANAGEMENT_API_URL: z.string().default("http://localhost:4000/api/v1/manage"),
 	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
 	MANAGEMENT_API_PORT: z.string().default("4001"),
+	// Default enterprise favors Hosted/local EE dev. Self-host OSS must set oss explicitly.
 	ENVSYNC_EDITION: z.enum(["oss", "enterprise"]).default("enterprise"),
+	// Optional: when unset, EditionPolicyService maps OSS→selfhosted, enterprise→hosted.
+	// Self-host enterprise installs MUST set selfhosted (see CONTRIBUTING footguns).
+	ENVSYNC_DEPLOYMENT_MODE: z.enum(["hosted", "selfhosted"]).optional(),
+	// Phase 7: max_orgs comes from entitlement claims. ENVSYNC_MAX_ORGS is ignored unless
+	// ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE=true (stranded multi-org support installs only).
+	ENVSYNC_MAX_ORGS: z.string().optional(),
+	ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE: z.string().optional(),
+	// Operator setup token for self-host org create (Phase 1b). Not an end-user session.
+	ENVSYNC_SETUP_TOKEN: z.string().optional(),
 	ENVSYNC_OBSERVABILITY_ENABLED: z.string().default("true"),
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),
 	ENVSYNC_LANDING_ENABLED: z.string().optional(),
 	ENVSYNC_MANAGEMENT_WEB_ENABLED: z.string().optional(),
 	ENVSYNC_LICENSE_ENFORCEMENT: z.string().default("false"),
-	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate"]).default("certificate"),
+	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate", "entitlement"]).default("certificate"),
 	ENVSYNC_LICENSE_BUNDLE_PATH: z.string().optional(),
 	ENVSYNC_LICENSE_CERT_PATH: z.string().optional(),
 	ENVSYNC_LICENSE_KEY_PATH: z.string().optional(),
@@ -79,6 +90,12 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_LICENSE_KEY: z.string().optional(),
 	ENVSYNC_INSTALL_FINGERPRINT: z.string().optional(),
 	ENVSYNC_LICENSE_LEASE_TTL_SECONDS: z.string().default("300"),
+	// Phase 4 Coder-style entitlement JWT (public key verify only; private key never ships)
+	ENVSYNC_ENTITLEMENT_JWT: z.string().optional(),
+	ENVSYNC_ENTITLEMENT_JWT_PATH: z.string().optional(),
+	ENVSYNC_ENTITLEMENT_GRACE_SECONDS: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_PEM: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_PATH: z.string().optional(),
 	ENVSYNC_STACK_NAME: z.string().optional(),
 	ENVSYNC_RELEASE_VERSION: z.string().optional(),
 	// OpenFGA configuration

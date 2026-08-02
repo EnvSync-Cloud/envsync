@@ -1,0 +1,27 @@
+EnvSync Enterprise License (Proprietary)
+
+Copyright (c) 2026 EnvSync Cloud. All rights reserved.
+
+This package (`envsync-enterprise-web`) is proprietary software. It is included
+in the public monorepo for transparency and dual-license development (PostHog /
+Coder style) but is **not** licensed under the MIT License that applies to the
+core dashboard shell (`apps/envsync-web`).
+
+## Production use
+
+Use of this software in production requires a valid EnvSync enterprise
+subscription or other written license from EnvSync Cloud.
+
+## What this covers
+
+- Enterprise dashboard WebModule registry and injected pages
+- Integrations UI (providers, org secrets, sync runs, bindings)
+- License activate/verify and org-level sync diagnostics (ex-management SPA)
+
+## What this does not cover
+
+- `apps/envsync-web` shell (MIT)
+- `packages/envsync-ui` design tokens when present (MIT)
+- Public SDKs used as peers
+
+See also `packages/envsync-enterprise/LICENSE`.

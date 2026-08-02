@@ -121,7 +121,8 @@ app.patch(
 app.patch(
 	"/role/:id",
 	describeRoute({
-		operationId: "updateRole",
+		// Distinct from roles.updateRole (PATCH /api/role/{id}) for unique OpenAPI operationIds.
+		operationId: "updateUserRole",
 		summary: "Update User Role",
 		description: "Update a user's role (Admin only)",
 		tags: ["Users"],

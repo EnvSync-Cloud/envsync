@@ -10,7 +10,6 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.5
 	github.com/charmbracelet/huh v0.7.0
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/envsync-cloud/envsync-management-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/savioxavier/termlink v1.4.3
@@ -78,4 +77,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-replace github.com/envsync-cloud/envsync-management-go-sdk => ../../sdks/envsync-management-go-sdk

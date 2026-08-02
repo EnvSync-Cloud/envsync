@@ -51,4 +51,6 @@ test-results
 *.log
 .omo
 .playwright-mcp
-/docs/audit
+
+# Local / untracked planning and ops notes (not part of published product tree)
+/docs/

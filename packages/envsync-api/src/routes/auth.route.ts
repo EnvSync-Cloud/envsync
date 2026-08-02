@@ -4,7 +4,11 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { AuthController } from "@/controllers/auth.controller";
-import { createWorkspaceRequestSchema, switchOrgRequestSchema, whoAmIResponseSchema } from "@/validators/auth.validator";
+import {
+	createOrganizationRequestSchema,
+	switchOrgRequestSchema,
+	whoAmIResponseSchema,
+} from "@/validators/auth.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
 
@@ -43,58 +47,62 @@ app.get(
 	AuthController.whoami,
 );
 
-app.post(
-	"/create-workspace",
-	describeRoute({
-		operationId: "createWorkspace",
-		summary: "Create Workspace",
-		description: "Create a new workspace for the current enterprise web session and switch into it",
-		tags: ["Authentication"],
-		responses: {
-			200: {
-				description: "Workspace created successfully",
-				content: {
-					"application/json": {
-						schema: resolver(whoAmIResponseSchema),
-					},
-				},
-			},
-			400: {
-				description: "Invalid request",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			401: {
-				description: "Cookie session required",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			403: {
-				description: "Enterprise edition required",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
-				},
-			},
-			409: {
-				description: "Workspace slug conflict",
-				content: {
-					"application/json": {
-						schema: resolver(errorResponseSchema),
-					},
+const createOrganizationRoute = describeRoute({
+	operationId: "createOrganization",
+	summary: "Create Organization",
+	description:
+		"Create a new organization for the current hosted web session and switch into it. Hosted only; self-host always 403.",
+	tags: ["Authentication"],
+	responses: {
+		200: {
+			description: "Organization created successfully",
+			content: {
+				"application/json": {
+					schema: resolver(whoAmIResponseSchema),
 				},
 			},
 		},
-	}),
-	zValidator("json", createWorkspaceRequestSchema),
-	AuthController.createWorkspace,
+		400: {
+			description: "Invalid request",
+			content: {
+				"application/json": {
+					schema: resolver(errorResponseSchema),
+				},
+			},
+		},
+		401: {
+			description: "Cookie session required",
+			content: {
+				"application/json": {
+					schema: resolver(errorResponseSchema),
+				},
+			},
+		},
+		403: {
+			description: "Not allowed on this deployment (e.g. self-host)",
+			content: {
+				"application/json": {
+					schema: resolver(errorResponseSchema),
+				},
+			},
+		},
+		409: {
+			description: "Organization slug conflict or org limit reached",
+			content: {
+				"application/json": {
+					schema: resolver(errorResponseSchema),
+				},
+			},
+		},
+	},
+});
+
+/** Hosted dashboard org create (Phase 6 naming; Phase 7 removed create-workspace alias). */
+app.post(
+	"/create-organization",
+	createOrganizationRoute,
+	zValidator("json", createOrganizationRequestSchema),
+	AuthController.createOrganization,
 );
 
 app.post(

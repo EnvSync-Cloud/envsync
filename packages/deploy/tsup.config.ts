@@ -3,8 +3,15 @@ import { fileURLToPath } from "node:url";
 
 const deployCoreSource = fileURLToPath(new URL("../deploy-core/src/index.ts", import.meta.url));
 
+/**
+ * OSS deploy CLI: owns the full engine (cli + helpers). Published dist is self-contained.
+ * Enterprise package imports the engine via `@envsync-cloud/deploy/cli` (OSS → never imports EE).
+ */
 export default defineConfig({
-	entry: ["src/index.ts"],
+	entry: {
+		index: "src/index.ts",
+		cli: "src/cli.ts",
+	},
 	format: ["esm"],
 	platform: "node",
 	target: "node18",
@@ -14,6 +21,7 @@ export default defineConfig({
 	clean: true,
 	sourcemap: false,
 	dts: false,
+	external: ["chalk", "yaml", "zod"],
 	esbuildPlugins: [
 		{
 			name: "workspace-deploy-core-source",

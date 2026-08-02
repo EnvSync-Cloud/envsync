@@ -5,9 +5,10 @@ import { InviteService } from "@/services/invite.service";
 import { onOrgOnboardingInvite, onUserOnboardingInvite } from "@/libs/mail";
 import { AuditLogService } from "@/services/audit_log.service";
 import { isPasswordStrong } from "@/utils/password";
-import { config } from "@/utils/env";
 import { CertificateRoleMapper } from "@/services/certificate-role.mapper";
 import { CertificateService } from "@/services/certificate.service";
+import { orgInviteAcceptLink, userInviteAcceptLink } from "@/helpers/invite-links";
+import { EditionPolicyService } from "@/services/edition-policy.service";
 import { OrgProvisioningService } from "@/services/org-provisioning.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
@@ -15,6 +16,8 @@ import { UserService } from "@/services/user.service";
 
 export class OnboardingController {
 	public static readonly createOrgInvite = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { email } = await c.req.json();
 
 		if (!email) {
@@ -24,13 +27,15 @@ export class OnboardingController {
 		const invite_code = await InviteService.createOrgInvite(email);
 
 		await onOrgOnboardingInvite(email, {
-			accept_link: `${config.LANDING_PAGE_URL}/onboarding/accept-org-invite/${invite_code}`,
+			accept_link: orgInviteAcceptLink(invite_code),
 		});
 
 		return c.json({ message: "Organization invite created successfully." }, 201);
 	};
 
 	public static readonly acceptOrgInvite = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { invite_code } = c.req.param();
 
 		const {
@@ -71,7 +76,7 @@ export class OnboardingController {
 				full_name,
 				password,
 			},
-			source: "org_invite_accept",
+			source: "hosted_signup",
 			inviteId: invite_data.id,
 		});
 
@@ -85,6 +90,8 @@ export class OnboardingController {
 	};
 
 	public static readonly getOrgInviteByCode = async (c: Context) => {
+		EditionPolicyService.assertPublicOrgSignupEnabled();
+
 		const { invite_code } = c.req.param();
 
 		if (!invite_code) {
@@ -109,7 +116,7 @@ export class OnboardingController {
 		const org = await OrgService.getOrg(org_id);
 
 		await onUserOnboardingInvite(email, {
-			accept_link: `${config.LANDING_PAGE_URL}/onboarding/accept-user-invite/${invite.invite_token}`,
+			accept_link: userInviteAcceptLink(invite.invite_token),
 			org_name: org.name,
 		});
 

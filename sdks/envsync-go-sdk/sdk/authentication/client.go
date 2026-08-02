@@ -75,10 +75,10 @@ func (c *Client) Whoami(
 	return response, nil
 }
 
-// Create a new workspace for the current enterprise web session and switch into it
-func (c *Client) CreateWorkspace(
+// Create a new organization for the current hosted web session and switch into it. Hosted only; self-host always 403.
+func (c *Client) CreateOrganization(
 	ctx context.Context,
-	request *sdk.CreateWorkspaceRequest,
+	request *sdk.CreateOrganizationRequest,
 	opts ...option.RequestOption,
 ) (*sdk.WhoAmIResponse, error) {
 	options := core.NewRequestOptions(opts...)
@@ -87,7 +87,7 @@ func (c *Client) CreateWorkspace(
 		c.baseURL,
 		"http://localhost:4000",
 	)
-	endpointURL := baseURL + "/api/auth/create-workspace"
+	endpointURL := baseURL + "/api/auth/create-organization"
 	headers := internal.MergeHeaders(
 		c.header.Clone(),
 		options.ToHeader(),

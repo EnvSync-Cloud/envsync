@@ -7,7 +7,11 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { poweredBy } from "hono/powered-by";
 import { prettyJSON } from "hono/pretty-json";
-import { openAPISpecs } from "hono-openapi";
+import { generateSpecs } from "hono-openapi";
+import {
+	disambiguateOpenApiOperationIds,
+	type OpenApiDocument,
+} from "@/libs/openapi-disambiguate";
 
 import { NoResultError } from "kysely";
 
@@ -18,23 +22,66 @@ import { httpRequestDuration } from "@/libs/telemetry/metrics";
 import { csrfMiddleware } from "@/middlewares/csrf.middleware";
 import { enterpriseLicenseLockMiddleware } from "@/middlewares/license-lock.middleware";
 import type { ApiSurface } from "@/modules/types";
+import {
+	MANAGE_API_PREFIX,
+	loadApiModules,
+	tryRegisterEnterpriseManageModules,
+} from "@/modules/load-modules";
 import { createApiRoutes } from "@/routes";
 import { config } from "@/utils/env";
 import { version } from "package.json";
 
+/** OpenAPI tag names for routes under `/api/v1/manage` that require Enterprise. */
+const ENTERPRISE_MANAGE_OPENAPI_TAGS = [
+	"License",
+	"Enterprise",
+	"OIDC Providers",
+	"SAML Providers",
+	"SAML SSO",
+	"Rotation",
+	"Dynamic Secrets",
+	"Log Forwarding",
+] as const;
+
+const ENTERPRISE_MANAGE_TAG_DESCRIPTION =
+	"**Only available in Enterprise deployment.** Served at `/api/v1/manage/{module}/...` on this API process (not a separate service).";
+
+function enterpriseManageOpenApiTags() {
+	return ENTERPRISE_MANAGE_OPENAPI_TAGS.map(name => ({
+		name,
+		description: ENTERPRISE_MANAGE_TAG_DESCRIPTION,
+	}));
+}
+
 export async function createApiApp(surface: ApiSurface) {
 	const app = new Hono();
 	const isManagement = surface === "management";
+	// Product path is always /api/v1/manage/{module}/... (core process when EE enabled;
+	// surface "management" is tests/OpenAPI codegen only — no second process in prod).
+	if (!isManagement) {
+		await tryRegisterEnterpriseManageModules();
+	}
+	const manageMounted = loadApiModules("management").length > 0;
 	const apiTitle = isManagement ? "EnvSync Management API" : "EnvSync API";
 	const serverUrl = isManagement
 		? config.MANAGEMENT_API_URL
 		: `http://localhost:${config.PORT}`;
-	const docsUrl = isManagement ? "/openapi" : "/openapi";
+	const docsUrl = "/openapi";
 	const allowedOrigins = [
 		config.DASHBOARD_URL,
 		config.LANDING_PAGE_URL,
 		config.MANAGEMENT_DASHBOARD_URL,
 	].filter(Boolean);
+
+	const openApiDescription = [
+		`${apiTitle} documentation.`,
+		"",
+		isManagement || manageMounted
+			? "Enterprise manage routes are mounted at `/api/v1/manage/{module}/...` on this same process (one OpenAPI document, one API process). Tags marked *Only available in Enterprise deployment* require an Enterprise edition."
+			: "OSS deployment exposes the core product API only.",
+		"",
+		"Bearer-token clients can optionally send the `X-EnvSync-Org-Id` header to select an active organization for that request. Cookie sessions continue to use `envsync_active_membership`, and API-key requests ignore this header.",
+	].join("\n");
 
 	app.onError((err, c) => {
 		if (err instanceof AppError) {
@@ -182,20 +229,31 @@ export async function createApiApp(surface: ApiSurface) {
 	});
 
 	app.use("/api/*", csrfMiddleware());
-	app.use(
-		"/api/*",
-		enterpriseLicenseLockMiddleware(
-			isManagement
-				? ["/api/license/status", "/api/license/activate", "/api/license/verify", "/api/system/status"]
-				: ["/api/system/status"],
-		),
-	);
+
+	const manageAllow = manageMounted
+		? [
+				`${MANAGE_API_PREFIX}/license/status`,
+				`${MANAGE_API_PREFIX}/license/activate`,
+				`${MANAGE_API_PREFIX}/license/verify`,
+				`${MANAGE_API_PREFIX}/system/status`,
+			]
+		: [];
+	const coreAllow = isManagement
+		? []
+		: ["/api/system/status", "/api/setup/status", "/api/setup/org"];
+	app.use("/api/*", enterpriseLicenseLockMiddleware([...coreAllow, ...manageAllow]));
 
 	app.use(logger());
 	app.use(prettyJSON());
 	app.use(poweredBy());
 
-	app.get("/health", ctx => ctx.json({ status: "ok!", surface }));
+	app.get("/health", ctx =>
+		ctx.json({
+			status: "ok!",
+			surface,
+			manage_api_prefix: manageMounted ? MANAGE_API_PREFIX : null,
+		}),
+	);
 
 	app.get("/health/mail", async ctx => {
 		try {
@@ -210,56 +268,68 @@ export async function createApiApp(surface: ApiSurface) {
 
 	app.get("/favicon.ico", async ctx => ctx.redirect("https://hono.dev/images/logo-small.png"));
 
-	app.route("/api", await createApiRoutes(surface));
+	// Core product at /api/* (skipped on dedicated management process).
+	if (!isManagement) {
+		app.route("/api", await createApiRoutes("core"));
+	}
+	// Single manage product path (core + optional second process).
+	if (manageMounted) {
+		app.route(MANAGE_API_PREFIX, await createApiRoutes("management"));
+	}
 
-	app.get(
-		"/openapi",
-		openAPISpecs(app, {
-			documentation: {
-				info: {
-					title: apiTitle,
-					version,
-					description: `${apiTitle} documentation\n\nBearer-token clients can optionally send the \`X-EnvSync-Org-Id\` header to select an active organization for that request. Cookie sessions continue to use \`envsync_active_membership\`, and API-key requests ignore this header.`,
-				},
-				components: {
-					parameters: {
-						XEnvSyncOrgIdHeader: {
-							name: "X-EnvSync-Org-Id",
-							in: "header",
-							required: false,
-							description:
-								"Optional. Bearer-token clients can use this to select the active organization for the request. Ignored for cookie sessions and API keys.",
-							schema: {
-								type: "string",
-							},
-						},
-					},
-					securitySchemes: {
-						bearerAuth: {
-							type: "http",
-							scheme: "bearer",
-							bearerFormat: "JWT",
-						},
-						apiKeyAuth: {
-							type: "apiKey",
-							in: "header",
-							name: "X-API-Key",
-						},
+	const openApiDocumentation = {
+		info: {
+			title: apiTitle,
+			version,
+			description: openApiDescription,
+		},
+		// Tag descriptions appear as section subtitles in Scalar / Swagger UI.
+		...(manageMounted || isManagement ? { tags: enterpriseManageOpenApiTags() } : {}),
+		components: {
+			parameters: {
+				XEnvSyncOrgIdHeader: {
+					name: "X-EnvSync-Org-Id",
+					in: "header",
+					required: false,
+					description:
+						"Optional. Bearer-token clients can use this to select the active organization for the request. Ignored for cookie sessions and API keys.",
+					schema: {
+						type: "string",
 					},
 				},
-				security: [
-					{ bearerAuth: [] },
-					{ apiKeyAuth: [] },
-				],
-				servers: [
-					{
-						url: serverUrl,
-						description: isManagement ? "Management server" : "Core server",
-					},
-				],
 			},
-		}),
-	);
+			securitySchemes: {
+				bearerAuth: {
+					type: "http",
+					scheme: "bearer",
+					bearerFormat: "JWT",
+				},
+				apiKeyAuth: {
+					type: "apiKey",
+					in: "header",
+					name: "X-API-Key",
+				},
+			},
+		},
+		security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
+		servers: [
+			{
+				url: serverUrl,
+				description:
+					manageMounted || isManagement
+						? "EnvSync API (core + Enterprise manage at /api/v1/manage)"
+						: "EnvSync API (core)",
+			},
+		],
+	};
+
+	// generateSpecs + disambiguate so dual-mounted manage routes get unique operationIds for SDKs.
+	app.get("/openapi", async c => {
+		const raw = (await generateSpecs(app, {
+			documentation: openApiDocumentation,
+		})) as OpenApiDocument;
+		return c.json(disambiguateOpenApiOperationIds(raw));
+	});
 
 	app.get(
 		"/docs",

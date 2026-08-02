@@ -11,6 +11,12 @@ const runtimeConfigSchema = z.object({
   edition: z.enum(["oss", "enterprise"]).default("enterprise"),
   dashboardVariant: z.enum(["oss", "enterprise"]).default("enterprise"),
   managementEnabled: z.boolean().default(false),
+  /** Hosted multi-tenant SaaS vs self-hosted product install (program plan Phase 1). */
+  deploymentMode: z.enum(["hosted", "selfhosted"]).optional(),
+  /** Dashboard may create organizations only on hosted. */
+  canCreateOrganization: z.boolean().optional(),
+  publicSignupEnabled: z.boolean().optional(),
+  maxOrgs: z.number().nullable().optional(),
   licenseStatus: z.enum(["unknown", "active", "inactive", "expired", "error", "locked"]).optional(),
   licenseLocked: z.boolean().optional(),
   otelEndpoint: z.string().url().optional(),
@@ -31,6 +37,8 @@ declare global {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+/** Unified manage surface on the core API process (no separate manage-api host). */
+const MANAGE_API_PATH = "/api/v1/manage";
 const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"
   ? "oss"
   : import.meta.env.VITE_SERVER_LICENSE === "enterprise"
@@ -39,13 +47,20 @@ const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"
       ? "oss"
       : "enterprise";
 
+function defaultManagementApiUrl(apiBaseUrl: string): string {
+  if (import.meta.env.VITE_MANAGEMENT_API_URL) {
+    return import.meta.env.VITE_MANAGEMENT_API_URL;
+  }
+  return `${apiBaseUrl.replace(/\/$/, "")}${MANAGE_API_PATH}`;
+}
+
 function inferFallbackRuntimeConfig(): RuntimeConfig {
   if (typeof window === "undefined") {
     return {
       apiBaseUrl: defaultApiBaseUrl,
       appBaseUrl: "http://app.lvh.me:8001",
       authBaseUrl: "http://auth.lvh.me:8080",
-      managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || "http://manage-api.lvh.me:4001",
+      managementApiUrl: defaultManagementApiUrl(defaultApiBaseUrl),
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
       apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,
@@ -76,7 +91,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     apiBaseUrl,
     appBaseUrl: host.startsWith("app.") ? origin : `${protocol}//app.${rootHost}`,
     authBaseUrl: `${protocol}//auth.${rootHost}`,
-    managementApiUrl: import.meta.env.VITE_MANAGEMENT_API_URL || `${protocol}//manage-api.${rootHost}`,
+    managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
     keycloakRealm: "envsync",
     webClientId: "envsync-web",
     apiDocsUrl: `${apiBaseUrl}/docs`,
@@ -108,3 +123,19 @@ function getRuntimeConfig(): RuntimeConfig {
 
 export const runtimeConfig = getRuntimeConfig();
 export const isEnterpriseDashboard = runtimeConfig.dashboardVariant === "enterprise";
+
+/** Hosted-only: dashboard "Create organization". Self-host never shows this (program plan §1.1a). */
+export function canCreateOrganizationInUi(config: RuntimeConfig = runtimeConfig): boolean {
+  if (typeof config.canCreateOrganization === "boolean") {
+    return config.canCreateOrganization;
+  }
+  // Fallback until runtime-config.js is updated by deploy: treat selfhosted edition builds as no.
+  if (config.deploymentMode === "selfhosted") {
+    return false;
+  }
+  if (config.deploymentMode === "hosted") {
+    return true;
+  }
+  // Legacy: enterprise build without deploymentMode — assume hosted-like (local).
+  return config.edition === "enterprise";
+}

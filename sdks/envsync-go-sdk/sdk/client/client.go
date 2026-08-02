@@ -11,6 +11,8 @@ import (
 	certificates "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/certificates"
 	changerequests "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/changerequests"
 	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
+	dynamicsecrets "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/dynamicsecrets"
+	enterprise "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/enterprise"
 	environmenttypes "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmenttypes"
 	environmentvariables "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariables"
 	environmentvariablespointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariablespointintime"
@@ -18,15 +20,22 @@ import (
 	fileupload "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/fileupload"
 	gpgkeys "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/gpgkeys"
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
+	license "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/license"
+	logforwarding "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/logforwarding"
+	oidcproviders "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/oidcproviders"
 	onboarding "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/onboarding"
 	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	organizations "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/organizations"
 	permissions "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/permissions"
 	roles "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/roles"
+	rotation "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/rotation"
+	samlproviders "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/samlproviders"
+	samlsso "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/samlsso"
 	secrets "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secrets"
 	secretspointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretspointintime"
 	secretsrollback "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/secretsrollback"
 	servicetokens "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/servicetokens"
+	setup "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/setup"
 	system "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/system"
 	teams "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/teams"
 	users "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/users"
@@ -64,6 +73,15 @@ type Client struct {
 	ChangeRequests                  *changerequests.Client
 	ServiceTokens                   *servicetokens.Client
 	System                          *system.Client
+	Setup                           *setup.Client
+	License                         *license.Client
+	Enterprise                      *enterprise.Client
+	OidcProviders                   *oidcproviders.Client
+	SamlProviders                   *samlproviders.Client
+	SamlSso                         *samlsso.Client
+	Rotation                        *rotation.Client
+	DynamicSecrets                  *dynamicsecrets.Client
+	LogForwarding                   *logforwarding.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -102,5 +120,14 @@ func NewClient(opts ...option.RequestOption) *Client {
 		ChangeRequests:                  changerequests.NewClient(opts...),
 		ServiceTokens:                   servicetokens.NewClient(opts...),
 		System:                          system.NewClient(opts...),
+		Setup:                           setup.NewClient(opts...),
+		License:                         license.NewClient(opts...),
+		Enterprise:                      enterprise.NewClient(opts...),
+		OidcProviders:                   oidcproviders.NewClient(opts...),
+		SamlProviders:                   samlproviders.NewClient(opts...),
+		SamlSso:                         samlsso.NewClient(opts...),
+		Rotation:                        rotation.NewClient(opts...),
+		DynamicSecrets:                  dynamicsecrets.NewClient(opts...),
+		LogForwarding:                   logforwarding.NewClient(opts...),
 	}
 }

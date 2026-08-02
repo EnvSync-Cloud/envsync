@@ -2,22 +2,48 @@
 
 Environment variable management platform — store, sync, and manage secrets across teams and environments.
 
+## Active program: no-piggyback + unified manage API
+
+- **Track branch:** `feat/the-big-update` (and phase branches)
+- **Local-only notes:** `docs/` is gitignored (planning/ADRs/support matrix stay on disk for operators; not in git)
+
+Do **not** reintroduce:
+
+- Separate `envsync-management-api` process or `manage-api.*` host
+- Separate `sdks/envsync-management-*` packages (clients use core SDKs only)
+- OSS deploy spawning enterprise CLI; self-host web org-create; landing required on self-host
+
+**Dual license:** [LICENSE](./LICENSE) · **Editions:** [EDITIONING.md](./EDITIONING.md) · **Deploy all editions:** [DEPLOY.md](./DEPLOY.md) · **Self-host OSS:** [SELFHOSTING.md](./SELFHOSTING.md)  
+Prefer **Organization** in product UI; org create is `POST /auth/create-organization` only.
+
+## Architecture facts (current)
+
+| Fact | Detail |
+|------|--------|
+| API processes | **One** (`envsync-api`); product at `/api/*` |
+| Manage surface | `/api/v1/manage/{module}/...` on the **same** process when EE modules load |
+| EE image | `docker/api-enterprise.Dockerfile` → `envsync-api-enterprise` (bundles enterprise) |
+| OpenAPI | Single doc at `/openapi` (+ `/docs`); enterprise tags marked in spec |
+| TS SDK | `@envsync-cloud/envsync-ts-sdk` only — `BASE` = API origin |
+| Go SDK | `sdks/envsync-go-sdk` only — same base URL for product + manage |
+| Dashboard EE | `envsync-enterprise-web` injected into `envsync-web` (no management SPA) |
+
 ## Monorepo structure
 
-- `packages/envsync-api/` — Backend API (Hono + Bun)
-- `packages/envsync-cli/` — CLI client (Go)
-- `packages/envsync-management-api/` — Enterprise management API (wraps envsync-api)
-- `packages/envsync-keycloak-theme/` — Custom Keycloak login theme (Docker-bundled)
-- `packages/deploy-cli/` — Self-hosted deployment CLI (TypeScript, published to npm)
-- `packages/deploy-core/` — Shared deployment primitives (TypeScript)
-- `packages/deploy/` — OSS deploy package (TypeScript)
-- `apps/envsync-web/` — Web dashboard (React + Vite)
-- `apps/envsync-landing/` — Marketing landing page (React + Vite)
-- `apps/envsync-management-web/` — Enterprise management dashboard (React + Vite)
-- `sdks/envsync-ts-sdk/` — TypeScript SDK (auto-generated)
-- `sdks/envsync-go-sdk/` — Go SDK (auto-generated)
-- `sdks/envsync-management-ts-sdk/` — Management API TypeScript SDK (auto-generated)
-- `sdks/envsync-management-go-sdk/` — Management API Go SDK (auto-generated)
+- `packages/envsync-api/` — Backend API (Hono + Bun); mounts manage when EE enabled
+- `packages/envsync-cli/` — CLI client (Go); single go-sdk client for product + manage
+- `packages/envsync-ui/` — Shared MIT design tokens + Tailwind preset
+- `packages/envsync-kernel/` — Shared MIT kernel (errors, `ApiModule`, registry)
+- `packages/envsync-enterprise/` — Proprietary EE modules/routes/services
+- `packages/envsync-enterprise-web/` — Proprietary dashboard modules (injected into web)
+- `packages/envsync-keycloak-theme/` — Custom Keycloak login theme
+- `packages/deploy/` — Public OSS deploy CLI (`@envsync-cloud/deploy`)
+- `packages/deploy-cli/` — Thin EE entry → `@envsync-cloud/deploy-enterprise` (private)
+- `packages/deploy-core/` — Shared deployment primitives
+- `apps/envsync-web/` — Web dashboard shell (React + Vite)
+- `apps/envsync-landing/` — Marketing landing (Hosted)
+- `sdks/envsync-ts-sdk/` — Generated TS SDK (core + manage)
+- `sdks/envsync-go-sdk/` — Generated Go SDK (core + manage)
 
 ## Runtimes
 
@@ -76,8 +102,10 @@ Single `.env` file at the repo root. All TS packages read from it via the `load-
 ## Cross-cutting conventions
 
 - Path alias `@/*` maps to `src/*` in all TS packages (configured in each `tsconfig.json`)
-- SDKs in `sdks/` are auto-generated — do not hand-edit
-- The TS SDK is consumed by `apps/envsync-web` via workspace link
+- SDKs in `sdks/` are auto-generated — do not hand-edit; regenerate via `sdks/envsync-ts-sdk` `generate:local` / Go Fern (see [sdks/AGENTS.md](./sdks/AGENTS.md))
+- Web + enterprise-web consume **only** `@envsync-cloud/envsync-ts-sdk`
+- CLI consumes **only** `sdks/envsync-go-sdk`
+- Boundary CI: `bun run check:boundaries`
 
 ## Init
 

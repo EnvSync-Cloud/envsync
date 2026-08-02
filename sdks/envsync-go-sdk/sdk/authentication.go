@@ -8,7 +8,7 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
-type CreateWorkspaceRequest struct {
+type CreateOrganizationRequest struct {
 	Name string `json:"name" url:"-"`
 }
 

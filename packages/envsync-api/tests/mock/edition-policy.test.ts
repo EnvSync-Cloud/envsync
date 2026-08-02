@@ -1,69 +1,132 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { EditionPolicyService } from "@/services/edition-policy.service";
-import { config } from "@/utils/env";
-
-const originalConfig = {
-	ENVSYNC_EDITION: config.ENVSYNC_EDITION,
-	ENVSYNC_MANAGEMENT_ENABLED: config.ENVSYNC_MANAGEMENT_ENABLED,
-	ENVSYNC_LANDING_ENABLED: config.ENVSYNC_LANDING_ENABLED,
-	ENVSYNC_MANAGEMENT_WEB_ENABLED: config.ENVSYNC_MANAGEMENT_WEB_ENABLED,
-	ENVSYNC_OBSERVABILITY_ENABLED: config.ENVSYNC_OBSERVABILITY_ENABLED,
-	ENVSYNC_SINGLE_ORG_MODE: config.ENVSYNC_SINGLE_ORG_MODE,
-	ENVSYNC_LICENSE_ENFORCEMENT: config.ENVSYNC_LICENSE_ENFORCEMENT,
-};
 
 afterEach(() => {
-	Object.assign(config, originalConfig);
+	EditionPolicyService.clearTestOverrides();
 });
 
-describe("EditionPolicyService", () => {
-	test("uses OSS-safe defaults when optional enterprise toggles are unset", () => {
-		Object.assign(config, {
-			ENVSYNC_EDITION: "oss",
-			ENVSYNC_MANAGEMENT_ENABLED: undefined,
-			ENVSYNC_LANDING_ENABLED: undefined,
-			ENVSYNC_MANAGEMENT_WEB_ENABLED: undefined,
-			ENVSYNC_SINGLE_ORG_MODE: "false",
-			ENVSYNC_LICENSE_ENFORCEMENT: "true",
+describe("EditionPolicyService channel matrix", () => {
+	test("hosted allows public signup and web org create", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
 		});
-
-		expect(EditionPolicyService.isOss()).toBe(true);
-		expect(EditionPolicyService.isManagementEnabled()).toBe(false);
-		expect(EditionPolicyService.isLandingEnabled()).toBe(false);
-		expect(EditionPolicyService.isManagementWebEnabled()).toBe(false);
-		expect(EditionPolicyService.isSingleOrgMode()).toBe(true);
-		expect(EditionPolicyService.requiresEnterpriseLicense()).toBe(false);
+		expect(EditionPolicyService.getDeploymentMode()).toBe("hosted");
+		expect(EditionPolicyService.isPublicOrgSignupEnabled()).toBe(true);
+		expect(EditionPolicyService.canCreateOrganizationViaWeb()).toBe(true);
+		expect(EditionPolicyService.getMaxOrgs()).toBeNull();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_dashboard", orgCount: 5 }),
+		).not.toThrow();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_signup", orgCount: 0 }),
+		).not.toThrow();
 	});
 
-	test("uses enterprise defaults when enterprise toggles are unset", () => {
-		Object.assign(config, {
-			ENVSYNC_EDITION: "enterprise",
-			ENVSYNC_MANAGEMENT_ENABLED: undefined,
-			ENVSYNC_LANDING_ENABLED: undefined,
-			ENVSYNC_MANAGEMENT_WEB_ENABLED: undefined,
-			ENVSYNC_LICENSE_ENFORCEMENT: "false",
+	test("selfhosted denies public signup and web org create", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+			max_orgs: 5,
 		});
-
-		expect(EditionPolicyService.isEnterprise()).toBe(true);
-		expect(EditionPolicyService.isManagementEnabled()).toBe(true);
-		expect(EditionPolicyService.isLandingEnabled()).toBe(true);
-		expect(EditionPolicyService.isManagementWebEnabled()).toBe(true);
-		expect(EditionPolicyService.requiresEnterpriseLicense()).toBe(false);
+		expect(EditionPolicyService.isPublicOrgSignupEnabled()).toBe(false);
+		expect(EditionPolicyService.canCreateOrganizationViaWeb()).toBe(false);
+		expect(() => EditionPolicyService.assertPublicOrgSignupEnabled()).toThrow(
+			expect.objectContaining({ code: "PUBLIC_ORG_SIGNUP_DISABLED" }),
+		);
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_dashboard", orgCount: 0 }),
+		).toThrow(expect.objectContaining({ code: "ORG_CREATE_CHANNEL_FORBIDDEN" }));
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_signup", orgCount: 0 }),
+		).toThrow(expect.objectContaining({ code: "ORG_CREATE_CHANNEL_FORBIDDEN" }));
 	});
 
-	test("honors explicit overrides for OSS deployments", () => {
-		Object.assign(config, {
-			ENVSYNC_EDITION: "oss",
-			ENVSYNC_MANAGEMENT_ENABLED: "true",
-			ENVSYNC_LANDING_ENABLED: "true",
-			ENVSYNC_MANAGEMENT_WEB_ENABLED: "true",
-			ENVSYNC_SINGLE_ORG_MODE: "false",
+	test("selfhosted CLI respects max_orgs from policy overrides (entitlement/test)", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+			max_orgs: 2,
 		});
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "selfhost_cli", orgCount: 0 }),
+		).not.toThrow();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "selfhost_cli", orgCount: 1 }),
+		).not.toThrow();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "selfhost_cli", orgCount: 2 }),
+		).toThrow(expect.objectContaining({ code: "ORG_LIMIT_REACHED" }));
+	});
 
-		expect(EditionPolicyService.isManagementEnabled()).toBe(true);
-		expect(EditionPolicyService.isLandingEnabled()).toBe(true);
-		expect(EditionPolicyService.isManagementWebEnabled()).toBe(true);
-		expect(EditionPolicyService.isSingleOrgMode()).toBe(true);
+	test("oss defaults to selfhosted single-org", () => {
+		EditionPolicyService.setTestOverrides({ edition: "oss" });
+		expect(EditionPolicyService.getDeploymentMode()).toBe("selfhosted");
+		expect(EditionPolicyService.getMaxOrgs()).toBe(1);
+		expect(EditionPolicyService.canCreateOrganizationViaWeb()).toBe(false);
+	});
+
+	test("normalizes legacy sources", () => {
+		expect(EditionPolicyService.normalizeProvisionSource("workspace_switcher")).toBe("hosted_dashboard");
+		expect(EditionPolicyService.normalizeProvisionSource("org_invite_accept")).toBe("hosted_signup");
+		expect(EditionPolicyService.normalizeProvisionSource("cli_bootstrap")).toBe("dev");
+	});
+
+	test("ENVSYNC_MAX_ORGS alone does not raise max_orgs without support override", async () => {
+		const { config } = await import("@/utils/env");
+		const prevMax = config.ENVSYNC_MAX_ORGS;
+		const prevOverride = config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE;
+		try {
+			config.ENVSYNC_MAX_ORGS = "9";
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = "false";
+			EditionPolicyService.clearTestOverrides();
+			EditionPolicyService.setTestOverrides({
+				edition: "enterprise",
+				deployment_mode: "selfhosted",
+			});
+			// Without max_orgs test override, env is ignored → default 1
+			expect(EditionPolicyService.getMaxOrgs()).toBe(1);
+
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = "true";
+			EditionPolicyService.clearTestOverrides();
+			EditionPolicyService.setTestOverrides({
+				edition: "enterprise",
+				deployment_mode: "selfhosted",
+			});
+			expect(EditionPolicyService.getMaxOrgs()).toBe(9);
+		} finally {
+			config.ENVSYNC_MAX_ORGS = prevMax;
+			config.ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE = prevOverride;
+			EditionPolicyService.clearTestOverrides();
+		}
+	});
+
+	test("policy snapshot exposes Phase 1 fields", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "selfhosted",
+			max_orgs: 1,
+		});
+		const snap = EditionPolicyService.getPolicySnapshot();
+		expect(snap.deployment_mode).toBe("selfhosted");
+		expect(snap.can_create_organization).toBe(false);
+		expect(snap.public_signup_enabled).toBe(false);
+		expect(snap.max_orgs).toBe(1);
+	});
+
+	test("hosted allows multi-org via CLI/dev bootstrap (UI harness)", () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+			single_org_mode: false,
+		});
+		// Regression: getMaxOrgs() is null on hosted; must not collapse to 1 for cli_bootstrap.
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "cli_bootstrap", orgCount: 5 }),
+		).not.toThrow();
+		expect(() =>
+			EditionPolicyService.assertCanProvisionOrg({ source: "hosted_dashboard", orgCount: 5 }),
+		).not.toThrow();
 	});
 });

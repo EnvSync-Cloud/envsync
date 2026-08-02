@@ -1,49 +1,100 @@
-# Edition Structure
+# Edition structure (dual-license monorepo)
 
-EnvSync uses a shared-shell model for maintaining a public FOSS edition and a private superset edition.
+EnvSync is a **public monorepo** with a dual license (MIT + proprietary enterprise),
+not a “private superset only” model. Enterprise packages live in-tree under a
+proprietary license; OSS builds must not depend on them.
 
-## Public Repo
+## Product matrix
 
-- `packages/envsync-api` remains the shared backend shell.
-- `apps/envsync-web` remains the shared dashboard shell.
-- Public SDKs remain public-only and must not reference private packages.
+| | Hosted Enterprise | Self-host OSS | Self-host Enterprise |
+|--|-------------------|---------------|----------------------|
+| `ENVSYNC_DEPLOYMENT_MODE` | `hosted` | `selfhosted` | `selfhosted` |
+| `ENVSYNC_EDITION` | `enterprise` | `oss` | `enterprise` |
+| Public org signup (landing) | Yes | No | No |
+| Multi-org | Yes (SaaS) | No (`max_orgs=1`) | Licensed claims only (default 1) |
+| First org | Landing / hosted dashboard | Bootstrap / OSS deploy CLI | EE deploy CLI |
+| Further orgs | Dashboard **Organization** create | Never | EE deploy CLI + entitlement |
+| Landing service | Separate (Cloudflare) | No | No |
+| Manage surface (`/api/v1/manage`) | Same core API process | No | Same core API (EE image / modules) |
+| Separate management API process | **No** | No | **No** (removed) |
+| License authority | Platform billing | N/A | Entitlement JWT / cert (public verify key) |
+| Deploy tool | N/A | `@envsync-cloud/deploy` | `@envsync-cloud/deploy-enterprise` |
+| Dashboard | `envsync-web` + EE modules | `envsync-web` OSS build | `envsync-web` EE build |
+| SDKs | Core TS/Go only | Core TS/Go | Core TS/Go (manage paths included) |
+| Management SPA | **None** | None | None |
 
-The public repo now contains registry-based extension seams for:
+Agent-facing product facts: root [AGENTS.md](./AGENTS.md).  
+**How to deploy each edition:** [DEPLOY.md](./DEPLOY.md).  
+Detailed planning notes under local `docs/` are gitignored.
 
-- API route modules
-- frontend route and nav modules
-- environment schema extensions
-- additional migration directories
-- background handler registration
-- future DB type augmentation
+## Package graph (simplified)
 
-## Private Superset Repo
+```text
+MIT
+  envsync-kernel
+  envsync-api          (core process + loaders)
+  deploy / deploy-core
+  apps/envsync-web     (shell; OSS stub for EE modules)
+  apps/envsync-landing
 
-The private repo should be created from the full public history and add enterprise-only packages such as:
+PROPRIETARY
+  envsync-enterprise       (management modules + EE services/engines/migrations)
+  envsync-enterprise-web   (dashboard WebModule[] + pages)
+  (manage surface on core API: /api/v1/manage — no second process)
+  deploy-cli               (npm: deploy-enterprise)
+```
 
-- `packages/envsync-enterprise-api`
-- `packages/envsync-enterprise-web`
-- `packages/envsync-enterprise-shared`
-- `sdks/envsync-enterprise-ts-sdk`
+EE services (OIDC, SAML, rotation, dynamic secrets, integrations, log-forwarding) and
+their migrations live under `envsync-enterprise`. `envsync-api` keeps thin monorepo
+re-export shims only (no production package.json dependency).
 
-The private repo should replace:
+## How edition injection works
 
-- `packages/envsync-api/src/modules/external-modules.ts`
-- `apps/envsync-web/src/modules/external-modules.ts`
+### API
 
-with imports from those enterprise-only packages.
+- **One process:** product modules via `loadApiModules("core")`.
+- Manage modules: optional dynamic load of `enterpriseManagementModules` → mount `/api/v1/manage` (EE image / monorepo when package present).
+- OSS publish graphs never list `envsync-enterprise` as a production dependency of `envsync-api`.
+- Feature gates: verified entitlements when `ENVSYNC_LICENSE_ENFORCEMENT=true`.
 
-## Sync Workflow
+### Frontend
 
-Recommended git model:
+- OSS: Vite `@enterprise-modules` → empty stub.
+- Enterprise / Hosted: `@enterprise-modules` → `packages/envsync-enterprise-web`
+  (`build:enterprise` / `build:hosted`). Hosted CF **must not** use `build:oss`.
+- `envsync-enterprise-web` is a **devDependency** of `envsync-web` (not a production dep)
+  so MIT production graphs stay free of proprietary packages; monorepo Vite still resolves it.
+- Shell chrome is shared; EE pages import UI via `@shell/*`.
+- Design tokens: MIT `envsync-ui` (do not fork `:root` in apps).
 
-1. Keep the public repo as the canonical upstream for shared code.
-2. Add the public repo as a `public` remote in the private repo.
-3. Open automated sync PRs in the private repo by merging `public/main`.
-4. Upstream shared seams to the public repo before adding enterprise behavior.
+### Deploy
+
+- Public `@envsync-cloud/deploy` is self-contained OSS (no monorepo spawn).
+- Enterprise deploy is a separate private package/bin.
+
+## Optional private-superset workflow
+
+A private repo that only holds secrets/signing keys or additional closed modules
+remains **optional**. The default product story is:
+
+1. Public monorepo dual license (this document).
+2. Private license-server for entitlement signing (keys never in the monorepo).
+
+If you maintain a private superset, keep public as upstream and never import
+proprietary packages from MIT package production graphs.
 
 ## Guardrails
 
-- Public code must not import enterprise-only packages.
-- Shared shell changes should remain generic and additive.
-- Provider-specific or proprietary behavior belongs in the private repo.
+- MIT packages must not list proprietary packages as **production** dependencies
+  (CI: `bun run check:boundaries`).
+- Self-host **web** must never create organizations (any edition).
+- Multi-org on self-host EE is **CLI + entitlement claims**, not cookie sessions.
+- Do not reintroduce `apps/envsync-management-web` or `/manage` merge.
+
+## Vocabulary
+
+| Term | Meaning |
+|------|---------|
+| **Organization** | Tenant boundary (DB `orgs`). Use this in product UI. |
+| **Workspace** | Deprecated as multi-org alias. Use Organization; `create-workspace` HTTP alias removed (Phase 7). |
+| **Project / App** | Work unit under one org. |

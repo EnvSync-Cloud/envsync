@@ -2,8 +2,14 @@ import { CacheClient } from "@/libs/cache";
 import { DB } from "@/libs/db";
 import { EnterpriseCertificateVerifierService, type CertificateValidationResult } from "@/services/enterprise-certificate-verifier.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { EntitlementService } from "@/services/entitlement.service";
+import { DEFAULT_ENTERPRISE_FEATURE_SET } from "@/services/entitlement.types";
 import { LicenseServerClient, type LicenseVerificationRequest, type LicenseVerificationResponse } from "@/services/license-server.client";
 import { config } from "@/utils/env";
+
+function looksLikeJwt(value: string | null | undefined): value is string {
+	return Boolean(value && value.split(".").length === 3);
+}
 
 const LICENSE_STATE_ID = "default";
 const LICENSE_CACHE_KEY = "envsync:license_state";
@@ -221,7 +227,7 @@ export class LicenseStateService {
 	}
 
 	public static async applyLicenseServerResponse(response: LicenseVerificationResponse) {
-		return this.updateLicenseState({
+		const updated = await this.updateLicenseState({
 			status: response.status,
 			signed_lease: response.signed_lease ?? null,
 			lease_expires_at: toDate(response.lease_expires_at),
@@ -229,7 +235,19 @@ export class LicenseStateService {
 			last_verified_at: new Date(),
 			last_error_code: response.reason_code ?? null,
 			last_error_message: response.message ?? null,
+			validation_mode: "lease",
 		});
+
+		// Phase 4: when license-server returns an entitlement JWT as signed_lease, verify cryptographically.
+		if (response.status === "active" && looksLikeJwt(response.signed_lease)) {
+			try {
+				await EntitlementService.verifyJwt(response.signed_lease, { apply: true });
+			} catch {
+				// Opaque/legacy signed_lease is not an Ed25519 entitlement JWT yet.
+			}
+		}
+
+		return updated;
 	}
 
 	public static buildLicenseRequest(): LicenseVerificationRequest {
@@ -244,6 +262,9 @@ export class LicenseStateService {
 	}
 
 	public static async activateLicense() {
+		if (this.usesEntitlementMode()) {
+			return this.validateEntitlementNow();
+		}
 		if (this.usesCertificateMode()) {
 			return this.validateCertificateNow();
 		}
@@ -252,6 +273,9 @@ export class LicenseStateService {
 	}
 
 	public static async verifyLicenseNow() {
+		if (this.usesEntitlementMode()) {
+			return this.validateEntitlementNow();
+		}
 		if (this.usesCertificateMode()) {
 			return this.validateCertificateNow();
 		}
@@ -263,13 +287,55 @@ export class LicenseStateService {
 		return config.ENVSYNC_LICENSE_MODE === "certificate";
 	}
 
+	private static usesEntitlementMode() {
+		return config.ENVSYNC_LICENSE_MODE === "entitlement";
+	}
+
 	public static async validateCertificateNow() {
 		const result = await EnterpriseCertificateVerifierService.validateFromEnv();
 		return this.applyCertificateValidationResult(result);
 	}
 
+	/**
+	 * Offline / file-based entitlement JWT (Phase 4). Authority is Ed25519 verify, not DB status.
+	 */
+	public static async validateEntitlementNow() {
+		try {
+			const verified = await EntitlementService.resolve();
+			if (!verified) {
+				return this.updateLicenseState({
+					status: "error",
+					last_verified_at: new Date(),
+					last_error_code: "ENTITLEMENT_REQUIRED",
+					last_error_message: "No entitlement JWT configured (ENVSYNC_ENTITLEMENT_JWT or path).",
+					validation_mode: "lease",
+				});
+			}
+			return this.updateLicenseState({
+				status: "active",
+				signed_lease: null,
+				lease_expires_at: verified.expires_at,
+				fingerprint: verified.claims.install_fingerprint || this.getInstallFingerprint() || null,
+				last_verified_at: verified.verified_at,
+				last_error_code: verified.in_grace ? "ENTITLEMENT_IN_GRACE" : null,
+				last_error_message: verified.in_grace
+					? "Entitlement is past exp but within grace window."
+					: null,
+				validation_mode: "lease",
+			});
+		} catch (error) {
+			return this.updateLicenseState({
+				status: "locked",
+				last_verified_at: new Date(),
+				last_error_code: "ENTITLEMENT_INVALID",
+				last_error_message: error instanceof Error ? error.message : String(error),
+				validation_mode: "lease",
+			});
+		}
+	}
+
 	public static async applyCertificateValidationResult(result: CertificateValidationResult) {
-		return this.updateLicenseState({
+		const updated = await this.updateLicenseState({
 			status: result.status,
 			signed_lease: null,
 			lease_expires_at: result.expires_at,
@@ -286,6 +352,17 @@ export class LicenseStateService {
 			root_ca_fingerprint_sha256: result.root_ca_fingerprint_sha256,
 			validated_at: new Date(),
 		});
+
+		// Cryptographically validated cert grants default EE feature set (offline air-gap path).
+		if (result.status === "active") {
+			EntitlementService.applyCertificateClaims({
+				install_fingerprint: this.getInstallFingerprint(),
+				features: [...DEFAULT_ENTERPRISE_FEATURE_SET],
+				expires_at: result.expires_at,
+			});
+		}
+
+		return updated;
 	}
 
 	public static async getEnforcementDecision() {
@@ -298,7 +375,44 @@ export class LicenseStateService {
 			};
 		}
 
+		// Entitlement JWT is primary authority when configured (file/env or mode=entitlement).
+		if (this.usesEntitlementMode() || config.ENVSYNC_ENTITLEMENT_JWT || config.ENVSYNC_ENTITLEMENT_JWT_PATH) {
+			const state = await this.validateEntitlementNow();
+			const locked = state.status !== "active";
+			return {
+				required: true,
+				locked,
+				reason: locked ? (state.last_error_code ?? "ENTITLEMENT_INVALID") : null,
+				state,
+			};
+		}
+
 		const state = await this.getLicenseState();
+
+		// Phase 4: if a stored signed_lease looks like a JWT, require crypto verify (blocks forged active+opaque).
+		if (looksLikeJwt(state.signed_lease)) {
+			try {
+				await EntitlementService.verifyJwt(state.signed_lease, { apply: true });
+				// Crypto verify succeeded (incl. grace). DB status alone is not authority.
+				return {
+					required: true,
+					locked: false,
+					reason: null,
+					state: {
+						...state,
+						status: "active",
+					},
+				};
+			} catch {
+				return {
+					required: true,
+					locked: true,
+					reason: "ENTITLEMENT_INVALID",
+					state,
+				};
+			}
+		}
+
 		if (this.usesCertificateMode() && state.status === "unknown") {
 			const refreshed = await this.validateCertificateNow();
 			return this.getEnforcementDecisionFromState(refreshed);
@@ -317,6 +431,15 @@ export class LicenseStateService {
 				: !certificateExpiry || certificateExpiry <= now
 					? "LICENSE_CERT_EXPIRED"
 					: null;
+
+			// Re-apply claims from validated cert so feature gates work after process restart (cache warm).
+			if (!locked && state.status === "active") {
+				EntitlementService.applyCertificateClaims({
+					install_fingerprint: state.fingerprint ?? this.getInstallFingerprint(),
+					features: [...DEFAULT_ENTERPRISE_FEATURE_SET],
+					expires_at: state.certificate_expires_at ?? null,
+				});
+			}
 
 			return {
 				required: true,
@@ -344,6 +467,12 @@ export class LicenseStateService {
 
 	public static async startHeartbeat() {
 		if (this.#heartbeatStarted || !EditionPolicyService.requiresEnterpriseLicense()) {
+			return;
+		}
+
+		if (this.usesEntitlementMode()) {
+			this.#heartbeatStarted = true;
+			await this.validateEntitlementNow();
 			return;
 		}
 

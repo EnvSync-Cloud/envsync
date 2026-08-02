@@ -4,7 +4,11 @@
 /* eslint-disable */
 export type SystemStatusState = {
     edition: SystemStatusState.edition;
+    deployment_mode?: SystemStatusState.deployment_mode;
     single_org_mode: boolean;
+    max_orgs?: number | null;
+    public_signup_enabled?: boolean;
+    can_create_organization?: boolean;
     management_enabled: boolean;
     observability_enabled: boolean;
     management_web_enabled: boolean;
@@ -16,6 +20,10 @@ export namespace SystemStatusState {
     export enum edition {
         OSS = 'oss',
         ENTERPRISE = 'enterprise',
+    }
+    export enum deployment_mode {
+        HOSTED = 'hosted',
+        SELFHOSTED = 'selfhosted',
     }
 }
 

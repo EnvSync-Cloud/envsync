@@ -44,11 +44,10 @@ export const InvitationsPanel = () => {
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
 
   const handleCopyInviteUrl = useCallback(async (inviteToken: string, inviteId: string) => {
-    const { protocol, hostname, port } = window.location;
-    const host = port ? `${hostname}:${port}` : hostname;
-    const rootHost = host.startsWith("app.") ? host.slice(4) : host;
-    const landingUrl = `${protocol}//${rootHost}`;
-    const inviteUrl = `${landingUrl}/onboarding/accept-user-invite/${inviteToken}`;
+    // Self-host: accept on dashboard (same origin as this app). Hosted may still use landing path.
+    // Prefer explicit appBaseUrl from runtime-config over strip-app. heuristics.
+    const base = (runtimeConfig.appBaseUrl || window.location.origin).replace(/\/$/, "");
+    const inviteUrl = `${base}/onboarding/accept-user-invite/${inviteToken}`;
     try {
       await navigator.clipboard.writeText(inviteUrl);
       setCopiedInviteId(inviteId);

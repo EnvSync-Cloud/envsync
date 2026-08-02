@@ -1,28 +1,4 @@
-import { Kysely } from "kysely";
-
-import { type Database } from "@/types/db";
-
-export async function up(db: Kysely<Database>): Promise<void> {
-    await db.schema
-        .createTable("log_forwarding_configs")
-        .addColumn("id", "text", col => col.primaryKey().notNull())
-        .addColumn("org_id", "text", col => col.notNull())
-        .addColumn("provider_type", "text", col => col.notNull())
-        .addColumn("name", "text", col => col.notNull())
-        .addColumn("config", "jsonb", col => col.notNull())
-        .addColumn("enabled", "boolean", col => col.notNull().defaultTo(true))
-        .addColumn("created_at", "timestamp", col => col.notNull().defaultTo("now()"))
-        .addColumn("updated_at", "timestamp", col => col.notNull().defaultTo("now()"))
-        .addForeignKeyConstraint(
-            "fk_log_forwarding_configs_org_id_orgs_id",
-            ["org_id"],
-            "orgs",
-            ["id"],
-            cb => cb.onDelete("cascade"),
-        )
-        .execute();
-}
-
-export async function down(db: Kysely<Database>): Promise<void> {
-    await db.schema.dropTable("log_forwarding_configs").execute();
-}
+/**
+ * H7/H3.4: EE migration owned by envsync-enterprise; re-export preserves core migrator stream.
+ */
+export { up, down } from "../../../../../envsync-enterprise/src/migrations/024_log_forwarding_configs.ts";

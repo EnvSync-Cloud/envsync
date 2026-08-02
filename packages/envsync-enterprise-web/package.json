@@ -1,0 +1,35 @@
+{
+  "name": "envsync-enterprise-web",
+  "version": "0.20.1",
+  "description": "Proprietary EnvSync enterprise dashboard modules (integrations, providers, sync)",
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": true,
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules": "./src/modules.ts"
+  },
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bun test"
+  },
+  "peerDependencies": {
+    "@envsync-cloud/envsync-ts-sdk": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
+    "lucide-react": ">=0.400.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-router-dom": "^6.0.0",
+    "sonner": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "typescript": "^5.8.3"
+  }
+}

@@ -23,7 +23,11 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shell/*": ["./src/*"],
+      "@enterprise-modules": [
+        "../../packages/envsync-enterprise-web/src/modules.ts"
+      ]
     }
   },
   "include": ["src"]

@@ -71,6 +71,8 @@ jobs:
       - name: Setup Bun Runtime
         uses: oven-sh/setup-bun@v2
       - run: bun i
+      - name: Package boundary checks (Phase 5)
+        run: bun run check:boundaries
       - name: Run deploy planner tests
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core
@@ -140,9 +142,6 @@ jobs:
       - name: Build TypeScript SDK
         run: bun run --filter @envsync-cloud/envsync-ts-sdk build
 
-      - name: Build Management TypeScript SDK
-        run: bun run --filter @envsync-cloud/envsync-management-ts-sdk build
-
       - name: Prepare E2E environment
         run: |
           cp .env.example .env
@@ -160,9 +159,6 @@ jobs:
           nohup bun run --filter envsync-api dev > /tmp/envsync-api.log 2>&1 &
           echo $! > /tmp/envsync-api.pid
 
-          nohup bun run --filter envsync-management-api dev > /tmp/envsync-management-api.log 2>&1 &
-          echo $! > /tmp/envsync-management-api.pid
-
           nohup bun run --filter envsync-web dev > /tmp/envsync-web.log 2>&1 &
           echo $! > /tmp/envsync-web.pid
 
@@ -175,7 +171,6 @@ jobs:
         run: |
           for url in \
             "http://api.lvh.me:4000/health" \
-            "http://localhost:4001/health" \
             "http://app.lvh.me:8001" \
             "http://localhost:8002" \
             "http://localhost:8025"
@@ -188,7 +183,7 @@ jobs:
 
               if [ "$i" -eq 90 ]; then
                 echo "service did not become ready: $url"
-                for logfile in /tmp/envsync-api.log /tmp/envsync-management-api.log /tmp/envsync-web.log /tmp/envsync-landing.log; do
+                for logfile in /tmp/envsync-api.log /tmp/envsync-web.log /tmp/envsync-landing.log; do
                   if [ -f "$logfile" ]; then
                     echo "===== $logfile ====="
                     tail -n 200 "$logfile" || true
@@ -271,7 +266,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: packages/envsync-api
+          context: .
           file: packages/envsync-api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

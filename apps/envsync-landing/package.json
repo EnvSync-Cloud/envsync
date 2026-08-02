@@ -1,7 +1,7 @@
 {
   "name": "envsync-landing",
   "private": true,
-  "version": "0.11.0",
+  "version": "0.20.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -54,7 +54,8 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "web-vitals": "^5.1.0",
-    "zod": "^3.25.64"
+    "zod": "^3.25.64",
+    "envsync-ui": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
