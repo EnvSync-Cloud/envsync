@@ -66,18 +66,18 @@ envsync push --env staging
 ┌──────────────────────────────────────────────────────────────┐
 │                    EnvSync Platform                          │
 ├──────────────────────────────────────────────────────────────┤
-│  🖥️  Dashboard    │  ⌨️  CLI        │  📦 SDKs                │
-│  (React + Vite)   │  (Go)          │  (TypeScript, Go)       │
-└─────────┬─────────┴───────┬────────┴──────────┬──────────────┘
+│  🖥️  Dashboard    │  ⌨️  CLI       │  📦 SDKs                │
+│  (React + Vite)   │  (Go)          │  (TypeScript Go)        │
+└─────────┬─────────┴───────┬────────┴──────────┬─────────-────┘
           │                 │                   │
           ▼                 ▼                   ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Core API                               │
 │              (Bun + Hono + PostgreSQL)                      │
 ├─────────────────────────────────────────────────────────────┤
-│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations           │
-│  📋 Variables  │  ⏰ Dynamic    │  📊 Audit Logs             │
-│  🔑 OIDC/SAML  │  📤 Log Fwd    │  🪝 Webhooks               │
+│  🔐 Secrets    │  🔄 Rotation   │  🌐 Integrations          │
+│  📋 Variables  │  ⏰ Dynamic    |  📊 Audit Logs            │
+│  🔑 OIDC/SAML  │  📤 Log Fwd    |  🪝 Webhooks              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
