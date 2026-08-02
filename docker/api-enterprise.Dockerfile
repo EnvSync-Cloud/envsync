@@ -1,16 +1,19 @@
 # Enterprise API image: core process + manage surface (/api/v1/manage/...)
-# Replaces the retired envsync-management-api second process.
+# Build context: monorepo root (see release.yml).
 FROM oven/bun:1.3.9-alpine AS build
 
 WORKDIR /app
 
+# Full workspace graph is required so bun can resolve workspace:* deps.
 COPY package.json bun.lock ./
 COPY packages ./packages
+COPY sdks ./sdks
+COPY apps ./apps
 
 RUN bun install
+
 WORKDIR /app/packages/envsync-api
 RUN bun run builder.enterprise.ts
-WORKDIR /app
 
 FROM oven/bun:1.3.9-alpine
 

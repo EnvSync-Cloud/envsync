@@ -266,7 +266,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: packages/envsync-api
+          context: .
           file: packages/envsync-api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

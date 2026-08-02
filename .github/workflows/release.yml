@@ -71,7 +71,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: packages/envsync-api
+          # Monorepo root: envsync-api depends on envsync-kernel via workspace:*.
+          context: .
           file: packages/envsync-api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -211,7 +212,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
@@ -233,17 +234,40 @@ jobs:
             exit 1
           fi
 
+      - name: Rewrite workspace deps for npm publish
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const root = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const v = root.version;
+          for (const path of ["packages/deploy/package.json", "packages/deploy-cli/package.json"]) {
+            const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+            for (const section of ["dependencies", "devDependencies", "peerDependencies"]) {
+              const deps = pkg[section];
+              if (!deps) continue;
+              for (const [name, spec] of Object.entries(deps)) {
+                if (typeof spec === "string" && spec.startsWith("workspace:")) {
+                  deps[name] = v;
+                  console.log(`${path}: ${section}.${name} ${spec} → ${v}`);
+                }
+              }
+            }
+            fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          }
+          NODE
+
       - name: Validate no workspace runtime dependencies
         run: |
           node - <<'NODE'
           const fs = require("node:fs");
-          const path = "packages/deploy/package.json";
-          const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
-          const deps = pkg.dependencies || {};
-          const bad = Object.entries(deps).filter(([, spec]) => typeof spec === "string" && spec.startsWith("workspace:"));
-          if (bad.length) {
-            console.error(`[${path}] contains workspace:* in dependencies: ${bad.map(([name, spec]) => `${name}@${spec}`).join(", ")}`);
-            process.exit(1);
+          for (const path of ["packages/deploy/package.json", "packages/deploy-cli/package.json"]) {
+            const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+            const deps = pkg.dependencies || {};
+            const bad = Object.entries(deps).filter(([, spec]) => typeof spec === "string" && spec.startsWith("workspace:"));
+            if (bad.length) {
+              console.error(`[${path}] contains workspace:* in dependencies: ${bad.map(([name, spec]) => `${name}@${spec}`).join(", ")}`);
+              process.exit(1);
+            }
           }
           NODE
 
@@ -278,9 +302,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
-
       - name: Install dependencies
         run: bun install
 
@@ -332,7 +355,7 @@ jobs:
       - name: Set up Node (GitHub Packages)
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://npm.pkg.github.com"
           scope: "@envsync-cloud"
 
@@ -360,6 +383,26 @@ jobs:
             echo "deploy-enterprise version ${DEPLOY_VERSION} does not match root version ${ROOT_VERSION}"
             exit 1
           fi
+
+      - name: Rewrite workspace deps for publish
+        run: |
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const v = JSON.parse(fs.readFileSync("package.json", "utf8")).version;
+          const path = "packages/deploy-cli/package.json";
+          const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+          for (const section of ["dependencies", "devDependencies", "peerDependencies"]) {
+            const deps = pkg[section];
+            if (!deps) continue;
+            for (const [name, spec] of Object.entries(deps)) {
+              if (typeof spec === "string" && spec.startsWith("workspace:")) {
+                deps[name] = v;
+                console.log(`${path}: ${section}.${name} ${spec} → ${v}`);
+              }
+            }
+          }
+          fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
 
       - name: Validate no workspace runtime dependencies
         run: |
@@ -406,7 +449,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
