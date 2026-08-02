@@ -24,7 +24,7 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 When working on tenancy, deploy CLI split, manage surface, licensing, or FE edition isolation:
 
 - Track: `feat/the-big-update` (phase branches as needed)
-- Product matrix: [EDITIONING.md](./EDITIONING.md), [SELFHOSTING.md](./SELFHOSTING.md), root [AGENTS.md](./AGENTS.md)
+- Product matrix: [EDITIONING.md](./EDITIONING.md), deploy all editions: [DEPLOY.md](./DEPLOY.md), root [AGENTS.md](./AGENTS.md)
 - Local planning notes may live under `docs/` (gitignored — not required for OSS clone)
 
 ### Deployment mode & edition footguns

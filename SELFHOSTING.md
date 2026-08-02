@@ -1,10 +1,12 @@
-# Self-Hosting EnvSync
+# Self-Hosting EnvSync (OSS)
+
+> **Full multi-edition guide:** [DEPLOY.md](./DEPLOY.md) (Hosted + self-host OSS + self-host Enterprise).
 
 ## Who this is for
 
 This guide is for operators deploying **OSS** EnvSync on a single Ubuntu or Debian Docker Swarm host.
 
-For **Enterprise** self-host, use the private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) from GitHub Packages — not this public flow.
+For **Enterprise** self-host, use the private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) from GitHub Packages — not this public flow. See [DEPLOY.md § Self-host Enterprise](./DEPLOY.md#3-self-host-enterprise).
 
 ## Requirements
 
@@ -91,13 +93,13 @@ Important facts:
 Upgrade to the running deploy package version:
 
 ```bash
-bunx @envsync-cloud/deploy@0.11.0 upgrade
+bunx @envsync-cloud/deploy@0.20.0 upgrade
 ```
 
 Upgrade to an exact target:
 
 ```bash
-bunx @envsync-cloud/deploy@0.11.0 upgrade 0.11.0
+bunx @envsync-cloud/deploy@0.20.0 upgrade 0.20.0
 ```
 
 Blue/green behavior:

@@ -23,6 +23,8 @@ npm i -g @envsync-cloud/deploy
 envsync-deploy --help
 ```
 
+Full operator guide (OSS + Enterprise + Hosted): monorepo root [DEPLOY.md](../../DEPLOY.md).
+
 ## Enterprise
 
 Private package `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) wraps

@@ -219,15 +219,16 @@ c := client.NewClient(option.WithBaseURL("https://api.envsync.cloud"))
 
 ---
 
-## Self-Hosting
+## Deploy (all editions)
 
-EnvSync supports self-hosted deployment with:
-- Docker Swarm
-- Traefik
-- Keycloak
-- ClickStack / HyperDX
+| Edition | Guide |
+|---------|--------|
+| Hosted Enterprise | Platform CI/CD |
+| Self-host OSS | `envsync-deploy` |
+| Self-host Enterprise | `envsync-deploy-enterprise` |
 
-See [SELFHOSTING.md](./SELFHOSTING.md) for details.
+See **[DEPLOY.md](./DEPLOY.md)** for full instructions (DNS, CLI flow, env matrix, license, pitfalls).  
+Self-host OSS short form: [SELFHOSTING.md](./SELFHOSTING.md). Editions: [EDITIONING.md](./EDITIONING.md).
 
 ---
 

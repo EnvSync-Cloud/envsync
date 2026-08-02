@@ -23,6 +23,8 @@ npm i -g @envsync-cloud/deploy-enterprise --registry=https://npm.pkg.github.com
 envsync-deploy-enterprise --help
 ```
 
+Full Enterprise self-host steps: monorepo root [DEPLOY.md](../../DEPLOY.md#3-self-host-enterprise).
+
 ## Build
 
 ```bash

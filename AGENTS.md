@@ -13,7 +13,7 @@ Do **not** reintroduce:
 - Separate `sdks/envsync-management-*` packages (clients use core SDKs only)
 - OSS deploy spawning enterprise CLI; self-host web org-create; landing required on self-host
 
-**Dual license:** [LICENSE](./LICENSE) · **Editions:** [EDITIONING.md](./EDITIONING.md) · **Self-host:** [SELFHOSTING.md](./SELFHOSTING.md)  
+**Dual license:** [LICENSE](./LICENSE) · **Editions:** [EDITIONING.md](./EDITIONING.md) · **Deploy all editions:** [DEPLOY.md](./DEPLOY.md) · **Self-host OSS:** [SELFHOSTING.md](./SELFHOSTING.md)  
 Prefer **Organization** in product UI; org create is `POST /auth/create-organization` only.
 
 ## Architecture facts (current)

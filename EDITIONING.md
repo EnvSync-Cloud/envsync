@@ -23,7 +23,9 @@ proprietary license; OSS builds must not depend on them.
 | SDKs | Core TS/Go only | Core TS/Go | Core TS/Go (manage paths included) |
 | Management SPA | **None** | None | None |
 
-Agent-facing product facts: root [AGENTS.md](./AGENTS.md). Detailed planning notes under local `docs/` are gitignored.
+Agent-facing product facts: root [AGENTS.md](./AGENTS.md).  
+**How to deploy each edition:** [DEPLOY.md](./DEPLOY.md).  
+Detailed planning notes under local `docs/` are gitignored.
 
 ## Package graph (simplified)
 
@@ -50,9 +52,10 @@ re-export shims only (no production package.json dependency).
 
 ### API
 
-- Core process: `loadApiModules("core")` — never imports `envsync-enterprise`.
-- Management process: registers `enterpriseManagementModules` from `envsync-enterprise`.
-- Feature gates (Phase 4): verified entitlements when `ENVSYNC_LICENSE_ENFORCEMENT=true`.
+- **One process:** product modules via `loadApiModules("core")`.
+- Manage modules: optional dynamic load of `enterpriseManagementModules` → mount `/api/v1/manage` (EE image / monorepo when package present).
+- OSS publish graphs never list `envsync-enterprise` as a production dependency of `envsync-api`.
+- Feature gates: verified entitlements when `ENVSYNC_LICENSE_ENFORCEMENT=true`.
 
 ### Frontend
 

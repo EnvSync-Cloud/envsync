@@ -1,6 +1,6 @@
 {
   "name": "envsync-enterprise-web",
-  "version": "0.11.0",
+  "version": "0.20.0",
   "description": "Proprietary EnvSync enterprise dashboard modules (integrations, providers, sync)",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
