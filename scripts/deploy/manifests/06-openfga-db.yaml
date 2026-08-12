@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfga-db
+  namespace: envsync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openfga-db
+  template:
+    metadata:
+      labels:
+        app: openfga-db
+    spec:
+      containers:
+        - name: openfga-db
+          image: postgres:17
+          env:
+            - name: POSTGRES_USER
+              value: openfga
+            - name: POSTGRES_PASSWORD
+              value: openfga
+            - name: POSTGRES_DB
+              value: openfga
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga-db
+  namespace: envsync
+spec:
+  selector:
+    app: openfga-db
+  ports:
+    - port: 5432
+      targetPort: 5432 
