@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { registerCmkTenantWrappingProvider } from "envsync-enterprise/services/cmk.service.ts";
 import { CmkService } from "envsync-enterprise/services/cmk.service.ts";
+import { CmkCloudProvider } from "envsync-enterprise/services/cmk-cloud.provider.ts";
 import { CmkCredentialService } from "envsync-enterprise/services/cmk-credential.service.ts";
 import { CmkRewrapWorker } from "envsync-enterprise/services/cmk-rewrap.worker.ts";
 import { EnterpriseIntegrationService } from "envsync-enterprise/services/enterprise-integration.service.ts";
@@ -83,6 +84,8 @@ afterEach(() => {
 	CmkRewrapWorker.staleRunningMs = 2 * 60 * 60 * 1000;
 	KMSClient.setTenantWrappingProvider(null);
 	resetMockKmsTenantWrapping();
+	CmkCloudProvider.setTestAdapter(null);
+	CmkService.clearKekCache();
 	EditionPolicyService.clearTestOverrides();
 	OrgFeatureGrantService.clearTestOverrides();
 	delete (config as { ENVSYNC_PLATFORM_ADMIN_TOKEN?: string }).ENVSYNC_PLATFORM_ADMIN_TOKEN;
@@ -435,7 +438,7 @@ describe("CMK grant gate", () => {
 		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({
 			source: "aws-kms",
 			status: "unavailable",
-			last_error: "cloud_unwrap_not_implemented",
+			last_error: "CMK_ATTACH_INCOMPLETE",
 		});
 	});
 

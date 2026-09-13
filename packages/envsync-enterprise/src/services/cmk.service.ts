@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 
 import { DB } from "envsync-api/ports/db";
@@ -6,7 +7,20 @@ import { AppService, EditionPolicyService } from "envsync-api/ports/services";
 import { KMSClient } from "envsync-api/ports/kms";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
+import { CmkCloudProvider, sanitizeCloudError } from "./cmk-cloud.provider";
 import { CmkCredentialService } from "./cmk-credential.service";
+
+const KEK_BYTES = 32;
+const KEK_CACHE_TTL_MS = 5 * 60 * 1000;
+
+type KekCacheEntry = {
+	kek: Buffer;
+	version: number;
+	allowRootUnwrap: boolean;
+	expiresAt: number;
+};
+
+const kekCache = new Map<string, KekCacheEntry>();
 
 export const KMS_SOURCES = ["managed", "aws-kms", "gcp-kms", "azure-kv"] as const;
 export const CLOUD_KMS_SOURCES = ["aws-kms", "gcp-kms", "azure-kv"] as const;
@@ -63,6 +77,14 @@ function toIso(value: Date | string | null | undefined): string | null {
 
 function isCloudSource(source: string): source is CloudKmsSource {
 	return (CLOUD_KMS_SOURCES as readonly string[]).includes(source);
+}
+
+function unavailableError() {
+	return new AppError(
+		"Customer-managed key is unavailable for this organization.",
+		503,
+		"CMK_UNAVAILABLE",
+	);
 }
 
 function hasWrappedKek(value: Buffer | Uint8Array | null | undefined): boolean {
@@ -227,10 +249,18 @@ export class CmkService {
 			await CmkCredentialService.getForOrg(orgId, input.credential_secret_id);
 		}
 
-		// Persist-as-pending until attach (PR-8). Never promote managed→active cloud.
+		// Persist-as-pending until attach. Never promote managed→active cloud.
 		const now = new Date();
 		const db = await DB.getInstance();
 		const existing = await this.loadRow(orgId);
+		if (
+			existing
+			&& isCloudSource(existing.source)
+			&& existing.source !== input.source
+			&& !isNeverAttachedConfig(existing)
+		) {
+			throw new ValidationError("Detach to managed before changing cloud KMS source.", "CMK_DETACH_REQUIRED");
+		}
 		const nextStatus = nextCloudPutStatus(existing, input.source);
 		if (existing) {
 			await db
@@ -269,6 +299,14 @@ export class CmkService {
 		return this.getConfig(orgId);
 	}
 
+	public static clearKekCache(orgId?: string): void {
+		if (orgId) {
+			kekCache.delete(orgId);
+			return;
+		}
+		kekCache.clear();
+	}
+
 	/**
 	 * Called on every tenant miniKMS op (except `__kms_config__`).
 	 * Does not check the `kms` entitlement — losing the SKU must not brick unwrap.
@@ -282,21 +320,28 @@ export class CmkService {
 			return;
 		}
 		if (row.status === "unavailable") {
-			throw new AppError(
-				"Customer-managed key is unavailable for this organization.",
-				503,
-				"CMK_UNAVAILABLE",
-			);
+			throw unavailableError();
 		}
 
-		// Cloud unwrap + SetTenantWrappingKey is PR-8. Fail closed; do not root-fallback.
-		await this.markUnavailable(orgId, "cloud_unwrap_not_implemented");
-		infoLogs(`kms_unavailable org=${orgId} reason=cloud_unwrap_not_implemented`, LogTypes.ERROR, "CmkService");
-		throw new AppError(
-			"Customer-managed key is unavailable for this organization.",
-			503,
-			"CMK_UNAVAILABLE",
-		);
+		const allowRootUnwrap = row.status === "rotating";
+		try {
+			// Fail closed on active unwrap. Do not fall back to MINIKMS_ROOT_KEY.
+			await this.setSidecarKek(row, {
+				allowRootUnwrap,
+				markUnavailableOnFail: row.status === "active",
+			});
+		} catch (error) {
+			if (row.status === "rotating") {
+				// Attach worker already persisted the KEK + dual-unwrap on the sidecar.
+				infoLogs(
+					`kms_unwrap org=${orgId} source=${row.source} ok=false rotating_continue`,
+					LogTypes.ERROR,
+					"CmkService",
+				);
+				return;
+			}
+			throw error;
+		}
 	}
 
 	public static async markUnavailable(orgId: string, lastError: string): Promise<void> {
@@ -336,17 +381,39 @@ export class CmkService {
 			return { ok: true, source: config.source, status: config.status, last_verified_at: now.toISOString() };
 		}
 		if (config.status === "unavailable") {
-			throw new AppError(
-				"Customer-managed key is unavailable for this organization.",
-				503,
-				"CMK_UNAVAILABLE",
-			);
+			throw unavailableError();
 		}
-		throw new AppError(
-			"Cloud CMK verify is not available until Hosted attach (PR-8).",
-			501,
-			"CMK_CLOUD_NOT_IMPLEMENTED",
-		);
+		this.assertHostedCloud();
+		try {
+			const row = await this.requireCloudRow(orgId);
+			if (hasWrappedKek(row.wrapped_kek)) {
+				await this.unwrapCloudKek(row);
+			} else {
+				await this.firstWrapKek(orgId);
+			}
+		} catch (error) {
+			if (config.status === "active") {
+				await this.markUnavailable(orgId, sanitizeCloudError(error));
+				infoLogs(`kms_unavailable org=${orgId} reason=verify_failed`, LogTypes.ERROR, "CmkService");
+				throw unavailableError();
+			}
+			throw error;
+		}
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({ last_verified_at: now, last_error: null, updated_at: now })
+			.where("org_id", "=", orgId)
+			.execute();
+		const updated = await this.getConfig(orgId);
+		infoLogs(`kms_verify org=${orgId} source=${updated.source} ok=true`, LogTypes.LOGS, "CmkService");
+		return {
+			ok: true,
+			source: updated.source,
+			status: updated.status,
+			last_verified_at: updated.last_verified_at ?? now.toISOString(),
+		};
 	}
 
 	public static async rotateKek(orgId: string): Promise<OrgKmsConfigView> {
@@ -354,30 +421,53 @@ export class CmkService {
 		if (config.source === "managed") {
 			throw new ValidationError("Managed miniKMS has no customer KEK to rotate.", "CMK_MANAGED_NO_KEK");
 		}
-		throw new AppError(
-			"Cloud KEK rotation is not available until Hosted attach (PR-8).",
-			501,
-			"CMK_CLOUD_NOT_IMPLEMENTED",
-		);
+		if (config.status === "unavailable") {
+			throw unavailableError();
+		}
+		this.assertHostedCloud();
+		const row = await this.requireCloudRow(orgId);
+		const kek = await this.unwrapCloudKek(row);
+		const wrapped = await this.wrapCloudKek(row, kek);
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({
+				wrapped_kek: wrapped,
+				last_verified_at: now,
+				last_error: null,
+				updated_at: now,
+			})
+			.where("org_id", "=", orgId)
+			.execute();
+		this.clearKekCache(orgId);
+		infoLogs(`kms_kek_rotated org=${orgId} source=${row.source}`, LogTypes.LOGS, "CmkService");
+		return this.getConfig(orgId);
 	}
 
-	public static async attach(orgId: string, _createdBy: string): Promise<OrgKmsJobView> {
+	public static async attach(orgId: string, createdBy: string): Promise<OrgKmsJobView> {
 		await this.assertNoActiveJob(orgId);
 		const config = await this.getConfig(orgId);
 		if (config.source === "managed") {
 			throw new ValidationError("Organization is already on managed wrapping.", "CMK_ALREADY_MANAGED");
 		}
-		if (!EditionPolicyService.isHosted()) {
-			throw new ForbiddenError(
-				"Cloud customer-managed keys are only available on Hosted deployments.",
-				"CMK_HOSTED_ONLY",
-			);
+		this.assertHostedCloud();
+		const row = await this.requireCloudRow(orgId);
+		if (!hasWrappedKek(row.wrapped_kek)) {
+			await this.firstWrapKek(orgId);
 		}
-		throw new AppError(
-			"Cloud CMK attach is not available until Hosted attach (PR-8).",
-			501,
-			"CMK_CLOUD_NOT_IMPLEMENTED",
-		);
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({ status: "rotating", last_error: null, updated_at: now })
+			.where("org_id", "=", orgId)
+			.execute();
+		return this.enqueueJob(orgId, "dek_rewrap", createdBy, {
+			allow_root_unwrap: true,
+			previous_status: config.status,
+			target: "TENANT_KEK",
+		});
 	}
 
 	public static async detach(orgId: string, createdBy: string): Promise<OrgKmsJobView> {
@@ -482,6 +572,55 @@ export class CmkService {
 			})
 			.where("org_id", "=", orgId)
 			.execute();
+		this.clearKekCache(orgId);
+	}
+
+	public static async loadMaterializedKek(orgId: string): Promise<{ kek: Buffer; version: number }> {
+		const row = await this.requireCloudRow(orgId);
+		const kek = hasWrappedKek(row.wrapped_kek) ? await this.unwrapCloudKek(row) : await this.firstWrapKek(orgId);
+		return { kek, version: row.kek_version };
+	}
+
+	/** Healthy detach only: refresh sidecar from cloud. Never used when status=unavailable. */
+	public static async warmupSidecarKek(orgId: string): Promise<void> {
+		const row = await this.requireCloudRow(orgId);
+		await this.setSidecarKek(row, { allowRootUnwrap: false, markUnavailableOnFail: false });
+	}
+
+	public static async markAttachSucceeded(orgId: string): Promise<void> {
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({
+				status: "active",
+				last_error: null,
+				last_verified_at: now,
+				updated_at: now,
+			})
+			.where("org_id", "=", orgId)
+			.execute();
+		this.clearKekCache(orgId);
+	}
+
+	public static async revertAttachFailure(orgId: string, previousStatus?: string): Promise<void> {
+		const row = await this.loadRow(orgId);
+		if (!row || row.source === "managed" || row.status !== "rotating") {
+			return;
+		}
+		const nextStatus: KmsStatus =
+			previousStatus === "active" || previousStatus === "pending" || previousStatus === "disabled"
+				? previousStatus
+				: "pending";
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({ status: nextStatus, updated_at: now })
+			.where("org_id", "=", orgId)
+			.where("status", "=", "rotating")
+			.execute();
+		this.clearKekCache(orgId);
 	}
 
 	public static async loadRow(orgId: string) {
@@ -491,6 +630,151 @@ export class CmkService {
 		} catch (error) {
 			if (isMissingKmsTable(error)) {
 				return undefined;
+			}
+			throw error;
+		}
+	}
+
+	private static assertHostedCloud() {
+		if (!EditionPolicyService.isHosted()) {
+			throw new ForbiddenError(
+				"Cloud customer-managed keys are only available on Hosted deployments.",
+				"CMK_HOSTED_ONLY",
+			);
+		}
+	}
+
+	private static async requireCloudRow(orgId: string) {
+		const row = await this.loadRow(orgId);
+		if (!row || !isCloudSource(row.source)) {
+			throw new ValidationError("Organization is already on managed wrapping.", "CMK_ALREADY_MANAGED");
+		}
+		if (!row.key_ref) {
+			throw new ValidationError("Cloud KMS key_ref is required.", "CMK_KEY_REF_REQUIRED");
+		}
+		if (!row.credential_secret_id) {
+			throw new ValidationError("Cloud KMS credential is required.", "CMK_CREDENTIAL_REQUIRED");
+		}
+		return row as typeof row & { source: CloudKmsSource; key_ref: string; credential_secret_id: string };
+	}
+
+	private static async wrapCloudKek(
+		row: { org_id: string; source: CloudKmsSource; key_ref: string; region?: string | null; credential_secret_id: string },
+		kek: Buffer,
+	): Promise<Buffer> {
+		const credentials = await CmkCredentialService.decryptValue(row.org_id, row.credential_secret_id);
+		return CmkCloudProvider.wrap({
+			source: row.source,
+			keyRef: row.key_ref,
+			region: row.region,
+			credentials,
+			plaintext: kek,
+		});
+	}
+
+	private static async unwrapCloudKek(row: {
+		org_id: string;
+		source: CloudKmsSource;
+		key_ref: string;
+		region?: string | null;
+		credential_secret_id: string;
+		wrapped_kek?: Buffer | Uint8Array | null;
+	}): Promise<Buffer> {
+		if (!hasWrappedKek(row.wrapped_kek)) {
+			throw new ValidationError("Tenant KEK has not been wrapped yet.", "CMK_KEK_NOT_WRAPPED");
+		}
+		const credentials = await CmkCredentialService.decryptValue(row.org_id, row.credential_secret_id);
+		return CmkCloudProvider.unwrap({
+			source: row.source,
+			keyRef: row.key_ref,
+			region: row.region,
+			credentials,
+			ciphertext: Buffer.from(row.wrapped_kek as Buffer),
+		});
+	}
+
+	private static async firstWrapKek(orgId: string): Promise<Buffer> {
+		const row = await this.requireCloudRow(orgId);
+		if (hasWrappedKek(row.wrapped_kek)) {
+			return this.unwrapCloudKek(row);
+		}
+		const kek = randomBytes(KEK_BYTES);
+		const wrapped = await this.wrapCloudKek(row, kek);
+		const now = new Date();
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_kms_config")
+			.set({
+				wrapped_kek: wrapped,
+				last_verified_at: now,
+				last_error: null,
+				updated_at: now,
+			})
+			.where("org_id", "=", orgId)
+			.execute();
+		return kek;
+	}
+
+	private static async setSidecarKek(
+		row: {
+			org_id: string;
+			source: string;
+			status: string;
+			key_ref?: string | null;
+			region?: string | null;
+			credential_secret_id?: string | null;
+			wrapped_kek?: Buffer | Uint8Array | null;
+			kek_version: number;
+		},
+		opts: { allowRootUnwrap: boolean; markUnavailableOnFail: boolean },
+	): Promise<Buffer> {
+		const cached = kekCache.get(row.org_id);
+		if (
+			cached
+			&& cached.version === row.kek_version
+			&& cached.allowRootUnwrap === opts.allowRootUnwrap
+			&& cached.expiresAt > Date.now()
+		) {
+			return cached.kek;
+		}
+
+		try {
+			if (!isCloudSource(row.source) || !row.key_ref || !row.credential_secret_id) {
+				throw new ValidationError("Cloud KMS configuration is incomplete.", "CMK_ATTACH_INCOMPLETE");
+			}
+			const kek = await this.unwrapCloudKek({
+				org_id: row.org_id,
+				source: row.source,
+				key_ref: row.key_ref,
+				region: row.region,
+				credential_secret_id: row.credential_secret_id,
+				wrapped_kek: row.wrapped_kek,
+			});
+			const kms = await KMSClient.getInstance();
+			await kms.setTenantWrappingKey({
+				tenantId: row.org_id,
+				kek,
+				kekVersion: row.kek_version,
+				allowRootUnwrap: opts.allowRootUnwrap,
+			});
+			kekCache.set(row.org_id, {
+				kek,
+				version: row.kek_version,
+				allowRootUnwrap: opts.allowRootUnwrap,
+				expiresAt: Date.now() + KEK_CACHE_TTL_MS,
+			});
+			infoLogs(`kms_unwrap org=${row.org_id} source=${row.source} ok=true`, LogTypes.LOGS, "CmkService");
+			return kek;
+		} catch (error) {
+			kekCache.delete(row.org_id);
+			if (opts.markUnavailableOnFail) {
+				await this.markUnavailable(row.org_id, sanitizeCloudError(error));
+				infoLogs(
+					`kms_unavailable org=${row.org_id} reason=${sanitizeCloudError(error)}`,
+					LogTypes.ERROR,
+					"CmkService",
+				);
+				throw unavailableError();
 			}
 			throw error;
 		}
@@ -518,6 +802,7 @@ export class CmkService {
 				})
 				.where("org_id", "=", orgId)
 				.execute();
+			this.clearKekCache(orgId);
 		} else {
 			await db
 				.insertInto("org_kms_config")

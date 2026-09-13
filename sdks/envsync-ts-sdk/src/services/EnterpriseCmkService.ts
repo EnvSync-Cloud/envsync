@@ -58,7 +58,7 @@ export class EnterpriseCmkService {
     }
     /**
      * Update organization KMS config
-     * Self-host cloud sources return 403 CMK_HOSTED_ONLY. Cloud attach is not wired until PR-8.
+     * Self-host cloud sources return 403 CMK_HOSTED_ONLY. Hosted persists cloud source as pending until attach.
      * @param requestBody
      * @returns OrgKmsConfigResponse Organization KMS config updated
      * @throws ApiError
@@ -100,7 +100,7 @@ export class EnterpriseCmkService {
     }
     /**
      * Verify organization KMS
-     * Managed source succeeds immediately. Cloud verify is PR-8.
+     * Managed source succeeds immediately. Cloud verify unwraps or first-wraps the tenant KEK.
      * @returns OrgKmsVerifyResponse Verify result
      * @throws ApiError
      */
@@ -116,7 +116,7 @@ export class EnterpriseCmkService {
     }
     /**
      * Rotate organization KEK
-     * Re-wraps wrapped_kek under the same or new key_ref. Cloud-only; not wired until PR-8.
+     * Re-wraps wrapped_kek under the current key_ref. Hosted cloud-only; does not rewrap DEKs.
      * @returns OrgKmsConfigResponse KEK rotated
      * @throws ApiError
      */
@@ -131,7 +131,7 @@ export class EnterpriseCmkService {
     }
     /**
      * Attach organization CMK
-     * Enqueues DEK rewrap under the tenant KEK. Cloud attach is PR-8.
+     * Enqueues DEK rewrap under the tenant KEK with allow_root_unwrap during the attach window. Hosted only.
      * @returns OrgKmsJobResponse Attach job enqueued
      * @throws ApiError
      */
@@ -140,8 +140,9 @@ export class EnterpriseCmkService {
             method: 'POST',
             url: '/api/v1/manage/kms/attach',
             errors: {
+                403: `Cloud CMK is Hosted-only`,
+                409: `A rewrap job is already running`,
                 500: `Internal server error`,
-                501: `Cloud attach not implemented`,
             },
         });
     }

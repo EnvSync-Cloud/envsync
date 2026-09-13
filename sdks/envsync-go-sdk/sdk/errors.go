@@ -127,30 +127,6 @@ func (n *NotFoundError) Unwrap() error {
 	return n.APIError
 }
 
-// Cloud attach not implemented
-type NotImplementedError struct {
-	*core.APIError
-	Body *ErrorResponse
-}
-
-func (n *NotImplementedError) UnmarshalJSON(data []byte) error {
-	var body *ErrorResponse
-	if err := json.Unmarshal(data, &body); err != nil {
-		return err
-	}
-	n.StatusCode = 501
-	n.Body = body
-	return nil
-}
-
-func (n *NotImplementedError) MarshalJSON() ([]byte, error) {
-	return json.Marshal(n.Body)
-}
-
-func (n *NotImplementedError) Unwrap() error {
-	return n.APIError
-}
-
 // CMK unavailable
 type ServiceUnavailableError struct {
 	*core.APIError

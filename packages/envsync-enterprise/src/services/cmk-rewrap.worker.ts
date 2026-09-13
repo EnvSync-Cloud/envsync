@@ -70,6 +70,15 @@ export class CmkRewrapWorker {
 		try {
 			const db = await DB.getInstance();
 			const cutoff = new Date(Date.now() - this.staleRunningMs);
+			const stale = await db
+				.selectFrom("org_kms_rewrap_job")
+				.select(["id", "org_id", "kind", "progress"])
+				.where("status", "=", "running")
+				.where("updated_at", "<", cutoff)
+				.execute();
+			if (stale.length === 0) {
+				return 0;
+			}
 			const result = await db
 				.updateTable("org_kms_rewrap_job")
 				.set({
@@ -78,9 +87,17 @@ export class CmkRewrapWorker {
 					error_message: "KMS_JOB_STALE: running job exceeded its lease and was reclaimed.",
 					updated_at: new Date(),
 				})
+				.where("id", "in", stale.map(job => job.id))
 				.where("status", "=", "running")
-				.where("updated_at", "<", cutoff)
 				.executeTakeFirst();
+
+			for (const job of stale) {
+				if (job.kind === "dek_rewrap") {
+					const previous = (job.progress as { previous_status?: string } | null)?.previous_status;
+					await CmkService.revertAttachFailure(job.org_id, previous);
+					await this.clearAttachDualUnwrap(job.org_id);
+				}
+			}
 			return Number(result.numUpdatedRows ?? 0);
 		} catch (error) {
 			if (isMissingKmsTable(error)) {
@@ -153,13 +170,70 @@ export class CmkRewrapWorker {
 				await this.runDetachManaged(job);
 				return;
 			}
-			await this.failJob(job.id, "CMK_CLOUD_NOT_IMPLEMENTED", "This rewrap kind is not implemented in managed-only CMK.");
+			if (job.kind === "dek_rewrap") {
+				await this.runDekRewrap(job);
+				return;
+			}
+			await this.failJob(job.id, "KMS_JOB_UNSUPPORTED", "kek_rewrap is synchronous via POST /rotate-kek.");
 		} catch (error) {
 			const code = error instanceof AppError ? error.code : "KMS_JOB_FAILED";
 			const message = error instanceof Error ? error.message : String(error);
 			infoLogs(`kms_dek_rewrap_failed job=${job.id} code=${code}`, LogTypes.ERROR, "CmkRewrapWorker");
+			if (job.kind === "dek_rewrap") {
+				const previous = (job.progress as { previous_status?: string } | null)?.previous_status;
+				await CmkService.revertAttachFailure(job.org_id, previous);
+				await this.clearAttachDualUnwrap(job.org_id);
+			}
 			await this.failJob(job.id, code, message);
 		}
+	}
+
+	/**
+	 * First attach / source change. Dual-unwrap is only while status=rotating.
+	 */
+	private static async runDekRewrap(job: ClaimedJob): Promise<void> {
+		const row = await CmkService.loadRow(job.org_id);
+		if (!row || row.source === "managed") {
+			await this.succeedJob(job.id, { already_managed: true });
+			return;
+		}
+
+		const kms = await KMSClient.getInstance();
+		if (typeof kms.supportsTenantRewrap === "function" && !kms.supportsTenantRewrap()) {
+			await CmkService.revertAttachFailure(
+				job.org_id,
+				typeof job.progress.previous_status === "string" ? job.progress.previous_status : undefined,
+			);
+			await this.failJob(
+				job.id,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+				"miniKMS sidecar does not support tenant wrapping RPCs. Attach cannot rewrap DEKs.",
+			);
+			return;
+		}
+
+		const { kek, version } = await CmkService.loadMaterializedKek(job.org_id);
+		await kms.setTenantWrappingKey({
+			tenantId: job.org_id,
+			kek,
+			kekVersion: version,
+			allowRootUnwrap: true,
+		});
+		await kms.rewrapTenantDataKeys({
+			tenantId: job.org_id,
+			target: "TENANT_KEK",
+			allowRootUnwrap: true,
+		});
+		await kms.setTenantWrappingKey({
+			tenantId: job.org_id,
+			kek,
+			kekVersion: version,
+			allowRootUnwrap: false,
+		});
+
+		await CmkService.markAttachSucceeded(job.org_id);
+		infoLogs(`kms_dek_rewrap_succeeded job=${job.id} org=${job.org_id} kind=dek_rewrap`, LogTypes.LOGS, "CmkRewrapWorker");
+		await this.succeedJob(job.id, { target: "TENANT_KEK", allow_root_unwrap: false });
 	}
 
 	/**
@@ -186,8 +260,19 @@ export class CmkRewrapWorker {
 		}
 
 		// Never call ensureTenantKek: unavailable is 503 by design.
-		// allow_warmup is reserved for PR-8 healthy detach (SetTenantWrappingKey after cloud unwrap).
-		// Break-glass always sets allow_warmup=false and must not take that branch.
+		// Healthy detach may warm the sidecar from cloud; break-glass must not.
+		const allowWarmup = job.progress.allow_warmup === true && row.status !== "unavailable";
+		if (allowWarmup) {
+			try {
+				await CmkService.warmupSidecarKek(job.org_id);
+			} catch (error) {
+				infoLogs(
+					`kms_detach_warmup_skipped org=${job.org_id} reason=${error instanceof Error ? error.message : String(error)}`,
+					LogTypes.ERROR,
+					"CmkRewrapWorker",
+				);
+			}
+		}
 
 		const kms = await KMSClient.getInstance();
 		if (typeof kms.supportsTenantRewrap === "function" && !kms.supportsTenantRewrap()) {
@@ -250,6 +335,24 @@ export class CmkRewrapWorker {
 			})
 			.where("id", "=", id)
 			.execute();
+	}
+
+	private static async clearAttachDualUnwrap(orgId: string): Promise<void> {
+		try {
+			const { kek, version } = await CmkService.loadMaterializedKek(orgId);
+			const kms = await KMSClient.getInstance();
+			if (typeof kms.supportsTenantRewrap === "function" && !kms.supportsTenantRewrap()) {
+				return;
+			}
+			await kms.setTenantWrappingKey({
+				tenantId: orgId,
+				kek,
+				kekVersion: version,
+				allowRootUnwrap: false,
+			});
+		} catch {
+			// Best-effort: attach failed and cloud unwrap may already be gone.
+		}
 	}
 
 	private static async failJob(id: string, code: string, message: string) {

@@ -102,7 +102,7 @@ manage.put(
 	describeRoute({
 		operationId: "updateOrgKmsConfig",
 		summary: "Update organization KMS config",
-		description: "Self-host cloud sources return 403 CMK_HOSTED_ONLY. Cloud attach is not wired until PR-8.",
+		description: "Self-host cloud sources return 403 CMK_HOSTED_ONLY. Hosted persists cloud source as pending until attach.",
 		tags: ["Enterprise CMK"],
 		responses: {
 			200: {
@@ -154,7 +154,7 @@ manage.post(
 	describeRoute({
 		operationId: "verifyOrgKms",
 		summary: "Verify organization KMS",
-		description: "Managed source succeeds immediately. Cloud verify is PR-8.",
+		description: "Managed source succeeds immediately. Cloud verify unwraps or first-wraps the tenant KEK.",
 		tags: ["Enterprise CMK"],
 		responses: {
 			200: {
@@ -179,7 +179,7 @@ manage.post(
 	describeRoute({
 		operationId: "rotateOrgKmsKek",
 		summary: "Rotate organization KEK",
-		description: "Re-wraps wrapped_kek under the same or new key_ref. Cloud-only; not wired until PR-8.",
+		description: "Re-wraps wrapped_kek under the current key_ref. Hosted cloud-only; does not rewrap DEKs.",
 		tags: ["Enterprise CMK"],
 		responses: {
 			200: {
@@ -200,15 +200,20 @@ manage.post(
 	describeRoute({
 		operationId: "attachOrgKms",
 		summary: "Attach organization CMK",
-		description: "Enqueues DEK rewrap under the tenant KEK. Cloud attach is PR-8.",
+		description:
+			"Enqueues DEK rewrap under the tenant KEK with allow_root_unwrap during the attach window. Hosted only.",
 		tags: ["Enterprise CMK"],
 		responses: {
 			202: {
 				description: "Attach job enqueued",
 				content: { "application/json": { schema: resolver(orgKmsJobResponseSchema) } },
 			},
-			501: {
-				description: "Cloud attach not implemented",
+			403: {
+				description: "Cloud CMK is Hosted-only",
+				content: { "application/json": { schema: resolver(errorResponseSchema) } },
+			},
+			409: {
+				description: "A rewrap job is already running",
 				content: { "application/json": { schema: resolver(errorResponseSchema) } },
 			},
 			500: {
