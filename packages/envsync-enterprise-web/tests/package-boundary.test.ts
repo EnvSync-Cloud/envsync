@@ -17,6 +17,14 @@ function listFiles(dir: string): string[] {
 
 describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
   test("exports enterpriseWebModules", async () => {
+    const { mock } = await import("bun:test");
+    mock.module("lucide-react", () => ({
+      Fingerprint: () => null,
+      KeyRound: () => null,
+      Link2: () => null,
+      LockKeyhole: () => null,
+      Workflow: () => null,
+    }));
     const mod = await import("../src/index.ts");
     expect(Array.isArray(mod.enterpriseWebModules)).toBe(true);
     expect(mod.enterpriseWebModules.map(module => module.name)).toEqual([
