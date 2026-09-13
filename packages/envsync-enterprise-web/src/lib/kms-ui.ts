@@ -30,17 +30,131 @@ export function isCloudKmsSource(source: string | null | undefined): boolean {
 }
 
 /**
- * Cloud attach is Hosted-only. Self-host and explicit selfhosted mode stay managed-only.
- * Missing deploymentMode on a local enterprise build is treated as hosted-like.
+ * Cloud attach is Hosted-only. Fail closed: hide cloud controls unless mode
+ * is explicitly hosted. Missing/unknown mode stays managed-only.
  */
 export function isHostedCmkUi(input: {
   deploymentMode?: string | null;
   runtimeDeploymentMode?: string | null;
 }): boolean {
   const mode = input.deploymentMode || input.runtimeDeploymentMode;
-  if (mode === "selfhosted") return false;
-  if (mode === "hosted") return true;
-  return true;
+  return mode === "hosted";
+}
+
+export type KmsFormState = {
+  source: KmsSource;
+  keyRef: string;
+  region: string;
+  credentialId: string;
+};
+
+export function kmsFormFromConfig(config: {
+  source: KmsSource | string;
+  key_ref: string | null;
+  region: string | null;
+  credential_secret_id: string | null;
+}): KmsFormState {
+  return {
+    source: config.source as KmsSource,
+    keyRef: config.key_ref ?? "",
+    region: config.region ?? "",
+    credentialId: config.credential_secret_id ?? "",
+  };
+}
+
+/**
+ * Seed the form from config only on org change. Later refetches (credential
+ * create) must not wipe a locally selected credential_secret_id.
+ */
+export function applyKmsConfigToForm(
+  form: KmsFormState,
+  config: {
+    org_id: string;
+    source: KmsSource | string;
+    key_ref: string | null;
+    region: string | null;
+    credential_secret_id: string | null;
+  },
+  syncedOrgId: string | null,
+): { form: KmsFormState; syncedOrgId: string } {
+  if (syncedOrgId === config.org_id) {
+    return { form, syncedOrgId };
+  }
+  return { form: kmsFormFromConfig(config), syncedOrgId: config.org_id };
+}
+
+export function cloudConfigReady(input: {
+  source: string;
+  keyRef: string;
+  credentialId: string;
+}): boolean {
+  return isCloudKmsSource(input.source) && Boolean(input.keyRef.trim()) && Boolean(input.credentialId);
+}
+
+export function canShowDetach(status: string | null | undefined): boolean {
+  return status === "active" || status === "unavailable" || status === "disabled";
+}
+
+export function canAttachFromConfig(config: {
+  source: string;
+  status: string;
+  key_ref: string | null;
+  credential_secret_id: string | null;
+  last_verified_at: string | null;
+}): boolean {
+  return (
+    isCloudKmsSource(config.source)
+    && config.status === "pending"
+    && Boolean(config.key_ref)
+    && Boolean(config.credential_secret_id)
+    && Boolean(config.last_verified_at)
+  );
+}
+
+export function shouldShowJobCard(input: {
+  jobStatus?: string | null;
+  configStatus?: string | null;
+}): boolean {
+  if (input.jobStatus === "pending" || input.jobStatus === "running" || input.jobStatus === "failed") {
+    return true;
+  }
+  return input.configStatus === "rotating" && input.jobStatus !== "succeeded";
+}
+
+const JOB_STORAGE_PREFIX = "envsync:kms-job:";
+const memoryJobStore = new Map<string, string>();
+
+export function kmsJobStorageKey(orgId: string): string {
+  return `${JOB_STORAGE_PREFIX}${orgId}`;
+}
+
+export function readStoredKmsJobId(orgId: string | null | undefined): string | null {
+  if (!orgId) return null;
+  const key = kmsJobStorageKey(orgId);
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      return sessionStorage.getItem(key);
+    } catch {
+      return memoryJobStore.get(key) ?? null;
+    }
+  }
+  return memoryJobStore.get(key) ?? null;
+}
+
+export function writeStoredKmsJobId(orgId: string | null | undefined, jobId: string | null): void {
+  if (!orgId) return;
+  const key = kmsJobStorageKey(orgId);
+  if (typeof sessionStorage !== "undefined") {
+    try {
+      if (jobId) sessionStorage.setItem(key, jobId);
+      else sessionStorage.removeItem(key);
+      return;
+    } catch {
+      // fall through to memory
+    }
+  }
+  if (jobId) memoryJobStore.set(key, jobId);
+  else memoryJobStore.delete(key);
 }
 
 export function kmsSourceLabel(source: string | null | undefined): string {

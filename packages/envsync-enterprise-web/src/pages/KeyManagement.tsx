@@ -18,6 +18,10 @@ import {
 import { isEnterpriseUiEnabled } from "../api/client";
 import { CreateKmsCredentialModal } from "../components/CreateKmsCredentialModal";
 import {
+  applyKmsConfigToForm,
+  canAttachFromConfig,
+  canShowDetach,
+  cloudConfigReady,
   configBlocksMutations,
   isCloudKmsSource,
   isHostedCmkUi,
@@ -26,7 +30,11 @@ import {
   keyRefPlaceholder,
   kmsSourceLabel,
   KMS_SOURCE_OPTIONS,
+  readStoredKmsJobId,
   safeJobProgressEntries,
+  shouldShowJobCard,
+  writeStoredKmsJobId,
+  type KmsFormState,
   type KmsSource,
 } from "../lib/kms-ui";
 import { runtimeConfig } from "@shell/utils/runtime-config";
@@ -84,34 +92,64 @@ export default function KeyManagement() {
     runtimeDeploymentMode: runtimeConfig.deploymentMode,
   });
 
-  const [source, setSource] = useState<KmsSource>("managed");
-  const [keyRef, setKeyRef] = useState("");
-  const [region, setRegion] = useState("");
-  const [credentialId, setCredentialId] = useState("");
+  const [form, setForm] = useState<KmsFormState>({
+    source: "managed",
+    keyRef: "",
+    region: "",
+    credentialId: "",
+  });
+  const [syncedOrgId, setSyncedOrgId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction>(null);
 
   useEffect(() => {
     if (!config) return;
-    setSource(config.source);
-    setKeyRef(config.key_ref ?? "");
-    setRegion(config.region ?? "");
-    setCredentialId(config.credential_secret_id ?? "");
-  }, [config]);
+    const next = applyKmsConfigToForm(form, config, syncedOrgId);
+    if (next.syncedOrgId !== syncedOrgId) {
+      setSyncedOrgId(next.syncedOrgId);
+      setForm(next.form);
+    }
+    // Only seed on org change so credential-create refetch cannot wipe the new id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config?.org_id]);
+
+  useEffect(() => {
+    if (!config?.org_id || jobId) return;
+    const stored = readStoredKmsJobId(config.org_id);
+    if (stored) setJobId(stored);
+  }, [config?.org_id, jobId]);
 
   const { data: job } = useOrgKmsJob(jobId);
 
   useEffect(() => {
     if (job?.status !== "succeeded" && job?.status !== "failed") return;
     void queryClient.invalidateQueries({ queryKey: ["enterprise", "kms"] });
-  }, [job?.status, queryClient]);
+    if (job.status === "succeeded") {
+      writeStoredKmsJobId(config?.org_id, null);
+    }
+  }, [job?.status, job, queryClient, config?.org_id]);
+
+  const rememberJob = (id: string) => {
+    setJobId(id);
+    writeStoredKmsJobId(config?.org_id, id);
+  };
+
+  const dismissJob = () => {
+    writeStoredKmsJobId(config?.org_id, null);
+    setJobId(null);
+  };
+
   const busy = updateConfig.isPending || verify.isPending || rotateKek.isPending
     || attach.isPending || detach.isPending;
   const mutatingLocked = configBlocksMutations(config) || jobInFlight(job);
-  const cloudSelected = isCloudKmsSource(source);
-  const cloudAttached = isCloudKmsSource(config?.source) && config?.source !== "managed";
+  const cloudSelected = isCloudKmsSource(form.source);
+  const cloudAttached = isCloudKmsSource(config?.source);
   const credentials = config?.credentials ?? [];
+  const cloudSaveReady = cloudConfigReady(form);
+  const attachReady = config ? canAttachFromConfig(config) : false;
+  const detachReady = canShowDetach(config?.status);
+  const showJob = shouldShowJobCard({ jobStatus: job?.status, configStatus: config?.status });
 
   const confirmCopy = useMemo(() => {
     switch (confirm) {
@@ -143,10 +181,10 @@ export default function KeyManagement() {
       const next = await updateConfig.mutateAsync(
         cloudSelected
           ? {
-              source,
-              key_ref: keyRef.trim() || null,
-              region: region.trim() || null,
-              credential_secret_id: credentialId || null,
+              source: form.source,
+              key_ref: form.keyRef.trim() || null,
+              region: form.region.trim() || null,
+              credential_secret_id: form.credentialId || null,
             }
           : { source: "managed" },
       );
@@ -175,11 +213,11 @@ export default function KeyManagement() {
     try {
       if (action === "attach") {
         const next = await attach.mutateAsync();
-        setJobId(next.id);
+        rememberJob(next.id);
         toast.success("Attach rewrap queued.");
       } else if (action === "detach") {
         const next = await detach.mutateAsync();
-        setJobId(next.id);
+        rememberJob(next.id);
         toast.success("Detach to managed queued.");
       } else if (action === "rotate") {
         await rotateKek.mutateAsync();
@@ -329,9 +367,9 @@ export default function KeyManagement() {
                 <span className="text-muted-foreground">Provider</span>
                 <select
                   className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  value={source}
+                  value={form.source}
                   disabled={mutatingLocked}
-                  onChange={event => setSource(event.target.value as KmsSource)}
+                  onChange={event => setForm(prev => ({ ...prev, source: event.target.value as KmsSource }))}
                 >
                   {KMS_SOURCE_OPTIONS.map(option => (
                     <option key={option.value} value={option.value}>
@@ -346,9 +384,9 @@ export default function KeyManagement() {
                   <label className="space-y-1 text-sm md:col-span-2">
                     <span className="text-muted-foreground">Key reference</span>
                     <Input
-                      value={keyRef}
-                      onChange={event => setKeyRef(event.target.value)}
-                      placeholder={keyRefPlaceholder(source)}
+                      value={form.keyRef}
+                      onChange={event => setForm(prev => ({ ...prev, keyRef: event.target.value }))}
+                      placeholder={keyRefPlaceholder(form.source)}
                       disabled={mutatingLocked}
                       autoComplete="off"
                     />
@@ -356,8 +394,8 @@ export default function KeyManagement() {
                   <label className="space-y-1 text-sm">
                     <span className="text-muted-foreground">Region</span>
                     <Input
-                      value={region}
-                      onChange={event => setRegion(event.target.value)}
+                      value={form.region}
+                      onChange={event => setForm(prev => ({ ...prev, region: event.target.value }))}
                       placeholder="us-east-1"
                       disabled={mutatingLocked}
                       autoComplete="off"
@@ -368,9 +406,9 @@ export default function KeyManagement() {
                     <div className="flex gap-2">
                       <select
                         className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                        value={credentialId}
+                        value={form.credentialId}
                         disabled={mutatingLocked}
-                        onChange={event => setCredentialId(event.target.value)}
+                        onChange={event => setForm(prev => ({ ...prev, credentialId: event.target.value }))}
                       >
                         <option value="">Select a configured credential</option>
                         {credentials.map(credential => (
@@ -417,13 +455,16 @@ export default function KeyManagement() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void onSave()} disabled={busy || mutatingLocked}>
+                <Button
+                  onClick={() => void onSave()}
+                  disabled={busy || mutatingLocked || (cloudSelected && !cloudSaveReady)}
+                >
                   Save configuration
                 </Button>
                 {cloudAttached && config.status === "pending" && (
                   <Button
                     variant="outline"
-                    disabled={busy || mutatingLocked}
+                    disabled={busy || mutatingLocked || !attachReady}
                     onClick={() => setConfirm("attach")}
                   >
                     Attach
@@ -438,7 +479,7 @@ export default function KeyManagement() {
                     Rotate KEK
                   </Button>
                 )}
-                {cloudAttached && config.status !== "rotating" && (
+                {cloudAttached && detachReady && (
                   <Button
                     variant="outline"
                     disabled={busy || mutatingLocked}
@@ -448,12 +489,26 @@ export default function KeyManagement() {
                   </Button>
                 )}
               </div>
+              {cloudAttached && config.status === "pending" && (
+                <p className="text-xs text-muted-foreground">
+                  {attachReady
+                    ? "Verify succeeded. Attach rewraps project data keys under this cloud key."
+                    : "Save the key reference and credential, then Verify, then Attach. To abandon, save provider as Managed by EnvSync."}
+                </p>
+              )}
             </article>
           )}
 
-          {(job || config.status === "rotating") && (
+          {showJob && (
             <article className="rounded-xl border border-border bg-card/50 p-6 space-y-3">
-              <h2 className="text-lg font-medium">Attach / detach progress</h2>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h2 className="text-lg font-medium">Attach / detach progress</h2>
+                {job?.status === "failed" && (
+                  <Button variant="outline" size="sm" onClick={dismissJob}>
+                    Dismiss
+                  </Button>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">
                 {job
                   ? `${job.kind.replaceAll("_", " ")} is ${job.status}.`
@@ -533,7 +588,7 @@ export default function KeyManagement() {
       <CreateKmsCredentialModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={id => setCredentialId(id)}
+        onCreated={id => setForm(prev => ({ ...prev, credentialId: id }))}
       />
 
       <AlertDialog open={confirm !== null} onOpenChange={open => !open && setConfirm(null)}>
