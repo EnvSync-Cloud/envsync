@@ -40,6 +40,14 @@ export const ActionPastTimeOptions = z.enum([
 
 export type ActionPastTimes = z.infer<typeof ActionPastTimeOptions>;
 
+function toSqlLikePattern(filter: string): string {
+	return filter
+		.replaceAll("\\", "\\\\")
+		.replaceAll("%", "\\%")
+		.replaceAll("_", "\\_")
+		.replaceAll("*", "%");
+}
+
 // Genesis hash for the first entry in the audit chain (Issue #11)
 const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -179,8 +187,9 @@ export class AuditLogService {
 		}
 
 		if (filter_by_category) {
-			auditLogsQuery = auditLogsQuery.where("action", "like", filter_by_category.replace("*", "%"));
-			totalCountQuery = totalCountQuery.where("action", "like", filter_by_category.replace("*", "%"));
+			const likePattern = toSqlLikePattern(filter_by_category);
+			auditLogsQuery = auditLogsQuery.where("action", "like", likePattern);
+			totalCountQuery = totalCountQuery.where("action", "like", likePattern);
 		}
 
 		if (filter_by_past_time) {

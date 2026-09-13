@@ -710,8 +710,8 @@ async function main() {
 	}
 
 	console.log(`ClickStack operator email: ${operator.email}`);
-	console.log(`ClickStack operator password: ${LOCAL_OPERATOR_PASSWORD}`);
-	console.log(`ClickStack access key: ${accessKey}`);
+	console.log("ClickStack operator password: [redacted]");
+	console.log("ClickStack access key: [redacted]");
 }
 
 await main();

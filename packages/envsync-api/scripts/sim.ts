@@ -158,7 +158,7 @@ function recordMetric(method: string, rawPath: string, status: number, ms: numbe
 	else metrics.failed++;
 
 	if (metrics.latencies.length >= MAX_LATENCY_SAMPLES) {
-		metrics.latencies[Math.floor(Math.random() * MAX_LATENCY_SAMPLES)] = ms;
+		metrics.latencies[crypto.randomInt(MAX_LATENCY_SAMPLES)] = ms;
 	} else {
 		metrics.latencies.push(ms);
 	}
@@ -252,12 +252,12 @@ async function apiFormData(
 // ── Helpers ──────────────────────────────────────────────────────────
 function random<T>(arr: T[]): T | undefined {
 	if (arr.length === 0) return undefined;
-	return arr[Math.floor(Math.random() * arr.length)];
+	return arr[crypto.randomInt(arr.length)];
 }
 
 let _uidCounter = 0;
 function uid(): string {
-	return `${Date.now().toString(36)}_${(++_uidCounter).toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+	return `${Date.now().toString(36)}_${(++_uidCounter).toString(36)}_${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // ── ResourcePoolManager ──────────────────────────────────────────────
@@ -1122,7 +1122,7 @@ for (const s of scenarios) {
 }
 
 function selectWeightedRandom(): Scenario {
-	const r = Math.random() * cumSum;
+	const r = crypto.randomInt(cumSum);
 	for (let i = 0; i < cumulativeWeights.length; i++) {
 		if (r < cumulativeWeights[i]) return scenarios[i];
 	}
@@ -1210,7 +1210,7 @@ class OrgManager {
 	pickRandomContext(): OrgContext | undefined {
 		const active = [...this.contexts.values()].filter((c) => c.status === "active");
 		if (active.length === 0) return undefined;
-		return active[Math.floor(Math.random() * active.length)];
+		return active[crypto.randomInt(active.length)];
 	}
 
 	async cleanupOrg(ctx: OrgContext): Promise<void> {
@@ -1275,7 +1275,11 @@ async function worker(_workerId: number, orgManager: OrgManager): Promise<void> 
 			continue;
 		}
 		const scenario = selectWeightedRandom();
-		const token = ctx.allTokens[Math.floor(Math.random() * ctx.allTokens.length)];
+		if (ctx.allTokens.length === 0) {
+			await Bun.sleep(100);
+			continue;
+		}
+		const token = ctx.allTokens[crypto.randomInt(ctx.allTokens.length)];
 		try {
 			await scenario.fn(token, ctx);
 		} catch {
