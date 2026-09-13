@@ -1,0 +1,105 @@
+import type { OrgKmsConfigResponse, OrgKmsJobResponse } from "@envsync-cloud/envsync-ts-sdk";
+
+export const CLOUD_KMS_SOURCES = ["aws-kms", "gcp-kms", "azure-kv"] as const;
+
+export type KmsSource = OrgKmsConfigResponse.source | "managed" | "aws-kms" | "gcp-kms" | "azure-kv";
+
+export const KMS_SOURCE_OPTIONS: Array<{ value: KmsSource; label: string }> = [
+  { value: "managed", label: "Managed by EnvSync (miniKMS)" },
+  { value: "aws-kms", label: "AWS KMS" },
+  { value: "gcp-kms", label: "GCP Cloud KMS" },
+  { value: "azure-kv", label: "Azure Key Vault" },
+];
+
+const SAFE_JOB_PROGRESS_KEYS = new Set([
+  "target",
+  "previous_status",
+  "allow_root_unwrap",
+  "allow_warmup",
+  "already_managed",
+  "code",
+  "completed",
+  "total",
+  "percent",
+]);
+
+const MATERIALISH_KEY = /kek|dek|pem|secret|plaintext|ciphertext|private|material|wrapped/i;
+
+export function isCloudKmsSource(source: string | null | undefined): boolean {
+  return (CLOUD_KMS_SOURCES as readonly string[]).includes(source ?? "");
+}
+
+/**
+ * Cloud attach is Hosted-only. Self-host and explicit selfhosted mode stay managed-only.
+ * Missing deploymentMode on a local enterprise build is treated as hosted-like.
+ */
+export function isHostedCmkUi(input: {
+  deploymentMode?: string | null;
+  runtimeDeploymentMode?: string | null;
+}): boolean {
+  const mode = input.deploymentMode || input.runtimeDeploymentMode;
+  if (mode === "selfhosted") return false;
+  if (mode === "hosted") return true;
+  return true;
+}
+
+export function kmsSourceLabel(source: string | null | undefined): string {
+  return KMS_SOURCE_OPTIONS.find(option => option.value === source)?.label
+    ?? source
+    ?? "managed";
+}
+
+export function jobInFlight(job?: Pick<OrgKmsJobResponse, "status"> | null): boolean {
+  return job?.status === "pending" || job?.status === "running";
+}
+
+export function configBlocksMutations(config?: Pick<OrgKmsConfigResponse, "status"> | null): boolean {
+  return config?.status === "rotating";
+}
+
+export function jobProgressPercent(job?: Pick<OrgKmsJobResponse, "status" | "progress"> | null): number {
+  if (!job) return 0;
+  const progress = job.progress ?? {};
+  if (typeof progress.percent === "number" && Number.isFinite(progress.percent)) {
+    return Math.max(0, Math.min(100, progress.percent));
+  }
+  if (typeof progress.completed === "number" && typeof progress.total === "number" && progress.total > 0) {
+    return Math.max(0, Math.min(100, Math.round((progress.completed / progress.total) * 100)));
+  }
+  switch (job.status) {
+    case "pending":
+      return 15;
+    case "running":
+      return 55;
+    case "succeeded":
+    case "failed":
+      return 100;
+    default:
+      return 0;
+  }
+}
+
+/** Only known metadata keys — never surface values that look like key material. */
+export function safeJobProgressEntries(progress: Record<string, unknown> | null | undefined): Array<[string, string]> {
+  if (!progress) return [];
+  return Object.entries(progress)
+    .filter(([key, value]) => {
+      if (MATERIALISH_KEY.test(key)) return false;
+      if (!SAFE_JOB_PROGRESS_KEYS.has(key)) return false;
+      return value !== undefined && value !== null && typeof value !== "object";
+    })
+    .map(([key, value]) => [key, String(value)]);
+}
+
+export function keyRefPlaceholder(source: string): string {
+  switch (source) {
+    case "aws-kms":
+      return "arn:aws:kms:us-east-1:123456789012:key/…";
+    case "gcp-kms":
+      return "projects/…/locations/…/keyRings/…/cryptoKeys/…";
+    case "azure-kv":
+      return "https://vault-name.vault.azure.net/keys/key-name";
+    default:
+      return "Cloud key reference";
+  }
+}

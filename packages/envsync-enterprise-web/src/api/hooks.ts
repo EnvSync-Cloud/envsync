@@ -1,7 +1,9 @@
 import type {
+  CreateOrgKmsCredentialRequest,
   CreateOrgSecretRequest,
   CreateProviderConnectionRequest,
   CreateSamlProviderRequest,
+  UpdateOrgKmsConfigRequest,
   UpdateOrgSecretRequest,
   UpdateProviderConnectionRequest,
   UpdateSamlProviderRequest,
@@ -532,6 +534,162 @@ export function useStartSamlTestLogin() {
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
+    },
+  });
+}
+
+const kmsConfigKey = ["enterprise", "kms", "config"] as const;
+const kmsAppsKey = ["enterprise", "kms", "apps"] as const;
+// Break-glass detach is platform-token only; do not add an org-UI hook.
+
+export async function getOrgKmsConfig() {
+  try {
+    return await getEnterpriseSDK().enterpriseCmk.getOrgKmsConfig();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export async function getOrgKmsJob(id: string) {
+  try {
+    return await getEnterpriseSDK().enterpriseCmk.getOrgKmsJob(id);
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export async function listOrgKmsApps() {
+  try {
+    return await getEnterpriseSDK().enterpriseCmk.listOrgKmsApps();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export function useOrgKmsConfig() {
+  return useQuery({
+    queryKey: kmsConfigKey,
+    queryFn: getOrgKmsConfig,
+    enabled: isEnterpriseUiEnabled(),
+    refetchInterval: query => (query.state.data?.status === "rotating" ? 3_000 : false),
+  });
+}
+
+export function useOrgKmsApps() {
+  return useQuery({
+    queryKey: kmsAppsKey,
+    queryFn: listOrgKmsApps,
+    enabled: isEnterpriseUiEnabled(),
+  });
+}
+
+export function useOrgKmsJob(jobId?: string | null) {
+  return useQuery({
+    queryKey: ["enterprise", "kms", "job", jobId],
+    queryFn: async () => {
+      if (!jobId) throw new Error("jobId is required");
+      return getOrgKmsJob(jobId);
+    },
+    enabled: isEnterpriseUiEnabled() && Boolean(jobId),
+    refetchInterval: query => {
+      const status = query.state.data?.status;
+      return status === "pending" || status === "running" ? 2_000 : false;
+    },
+  });
+}
+
+export function useUpdateOrgKmsConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UpdateOrgKmsConfigRequest) => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.updateOrgKmsConfig(payload);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "kms"] });
+    },
+  });
+}
+
+export function useCreateOrgKmsCredential() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateOrgKmsCredentialRequest) => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.createOrgKmsCredential(payload);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: kmsConfigKey });
+    },
+  });
+}
+
+export function useVerifyOrgKms() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.verifyOrgKms();
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: kmsConfigKey });
+    },
+  });
+}
+
+export function useRotateOrgKmsKek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.rotateOrgKmsKek();
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "kms"] });
+    },
+  });
+}
+
+export function useAttachOrgKms() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.attachOrgKms();
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "kms"] });
+    },
+  });
+}
+
+export function useDetachOrgKms() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        return await getEnterpriseSDK().enterpriseCmk.detachOrgKms();
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "kms"] });
     },
   });
 }
