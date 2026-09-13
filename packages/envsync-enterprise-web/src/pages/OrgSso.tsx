@@ -7,12 +7,19 @@ import {
   useDeleteSamlProvider,
   useDownloadSpMetadata,
   useSamlProviders,
+  useSpMetadata,
   useStartSamlTestLogin,
   useUpdateSamlProvider,
 } from "../api/hooks";
 import { isEnterpriseUiEnabled } from "../api/client";
 import { SamlProviderSheet } from "../components/SamlProviderSheet";
-import { isSafeHttpRedirectUrl, publishedSpUrls, samlProviderLabel } from "../lib/saml-sp";
+import {
+  isSafeHttpRedirectUrl,
+  parseSpMetadataXml,
+  publishedSpUrls,
+  samlProviderLabel,
+  startUrlFromEntityId,
+} from "../lib/saml-sp";
 import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
 import { Switch } from "@shell/components/ui/switch";
@@ -70,6 +77,7 @@ export default function OrgSso() {
   const orgId = user?.org?.id ?? "";
   const orgSlug = user?.org?.slug ?? "";
   const { data: providers = [], isLoading, isError, error, refetch, isFetching } = useSamlProviders();
+  const { data: metadataXml } = useSpMetadata(orgId || undefined);
   const updateProvider = useUpdateSamlProvider();
   const deleteProvider = useDeleteSamlProvider();
   const downloadMetadata = useDownloadSpMetadata();
@@ -80,20 +88,29 @@ export default function OrgSso() {
   const [deleteTarget, setDeleteTarget] = useState<SamlProviderResponse | null>(null);
   const [testTarget, setTestTarget] = useState<SamlProviderResponse | null>(null);
 
-  const sp = useMemo(
-    () => (orgId && orgSlug ? publishedSpUrls(runtimeConfig.apiBaseUrl, orgId, orgSlug) : null),
-    [orgId, orgSlug],
-  );
+  const sp = useMemo(() => {
+    if (!orgId || !orgSlug) return null;
+    const fallback = publishedSpUrls(runtimeConfig.apiBaseUrl, orgId, orgSlug);
+    const parsed = typeof metadataXml === "string" ? parseSpMetadataXml(metadataXml) : null;
+    const entityId = parsed?.entityId || fallback.entityId;
+    return {
+      entityId,
+      acsUrl: parsed?.acsUrl || fallback.acsUrl,
+      startUrl: startUrlFromEntityId(entityId, orgSlug) ?? fallback.startUrl,
+      metadataUrl: entityId,
+    };
+  }, [metadataXml, orgId, orgSlug]);
 
   const summary = useMemo(() => {
     const enabledCount = providers.filter((provider) => provider.enabled).length;
     const defaultProvider = providers.find((provider) => provider.is_default) ?? null;
+    const loginDefault = defaultProvider?.enabled ? defaultProvider : null;
     const lastSso = providers
       .map((provider) => provider.last_sso_at)
       .filter((value): value is string => Boolean(value))
       .sort()
       .at(-1);
-    return { enabledCount, defaultProvider, lastSso };
+    return { enabledCount, defaultProvider, loginDefault, lastSso };
   }, [providers]);
 
   const busyId = updateProvider.isPending || deleteProvider.isPending || startTestLogin.isPending;
@@ -109,6 +126,11 @@ export default function OrgSso() {
   };
 
   const onToggleEnabled = async (provider: SamlProviderResponse, next: boolean) => {
+    const otherEnabled = providers.filter((item) => item.id !== provider.id && item.enabled).length;
+    if (next && otherEnabled >= 1 && !summary.loginDefault && !provider.is_default) {
+      toast.error("Set a default IdP before enabling more than one. /login cannot pick among multiple enabled providers.");
+      return;
+    }
     try {
       await updateProvider.mutateAsync({ id: provider.id, enabled: next });
       toast.success(next ? "Identity provider enabled." : "Identity provider disabled.");
@@ -140,7 +162,9 @@ export default function OrgSso() {
   const onDownloadMetadata = async () => {
     if (!orgId) return;
     try {
-      const xml = await downloadMetadata.mutateAsync(orgId);
+      const xml = typeof metadataXml === "string" && metadataXml.trim()
+        ? metadataXml
+        : await downloadMetadata.mutateAsync(orgId);
       if (typeof xml !== "string" || xml.trim().length === 0) {
         toast.error("SP metadata was empty.");
         return;
@@ -160,21 +184,28 @@ export default function OrgSso() {
 
   const onConfirmTestLogin = async () => {
     if (!testTarget || !orgSlug) return;
+    // Open on the click, before await — after await, popup blockers fire and
+    // windowFeatures=noopener makes open() return null even when it succeeded.
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
     try {
       const result = await startTestLogin.mutateAsync({
         orgSlug,
         providerId: testTarget.id,
       });
       if (!result.redirect_url || !isSafeHttpRedirectUrl(result.redirect_url)) {
+        popup?.close();
         toast.error("SSO start did not return a valid redirect URL.");
         return;
       }
-      const opened = window.open(result.redirect_url, "_blank", "noopener,noreferrer");
-      if (!opened) {
+      if (popup) {
+        popup.location.assign(result.redirect_url);
+      } else {
         window.location.assign(result.redirect_url);
       }
       setTestTarget(null);
     } catch (err) {
+      popup?.close();
       toast.error(err instanceof Error ? err.message : "Could not start SSO test login.");
     }
   };
@@ -224,6 +255,16 @@ export default function OrgSso() {
         </div>
       )}
 
+      {summary.enabledCount > 1 && !summary.loginDefault && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+        >
+          Several IdPs are enabled and none is default. /login POSTs without a provider id and
+          cannot start SSO until you set a default.
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-3">
         <article className="rounded-xl border border-border bg-card/50 px-4 py-3">
           <p className="text-xs text-muted-foreground">Identity providers</p>
@@ -234,7 +275,7 @@ export default function OrgSso() {
           <p className="text-xs text-muted-foreground">Default IdP</p>
           <p className="truncate text-lg font-semibold">{summary.defaultProvider?.name ?? "None"}</p>
           <p className="text-xs text-muted-foreground">
-            Used when login does not pick a provider
+            Required when more than one IdP is enabled. /login does not send a provider id.
           </p>
         </article>
         <article className="rounded-xl border border-border bg-card/50 px-4 py-3">
@@ -392,6 +433,11 @@ export default function OrgSso() {
           if (!open) setEditing(null);
         }}
         provider={editing}
+        defaultNewAsDefault={
+          providers.length === 0 || (summary.enabledCount > 0 && !summary.loginDefault)
+        }
+        existingEnabledCount={summary.enabledCount}
+        hasDefault={Boolean(summary.loginDefault)}
       />
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>

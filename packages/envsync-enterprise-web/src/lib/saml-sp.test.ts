@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { isSafeHttpRedirectUrl, publishedSpUrls, samlProviderLabel } from "./saml-sp";
+import {
+  isSafeHttpRedirectUrl,
+  parseSpMetadataXml,
+  publishedSpUrls,
+  samlProviderLabel,
+  startUrlFromEntityId,
+} from "./saml-sp";
 
 describe("saml-sp helpers", () => {
   test("publishes public /api/saml aliases", () => {
@@ -20,5 +26,20 @@ describe("saml-sp helpers", () => {
   test("labels known IdP types", () => {
     expect(samlProviderLabel("azure-ad")).toBe("Azure AD");
     expect(samlProviderLabel("custom")).toBe("custom");
+  });
+
+  test("parses entityID and ACS from SP metadata XML", () => {
+    const xml = [
+      `<?xml version="1.0" encoding="UTF-8"?>`,
+      `<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://api.example.com/api/saml/metadata/org_123">`,
+      `<md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://api.example.com/api/saml/acs/org_123" index="0" isDefault="true" />`,
+      `</md:EntityDescriptor>`,
+    ].join("");
+    expect(parseSpMetadataXml(xml)).toEqual({
+      entityId: "https://api.example.com/api/saml/metadata/org_123",
+      acsUrl: "https://api.example.com/api/saml/acs/org_123",
+    });
+    expect(startUrlFromEntityId("https://api.example.com/api/saml/metadata/org_123", "acme"))
+      .toBe("https://api.example.com/api/saml/sso/acme");
   });
 });

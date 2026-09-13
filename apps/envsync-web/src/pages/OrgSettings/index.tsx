@@ -79,9 +79,11 @@ export const OrgSettings = () => {
                       : "License"}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                    {showIntegrations || showSync || showSso
+                    {showSso
                       ? "Manage SSO, provider connections, org secrets, sync diagnostics, and license activation in the dashboard (no separate /manage SPA)."
-                      : "Activate or verify the enterprise entitlement for this install."}
+                      : showIntegrations || showSync
+                        ? "Manage provider connections, org secrets, sync diagnostics, and license activation in the dashboard (no separate /manage SPA)."
+                        : "Activate or verify the enterprise entitlement for this install."}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
