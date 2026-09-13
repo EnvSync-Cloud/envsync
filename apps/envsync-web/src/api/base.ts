@@ -1,6 +1,9 @@
 import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
+import { isPublicAuthPath } from "@/lib/login-auth";
 import { env, type Function } from "@/utils/env";
 import { runtimeConfig } from "@/utils/runtime-config";
+
+export { isPublicAuthPath };
 
 let loginRedirectInFlight = false;
 
@@ -39,14 +42,6 @@ export function isReloginError(error: unknown) {
   }
 
   return false;
-}
-
-export function isPublicAuthPath(pathname = typeof window === "undefined" ? "" : window.location.pathname) {
-  return (
-    pathname === "/login" ||
-    pathname === "/auth/callback" ||
-    pathname.startsWith("/onboarding/accept-user-invite")
-  );
 }
 
 export async function redirectToLogin() {

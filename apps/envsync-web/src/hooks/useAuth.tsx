@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest, isReloginError, redirectToLogin, sdk } from "@/api";
+import { apiRequest, isPublicAuthPath, isReloginError, redirectToLogin, sdk } from "@/api";
 import { identifyUser } from "@/telemetry";
 import { normalizeAuthSession, type EntitledAuthSession } from "@/types/auth-session";
 
@@ -30,15 +30,18 @@ export const useAuth = () => {
       setIsAuthenticated(true);
       syncIdentity(userData);
     } catch (error) {
-      console.error("Failed to fetch user:", error);
       setIsAuthenticated(false);
       setUser(undefined);
+      const onPublicAuth = typeof window !== "undefined" && isPublicAuthPath(window.location.pathname);
       if (isReloginError(error)) {
         setAuthError(null);
-        // /login and other public auth routes must render without a session.
-        await redirectToLogin();
+        if (!onPublicAuth) {
+          console.error("Failed to fetch user:", error);
+          await redirectToLogin();
+        }
         return;
       }
+      console.error("Failed to fetch user:", error);
       setAuthError("Could not load your session. Check the API is running and try again.");
     } finally {
       setIsLoading(false);
