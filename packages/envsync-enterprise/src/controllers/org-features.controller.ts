@@ -39,11 +39,13 @@ export class OrgFeaturesController {
 		const payload = c.req.valid("json" as never) as {
 			features: string[];
 			source?: "billing" | "support" | "seed";
+			updated_by?: string;
 		};
 		const grant = await OrgFeatureGrantService.replaceGrant({
 			orgId,
 			features: payload.features,
 			source: payload.source,
+			updatedBy: payload.updated_by?.trim() || "platform",
 		});
 		return c.json({
 			org_id: grant.org_id,

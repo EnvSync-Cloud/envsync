@@ -20,6 +20,7 @@ type PutOrgFeatureGrantRequest struct {
 	EnvSyncPlatformToken string                           `json:"-" url:"-"`
 	Features             []string                         `json:"features,omitempty" url:"-"`
 	Source               *PutOrgFeatureGrantRequestSource `json:"source,omitempty" url:"-"`
+	UpdatedBy            *string                          `json:"updated_by,omitempty" url:"-"`
 }
 
 type OrgFeatureGrantResponse struct {

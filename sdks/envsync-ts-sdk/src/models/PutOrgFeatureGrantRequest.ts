@@ -5,6 +5,7 @@
 export type PutOrgFeatureGrantRequest = {
     features: Array<string>;
     source?: PutOrgFeatureGrantRequest.source;
+    updated_by?: string;
 };
 export namespace PutOrgFeatureGrantRequest {
     export enum source {
