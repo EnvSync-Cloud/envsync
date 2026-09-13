@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthContext } from "@/contexts/auth";
+import {
+  requestSsoRedirectUrl,
+  SSO_SLUG_KEY,
+  SSO_START_ERROR,
+  ssoErrorFromSearch,
+} from "@/lib/login-auth";
 import { runtimeConfig } from "@/utils/runtime-config";
-
-const SSO_SLUG_KEY = "envsync_sso_slug";
-const SSO_START_ERROR = "We couldn't start SSO for that organization.";
 
 function readStoredSlug() {
   try {
@@ -33,14 +36,13 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, isLoading } = useAuthContext();
-  const showSso = runtimeConfig.edition !== "oss";
+  const showSso = !isLoading && runtimeConfig.edition !== "oss";
   const [slug, setSlug] = useState(readStoredSlug);
-  const [ssoError, setSsoError] = useState(
-    searchParams.get("sso") === "failed" ? SSO_START_ERROR : null,
-  );
+  const [ssoError, setSsoError] = useState(ssoErrorFromSearch(searchParams.get("sso")));
   const [keycloakError, setKeycloakError] = useState<string | null>(null);
   const [keycloakPending, setKeycloakPending] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
+  const actionsDisabled = isLoading || keycloakPending || ssoPending;
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -49,6 +51,7 @@ const Login = () => {
   }, [isAuthenticated, isLoading, navigate]);
 
   const handleKeycloakLogin = async () => {
+    if (actionsDisabled) return;
     setKeycloakError(null);
     setKeycloakPending(true);
     try {
@@ -68,28 +71,18 @@ const Login = () => {
   const handleSsoLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     const orgSlug = slug.trim();
-    if (!orgSlug || ssoPending) return;
+    if (!orgSlug || actionsDisabled) return;
 
     persistSlug(orgSlug);
     setSsoError(null);
     setSsoPending(true);
     try {
-      // JSON POST only — never GET-navigate to the API (errors must stay on /login).
-      const response = await fetch(
-        `${runtimeConfig.apiBaseUrl.replace(/\/$/, "")}/api/saml/sso/${encodeURIComponent(orgSlug)}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        },
-      );
-      const body = (await response.json().catch(() => null)) as { redirect_url?: string } | null;
-      if (!response.ok || !body?.redirect_url) {
+      const redirectUrl = await requestSsoRedirectUrl(runtimeConfig.apiBaseUrl, orgSlug);
+      if (!redirectUrl) {
         setSsoError(SSO_START_ERROR);
         return;
       }
-      window.location.assign(body.redirect_url);
+      window.location.assign(redirectUrl);
     } catch {
       setSsoError(SSO_START_ERROR);
     } finally {
@@ -111,13 +104,13 @@ const Login = () => {
               type="button"
               data-testid="login-keycloak"
               className="w-full"
-              disabled={keycloakPending || ssoPending}
+              disabled={actionsDisabled}
               onClick={() => void handleKeycloakLogin()}
             >
-              {keycloakPending ? (
+              {isLoading || keycloakPending ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Redirecting…
+                  {keycloakPending ? "Redirecting…" : "Loading…"}
                 </>
               ) : (
                 "Continue with EnvSync"
@@ -152,7 +145,7 @@ const Login = () => {
                       onChange={(event) => setSlug(event.target.value)}
                       autoComplete="organization"
                       placeholder="acme-corp"
-                      disabled={ssoPending || keycloakPending}
+                      disabled={actionsDisabled}
                     />
                   </div>
 
@@ -172,7 +165,7 @@ const Login = () => {
                     variant="outline"
                     data-testid="login-sso-submit"
                     className="w-full"
-                    disabled={ssoPending || keycloakPending || !slug.trim()}
+                    disabled={actionsDisabled || !slug.trim()}
                   >
                     {ssoPending ? (
                       <>

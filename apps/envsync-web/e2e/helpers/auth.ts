@@ -274,7 +274,13 @@ async function startWebLoginFromChooser(page: Page) {
 	const keycloakButton = page.getByTestId("login-keycloak");
 	await keycloakButton.waitFor({ state: "visible", timeout: 10_000 });
 	await Promise.all([
-		page.waitForLoadState("domcontentloaded"),
+		page.waitForURL((url) => {
+			try {
+				return new URL(url).pathname !== "/login";
+			} catch {
+				return false;
+			}
+		}, { timeout: config.actionTimeoutMs, waitUntil: "commit" }),
 		keycloakButton.click(),
 	]);
 }
