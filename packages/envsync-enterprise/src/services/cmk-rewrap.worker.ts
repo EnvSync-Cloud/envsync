@@ -5,6 +5,7 @@ import { AppError } from "envsync-api/ports/errors";
 import { KMSClient } from "envsync-api/ports/kms";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
+import { sanitizeCloudError } from "./cmk-cloud.provider";
 import { CmkService, isNeverAttachedConfig } from "./cmk.service";
 
 type ClaimedJob = {
@@ -95,7 +96,7 @@ export class CmkRewrapWorker {
 				if (job.kind === "dek_rewrap") {
 					const previous = (job.progress as { previous_status?: string } | null)?.previous_status;
 					await CmkService.revertAttachFailure(job.org_id, previous);
-					await this.clearAttachDualUnwrap(job.org_id);
+					await this.abortFailedAttachWrapping(job.org_id);
 				}
 			}
 			return Number(result.numUpdatedRows ?? 0);
@@ -177,12 +178,12 @@ export class CmkRewrapWorker {
 			await this.failJob(job.id, "KMS_JOB_UNSUPPORTED", "kek_rewrap is synchronous via POST /rotate-kek.");
 		} catch (error) {
 			const code = error instanceof AppError ? error.code : "KMS_JOB_FAILED";
-			const message = error instanceof Error ? error.message : String(error);
+			const message = sanitizeJobError(error);
 			infoLogs(`kms_dek_rewrap_failed job=${job.id} code=${code}`, LogTypes.ERROR, "CmkRewrapWorker");
 			if (job.kind === "dek_rewrap") {
 				const previous = (job.progress as { previous_status?: string } | null)?.previous_status;
 				await CmkService.revertAttachFailure(job.org_id, previous);
-				await this.clearAttachDualUnwrap(job.org_id);
+				await this.abortFailedAttachWrapping(job.org_id);
 			}
 			await this.failJob(job.id, code, message);
 		}
@@ -337,35 +338,42 @@ export class CmkRewrapWorker {
 			.execute();
 	}
 
-	private static async clearAttachDualUnwrap(orgId: string): Promise<void> {
+	/**
+	 * Failed/stale attach: DEKs may still be root-wrapped. Clear the tenant KEK
+	 * so we stay on root. Never Set(allowRootUnwrap=false) here — that bricks
+	 * root-wrapped DEKs.
+	 */
+	private static async abortFailedAttachWrapping(orgId: string): Promise<void> {
 		try {
-			const { kek, version } = await CmkService.loadMaterializedKek(orgId);
 			const kms = await KMSClient.getInstance();
 			if (typeof kms.supportsTenantRewrap === "function" && !kms.supportsTenantRewrap()) {
 				return;
 			}
-			await kms.setTenantWrappingKey({
-				tenantId: orgId,
-				kek,
-				kekVersion: version,
-				allowRootUnwrap: false,
-			});
+			await kms.clearTenantWrappingKey(orgId);
 		} catch {
-			// Best-effort: attach failed and cloud unwrap may already be gone.
+			// Best-effort: sidecar may already be root-only or RPC-unavailable.
 		}
 	}
 
 	private static async failJob(id: string, code: string, message: string) {
 		const db = await DB.getInstance();
+		const safe = message === code ? code : `${code}: ${message}`;
 		await db
 			.updateTable("org_kms_rewrap_job")
 			.set({
 				status: "failed",
 				progress: { code },
-				error_message: `${code}: ${message}`,
+				error_message: safe,
 				updated_at: new Date(),
 			})
 			.where("id", "=", id)
 			.execute();
 	}
+}
+
+function sanitizeJobError(error: unknown): string {
+	if (error instanceof AppError) {
+		return error.code;
+	}
+	return sanitizeCloudError(error);
 }

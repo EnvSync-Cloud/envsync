@@ -91,7 +91,10 @@ function hasWrappedKek(value: Buffer | Uint8Array | null | undefined): boolean {
 	return Boolean(value && value.length > 0);
 }
 
-/** Never-attached: persist-as-pending cloud config with no tenant KEK written yet. */
+/**
+ * Never-attached: cloud config that has not finished DEK rewrap.
+ * `verify` may first-wrap a KEK while status stays pending; DEKs are still root.
+ */
 export function isNeverAttachedConfig(row: {
 	source: string;
 	status: string;
@@ -100,7 +103,11 @@ export function isNeverAttachedConfig(row: {
 	if (!row || row.source === "managed") {
 		return true;
 	}
-	return row.status === "pending" && !hasWrappedKek(row.wrapped_kek);
+	return row.status === "pending";
+}
+
+function isKmsStatus(value: string | undefined): value is KmsStatus {
+	return Boolean(value && (KMS_STATUSES as readonly string[]).includes(value));
 }
 
 /**
@@ -260,6 +267,19 @@ export class CmkService {
 			&& !isNeverAttachedConfig(existing)
 		) {
 			throw new ValidationError("Detach to managed before changing cloud KMS source.", "CMK_DETACH_REQUIRED");
+		}
+		if (
+			existing
+			&& (existing.status === "active" || existing.status === "rotating")
+			&& existing.source === input.source
+		) {
+			const nextRef = input.key_ref === undefined ? existing.key_ref : input.key_ref;
+			if ((nextRef ?? null) !== (existing.key_ref ?? null)) {
+				throw new ValidationError(
+					"Rotate the KEK before changing key_ref on an attached CMK.",
+					"CMK_ROTATE_KEK_REQUIRED",
+				);
+			}
 		}
 		const nextStatus = nextCloudPutStatus(existing, input.source);
 		if (existing) {
@@ -457,17 +477,42 @@ export class CmkService {
 			await this.firstWrapKek(orgId);
 		}
 		const now = new Date();
+		const jobRow = {
+			id: uuidv4(),
+			org_id: orgId,
+			app_id: null,
+			kind: "dek_rewrap" as const,
+			status: "pending" as const,
+			progress: {
+				allow_root_unwrap: true,
+				previous_status: config.status,
+				target: "TENANT_KEK",
+			},
+			error_message: null,
+			created_by: createdBy,
+			created_at: now,
+			updated_at: now,
+		};
 		const db = await DB.getInstance();
-		await db
-			.updateTable("org_kms_config")
-			.set({ status: "rotating", last_error: null, updated_at: now })
-			.where("org_id", "=", orgId)
-			.execute();
-		return this.enqueueJob(orgId, "dek_rewrap", createdBy, {
-			allow_root_unwrap: true,
-			previous_status: config.status,
-			target: "TENANT_KEK",
-		});
+		try {
+			// Same txn: never leave status=rotating without a job row.
+			await db.transaction().execute(async trx => {
+				await trx
+					.updateTable("org_kms_config")
+					.set({ status: "rotating", last_error: null, updated_at: now })
+					.where("org_id", "=", orgId)
+					.execute();
+				await trx.insertInto("org_kms_rewrap_job").values(jobRow).execute();
+			});
+		} catch (error) {
+			const code = (error as { code?: string }).code;
+			if (code === "23505") {
+				throw new ConflictError("A KMS rewrap job is already in progress for this organization.", "KMS_JOB_IN_PROGRESS");
+			}
+			throw error;
+		}
+		infoLogs(`kms_dek_rewrap_enqueued org=${orgId} kind=dek_rewrap job=${jobRow.id}`, LogTypes.LOGS, "CmkService");
+		return mapJobRow(jobRow);
 	}
 
 	public static async detach(orgId: string, createdBy: string): Promise<OrgKmsJobView> {
@@ -608,10 +653,9 @@ export class CmkService {
 		if (!row || row.source === "managed" || row.status !== "rotating") {
 			return;
 		}
+		// Preserve unavailable (fail-closed). Only invent pending when previous is missing/unknown/rotating.
 		const nextStatus: KmsStatus =
-			previousStatus === "active" || previousStatus === "pending" || previousStatus === "disabled"
-				? previousStatus
-				: "pending";
+			isKmsStatus(previousStatus) && previousStatus !== "rotating" ? previousStatus : "pending";
 		const now = new Date();
 		const db = await DB.getInstance();
 		await db

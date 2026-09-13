@@ -93,11 +93,15 @@ function parseAzureCredentials(raw: string) {
 			"CMK_CREDENTIAL_INVALID",
 		);
 	}
+	const algorithm = pickString(obj, "algorithm") ?? "RSA-OAEP-256";
+	if (algorithm !== "RSA-OAEP-256") {
+		throw new ValidationError("Azure wrap algorithm must be RSA-OAEP-256.", "CMK_CREDENTIAL_INVALID");
+	}
 	return {
 		tenantId,
 		clientId,
 		clientSecret,
-		algorithm: pickString(obj, "algorithm") ?? "RSA-OAEP-256",
+		algorithm,
 	};
 }
 
@@ -136,13 +140,17 @@ async function liveAwsWrap(input: CloudKmsWrapInput): Promise<Buffer> {
 		region,
 		credentials,
 	});
-	const result = await client.send(
-		new EncryptCommand({
-			KeyId: input.keyRef,
-			Plaintext: input.plaintext,
-		}),
-	);
-	return asBuffer(result.CiphertextBlob, "ciphertext");
+	try {
+		const result = await client.send(
+			new EncryptCommand({
+				KeyId: input.keyRef,
+				Plaintext: input.plaintext,
+			}),
+		);
+		return asBuffer(result.CiphertextBlob, "ciphertext");
+	} finally {
+		client.destroy();
+	}
 }
 
 async function liveAwsUnwrap(input: CloudKmsUnwrapInput): Promise<Buffer> {
@@ -153,13 +161,17 @@ async function liveAwsUnwrap(input: CloudKmsUnwrapInput): Promise<Buffer> {
 		region,
 		credentials,
 	});
-	const result = await client.send(
-		new DecryptCommand({
-			KeyId: input.keyRef,
-			CiphertextBlob: input.ciphertext,
-		}),
-	);
-	return asBuffer(result.Plaintext, "plaintext");
+	try {
+		const result = await client.send(
+			new DecryptCommand({
+				KeyId: input.keyRef,
+				CiphertextBlob: input.ciphertext,
+			}),
+		);
+		return asBuffer(result.Plaintext, "plaintext");
+	} finally {
+		client.destroy();
+	}
 }
 
 async function liveGcpWrap(input: CloudKmsWrapInput): Promise<Buffer> {
