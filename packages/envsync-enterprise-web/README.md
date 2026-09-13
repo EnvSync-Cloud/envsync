@@ -22,6 +22,7 @@ packages/envsync-enterprise-web (PROPRIETARY WebModule[] + pages)
 | `/organisation/license` | Activate / verify license + install status |
 | `/organisation/sync` | Org-wide sync runs + audit trail + retry |
 | `/organisation/sso` | Organisation SAML SSO (IdP CRUD, SP metadata, test login) |
+| `/organisation/keys` | Organization wrapping key (Enterprise CMK) |
 | `/applications/:id/integrations*` | Project-level bindings / provider setup |
 
 There is **no** separate `envsync-management-web` SPA or `/manage` merge step.

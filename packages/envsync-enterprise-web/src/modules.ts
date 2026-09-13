@@ -1,4 +1,4 @@
-import { Fingerprint, KeyRound, Link2, Workflow } from "lucide-react";
+import { Fingerprint, KeyRound, Link2, LockKeyhole, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
 
@@ -8,7 +8,6 @@ const isOrgAdmin = (user: { role: { is_admin: boolean; is_master: boolean } }) =
 /**
  * Canonical enterprise dashboard modules (D10 / Phase 5b–5c).
  * Wired into the shell via Vite alias `@enterprise-modules`.
- * Key management lands in a later PR — do not add it here.
  */
 export const enterpriseWebModules: WebModule[] = [
   {
@@ -156,6 +155,38 @@ export const enterpriseWebModules: WebModule[] = [
     },
     settingsSections: [
       { id: "sso", label: "SSO" },
+    ],
+  },
+  {
+    name: "enterprise-kms",
+    requiredFeature: "kms",
+    routes: [
+      {
+        id: "organisation-keys",
+        layout: "root",
+        path: "organisation/keys",
+        loadComponent: () => import("./pages/KeyManagement"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-keys",
+            name: "Key management",
+            href: "/organisation/keys",
+            icon: LockKeyhole,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-keys": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("kms")),
+    },
+    settingsSections: [
+      { id: "keys", label: "Key management" },
     ],
   },
 ];
