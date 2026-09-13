@@ -85,7 +85,7 @@ test.describe("onboarding journey from landing", () => {
 
 			await page.goto("/organisation", { waitUntil: "domcontentloaded" });
 			await expect(
-				page.getByText(/Organization Settings|Organisation Settings/),
+				page.getByRole("heading", { name: /^(Organization|Organisation) Settings$/i }),
 			).toBeVisible();
 
 			await page

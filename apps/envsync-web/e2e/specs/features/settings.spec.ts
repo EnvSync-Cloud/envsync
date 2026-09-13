@@ -12,6 +12,6 @@ test.describe("feature: settings", () => {
 		await expect(page.getByTestId("my-certs-section-private-key")).toBeVisible();
 
 		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
-		await expect(page.getByText(/Organization Settings|Organisation Settings/i)).toBeVisible();
+		await expect(page.getByRole("heading", { name: /^(Organization|Organisation) Settings$/i })).toBeVisible();
 	});
 });
