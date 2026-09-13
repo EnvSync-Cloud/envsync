@@ -129,7 +129,12 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 					computedUserset: { relation: "have_audit_access" },
 				},
 				can_manage_org_settings: {
-					computedUserset: { relation: "master" },
+					union: {
+						child: [
+							{ computedUserset: { relation: "admin" } },
+							{ computedUserset: { relation: "master" } },
+						],
+					},
 				},
 				can_manage_invites: {
 					union: {

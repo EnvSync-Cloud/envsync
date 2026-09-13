@@ -1,8 +1,8 @@
 import { createContext, useContext } from "react";
-import type { AuthMembershipSummary, AuthSession } from "@/types/auth-session";
+import type { AuthMembershipSummary, EntitledAuthSession } from "@/types/auth-session";
 
 export interface IAuthContext {
-  user: AuthSession | null;
+  user: EntitledAuthSession | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   token: string | null;

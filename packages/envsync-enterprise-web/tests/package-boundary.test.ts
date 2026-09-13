@@ -19,12 +19,20 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
   test("exports enterpriseWebModules", async () => {
     const mod = await import("../src/index.ts");
     expect(Array.isArray(mod.enterpriseWebModules)).toBe(true);
-    expect(mod.enterpriseWebModules.length).toBeGreaterThan(0);
-    expect(mod.enterpriseWebModules[0].name).toBe("enterprise-integrations");
-    const ids = mod.enterpriseWebModules[0].routes.map(r => r.id);
-    expect(ids).toContain("organisation-integrations");
-    expect(ids).toContain("organisation-license");
-    expect(ids).toContain("organisation-sync");
+    expect(mod.enterpriseWebModules.map(module => module.name)).toEqual([
+      "enterprise-integrations",
+      "enterprise-license",
+    ]);
+    const byName = Object.fromEntries(mod.enterpriseWebModules.map(module => [module.name, module]));
+    expect(byName["enterprise-integrations"].requiredFeature).toBe("integrations");
+    expect(byName["enterprise-license"].requiredFeature).toBeUndefined();
+    const integrationIds = byName["enterprise-integrations"].routes.map(r => r.id);
+    expect(integrationIds).toContain("organisation-integrations");
+    expect(integrationIds).toContain("organisation-sync");
+    expect(integrationIds).not.toContain("organisation-license");
+    expect(byName["enterprise-license"].routes.map(r => r.id)).toContain("organisation-license");
+    expect(mod.enterpriseWebModules.some(module => module.name === "enterprise-sso")).toBe(false);
+    expect(mod.enterpriseWebModules.some(module => module.name === "enterprise-kms")).toBe(false);
   });
 
   test("source lives in package (integrations + license + sync pages present)", () => {
@@ -37,7 +45,9 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
 
   test("nav exposes Enterprise group with license and sync", async () => {
     const mod = await import("../src/index.ts");
-    const nav = mod.enterpriseWebModules[0].navGroups.flatMap(g => g.items.map(i => i.id));
+    const nav = mod.enterpriseWebModules.flatMap(module =>
+      module.navGroups.flatMap(g => g.items.map(i => i.id)),
+    );
     expect(nav).toContain("organisation-license");
     expect(nav).toContain("organisation-sync");
     expect(nav).toContain("organisation-integrations");
