@@ -1068,6 +1068,12 @@ ${renderEnvList({
 	})}
 ${apiLicenseVolume}
     networks: [envsync]
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
     deploy:
       replicas: ${slotHasApiDeployment(deployment.slots.blue) ? 1 : 0}
 
@@ -1081,6 +1087,12 @@ ${renderEnvList({
 	})}
 ${apiLicenseVolume}
     networks: [envsync]
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
     deploy:
       replicas: ${slotHasApiDeployment(deployment.slots.green) ? 1 : 0}` : ""}${netutilsService}${vpnResult?.serviceBlock ?? ""}
 
