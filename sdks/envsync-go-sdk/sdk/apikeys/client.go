@@ -40,7 +40,7 @@ func (c *Client) GetAllApiKeys(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/api_key"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) CreateApiKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/api_key"
 	headers := internal.MergeHeaders(
@@ -132,7 +132,7 @@ func (c *Client) GetApiKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/api_key/%v",
@@ -181,7 +181,7 @@ func (c *Client) UpdateApiKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/api_key/%v",
@@ -231,7 +231,7 @@ func (c *Client) DeleteApiKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/api_key/%v",
@@ -279,7 +279,7 @@ func (c *Client) RegenerateApiKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/api_key/%v/regenerate",

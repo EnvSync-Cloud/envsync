@@ -41,7 +41,7 @@ func (c *Client) RollbackEnvsToPitId(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/rollback/pit"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) RollbackEnvsToTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/rollback/timestamp"
 	headers := internal.MergeHeaders(
@@ -136,7 +136,7 @@ func (c *Client) RollbackVariableToPitId(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/rollback/variable/%v/pit",
@@ -187,7 +187,7 @@ func (c *Client) RollbackVariableToTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/rollback/variable/%v/timestamp",

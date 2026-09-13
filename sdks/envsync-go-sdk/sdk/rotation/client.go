@@ -41,7 +41,7 @@ func (c *Client) GetRotationPolicies(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/rotation"
 	queryParams, err := internal.QueryValues(request)
@@ -93,7 +93,7 @@ func (c *Client) CreateRotationPolicy(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/rotation"
 	headers := internal.MergeHeaders(
@@ -155,7 +155,7 @@ func (c *Client) GetRotationPolicy(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/rotation/%v",
@@ -208,7 +208,7 @@ func (c *Client) DeleteRotationPolicy(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/rotation/%v",
@@ -267,7 +267,7 @@ func (c *Client) UpdateRotationPolicy(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/rotation/%v",
@@ -327,7 +327,7 @@ func (c *Client) TriggerRotation(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/rotation/%v/rotate",
@@ -390,7 +390,7 @@ func (c *Client) GetRotationStates(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/rotation/%v/states",
@@ -442,7 +442,7 @@ func (c *Client) RevokeExpiredCredentials(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/rotation/revoke-expired"
 	headers := internal.MergeHeaders(

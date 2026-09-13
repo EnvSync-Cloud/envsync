@@ -41,7 +41,7 @@ func (c *Client) GenerateGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/gpg_key/generate"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) ImportGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/gpg_key/import"
 	headers := internal.MergeHeaders(
@@ -135,7 +135,7 @@ func (c *Client) SignDataWithGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/gpg_key/sign"
 	headers := internal.MergeHeaders(
@@ -182,7 +182,7 @@ func (c *Client) VerifyGpgSignature(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/gpg_key/verify"
 	headers := internal.MergeHeaders(
@@ -228,7 +228,7 @@ func (c *Client) ListGpgKeys(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/gpg_key"
 	headers := internal.MergeHeaders(
@@ -273,7 +273,7 @@ func (c *Client) GetGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v",
@@ -321,7 +321,7 @@ func (c *Client) DeleteGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v",
@@ -369,7 +369,7 @@ func (c *Client) ExportGpgPublicKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v/export",
@@ -418,7 +418,7 @@ func (c *Client) RevokeGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v/revoke",
@@ -469,7 +469,7 @@ func (c *Client) RotateGpgKey(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v/rotate",
@@ -520,7 +520,7 @@ func (c *Client) ExtendGpgKeyExpiry(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v/extend-expiry",
@@ -571,7 +571,7 @@ func (c *Client) UpdateGpgKeyTrustLevel(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/gpg_key/%v/trust",

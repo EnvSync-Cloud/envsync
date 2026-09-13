@@ -2,8 +2,10 @@
 export { AppService } from "@/services/app.service";
 export { AuditLogService } from "@/services/audit_log.service";
 export { AuthorizationService } from "@/services/authorization.service";
+export { EditionPolicyService } from "@/services/edition-policy.service";
 export { EnvService } from "@/services/env.service";
 export { EnvTypeService } from "@/services/env_type.service";
+
 export { EntitlementService } from "@/services/entitlement.service";
 export { LicenseStateService } from "@/services/license-state.service";
 export { OrgFeatureGrantService } from "@/services/org-feature-grant.service";

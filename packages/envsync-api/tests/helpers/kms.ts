@@ -23,7 +23,60 @@ import type {
 	CreateSessionManagedRequest,
 	CreateSessionResult,
 	ValidateSessionResult,
+	TenantWrappingProvider,
+	RewrapTarget,
+	KeyInfoResult,
+	CreateDataKeyResult,
+	RotateDataKeyResult,
+	ReEncryptResult,
 } from "@/libs/kms/client";
+import { AppError } from "@/libs/errors";
+
+export const KMS_CONFIG_SCOPE_ID = "__kms_config__";
+
+let tenantWrappingProvider: TenantWrappingProvider | null = null;
+let mockSupportsTenantRewrap = false;
+let mockRewrapImpl: ((input: { tenantId: string; target: RewrapTarget; allowRootUnwrap?: boolean }) => Promise<void>) | null = null;
+let mockClearImpl: ((tenantId: string) => Promise<void>) | null = null;
+let mockSetWrappingImpl: ((input: { tenantId: string; kek: Buffer; kekVersion: number; allowRootUnwrap?: boolean }) => Promise<void>) | null = null;
+
+export function setMockKmsTenantRewrap(options: {
+	supports?: boolean;
+	rewrap?: typeof mockRewrapImpl;
+	clear?: typeof mockClearImpl;
+	setWrapping?: typeof mockSetWrappingImpl;
+}) {
+	if (options.supports !== undefined) {
+		mockSupportsTenantRewrap = options.supports;
+	}
+	if (options.rewrap !== undefined) {
+		mockRewrapImpl = options.rewrap;
+	}
+	if (options.clear !== undefined) {
+		mockClearImpl = options.clear;
+	}
+	if (options.setWrapping !== undefined) {
+		mockSetWrappingImpl = options.setWrapping;
+	}
+}
+
+export function resetMockKmsTenantWrapping() {
+	tenantWrappingProvider = null;
+	mockSupportsTenantRewrap = false;
+	mockRewrapImpl = null;
+	mockClearImpl = null;
+	mockSetWrappingImpl = null;
+}
+
+async function beforeTenantOp(orgId: string, scopeId: string): Promise<void> {
+	if (scopeId === KMS_CONFIG_SCOPE_ID) {
+		return;
+	}
+	if (!tenantWrappingProvider) {
+		return;
+	}
+	await tenantWrappingProvider({ orgId, scopeId });
+}
 
 /**
  * Derive a deterministic 256-bit key from org+app IDs (test-only).
@@ -89,12 +142,23 @@ export function resetVaultStore(): void {
 }
 
 export const MockKMSClient = {
+	getInstance: async () => MockKMSClient,
+
+	setTenantWrappingProvider(fn: TenantWrappingProvider | null) {
+		tenantWrappingProvider = fn;
+	},
+
+	supportsTenantRewrap() {
+		return mockSupportsTenantRewrap;
+	},
+
 	async encrypt(
 		orgId: string,
 		appId: string,
 		plaintext: string,
 		aad: string,
 	): Promise<{ ciphertext: string; keyVersionId: string }> {
+		await beforeTenantOp(orgId, appId);
 		const key = deriveTestKey(orgId, appId);
 		const iv = randomBytes(12);
 		const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -123,6 +187,7 @@ export const MockKMSClient = {
 		aad: string,
 		_keyVersionId: string,
 	): Promise<{ plaintext: string }> {
+		await beforeTenantOp(orgId, appId);
 		const key = deriveTestKey(orgId, appId);
 		const combined = Buffer.from(ciphertext, "base64");
 
@@ -147,6 +212,7 @@ export const MockKMSClient = {
 		appId: string,
 		items: { plaintext: string; aad: string }[],
 	): Promise<{ ciphertext: string; keyVersionId: string }[]> {
+		await beforeTenantOp(orgId, appId);
 		return Promise.all(
 			items.map((item) => this.encrypt(orgId, appId, item.plaintext, item.aad)),
 		);
@@ -157,6 +223,7 @@ export const MockKMSClient = {
 		appId: string,
 		items: { ciphertext: string; aad: string; keyVersionId: string }[],
 	): Promise<{ plaintext: string }[]> {
+		await beforeTenantOp(orgId, appId);
 		return Promise.all(
 			items.map((item) =>
 				this.decrypt(orgId, appId, item.ciphertext, item.aad, item.keyVersionId),
@@ -254,6 +321,93 @@ export const MockKMSClient = {
 	},
 
 	// ─── Vault service mock methods ─────────────────────────────────
+
+	async getKeyInfo(orgId: string, scopeId: string): Promise<KeyInfoResult> {
+		await beforeTenantOp(orgId, scopeId);
+		return {
+			keyVersionId: "mock-kv",
+			version: 1,
+			encryptionCount: 0,
+			maxEncryptions: 0,
+			status: "active",
+		};
+	},
+
+	async createDataKey(orgId: string, scopeId: string): Promise<CreateDataKeyResult> {
+		await beforeTenantOp(orgId, scopeId);
+		return { keyVersionId: `mock-v1-${randomUUID().slice(0, 8)}`, version: 1 };
+	},
+
+	async rotateDataKey(orgId: string, scopeId: string): Promise<RotateDataKeyResult> {
+		await beforeTenantOp(orgId, scopeId);
+		return { newKeyVersionId: `mock-v2-${randomUUID().slice(0, 8)}` };
+	},
+
+	async reEncrypt(
+		orgId: string,
+		scopeId: string,
+		ciphertext: string,
+		_sourceAad: string,
+		_targetAad: string,
+		_sourceKeyVersionId: string,
+	): Promise<ReEncryptResult> {
+		await beforeTenantOp(orgId, scopeId);
+		return { ciphertext, keyVersionId: "mock-kv" };
+	},
+
+	async setTenantWrappingKey(input: {
+		tenantId: string;
+		kek: Buffer;
+		kekVersion: number;
+		allowRootUnwrap?: boolean;
+	}): Promise<void> {
+		if (!mockSupportsTenantRewrap) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		if (mockSetWrappingImpl) {
+			await mockSetWrappingImpl(input);
+		}
+	},
+
+	async clearTenantWrappingKey(tenantId: string): Promise<void> {
+		if (!mockSupportsTenantRewrap) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		if (mockClearImpl) {
+			await mockClearImpl(tenantId);
+		}
+	},
+
+	async rewrapTenantDataKeys(input: {
+		tenantId: string;
+		target: RewrapTarget;
+		allowRootUnwrap?: boolean;
+	}): Promise<void> {
+		if (!mockSupportsTenantRewrap) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		if (mockRewrapImpl) {
+			await mockRewrapImpl(input);
+			return;
+		}
+		throw new AppError(
+			"Sidecar has no persisted tenant wrapping key for this organization.",
+			503,
+			"CMK_BREAK_GLASS_KEK_MISSING",
+		);
+	},
 
 	async vaultWrite(req: VaultWriteRequest, _sessionToken: string): Promise<VaultWriteResult> {
 		const k = vaultKey(req.orgId, req.scopeId, req.entryType, req.key, req.envTypeId);

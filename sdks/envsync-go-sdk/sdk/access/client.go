@@ -40,7 +40,7 @@ func (c *Client) CreateCliLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/cli"
 	headers := internal.MergeHeaders(
@@ -84,7 +84,7 @@ func (c *Client) CreateWebLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/web"
 	headers := internal.MergeHeaders(
@@ -129,7 +129,7 @@ func (c *Client) CallbackWebLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/web/callback"
 	queryParams, err := internal.QueryValues(request)
@@ -178,7 +178,7 @@ func (c *Client) LogoutWebLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/web/logout"
 	headers := internal.MergeHeaders(
@@ -222,7 +222,7 @@ func (c *Client) CreateApiLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/api"
 	headers := internal.MergeHeaders(
@@ -267,7 +267,7 @@ func (c *Client) CallbackApiLogin(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/access/api/callback"
 	queryParams, err := internal.QueryValues(request)

@@ -191,6 +191,16 @@ type EnterpriseAuditActions =
 	| "enterprise_env_mapping_updated"
 	| "enterprise_sync_run_created";
 
+type KmsAuditActions =
+	| "kms_source_changed"
+	| "kms_credential_created"
+	| "kms_verify"
+	| "kms_unavailable"
+	| "kms_kek_rotated"
+	| "kms_dek_rewrap_enqueued"
+	| "kms_detach_enqueued"
+	| "kms_break_glass_detach";
+
 type AuditActions =
 	| AppAuditActions
 	| AuditLogAuditActions
@@ -214,4 +224,5 @@ type AuditActions =
 	| OidcAuditActions
 	| SamlAuditActions
 	| RotationAuditActions
-	| DynamicSecretAuditActions;
+	| DynamicSecretAuditActions
+	| KmsAuditActions;

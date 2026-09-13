@@ -10,6 +10,8 @@ import type { Database } from "@/types/db";
 
 // Tables in FK-safe truncation order (children first)
 const TABLES_IN_ORDER = [
+	"org_kms_rewrap_job",
+	"org_kms_config",
 	"sync_audit_event",
 	"sync_run",
 	"env_type_mapping",

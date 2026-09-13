@@ -3,10 +3,43 @@ import { SpanKind } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
+import { AppError } from "@/libs/errors";
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { withSpan } from "@/libs/telemetry";
 import { externalServiceCalls } from "@/libs/telemetry/metrics";
+
+/** Scope used to encrypt CMK credentials. Must never be wrapped by the org CMK. */
+export const KMS_CONFIG_SCOPE_ID = "__kms_config__";
+
+export type TenantWrappingProvider = (input: {
+	orgId: string;
+	scopeId: string;
+}) => Promise<void>;
+
+export type RewrapTarget = "TENANT_KEK" | "ROOT";
+
+export interface KeyInfoResult {
+	keyVersionId: string;
+	version: number;
+	encryptionCount: number;
+	maxEncryptions: number;
+	status: string;
+}
+
+export interface CreateDataKeyResult {
+	keyVersionId: string;
+	version: number;
+}
+
+export interface RotateDataKeyResult {
+	newKeyVersionId: string;
+}
+
+export interface ReEncryptResult {
+	ciphertext: string;
+	keyVersionId: string;
+}
 
 /**
  * KMS Client wrapping miniKMS gRPC Encrypt/Decrypt/BatchEncrypt/BatchDecrypt RPCs.
@@ -185,6 +218,16 @@ interface GrpcRevokeCertResponse { success: boolean }
 interface GrpcGetCRLResponse { crl_der: Buffer | string; crl_number: string | number; is_delta: boolean }
 interface GrpcCheckOCSPResponse { status: number; revoked_at: string }
 interface GrpcGetRootCAResponse { cert_pem: string }
+interface GrpcCreateDataKeyResponse { key_version_id: string; version: number }
+interface GrpcRotateDataKeyResponse { new_key_version_id: string }
+interface GrpcReEncryptResponse { ciphertext: string; key_version_id: string }
+interface GrpcGetKeyInfoResponse {
+	key_version_id: string;
+	version: number;
+	encryption_count: string | number;
+	max_encryptions: string | number;
+	status: string;
+}
 
 // Vault gRPC response shapes
 interface GrpcVaultWriteResponse { id: string; version: number; key_version_id: string }
@@ -215,6 +258,46 @@ function isVaultEntryNotFound(error: unknown): error is grpc.ServiceError {
 	);
 }
 
+function isGrpcUnimplemented(error: unknown): boolean {
+	return Boolean(
+		error instanceof Error
+			&& "code" in error
+			&& (error as grpc.ServiceError).code === grpc.status.UNIMPLEMENTED,
+	);
+}
+
+function isMissingTenantKek(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+	const grpcErr = error as grpc.ServiceError;
+	if (grpcErr.code === grpc.status.NOT_FOUND || grpcErr.code === grpc.status.FAILED_PRECONDITION) {
+		return /wrapping key|tenant kek|no.*kek|kek.*missing/i.test(error.message);
+	}
+	return /wrapping key|tenant kek|no.*kek|kek.*missing/i.test(error.message);
+}
+
+function mapTenantWrappingError(error: unknown): never {
+	if (error instanceof AppError) {
+		throw error;
+	}
+	if (isGrpcUnimplemented(error)) {
+		throw new AppError(
+			"miniKMS sidecar does not support tenant wrapping RPCs.",
+			503,
+			"CMK_SIDECAR_RPC_UNAVAILABLE",
+		);
+	}
+	if (isMissingTenantKek(error)) {
+		throw new AppError(
+			"Sidecar has no persisted tenant wrapping key for this organization.",
+			503,
+			"CMK_BREAK_GLASS_KEK_MISSING",
+		);
+	}
+	throw error;
+}
+
 function normalizeVaultError(error: unknown): never {
 	if (isVaultEntryNotFound(error)) {
 		const normalized = new Error("vault entry not found") as grpc.ServiceError;
@@ -228,6 +311,7 @@ function normalizeVaultError(error: unknown): never {
 
 export class KMSClient {
 	private static instance: Promise<KMSClient> | undefined;
+	static #provider: TenantWrappingProvider | null = null;
 	private grpcAddr: string;
 	private kmsStub: grpc.Client;
 	private healthStub: grpc.Client;
@@ -277,12 +361,40 @@ export class KMSClient {
 		this.sessionStub = new SessionService(this.grpcAddr, credentials);
 	}
 
+	public static setTenantWrappingProvider(fn: TenantWrappingProvider | null) {
+		this.#provider = fn;
+	}
+
+	/**
+	 * Skip the org CMK when encrypting CMK credentials (`__kms_config__`).
+	 * OSS / unregistered provider is a no-op.
+	 */
+	public static async beforeTenantOp(orgId: string, scopeId: string): Promise<void> {
+		if (scopeId === KMS_CONFIG_SCOPE_ID) {
+			return;
+		}
+		if (!KMSClient.#provider) {
+			return;
+		}
+		await KMSClient.#provider({ orgId, scopeId });
+	}
+
 	public static getInstance(): Promise<KMSClient> {
 		this.instance ??= this._getInstance().catch(err => {
 			this.instance = undefined;
 			throw err;
 		});
 		return this.instance;
+	}
+
+	private hasKmsMethod(name: string): boolean {
+		return typeof (this.kmsStub as unknown as Record<string, unknown>)[name] === "function";
+	}
+
+	public supportsTenantRewrap(): boolean {
+		return this.hasKmsMethod("SetTenantWrappingKey")
+			&& this.hasKmsMethod("ClearTenantWrappingKey")
+			&& this.hasKmsMethod("RewrapTenantDataKeys");
 	}
 
 	private static async _getInstance(): Promise<KMSClient> {
@@ -352,6 +464,7 @@ export class KMSClient {
 		plaintext: string,
 		aad: string,
 	): Promise<EncryptResult> {
+		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
 			const response = await this.rpcCall<GrpcEncryptResponse>(this.kmsStub, "Encrypt", {
 				tenant_id: orgId,
@@ -386,6 +499,7 @@ export class KMSClient {
 		aad: string,
 		keyVersionId: string,
 	): Promise<DecryptResult> {
+		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
 			const response = await this.rpcCall<GrpcDecryptResponse>(this.kmsStub, "Decrypt", {
 				tenant_id: orgId,
@@ -418,6 +532,7 @@ export class KMSClient {
 		appId: string,
 		items: BatchEncryptItem[],
 	): Promise<EncryptResult[]> {
+		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
 			const response = await this.rpcCall<GrpcBatchEncryptResponse>(this.kmsStub, "BatchEncrypt", {
 				tenant_id: orgId,
@@ -452,6 +567,7 @@ export class KMSClient {
 		appId: string,
 		items: BatchDecryptItem[],
 	): Promise<DecryptResult[]> {
+		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
 			const response = await this.rpcCall<GrpcBatchDecryptResponse>(this.kmsStub, "BatchDecrypt", {
 				tenant_id: orgId,
@@ -498,6 +614,7 @@ export class KMSClient {
 	 * Create an Org Intermediate CA via miniKMS PKI.
 	 */
 	public async createOrgCA(orgId: string, orgName: string): Promise<CreateOrgCAResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateOrgCA", {
 				org_id: orgId,
@@ -524,6 +641,7 @@ export class KMSClient {
 		orgId: string,
 		role: string,
 	): Promise<IssueMemberCertResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcIssueMemberCertResponse>(this.pkiStub, "IssueMemberCert", {
 				member_id: memberId,
@@ -548,6 +666,7 @@ export class KMSClient {
 	 * Revoke a certificate via miniKMS PKI.
 	 */
 	public async revokeCert(serialHex: string, orgId: string, reason: number): Promise<RevokeCertResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcRevokeCertResponse>(this.pkiStub, "RevokeCert", {
 				serial_hex: serialHex,
@@ -567,6 +686,7 @@ export class KMSClient {
 	 * Get the CRL for an org via miniKMS PKI.
 	 */
 	public async getCRL(orgId: string, deltaOnly: boolean): Promise<GetCRLResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcGetCRLResponse>(this.pkiStub, "GetCRL", {
 				org_id: orgId,
@@ -589,6 +709,7 @@ export class KMSClient {
 	 * Check OCSP status for a certificate via miniKMS PKI.
 	 */
 	public async checkOCSP(serialHex: string, orgId: string): Promise<CheckOCSPResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcCheckOCSPResponse>(this.pkiStub, "CheckOCSP", {
 				serial_hex: serialHex,
@@ -631,6 +752,7 @@ export class KMSClient {
 		req: VaultWriteRequest,
 		sessionToken: string,
 	): Promise<VaultWriteResult> {
+		await KMSClient.beforeTenantOp(req.orgId, req.scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultWriteResponse>(
 				this.vaultStub,
@@ -666,6 +788,7 @@ export class KMSClient {
 		req: VaultReadRequest,
 		sessionToken: string,
 	): Promise<VaultReadResult> {
+		await KMSClient.beforeTenantOp(req.orgId, req.scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultReadResponse>(
 				this.vaultStub,
@@ -703,6 +826,7 @@ export class KMSClient {
 		envTypeId: string | undefined,
 		sessionToken: string,
 	): Promise<boolean> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultDeleteResponse>(
 				this.vaultStub,
@@ -731,6 +855,7 @@ export class KMSClient {
 		version: number,
 		sessionToken: string,
 	): Promise<number> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultDestroyResponse>(
 				this.vaultStub,
@@ -757,6 +882,7 @@ export class KMSClient {
 		envTypeId: string | undefined,
 		sessionToken: string,
 	): Promise<VaultListEntry[]> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultListResponse>(
 				this.vaultStub,
@@ -789,6 +915,7 @@ export class KMSClient {
 		envTypeId: string | undefined,
 		sessionToken: string,
 	): Promise<VaultVersionEntry[]> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
 			const response = await this.rpcCallWithAuth<GrpcVaultHistoryResponse>(
 				this.vaultStub,
@@ -818,6 +945,7 @@ export class KMSClient {
 	 * Create a managed session (for web/OIDC-authenticated members).
 	 */
 	public async createSessionManaged(req: CreateSessionManagedRequest): Promise<CreateSessionResult> {
+		await KMSClient.beforeTenantOp(req.orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcCreateSessionResponse>(this.sessionStub, "CreateSession", {
 				managed_auth: {
@@ -886,6 +1014,7 @@ export class KMSClient {
 	 * Revoke all sessions for a member.
 	 */
 	public async revokeMemberSessions(memberId: string, orgId: string): Promise<number> {
+		await KMSClient.beforeTenantOp(orgId, "");
 		try {
 			const response = await this.rpcCall<GrpcRevokeMemberSessionsResponse>(this.sessionStub, "RevokeMemberSessions", {
 				member_id: memberId,
@@ -897,6 +1026,161 @@ export class KMSClient {
 				infoLogs(`Session RevokeMemberSessions error: ${error.message}`, LogTypes.ERROR, "KMSClient");
 			}
 			throw error;
+		}
+	}
+
+	// ─── Data-key + tenant wrapping (Enterprise CMK) ──────────
+
+	public async createDataKey(orgId: string, scopeId: string): Promise<CreateDataKeyResult> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
+		try {
+			const response = await this.rpcCall<GrpcCreateDataKeyResponse>(this.kmsStub, "CreateDataKey", {
+				tenant_id: orgId,
+				scope_id: scopeId,
+			});
+			return { keyVersionId: response.key_version_id, version: response.version };
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS CreateDataKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async rotateDataKey(orgId: string, scopeId: string): Promise<RotateDataKeyResult> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
+		try {
+			const response = await this.rpcCall<GrpcRotateDataKeyResponse>(this.kmsStub, "RotateDataKey", {
+				tenant_id: orgId,
+				scope_id: scopeId,
+			});
+			return { newKeyVersionId: response.new_key_version_id };
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS RotateDataKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async reEncrypt(
+		orgId: string,
+		scopeId: string,
+		ciphertext: string,
+		sourceAad: string,
+		targetAad: string,
+		sourceKeyVersionId: string,
+	): Promise<ReEncryptResult> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
+		try {
+			const response = await this.rpcCall<GrpcReEncryptResponse>(this.kmsStub, "ReEncrypt", {
+				tenant_id: orgId,
+				scope_id: scopeId,
+				ciphertext,
+				source_aad: sourceAad,
+				target_aad: targetAad,
+				source_key_version_id: sourceKeyVersionId,
+			});
+			return { ciphertext: response.ciphertext, keyVersionId: response.key_version_id };
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS ReEncrypt error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async getKeyInfo(orgId: string, scopeId: string): Promise<KeyInfoResult> {
+		await KMSClient.beforeTenantOp(orgId, scopeId);
+		try {
+			const response = await this.rpcCall<GrpcGetKeyInfoResponse>(this.kmsStub, "GetKeyInfo", {
+				tenant_id: orgId,
+				scope_id: scopeId,
+			});
+			return {
+				keyVersionId: response.key_version_id,
+				version: response.version,
+				encryptionCount: Number(response.encryption_count),
+				maxEncryptions: Number(response.max_encryptions),
+				status: response.status,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS GetKeyInfo error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async setTenantWrappingKey(input: {
+		tenantId: string;
+		kek: Buffer;
+		kekVersion: number;
+		allowRootUnwrap?: boolean;
+	}): Promise<void> {
+		if (!this.hasKmsMethod("SetTenantWrappingKey")) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		try {
+			await this.rpcCall(this.kmsStub, "SetTenantWrappingKey", {
+				tenant_id: input.tenantId,
+				kek: input.kek,
+				kek_version: input.kekVersion,
+				allow_root_unwrap: input.allowRootUnwrap ?? false,
+			});
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS SetTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			mapTenantWrappingError(error);
+		}
+	}
+
+	public async clearTenantWrappingKey(tenantId: string): Promise<void> {
+		if (!this.hasKmsMethod("ClearTenantWrappingKey")) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		try {
+			await this.rpcCall(this.kmsStub, "ClearTenantWrappingKey", { tenant_id: tenantId });
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS ClearTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			mapTenantWrappingError(error);
+		}
+	}
+
+	public async rewrapTenantDataKeys(input: {
+		tenantId: string;
+		target: RewrapTarget;
+		allowRootUnwrap?: boolean;
+	}): Promise<void> {
+		if (!this.hasKmsMethod("RewrapTenantDataKeys")) {
+			throw new AppError(
+				"miniKMS sidecar does not support tenant wrapping RPCs.",
+				503,
+				"CMK_SIDECAR_RPC_UNAVAILABLE",
+			);
+		}
+		try {
+			await this.rpcCall(this.kmsStub, "RewrapTenantDataKeys", {
+				tenant_id: input.tenantId,
+				target: input.target,
+				allow_root_unwrap: input.allowRootUnwrap ?? false,
+			});
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`KMS RewrapTenantDataKeys error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			mapTenantWrappingError(error);
 		}
 	}
 

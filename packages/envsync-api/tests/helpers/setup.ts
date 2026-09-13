@@ -236,9 +236,12 @@ if (!isE2E) {
 		const { MockKMSClient } = await import("./kms");
 
 		mock.module("@/libs/kms/client", () => ({
-			KMSClient: {
-				getInstance: async () => MockKMSClient,
-			},
+			KMSClient: MockKMSClient,
+			KMS_CONFIG_SCOPE_ID: "__kms_config__",
+		}));
+		mock.module("envsync-api/ports/kms", () => ({
+			KMSClient: MockKMSClient,
+			KMS_CONFIG_SCOPE_ID: "__kms_config__",
 		}));
 
 		// Mock session-manager — returns a static token for vault operations

@@ -41,7 +41,7 @@ func (c *Client) CreateDirectChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/change_request/direct"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) CreatePromotionChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/change_request/promotion"
 	headers := internal.MergeHeaders(
@@ -126,7 +126,7 @@ func (c *Client) ListChangeRequests(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/change_request"
 	headers := internal.MergeHeaders(
@@ -163,7 +163,7 @@ func (c *Client) GetChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/change_request/%v",
@@ -203,7 +203,7 @@ func (c *Client) ApproveChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/change_request/%v/approve",
@@ -252,7 +252,7 @@ func (c *Client) RejectChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/change_request/%v/reject",
@@ -302,7 +302,7 @@ func (c *Client) CancelChangeRequest(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/change_request/%v/cancel",
