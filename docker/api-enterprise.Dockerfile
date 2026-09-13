@@ -20,7 +20,8 @@ FROM oven/bun:1.3.9-alpine
 
 WORKDIR /app
 
-RUN addgroup -S envsync && adduser -S envsync -G envsync
+RUN apk add --no-cache wget \
+	&& addgroup -S envsync && adduser -S envsync -G envsync
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
@@ -36,7 +37,7 @@ USER envsync
 
 EXPOSE 4000
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=45s --retries=8 \
-  CMD ["bun", "-e", "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=8 \
+  CMD wget -q -O /dev/null http://127.0.0.1:4000/health
 
 CMD ["bun", "run", "dist/entrypoint.enterprise.js"]

@@ -2804,7 +2804,7 @@ function apiHealth(services: Map<string, ServiceHealth>, stackName: string): Ser
 	return "degraded";
 }
 
-function waitForApiSlotHealthy(config: DeployConfig, slot: ApiSlot, timeoutSeconds = 180) {
+function waitForApiSlotHealthy(config: DeployConfig, slot: ApiSlot, timeoutSeconds = 300) {
 	if (currentOptions.dryRun) {
 		logDryRun(`Would wait for API ${slot} slot readiness`);
 		return;
