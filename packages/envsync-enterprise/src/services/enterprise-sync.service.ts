@@ -1,7 +1,7 @@
 import { DB } from "envsync-api/ports/db";
 import log, { LogTypes } from "envsync-api/ports/logger";
-import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
-import { EnvService } from "envsync-api/ports/services";
+import { ForbiddenError, NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import { EntitlementService, EnvService } from "envsync-api/ports/services";
 import { EnterpriseProviderSyncService } from "./enterprise-provider-sync.service";
 import { EnvTypeService } from "envsync-api/ports/services";
 import { SecretService } from "envsync-api/ports/services";
@@ -108,6 +108,19 @@ export class EnterpriseSyncService {
 				.execute();
 
 			for (const run of pendingRuns) {
+				try {
+					await EntitlementService.assertOrgFeature(run.org_id, "integrations");
+				} catch (error) {
+					if (error instanceof ForbiddenError) {
+						log(
+							`Skipping sync run ${run.id} for org ${run.org_id}: ${error.code}`,
+							LogTypes.LOGS,
+							"EnterpriseSyncService",
+						);
+						continue;
+					}
+					throw error;
+				}
 				await this.executeRun(run.id);
 			}
 		} finally {

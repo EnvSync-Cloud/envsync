@@ -374,7 +374,22 @@ describe("assertOrgFeature Hosted grants", () => {
 				code: "ORG_FEATURE_MISSING",
 			});
 		}
-		expect(await EntitlementService.getOrgFeatures("org_none")).toEqual([]);
+		expect(await EntitlementService.getOrgFeatures("org_none")).toEqual(["multi_org"]);
+		await expect(EntitlementService.assertOrgFeature("org_none", "multi_org")).resolves.toBeUndefined();
+	});
+
+	test("hosted grant still passes multi_org from the install ceiling", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		OrgFeatureGrantService.setTestOverrides({ grant: hostedGrant(["saml"]) });
+
+		expect(await EntitlementService.getOrgFeatures("org_restricted")).toEqual(
+			expect.arrayContaining(["saml", "multi_org"]),
+		);
+		expect(await EntitlementService.getOrgFeatures("org_restricted")).not.toContain("integrations");
+		await expect(EntitlementService.assertOrgFeature("org_restricted", "multi_org")).resolves.toBeUndefined();
 	});
 
 	test("delete grant restores unrestricted", async () => {
@@ -466,6 +481,11 @@ describe("orgFeatureGuard", () => {
 		const res = await app.request("http://localhost/api/v1/manage/enterprise/providers");
 		expect(res.status).toBe(403);
 		expect(await res.json()).toMatchObject({ code: "ORG_FEATURE_MISSING" });
+
+		const routeSource = await Bun.file(
+			path.join(import.meta.dir, "../../../envsync-enterprise/src/routes/enterprise.route.ts"),
+		).text();
+		expect(routeSource).toContain('orgFeatureGuard("integrations")');
 	});
 });
 

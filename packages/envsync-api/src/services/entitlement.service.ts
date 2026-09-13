@@ -289,7 +289,7 @@ export class EntitlementService {
 			return ceiling;
 		}
 		const granted = new Set(grant.features);
-		return ceiling.filter(feature => granted.has(feature));
+		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
 	}
 
 	public static async assertFeature(feature: EnterpriseFeature) {
@@ -341,6 +341,9 @@ export class EntitlementService {
 
 		const grant = await OrgFeatureGrantService.getGrant(orgId);
 		if (!grant) {
+			return;
+		}
+		if (feature === "multi_org") {
 			return;
 		}
 		if (!grant.features.includes(feature)) {

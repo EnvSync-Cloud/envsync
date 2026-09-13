@@ -8560,7 +8560,8 @@
             "example": [
               "saml",
               "kms"
-            ]
+            ],
+            "minItems": 0
           },
           "source": {
             "type": "string",
@@ -8570,6 +8571,11 @@
               "seed"
             ],
             "example": "billing"
+          },
+          "updated_by": {
+            "type": "string",
+            "minLength": 1,
+            "example": "platform"
           }
         },
         "required": [

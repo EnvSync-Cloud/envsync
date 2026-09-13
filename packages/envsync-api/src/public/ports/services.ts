@@ -4,6 +4,7 @@ export { AuditLogService } from "@/services/audit_log.service";
 export { AuthorizationService } from "@/services/authorization.service";
 export { EnvService } from "@/services/env.service";
 export { EnvTypeService } from "@/services/env_type.service";
+export { EntitlementService } from "@/services/entitlement.service";
 export { LicenseStateService } from "@/services/license-state.service";
 export { OrgFeatureGrantService } from "@/services/org-feature-grant.service";
 export { OrgService } from "@/services/org.service";
