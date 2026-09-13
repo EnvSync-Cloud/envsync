@@ -111,8 +111,12 @@ func (uc *createAppUseCase) validateBusinessRules(app domain.Application) error 
 		return NewValidationError("application name cannot be empty", ErrAppNameEmpty)
 	}
 
+	if strings.TrimSpace(app.Description) == "" {
+		return NewValidationError("application description is required", ErrAppDescriptionRequired)
+	}
+
 	// Validate description length
-	if len(app.Description) > 1 && len(app.Description) > 500 {
+	if len(app.Description) > 500 {
 		return NewValidationError("application description too long", ErrAppDescriptionTooLong)
 	}
 

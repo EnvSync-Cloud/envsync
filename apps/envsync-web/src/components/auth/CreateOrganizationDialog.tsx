@@ -77,7 +77,7 @@ export const CreateOrganizationDialog = ({
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="organization-name" className="text-foreground">
-              Organization name
+              Organization name *
             </Label>
             <Input
               id="organization-name"

@@ -140,7 +140,7 @@ const AcceptUserInvitePage = () => {
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full name</Label>
+                  <Label htmlFor="fullName">Full name *</Label>
                   <Input
                     id="fullName"
                     value={fullName}
@@ -151,7 +151,7 @@ const AcceptUserInvitePage = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Password *</Label>
                   <div className="relative">
                     <Input
                       id="password"

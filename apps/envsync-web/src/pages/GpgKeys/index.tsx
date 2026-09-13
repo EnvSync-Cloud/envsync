@@ -219,7 +219,7 @@ const GpgKeys = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-muted-foreground">Key</Label>
+                  <Label className="text-muted-foreground">Key *</Label>
                   <Select value={signKeyId} onValueChange={setSignKeyId}>
                     <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue placeholder="Select a key" />
@@ -232,7 +232,7 @@ const GpgKeys = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Data</Label>
+                  <Label className="text-muted-foreground">Data *</Label>
                   <Textarea
                     value={signData}
                     onChange={(e) => setSignData(e.target.value)}
@@ -297,7 +297,7 @@ const GpgKeys = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-muted-foreground">Data</Label>
+                  <Label className="text-muted-foreground">Data *</Label>
                   <Textarea
                     value={verifyData}
                     onChange={(e) => setVerifyData(e.target.value)}
@@ -306,7 +306,7 @@ const GpgKeys = () => {
                   />
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Signature</Label>
+                  <Label className="text-muted-foreground">Signature *</Label>
                   <Textarea
                     value={verifySignature}
                     onChange={(e) => setVerifySignature(e.target.value)}
@@ -365,11 +365,11 @@ const GpgKeys = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-muted-foreground">Name</Label>
+                  <Label className="text-muted-foreground">Name *</Label>
                   <Input value={importName} onChange={(e) => setImportName(e.target.value)} className="bg-muted border-border text-foreground" placeholder="Key name" />
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Public Key (armored)</Label>
+                  <Label className="text-muted-foreground">Public Key (armored) *</Label>
                   <Textarea value={importPublicKey} onChange={(e) => setImportPublicKey(e.target.value)} className="bg-muted border-border text-foreground min-h-[100px] font-mono text-xs" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----..." />
                 </div>
                 <div>
@@ -406,15 +406,15 @@ const GpgKeys = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-muted-foreground">Name</Label>
+                  <Label className="text-muted-foreground">Name *</Label>
                   <Input value={genForm.name} onChange={(e) => setGenForm((f) => ({ ...f, name: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="My Signing Key" />
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Email</Label>
+                  <Label className="text-muted-foreground">Email *</Label>
                   <Input value={genForm.email} onChange={(e) => setGenForm((f) => ({ ...f, email: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="dev@example.com" />
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Algorithm</Label>
+                  <Label className="text-muted-foreground">Algorithm *</Label>
                   <Select value={genForm.algorithm} onValueChange={(v) => setGenForm((f) => ({ ...f, algorithm: v as GenerateGpgKeyRequest.algorithm }))}>
                     <SelectTrigger className="bg-muted border-border text-foreground">
                       <SelectValue />

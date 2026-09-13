@@ -126,6 +126,10 @@ export function CreateProviderConnectionModal({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!form.name.trim()) {
+      toast.error("Connection name is required.");
+      return;
+    }
     try {
       await createProviderConnection.mutateAsync({
         provider_type: form.provider_type,
@@ -191,7 +195,7 @@ export function CreateProviderConnectionModal({
           )}
 
           <label className="space-y-2">
-            <span className="text-sm text-muted-foreground">Connection name</span>
+            <span className="text-sm text-muted-foreground">Connection name *</span>
             <Input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}

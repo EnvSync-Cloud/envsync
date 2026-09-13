@@ -141,7 +141,7 @@ const ProjectAccess = () => {
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Subject type</p>
+                  <p className="text-sm text-muted-foreground">Subject type *</p>
                   <Select value={subjectType} onValueChange={(value) => setSubjectType(value as "user" | "team")}>
                     <SelectTrigger className="border-border bg-card text-foreground">
                       <SelectValue />
@@ -153,7 +153,7 @@ const ProjectAccess = () => {
                   </Select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <p className="text-sm text-muted-foreground">Subject</p>
+                  <p className="text-sm text-muted-foreground">Subject *</p>
                   <Select value={subjectId} onValueChange={setSubjectId}>
                       <SelectTrigger className="border-border bg-card text-foreground">
                         <SelectValue placeholder={`Select ${subjectType}`} />
@@ -171,7 +171,7 @@ const ProjectAccess = () => {
 
               <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Access level</p>
+                  <p className="text-sm text-muted-foreground">Access level *</p>
                   <Select value={relation} onValueChange={(value) => setRelation(value as "viewer" | "editor" | "admin")}>
                     <SelectTrigger className="border-border bg-card text-foreground">
                       <SelectValue />

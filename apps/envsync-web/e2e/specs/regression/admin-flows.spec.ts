@@ -8,7 +8,7 @@ test.describe("admin surfaces", () => {
 		await expect(page.getByRole("heading", { name: "API Keys" }).first()).toBeVisible();
 
 		await page.getByRole("button", { name: "Create API Key" }).click();
-		await page.locator("#description").fill(makeName("UI_REGRESSION_KEY"));
+		await page.locator("#api-key-name").fill(makeName("UI_REGRESSION_KEY"));
 
 		const createResponse = waitForTrackedResponse(page, {
 			method: "POST",

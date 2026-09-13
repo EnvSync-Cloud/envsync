@@ -15,6 +15,10 @@ export class AppController {
 			return c.json({ error: "Name is required." }, 400);
 		}
 
+		if (!description) {
+			return c.json({ error: "Description is required." }, 400);
+		}
+
 		if (enable_secrets && !public_key) {
 			const keypair = await generateKeyPair();
 			public_key = keypair.publicKey;

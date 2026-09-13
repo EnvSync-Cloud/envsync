@@ -439,7 +439,7 @@ export default function ProjectIntegrationProvider() {
             </div>
             <form onSubmit={onCreateBinding} className="p-4 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="provider-connection">Provider Connection</Label>
+                <Label htmlFor="provider-connection">Provider Connection *</Label>
                 <select
                   id="provider-connection"
                   value={bindingForm.provider_connection_id}
@@ -539,7 +539,7 @@ export default function ProjectIntegrationProvider() {
             <form onSubmit={onCreateMapping} className="p-4 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="mapping-binding">Binding</Label>
+                  <Label htmlFor="mapping-binding">Binding *</Label>
                   <select
                     id="mapping-binding"
                     value={mappingForm.integration_binding_id}
@@ -558,7 +558,7 @@ export default function ProjectIntegrationProvider() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="mapping-env-type">Environment Type</Label>
+                  <Label htmlFor="mapping-env-type">Environment Type *</Label>
                   <select
                     id="mapping-env-type"
                     value={mappingForm.env_type_id}
@@ -576,7 +576,7 @@ export default function ProjectIntegrationProvider() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target-identifier">{copy.targetLabel}</Label>
+                <Label htmlFor="target-identifier">{copy.targetLabel} *</Label>
                 <Input
                   id="target-identifier"
                   value={mappingForm.target_identifier}

@@ -3,8 +3,8 @@ import "zod-openapi/extend";
 
 export const createAppRequestBodySchema = z
 	.object({
-		name: z.string().openapi({ example: "My Application" }),
-		description: z.string().openapi({ example: "Description of my application" }),
+		name: z.string().min(1).openapi({ example: "My Application" }),
+		description: z.string().min(1).openapi({ example: "Description of my application" }),
 		enable_secrets: z.boolean().optional().openapi({ example: false }),
 		public_key: z
 			.string()

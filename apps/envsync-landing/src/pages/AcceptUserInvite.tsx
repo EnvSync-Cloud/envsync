@@ -156,7 +156,7 @@ const AcceptUserInvite = () => {
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="fullName" className="text-slate-300">Full Name</Label>
+                      <Label htmlFor="fullName" className="text-slate-300">Full Name *</Label>
                       <Input
                         id="fullName"
                         type="text"
@@ -170,7 +170,7 @@ const AcceptUserInvite = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="password" className="text-slate-300">Password</Label>
+                      <Label htmlFor="password" className="text-slate-300">Password *</Label>
                       <div className="relative">
                         <Input
                           id="password"

@@ -502,7 +502,7 @@ export function CreateWebhookDialog({
                 </div>
                 <div className="flex flex-col items-start gap-0.5">
                   <span className="text-sm font-medium text-foreground">
-                    Event Subscriptions
+                    Event Subscriptions *
                   </span>
                   <span
                     className={cn(
@@ -797,7 +797,7 @@ export function CreateWebhookDialog({
                   <Button
                     onClick={onCreate}
                     className="bg-teal-500 hover:bg-teal-600 text-foreground"
-                    disabled={isCreating}
+                    disabled={isCreating || !isBasicInfoComplete || !isConfigComplete || !isEventsComplete}
                   >
                     {isCreating ? (
                       <>
