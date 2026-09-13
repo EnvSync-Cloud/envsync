@@ -86,7 +86,9 @@ export default function SyncOperations() {
     return (
       <div className="mx-auto max-w-7xl space-y-4 px-6 py-8">
         <h1 className="text-2xl font-semibold">Sync operations</h1>
-        <p className="text-sm text-muted-foreground">Management API is not configured.</p>
+        <p className="text-sm text-muted-foreground">
+          Enterprise modules are not enabled on this dashboard build.
+        </p>
       </div>
     );
   }

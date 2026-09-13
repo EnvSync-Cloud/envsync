@@ -50,7 +50,12 @@ export class FGAClient {
 					authorizationModelId: this.modelId || undefined,
 				});
 
-				infoLogs(`OpenFGA connected (store=${this.storeId})`, LogTypes.LOGS, "OpenFGA");
+				infoLogs(
+					`OpenFGA connected (store=${this.storeId}, model=${this.modelId || "unset"}). ` +
+						`Pinned OPENFGA_MODEL_ID is not rewritten on boot; after FGA model changes run \`bun run cli init\` or e2e-setup so org admins pick up can_manage_org_settings.`,
+					LogTypes.LOGS,
+					"OpenFGA",
+				);
 				return;
 			}
 

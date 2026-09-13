@@ -1,3 +1,8 @@
+/**
+ * Mock hierarchy matches model.ts. There is no pinned OpenFGA fixture in-repo;
+ * e2e-setup writes authorizationModelDef. Real admin∪master coverage is in
+ * tests/e2e/flows/org-management.e2e.test.ts (org admin PATCH /api/org).
+ */
 import { beforeEach, describe, expect, test } from "bun:test";
 
 import { MockFGAClient, resetFGA, setupUserOrgTuples } from "../helpers/fga";

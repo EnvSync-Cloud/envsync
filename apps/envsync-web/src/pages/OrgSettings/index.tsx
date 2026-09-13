@@ -7,6 +7,7 @@ import { OrgOverviewCard } from "@/components/org-settings//OrgOverviewCard";
 import { DangerZoneCard } from "@/components/org-settings//DangerZoneCard";
 import { DeleteOrgModal } from "@/components/org-settings//DeleteOrgModal";
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
+import { useAuthContext } from "@/contexts/auth";
 import { useOrgSettings } from "@/hooks/useOrgSettings";
 import { runtimeConfig } from "@/utils/runtime-config";
 
@@ -45,6 +46,12 @@ export const OrgSettings = () => {
     isSaving,
     isDeleting,
   } = useOrgSettings();
+  const { allowedScopes } = useAuthContext();
+  const showIntegrations = allowedScopes.includes("organisation-integrations");
+  const showSync = allowedScopes.includes("organisation-sync");
+  const showLicense = allowedScopes.includes("organisation-license");
+  const showEnterpriseCard =
+    runtimeConfig.edition === "enterprise" && (showIntegrations || showSync || showLicense);
 
   if (isLoading) {
     return <OrgSettingsLoadingPage />;
@@ -59,37 +66,46 @@ export const OrgSettings = () => {
       <OrgSettingsHeader orgName={orgData?.name} />
 
       <BentoGrid className="md:auto-rows-auto">
-        {runtimeConfig.edition === "enterprise" && (
+        {showEnterpriseCard && (
           <BentoGridItem className="md:col-span-3 p-0">
             <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/8 p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-200/80">Enterprise</p>
-                  <h2 className="mt-2 text-xl font-semibold text-foreground">Integrations, sync ops, and license</h2>
+                  <h2 className="mt-2 text-xl font-semibold text-foreground">
+                    {showIntegrations || showSync ? "Integrations, sync ops, and license" : "License"}
+                  </h2>
                   <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                    Manage provider connections, org secrets, sync diagnostics, and license activation in the dashboard
-                    (no separate /manage SPA).
+                    {showIntegrations || showSync
+                      ? "Manage provider connections, org secrets, sync diagnostics, and license activation in the dashboard (no separate /manage SPA)."
+                      : "Activate or verify the enterprise entitlement for this install."}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
-                    to="/organisation/integrations"
-                    className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
-                  >
-                    Integrations
-                  </Link>
-                  <Link
-                    to="/organisation/sync"
-                    className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
-                  >
-                    Sync ops
-                  </Link>
-                  <Link
-                    to="/organisation/license"
-                    className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
-                  >
-                    License
-                  </Link>
+                  {showIntegrations && (
+                    <Link
+                      to="/organisation/integrations"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      Integrations
+                    </Link>
+                  )}
+                  {showSync && (
+                    <Link
+                      to="/organisation/sync"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      Sync ops
+                    </Link>
+                  )}
+                  {showLicense && (
+                    <Link
+                      to="/organisation/license"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      License
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
