@@ -28,12 +28,18 @@ describe("deploy package artifact (OSS)", () => {
 		const pkg = JSON.parse(fs.readFileSync(path.join(packageDir, "package.json"), "utf8")) as {
 			name: string;
 			bin: Record<string, string>;
+			dependencies?: Record<string, string>;
 		};
 		const [{ files }] = runPackDryRun(packageDir);
 		const filePaths = files.map(file => file.path);
 
 		expect(pkg.name).toBe("@envsync-cloud/deploy");
 		expect(pkg.bin["envsync-deploy"]).toBe("dist/index.js");
+		expect(pkg.dependencies).toMatchObject({
+			chalk: expect.any(String),
+			yaml: expect.any(String),
+			zod: expect.any(String),
+		});
 		expect(filePaths).toContain("dist/index.js");
 		expect(filePaths).toContain("README.md");
 		expect(filePaths.some(file => file.startsWith("src/"))).toBe(false);
