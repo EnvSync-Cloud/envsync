@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envsync-api
+  namespace: envsync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: envsync-api
+  template:
+    metadata:
+      labels:
+        app: envsync-api
+    spec:
+      containers:
+        - name: envsync-api
+          image: ghcr.io/envsync-cloud/envsync-api:latest
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_HOST
+              value: postgres
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: S3_ENDPOINT
+              value: http://rustfs:9000
+            - name: S3_BUCKET_URL
+              value: http://rustfs:9000
+            - name: OPENFGA_API_URL
+              value: http://openfga:8090
+            - name: ZITADEL_URL
+              value: http://zitadel:8080
+            - name: MINIKMS_GRPC_ADDR
+              value: minikms:50051
+          ports:
+            - containerPort: 4000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envsync-api
+  namespace: envsync
+spec:
+  selector:
+    app: envsync-api
+  ports:
+    - port: 4000
+      targetPort: 4000 

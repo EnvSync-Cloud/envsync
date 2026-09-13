@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zitadel-db
+  namespace: envsync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zitadel-db
+  template:
+    metadata:
+      labels:
+        app: zitadel-db
+    spec:
+      containers:
+        - name: zitadel-db
+          image: postgres:17
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POSTGRES_DB
+              value: zitadel
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zitadel-db
+  namespace: envsync
+spec:
+  selector:
+    app: zitadel-db
+  ports:
+    - port: 5432
+      targetPort: 5432 

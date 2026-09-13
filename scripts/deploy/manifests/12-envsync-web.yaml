@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envsync-web
+  namespace: envsync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: envsync-web
+  template:
+    metadata:
+      labels:
+        app: envsync-web
+    spec:
+      containers:
+        - name: envsync-web
+          image: ghcr.io/envsync-cloud/envsync-web:latest
+          env:
+            - name: VITE_API_BASE_URL
+              value: PLACEHOLDER_API_DOMAIN
+          ports:
+            - containerPort: 5173
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envsync-web
+  namespace: envsync
+spec:
+  selector:
+    app: envsync-web
+  ports:
+    - port: 5173
+      targetPort: 5173 
