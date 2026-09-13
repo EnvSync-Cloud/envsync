@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Key, Copy } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -26,6 +27,7 @@ export const ApiKeys = () => {
   const copy = useCopy();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [showCreatedKeyModalOpen, setShowCreatedKeyModalOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("");
   const [newKeyDescription, setNewKeyDescription] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [actionLoadingStates, setActionLoadingStates] = useState<
@@ -41,6 +43,7 @@ export const ApiKeys = () => {
   const createApiKey = api.apiKeys.createApiKey({
     onSuccess: ({ data }) => {
       setCreatedKey(data.key);
+      setNewKeyName("");
       setNewKeyDescription("");
       setIsCreateModalOpen(false);
       setShowCreatedKeyModalOpen(true);
@@ -94,8 +97,15 @@ export const ApiKeys = () => {
 
   const handleCreateKey = useCallback(() => {
     if (createApiKey.isPending) return;
-    createApiKey.mutate(newKeyDescription);
-  }, [newKeyDescription, createApiKey]);
+    if (!newKeyName.trim()) {
+      toast.error("Name is required.");
+      return;
+    }
+    createApiKey.mutate({
+      name: newKeyName.trim(),
+      description: newKeyDescription.trim() || undefined,
+    });
+  }, [newKeyName, newKeyDescription, createApiKey]);
 
   const handleDeleteApiKey = useCallback(
     (apiKeyId: string) => {
@@ -224,12 +234,24 @@ export const ApiKeys = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="api-key-name">
+                  Name *
+                </Label>
+                <Input
+                  id="api-key-name"
+                  placeholder="Production API Key"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  disabled={createApiKey.isPending}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="description">
                   Description
                 </Label>
                 <Textarea
                   id="description"
-                  placeholder="Enter a description for this API key..."
+                  placeholder="Optional description for this API key..."
                   value={newKeyDescription}
                   onChange={(e) => setNewKeyDescription(e.target.value)}
                   disabled={createApiKey.isPending}
@@ -246,7 +268,7 @@ export const ApiKeys = () => {
               </Button>
               <Button
                 onClick={handleCreateKey}
-                disabled={createApiKey.isPending}
+                disabled={createApiKey.isPending || !newKeyName.trim()}
               >
                 {createApiKey.isPending ? (
                   <>

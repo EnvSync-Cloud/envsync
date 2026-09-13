@@ -51,6 +51,10 @@ export function CreateOrgSecretModal({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!form.key.trim() || !form.value.trim()) {
+      toast.error("Key and value are required.");
+      return;
+    }
     try {
       const providerRefs = form.providerRefs
         .split(",")
@@ -88,7 +92,7 @@ export function CreateOrgSecretModal({
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <label className="space-y-2">
-            <span className="text-sm text-muted-foreground">Key</span>
+            <span className="text-sm text-muted-foreground">Key *</span>
             <Input
               value={form.key}
               onChange={(event) => setForm((prev) => ({ ...prev, key: event.target.value }))}
@@ -98,7 +102,7 @@ export function CreateOrgSecretModal({
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm text-muted-foreground">Value</span>
+            <span className="text-sm text-muted-foreground">Value *</span>
             <Textarea
               value={form.value}
               onChange={(event) => setForm((prev) => ({ ...prev, value: event.target.value }))}

@@ -126,7 +126,7 @@ const AcceptOrgInvite = () => {
     }
     setFullNameError("");
     
-    if (invite_code && orgName && companySize && fullName && password && !acceptOrgInviteMutation.isPending) {
+    if (invite_code && orgName && companySize && website && fullName && password && !acceptOrgInviteMutation.isPending) {
       trackAction("org_signup_started", {
         "envsync.event_name": "org_signup_started",
         "envsync.event_category": "onboarding",
@@ -141,7 +141,7 @@ const AcceptOrgInvite = () => {
         org_data: {
           name: orgName,
           size: companySize,
-          website: website || "https://example.com"
+          website,
         },
         user_data: {
           full_name: fullName,
@@ -206,7 +206,7 @@ const AcceptOrgInvite = () => {
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="orgName" className="text-slate-300">Organization Name</Label>
+                      <Label htmlFor="orgName" className="text-slate-300">Organization Name *</Label>
                       <Input
                         id="orgName"
                         type="text"
@@ -220,7 +220,7 @@ const AcceptOrgInvite = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="companySize" className="text-slate-300">Company Size</Label>
+                      <Label htmlFor="companySize" className="text-slate-300">Company Size *</Label>
                       <Select value={companySize} onValueChange={setCompanySize} disabled={acceptOrgInviteMutation.isPending}>
                         <SelectTrigger className="bg-slate-700 border-slate-600 text-white focus:border-emerald-500">
                           <SelectValue placeholder="Select company size" />
@@ -236,20 +236,21 @@ const AcceptOrgInvite = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="website" className="text-slate-300">Website (Optional)</Label>
+                      <Label htmlFor="website" className="text-slate-300">Website *</Label>
                       <Input
                         id="website"
                         type="url"
                         placeholder="https://yourcompany.com"
                         value={website}
                         onChange={(e) => setWebsite(e.target.value)}
+                        required
                         disabled={acceptOrgInviteMutation.isPending}
                         className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400 focus:border-emerald-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="fullName" className="text-slate-300">Full Name</Label>
+                      <Label htmlFor="fullName" className="text-slate-300">Full Name *</Label>
                       <Input
                         id="fullName"
                         type="text"
@@ -271,7 +272,7 @@ const AcceptOrgInvite = () => {
                     </div>
 
                     <div>
-                      <Label htmlFor="password" className="text-slate-300">Password</Label>
+                      <Label htmlFor="password" className="text-slate-300">Password *</Label>
                       <div className="relative">
                         <Input
                           id="password"
@@ -308,7 +309,7 @@ const AcceptOrgInvite = () => {
                       type="submit" 
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                       size="lg"
-                      disabled={acceptOrgInviteMutation.isPending || !orgName || !companySize || !fullName || !password}
+                      disabled={acceptOrgInviteMutation.isPending || !orgName || !companySize || !website || !fullName || !password}
                     >
                       {acceptOrgInviteMutation.isPending ? (
                         <>

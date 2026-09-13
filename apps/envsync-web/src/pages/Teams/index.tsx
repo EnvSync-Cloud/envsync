@@ -437,7 +437,7 @@ const Teams = () => {
           </SheetHeader>
           <div className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label className="text-foreground">Name</Label>
+              <Label className="text-foreground">Name *</Label>
               <Input value={name} onChange={(event) => setName(event.target.value)} className="border-border bg-card text-foreground" />
             </div>
             <div className="space-y-2">
@@ -463,7 +463,7 @@ const Teams = () => {
             <Button variant="outline" className="border-border text-foreground" onClick={() => setEditorOpen(false)}>
               Cancel
             </Button>
-            <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={saveTeam}>
+            <Button className="bg-emerald-500 hover:bg-emerald-600" onClick={saveTeam} disabled={!name.trim()}>
               Save
             </Button>
           </SheetFooter>

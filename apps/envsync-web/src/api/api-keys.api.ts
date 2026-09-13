@@ -58,20 +58,25 @@ const useApiKeys = () => {
  * @param {Function<ApiKeyResponse>} [options.onSuccess] - Callback function to execute on successful API key creation.
  * @param {Function<Error>} [options.onError] - Callback function to execute on error during API key creation.
  */
+export type CreateApiKeyVariables = {
+  name: string;
+  description?: string;
+};
+
 const useCreateApiKey = ({
   before,
   onSuccess,
   onError,
-}: MutationOptions<ApiKeyResponse, string> = {}) => {
+}: MutationOptions<ApiKeyResponse, CreateApiKeyVariables> = {}) => {
   const { invalidateApiKeys } = useInvalidateQueries();
 
   return useMutation({
-    mutationFn: async (description: string) => {
-      before?.(description);
+    mutationFn: async ({ name, description }: CreateApiKeyVariables) => {
+      before?.({ name, description });
 
       const data = await sdk.apiKeys.createApiKey({
-        name: description || "Untitled API Key",
-        description: description || null,
+        name,
+        description,
       });
       return data;
     },

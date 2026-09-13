@@ -182,7 +182,7 @@ const Certificates = () => {
                 {!issuedCert ? (
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-muted-foreground">Member Email</Label>
+                      <Label className="text-muted-foreground">Member Email *</Label>
                       <Input
                         list="certificate-user-emails"
                         value={issueEmail}
@@ -340,7 +340,7 @@ const Certificates = () => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label className="text-muted-foreground">Organization Name</Label>
+                      <Label className="text-muted-foreground">Organization Name *</Label>
                       <Input value={caOrgName} onChange={(e) => setCAOrgName(e.target.value)} className="bg-muted border-border text-foreground" placeholder="My Organization" />
                     </div>
                     <div>
@@ -478,7 +478,7 @@ const Certificates = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-muted-foreground">Reason Code (RFC 5280)</Label>
+              <Label className="text-muted-foreground">Reason Code (RFC 5280) *</Label>
               <Input
                 type="number"
                 min={0}

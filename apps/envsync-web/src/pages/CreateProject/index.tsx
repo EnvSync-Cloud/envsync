@@ -104,8 +104,10 @@ export const CreateProject = () => {
         "Project name can only contain letters, numbers, spaces, hyphens, and underscores";
     }
 
-    // Validate description
-    if (formData.description.length > MAX_DESCRIPTION_LENGTH) {
+    // Validate description (required by CreateAppRequest)
+    if (!formData.description.trim()) {
+      errors.description = "Description is required";
+    } else if (formData.description.length > MAX_DESCRIPTION_LENGTH) {
       errors.description = `Description must be less than ${MAX_DESCRIPTION_LENGTH} characters`;
     }
 
@@ -207,7 +209,7 @@ export const CreateProject = () => {
         // Step 1: Create the project
         const response = await sdk.applications.createApp({
           name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
+          description: formData.description.trim(),
           enable_secrets: formData.enableSecrets,
           public_key: formData.enableSecrets
             ? formData.publicKey.trim()
@@ -367,7 +369,7 @@ export const CreateProject = () => {
               {/* Project Description */}
               <div className="space-y-2">
                 <Label htmlFor="project-description" className="text-foreground">
-                  Description
+                  Description *
                 </Label>
                 <Textarea
                   id="project-description"
@@ -389,7 +391,7 @@ export const CreateProject = () => {
                 )}
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>
-                    Optional description to help identify this project
+                    Description to help identify this project
                   </span>
                   <span>
                     {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
@@ -759,7 +761,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                   } as React.FormEvent<HTMLFormElement>)
                 }
                 className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
-                disabled={isCreating || !formData.name.trim()}
+                disabled={isCreating || !formData.name.trim() || !formData.description.trim()}
               >
                 {isCreating ? (
                   <>

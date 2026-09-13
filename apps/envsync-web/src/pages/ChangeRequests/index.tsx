@@ -144,6 +144,7 @@ const ChangeRequests = () => {
 
   const submit = () => {
     if (!selectedAppId || !targetEnvTypeId || !title.trim() || !message.trim()) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
@@ -293,7 +294,7 @@ const ChangeRequests = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-foreground">Project</Label>
+                    <Label className="text-foreground">Project *</Label>
                     <Select value={selectedAppId} onValueChange={setSelectedAppId}>
                       <SelectTrigger
                         data-testid="change-request-project-select"
@@ -314,7 +315,7 @@ const ChangeRequests = () => {
 
                 <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                   <div className="space-y-2">
-                    <Label className="text-foreground">Title</Label>
+                    <Label className="text-foreground">Title *</Label>
                     <Input
                       data-testid="change-request-title-input"
                       value={title}
@@ -333,7 +334,7 @@ const ChangeRequests = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-foreground">Message</Label>
+                  <Label className="text-foreground">Message *</Label>
                   <Textarea
                     data-testid="change-request-message-input"
                     value={message}
@@ -345,7 +346,7 @@ const ChangeRequests = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   {mode === "promotion" && (
                     <div className="space-y-2">
-                      <Label className="text-foreground">Source environment</Label>
+                      <Label className="text-foreground">Source environment *</Label>
                       <Select
                         value={sourceEnvTypeId}
                         onValueChange={setSourceEnvTypeId}
@@ -372,7 +373,7 @@ const ChangeRequests = () => {
                   )}
 
                   <div className="space-y-2">
-                    <Label className="text-foreground">Target environment</Label>
+                    <Label className="text-foreground">Target environment *</Label>
                     <Select
                       value={targetEnvTypeId}
                       onValueChange={setTargetEnvTypeId}
@@ -642,10 +643,11 @@ const ChangeRequests = () => {
                       <ShieldAlert className="size-4" />
                       Review decision
                     </div>
+                    <Label className="mb-2 block text-foreground">Rejection reason *</Label>
                     <Textarea
                       value={rejectReason}
                       onChange={(event) => setRejectReason(event.target.value)}
-                      placeholder="Optional rejection reason"
+                      placeholder="Explain why this request is being rejected"
                       className="border-border bg-card text-foreground"
                     />
                     <div className="mt-3 flex gap-2">
@@ -666,14 +668,17 @@ const ChangeRequests = () => {
                         variant="outline"
                         className="border-red-700 text-red-300 hover:bg-red-950"
                         data-testid="change-request-dialog-reject-button"
-                        onClick={() =>
+                        onClick={() => {
+                          if (!rejectReason.trim()) {
+                            toast.error("Rejection reason is required.");
+                            return;
+                          }
                           reject.mutate({
                             id: selectedRequest.id,
-                            rejection_reason:
-                              rejectReason || "Rejected during review",
+                            rejection_reason: rejectReason.trim(),
                             app_id: selectedRequest.app_id,
-                          })
-                        }
+                          });
+                        }}
                       >
                         <X className="mr-2 size-4" />
                         Reject

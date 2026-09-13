@@ -327,7 +327,7 @@ export const ManageEnvironment = () => {
     <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor={`${mode}-env-name`} className="text-foreground">
-          Name
+          Name *
         </Label>
         <Input
           id={`${mode}-env-name`}

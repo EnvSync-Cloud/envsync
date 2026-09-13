@@ -68,6 +68,24 @@ describe("POST /api/app/", () => {
 		expect(res.status).toBe(400);
 	});
 
+	test("returns 400 when description is missing", async () => {
+		const res = await testRequest("/api/app", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "No Description App" },
+		});
+		expect(res.status).toBe(400);
+	});
+
+	test("returns 400 when description is empty", async () => {
+		const res = await testRequest("/api/app", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "Empty Description App", description: "" },
+		});
+		expect(res.status).toBe(400);
+	});
+
 	test("returns 403 for user without can_manage_apps", async () => {
 		const res = await testRequest("/api/app", {
 			method: "POST",

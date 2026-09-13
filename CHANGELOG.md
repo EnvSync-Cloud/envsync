@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.2
+
+### Fixed
+
+- Required API fields are now required in the dashboard, landing, CLI, and EE forms
+  (app description, API key name, org-invite website, change-request reject reason, and related labels).
+- `POST /api/app` rejects a missing or empty `description` (Zod + controller), with matching CLI validation.
+
+---
+
 ## Unreleased — no-piggyback P2 (ports + design system start)
 
 ### Added
