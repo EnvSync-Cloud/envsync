@@ -1,4 +1,4 @@
-import { KeyRound, Link2, Workflow } from "lucide-react";
+import { Fingerprint, KeyRound, Link2, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
 
@@ -8,7 +8,7 @@ const isOrgAdmin = (user: { role: { is_admin: boolean; is_master: boolean } }) =
 /**
  * Canonical enterprise dashboard modules (D10 / Phase 5b–5c).
  * Wired into the shell via Vite alias `@enterprise-modules`.
- * SSO / Key management pages land in later PRs — do not add them here.
+ * Key management lands in a later PR — do not add it here.
  */
 export const enterpriseWebModules: WebModule[] = [
   {
@@ -124,6 +124,38 @@ export const enterpriseWebModules: WebModule[] = [
     },
     settingsSections: [
       { id: "license", label: "License" },
+    ],
+  },
+  {
+    name: "enterprise-sso",
+    requiredFeature: "saml",
+    routes: [
+      {
+        id: "organisation-sso",
+        layout: "root",
+        path: "organisation/sso",
+        loadComponent: () => import("./pages/OrgSso"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-sso",
+            name: "SSO",
+            href: "/organisation/sso",
+            icon: Fingerprint,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-sso": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("saml")),
+    },
+    settingsSections: [
+      { id: "sso", label: "SSO" },
     ],
   },
 ];

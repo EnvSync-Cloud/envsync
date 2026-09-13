@@ -47,6 +47,7 @@ export default function LicenseSettings() {
   const orgFeatures = user?.features ?? [];
   const installFeatures = system?.entitlement?.features ?? [];
   const showIntegrationsLink = orgFeatures.includes("integrations");
+  const showSsoLink = orgFeatures.includes("saml");
   const busy = activate.isPending || verify.isPending;
 
   const onActivate = async () => {
@@ -90,6 +91,16 @@ export default function LicenseSettings() {
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Activate or verify the self-host enterprise entitlement. Effective org features come from whoami;
               install ceiling is the entitlement catalog on this deployment.
+              {showSsoLink ? (
+                <>
+                  {" "}
+                  SAML identity providers live under{" "}
+                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/sso">
+                    Organisation → SSO
+                  </Link>
+                  .
+                </>
+              ) : null}
               {showIntegrationsLink ? (
                 <>
                   {" "}
