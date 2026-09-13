@@ -134,12 +134,12 @@ func samlDeleteCommand(handler *handlers.SamlHandler) *cli.Command {
 func samlMetadataCommand(handler *handlers.SamlHandler) *cli.Command {
 	return &cli.Command{
 		Name:   "metadata",
-		Usage:  "Retrieve SAML Service Provider metadata XML",
+		Usage:  "Retrieve public SAML Service Provider metadata XML",
 		Action: handler.Metadata,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "id",
-				Usage:    "SAML provider ID",
+				Name:     "org-slug",
+				Usage:    "Organization slug",
 				Required: true,
 			},
 		},
@@ -149,13 +149,17 @@ func samlMetadataCommand(handler *handlers.SamlHandler) *cli.Command {
 func samlSsoCommand(handler *handlers.SamlHandler) *cli.Command {
 	return &cli.Command{
 		Name:   "sso",
-		Usage:  "Initiate SP-initiated SAML SSO flow",
+		Usage:  "Initiate public SP-initiated SAML SSO flow",
 		Action: handler.Sso,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "provider-id",
-				Usage:    "SAML provider ID to initiate SSO with",
+				Name:     "org-slug",
+				Usage:    "Organization slug",
 				Required: true,
+			},
+			&cli.StringFlag{
+				Name:  "provider-id",
+				Usage: "Optional SAML provider ID (must belong to the organization and be enabled)",
 			},
 		},
 	}

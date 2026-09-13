@@ -81,6 +81,11 @@ export class OrgService {
 		return !!org;
 	};
 
+	public static getOrgBySlug = async (slug: string) => {
+		const db = await DB.getInstance();
+		return db.selectFrom("orgs").selectAll().where("slug", "=", slug).executeTakeFirst();
+	};
+
 	public static deleteOrg = async (id: string) => {
 		const db = await DB.getInstance();
 		const [users, teams, apps, envTypes, certs, gpgKeys, orphanedAuthServiceIds] = await Promise.all([

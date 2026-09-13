@@ -140,23 +140,26 @@ func (h *SamlHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (h *SamlHandler) Metadata(ctx context.Context, cmd *cli.Command) error {
-	id := cmd.String("id")
+	orgSlug := cmd.String("org-slug")
 
-	if err := h.metadataUseCase.Execute(ctx, id); err != nil {
+	xml, err := h.metadataUseCase.Execute(ctx, orgSlug)
+	if err != nil {
 		return h.formatError(cmd, err)
 	}
 
 	if cmd.Bool("json") {
-		return h.formatter.FormatJSON(cmd.Writer, map[string]string{"message": "SAML metadata retrieved successfully"})
+		return h.formatter.FormatJSON(cmd.Writer, map[string]string{"metadata": xml})
 	}
 
-	return h.formatter.FormatMetadataSuccess(cmd.Writer, id)
+	_, err = cmd.Writer.Write([]byte(xml))
+	return err
 }
 
 func (h *SamlHandler) Sso(ctx context.Context, cmd *cli.Command) error {
+	orgSlug := cmd.String("org-slug")
 	providerID := cmd.String("provider-id")
 
-	result, err := h.ssoUseCase.Execute(ctx, providerID)
+	result, err := h.ssoUseCase.Execute(ctx, orgSlug, providerID)
 	if err != nil {
 		return h.formatError(cmd, err)
 	}

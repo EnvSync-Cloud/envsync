@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
@@ -15,8 +16,8 @@ type SamlService interface {
 	GetProvider(ctx context.Context, id string) (*domain.SamlProvider, error)
 	UpdateProvider(ctx context.Context, input domain.UpdateSamlProviderInput) error
 	DeleteProvider(ctx context.Context, id string) error
-	GetMetadata(ctx context.Context, id string) error
-	InitiateSso(ctx context.Context, providerID string) (*domain.SamlSsoResult, error)
+	GetMetadata(ctx context.Context, orgSlug string) (string, error)
+	InitiateSso(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error)
 }
 
 type samlService struct{}
@@ -36,9 +37,9 @@ func (s *samlService) CreateProvider(ctx context.Context, input domain.CreateSam
 	req := &sdk.CreateSamlProviderRequest{
 		ProviderType: providerType,
 		Name:         input.Name,
-		EntityId:     input.EntityID,
-		SsoUrl:       input.SsoURL,
-		Certificate:  input.Certificate,
+		EntityId:     strPtrIfNonEmpty(input.EntityID),
+		SsoUrl:       strPtrIfNonEmpty(input.SsoURL),
+		Certificate:  strPtrIfNonEmpty(input.Certificate),
 	}
 
 	resp, err := client.SamlProviders.CreateSamlProvider(ctx, req)
@@ -98,27 +99,39 @@ func (s *samlService) DeleteProvider(ctx context.Context, id string) error {
 	return err
 }
 
-func (s *samlService) GetMetadata(ctx context.Context, id string) error {
+func (s *samlService) GetMetadata(ctx context.Context, orgSlug string) (string, error) {
 	client := repository.GetManagementClient()
-
-	return client.SamlProviders.GetSamlMetadata(ctx, id)
-}
-
-func (s *samlService) InitiateSso(ctx context.Context, providerID string) (*domain.SamlSsoResult, error) {
-	client := repository.GetManagementClient()
-
-	req := &sdk.SamlSsoRequest{
-		ProviderId: providerID,
+	me, err := client.Authentication.Whoami(ctx)
+	if err != nil {
+		return "", err
 	}
 
-	resp, err := client.SamlSso.InitiateSamlSso(ctx, req)
+	orgID := ""
+	if me.Org != nil && me.Org.Slug == orgSlug {
+		orgID = me.Org.Id
+	}
+	for _, membership := range me.Memberships {
+		if membership != nil && membership.OrgSlug == orgSlug {
+			orgID = membership.OrgId
+			break
+		}
+	}
+	if orgID == "" {
+		return "", fmt.Errorf("organization slug %q not found in the current session", orgSlug)
+	}
+
+	return repository.GetPublicSamlMetadata(ctx, orgID)
+}
+
+func (s *samlService) InitiateSso(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error) {
+	resp, err := repository.StartPublicSamlSso(ctx, orgSlug, providerID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &domain.SamlSsoResult{
-		RedirectURL: resp.RedirectUrl,
-		RequestID:   resp.RequestId,
+		RedirectURL: resp.RedirectURL,
+		RequestID:   resp.RequestID,
 	}, nil
 }
 
@@ -130,7 +143,7 @@ func mapSamlResponseToDomain(r *sdk.SamlProviderResponse) *domain.SamlProvider {
 		Name:         r.Name,
 		EntityID:     r.EntityId,
 		SsoURL:       r.SsoUrl,
-		Certificate:  r.Certificate,
+		Certificate:  derefString(r.Certificate),
 		Enabled:      r.Enabled,
 		CreatedAt:    r.CreatedAt,
 		UpdatedAt:    r.UpdatedAt,

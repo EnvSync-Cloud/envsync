@@ -230,6 +230,8 @@ const requiredEeMigrations = [
 	"023_secret_rotation.ts",
 	"024_log_forwarding_configs.ts",
 	"024_saml_providers.ts",
+	"025_saml_sso_login_path.ts",
+	"026_org_feature_grant.ts",
 ];
 for (const name of requiredEeMigrations) {
 	const eeMig = path.join(eeMigrationsDir, name);

@@ -141,6 +141,7 @@ export type { PermissionMessageResponse } from './models/PermissionMessageRespon
 export type { PromotionChangeRequestBody } from './models/PromotionChangeRequestBody';
 export { ProviderConnection } from './models/ProviderConnection';
 export type { ProviderConnectionsResponse } from './models/ProviderConnectionsResponse';
+export type { PublicSamlSsoRequest } from './models/PublicSamlSsoRequest';
 export { PutOrgFeatureGrantRequest } from './models/PutOrgFeatureGrantRequest';
 export type { RegenerateApiKeyResponse } from './models/RegenerateApiKeyResponse';
 export type { RejectChangeRequestBody } from './models/RejectChangeRequestBody';
@@ -171,7 +172,6 @@ export type { RotationStateResponse } from './models/RotationStateResponse';
 export type { RotationStatesResponse } from './models/RotationStatesResponse';
 export { SamlProviderResponse } from './models/SamlProviderResponse';
 export type { SamlProvidersResponse } from './models/SamlProvidersResponse';
-export type { SamlSsoRequest } from './models/SamlSsoRequest';
 export type { SamlSsoResponse } from './models/SamlSsoResponse';
 export type { SecretDiffRequest } from './models/SecretDiffRequest';
 export type { SecretDiffResponse } from './models/SecretDiffResponse';

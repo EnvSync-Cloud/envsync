@@ -18,17 +18,18 @@ func NewGetSamlMetadataUseCase() GetSamlMetadataUseCase {
 	}
 }
 
-func (uc *getSamlMetadataUseCase) Execute(ctx context.Context, id string) error {
+func (uc *getSamlMetadataUseCase) Execute(ctx context.Context, orgSlug string) (string, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "saml.metadata")
 	defer span.End()
 
-	if strings.TrimSpace(id) == "" {
-		return NewValidationError("provider ID is required", ErrProviderIDRequired)
+	if strings.TrimSpace(orgSlug) == "" {
+		return "", NewValidationError("organization slug is required", ErrOrgSlugRequired)
 	}
 
-	if err := uc.service.GetMetadata(ctx, id); err != nil {
-		return NewServiceError("failed to get SAML metadata", err)
+	xml, err := uc.service.GetMetadata(ctx, orgSlug)
+	if err != nil {
+		return "", NewServiceError("failed to get SAML metadata", err)
 	}
 
-	return nil
+	return xml, nil
 }

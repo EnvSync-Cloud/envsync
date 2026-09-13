@@ -14,24 +14,32 @@ type CreateSamlProviderRequest struct {
 	// Human-readable name for this provider
 	Name string `json:"name" url:"-"`
 	// SAML entity ID (issuer) from the IdP metadata
-	EntityId string `json:"entity_id" url:"-"`
+	EntityId *string `json:"entity_id,omitempty" url:"-"`
 	// IdP SSO login URL
-	SsoUrl string `json:"sso_url" url:"-"`
+	SsoUrl *string `json:"sso_url,omitempty" url:"-"`
 	// IdP X.509 certificate (PEM format) for signature validation
-	Certificate string `json:"certificate" url:"-"`
+	Certificate *string `json:"certificate,omitempty" url:"-"`
+	// Optional IdP metadata XML. When set, entity_id, sso_url, and certificate are parsed from it.
+	IdpMetadataXml *string `json:"idp_metadata_xml,omitempty" url:"-"`
+	// Mark this provider as the default IdP for the organization
+	IsDefault *bool `json:"is_default,omitempty" url:"-"`
 }
 
 type SamlProviderResponse struct {
-	Id           string                           `json:"id" url:"id"`
-	OrgId        string                           `json:"org_id" url:"org_id"`
-	ProviderType SamlProviderResponseProviderType `json:"provider_type" url:"provider_type"`
-	Name         string                           `json:"name" url:"name"`
-	EntityId     string                           `json:"entity_id" url:"entity_id"`
-	SsoUrl       string                           `json:"sso_url" url:"sso_url"`
-	Certificate  string                           `json:"certificate" url:"certificate"`
-	Enabled      bool                             `json:"enabled" url:"enabled"`
-	CreatedAt    string                           `json:"created_at" url:"created_at"`
-	UpdatedAt    string                           `json:"updated_at" url:"updated_at"`
+	Id                     string                           `json:"id" url:"id"`
+	OrgId                  string                           `json:"org_id" url:"org_id"`
+	ProviderType           SamlProviderResponseProviderType `json:"provider_type" url:"provider_type"`
+	Name                   string                           `json:"name" url:"name"`
+	EntityId               string                           `json:"entity_id" url:"entity_id"`
+	SsoUrl                 string                           `json:"sso_url" url:"sso_url"`
+	Certificate            *string                          `json:"certificate,omitempty" url:"certificate,omitempty"`
+	CertificateFingerprint *string                          `json:"certificate_fingerprint,omitempty" url:"certificate_fingerprint,omitempty"`
+	CertificateNotAfter    *string                          `json:"certificate_not_after,omitempty" url:"certificate_not_after,omitempty"`
+	Enabled                bool                             `json:"enabled" url:"enabled"`
+	IsDefault              bool                             `json:"is_default" url:"is_default"`
+	LastSsoAt              *string                          `json:"last_sso_at,omitempty" url:"last_sso_at,omitempty"`
+	CreatedAt              string                           `json:"created_at" url:"created_at"`
+	UpdatedAt              string                           `json:"updated_at" url:"updated_at"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -79,11 +87,25 @@ func (s *SamlProviderResponse) GetSsoUrl() string {
 	return s.SsoUrl
 }
 
-func (s *SamlProviderResponse) GetCertificate() string {
+func (s *SamlProviderResponse) GetCertificate() *string {
 	if s == nil {
-		return ""
+		return nil
 	}
 	return s.Certificate
+}
+
+func (s *SamlProviderResponse) GetCertificateFingerprint() *string {
+	if s == nil {
+		return nil
+	}
+	return s.CertificateFingerprint
+}
+
+func (s *SamlProviderResponse) GetCertificateNotAfter() *string {
+	if s == nil {
+		return nil
+	}
+	return s.CertificateNotAfter
 }
 
 func (s *SamlProviderResponse) GetEnabled() bool {
@@ -91,6 +113,20 @@ func (s *SamlProviderResponse) GetEnabled() bool {
 		return false
 	}
 	return s.Enabled
+}
+
+func (s *SamlProviderResponse) GetIsDefault() bool {
+	if s == nil {
+		return false
+	}
+	return s.IsDefault
+}
+
+func (s *SamlProviderResponse) GetLastSsoAt() *string {
+	if s == nil {
+		return nil
+	}
+	return s.LastSsoAt
 }
 
 func (s *SamlProviderResponse) GetCreatedAt() string {
@@ -223,9 +259,11 @@ func (c CreateSamlProviderRequestProviderType) Ptr() *CreateSamlProviderRequestP
 }
 
 type UpdateSamlProviderRequest struct {
-	Name        *string `json:"name,omitempty" url:"-"`
-	EntityId    *string `json:"entity_id,omitempty" url:"-"`
-	SsoUrl      *string `json:"sso_url,omitempty" url:"-"`
-	Certificate *string `json:"certificate,omitempty" url:"-"`
-	Enabled     *bool   `json:"enabled,omitempty" url:"-"`
+	Name           *string `json:"name,omitempty" url:"-"`
+	EntityId       *string `json:"entity_id,omitempty" url:"-"`
+	SsoUrl         *string `json:"sso_url,omitempty" url:"-"`
+	Certificate    *string `json:"certificate,omitempty" url:"-"`
+	Enabled        *bool   `json:"enabled,omitempty" url:"-"`
+	IsDefault      *bool   `json:"is_default,omitempty" url:"-"`
+	IdpMetadataXml *string `json:"idp_metadata_xml,omitempty" url:"-"`
 }

@@ -369,6 +369,8 @@ export interface SamlProvider extends BaseTable {
 	sso_url: ColumnType<string>;
 	certificate: ColumnType<string>;
 	enabled: ColumnType<boolean>;
+	is_default: ColumnType<boolean>;
+	last_sso_at?: ColumnType<Date | null>;
 }
 
 export interface RotationPolicy extends BaseTable {

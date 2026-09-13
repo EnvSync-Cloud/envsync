@@ -1,21 +1,23 @@
-import { type Selectable } from "kysely";
+import { NoResultError, type Selectable } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 
-import { cacheAside, invalidateCache } from "envsync-api/ports/helpers";
+import { cacheAside, cacheGetDel, cacheSetJson, invalidateCache } from "envsync-api/ports/helpers";
 import { CacheKeys, CacheTTL } from "envsync-api/ports/helpers";
 import {
 	buildAuthnRequest,
 	buildSpMetadata,
+	parseIdpMetadataXml,
+	redactSamlCertificate,
+	signRelayState,
 	validateSamlResponse,
-	type SamlAssertionAttributes,
+	verifyRelayState,
 } from "envsync-api/ports/helpers";
+import { samlSessionSecret } from "envsync-api/ports/helpers";
 import { DB } from "envsync-api/ports/db";
-import { orNotFound } from "envsync-api/ports/errors";
+import { AppError, ForbiddenError, NotFoundError, orNotFound } from "envsync-api/ports/errors";
 import { config } from "envsync-api/ports/env";
 import { createKeycloakUser, findKeycloakUserByUsername } from "envsync-api/ports/helpers";
-import { UserService } from "envsync-api/ports/services";
-import { RoleService } from "envsync-api/ports/services";
-import { AuthorizationService } from "envsync-api/ports/services";
+import { EntitlementService, OrgService, UserService } from "envsync-api/ports/services";
 import type { Database } from "envsync-api/ports/types-db";
 
 type SamlProviderRow = Selectable<Database["saml_providers"]>;
@@ -34,18 +36,48 @@ export interface SamlSessionResult {
 	userId: string;
 	email: string;
 	orgId: string;
+	providerId: string;
+	providerType: string;
 }
+
+export type PendingSamlAuthn = {
+	request_id: string;
+	org_id: string;
+	provider_id: string;
+	acs_url: string;
+	created_at: number;
+};
+
+const SSO_NOT_AVAILABLE = () =>
+	new AppError("SSO is not available for this organization.", 404, "SSO_NOT_AVAILABLE");
 
 export class SamlService {
 	public static createProvider = async (data: {
 		org_id: string;
 		provider_type: SamlProviderType;
 		name: string;
-		entity_id: string;
-		sso_url: string;
-		certificate: string;
+		entity_id?: string;
+		sso_url?: string;
+		certificate?: string;
+		idp_metadata_xml?: string;
+		is_default?: boolean;
 	}): Promise<SamlProviderRow> => {
+		const parsed = data.idp_metadata_xml ? parseIdpMetadataXml(data.idp_metadata_xml) : null;
+		const entityId = data.entity_id || parsed?.entity_id;
+		const ssoUrl = data.sso_url || parsed?.sso_url;
+		const certificate = data.certificate || parsed?.certificate;
+		if (!entityId || !ssoUrl || !certificate) {
+			throw new AppError(
+				"Provide idp_metadata_xml or entity_id, sso_url, and certificate",
+				400,
+				"VALIDATION_ERROR",
+			);
+		}
+
 		const db = await DB.getInstance();
+		if (data.is_default) {
+			await SamlService.clearDefaultForOrg(data.org_id);
+		}
 
 		const provider = await db
 			.insertInto("saml_providers")
@@ -54,10 +86,11 @@ export class SamlService {
 				org_id: data.org_id,
 				provider_type: data.provider_type,
 				name: data.name,
-				entity_id: data.entity_id,
-				sso_url: data.sso_url,
-				certificate: data.certificate,
+				entity_id: entityId,
+				sso_url: ssoUrl,
+				certificate,
 				enabled: true,
+				is_default: data.is_default ?? false,
 				created_at: new Date(),
 				updated_at: new Date(),
 			})
@@ -101,6 +134,8 @@ export class SamlService {
 			sso_url?: string;
 			certificate?: string;
 			enabled?: boolean;
+			is_default?: boolean;
+			idp_metadata_xml?: string;
 		},
 	): Promise<void> => {
 		const db = await DB.getInstance();
@@ -115,9 +150,27 @@ export class SamlService {
 			id,
 		);
 
+		const parsed = data.idp_metadata_xml ? parseIdpMetadataXml(data.idp_metadata_xml) : null;
+		const patch: Record<string, unknown> = {
+			updated_at: new Date(),
+		};
+		if (data.name !== undefined) patch.name = data.name;
+		if (data.enabled !== undefined) patch.enabled = data.enabled;
+		if (data.entity_id !== undefined || parsed?.entity_id) patch.entity_id = data.entity_id || parsed?.entity_id;
+		if (data.sso_url !== undefined || parsed?.sso_url) patch.sso_url = data.sso_url || parsed?.sso_url;
+		if (data.certificate !== undefined || parsed?.certificate) {
+			patch.certificate = data.certificate || parsed?.certificate;
+		}
+		if (data.is_default !== undefined) {
+			if (data.is_default) {
+				await SamlService.clearDefaultForOrg(existing.org_id);
+			}
+			patch.is_default = data.is_default;
+		}
+
 		await db
 			.updateTable("saml_providers")
-			.set({ ...data, updated_at: new Date() })
+			.set(patch)
 			.where("id", "=", id)
 			.execute();
 
@@ -142,60 +195,203 @@ export class SamlService {
 		await invalidateCache(CacheKeys.samlProvidersByOrg(existing.org_id));
 	};
 
-	public static initiateSso = async (
-		providerId: string,
-		acsUrl: string,
-	): Promise<{ redirectUrl: string; requestId: string }> => {
-		const provider = await SamlService.getProvider(providerId);
-
-		if (!provider.enabled) {
-			throw new Error("SAML provider is disabled");
+	public static startByOrgSlug = async (
+		slug: string,
+		providerId?: string,
+	): Promise<{ redirectUrl: string; requestId: string; orgId: string; provider: SamlProviderRow }> => {
+		const org = await OrgService.getOrgBySlug(slug);
+		if (!org) {
+			throw SSO_NOT_AVAILABLE();
 		}
 
-		const spEntityId = SamlService.buildSpEntityId(provider.org_id);
+		try {
+			await EntitlementService.assertFeature("saml");
+			await EntitlementService.assertOrgFeature(org.id, "saml");
+		} catch (err) {
+			if (err instanceof ForbiddenError || (err instanceof AppError && err.statusCode === 403)) {
+				throw SSO_NOT_AVAILABLE();
+			}
+			throw err;
+		}
+
+		const provider = await SamlService.pickEnabledProvider(org.id, providerId);
+		const acsUrl = SamlService.buildAcsUrl(org.id);
+		const spEntityId = SamlService.buildSpEntityId(org.id);
 		const { xml, requestId } = buildAuthnRequest(spEntityId, acsUrl, provider.sso_url);
 
-		const encodedRequest = btoa(xml);
-		const redirectUrl = `${provider.sso_url}?SAMLRequest=${encodeURIComponent(encodedRequest)}`;
+		const pending: PendingSamlAuthn = {
+			request_id: requestId,
+			org_id: org.id,
+			provider_id: provider.id,
+			acs_url: acsUrl,
+			created_at: Date.now(),
+		};
+		await cacheSetJson(CacheKeys.samlAuthn(requestId), pending, CacheTTL.SAML_AUTHN);
 
-		return { redirectUrl, requestId };
+		const relayState = signRelayState(
+			{ v: 1, rid: requestId, org: org.id, pid: provider.id },
+			samlSessionSecret(),
+		);
+		const encodedRequest = btoa(xml);
+		const redirectUrl = SamlService.buildIdpRedirectUrl(provider.sso_url, encodedRequest, relayState);
+
+		return { redirectUrl, requestId, orgId: org.id, provider };
 	};
 
-	public static handleAcs = async (
-		providerId: string,
+	public static handleBoundAcs = async (
+		orgId: string,
 		samlResponseBase64: string,
-		acsUrl: string,
+		relayState: string,
 	): Promise<SamlSessionResult> => {
-		const provider = await SamlService.getProvider(providerId);
-
-		if (!provider.enabled) {
-			throw new Error("SAML provider is disabled");
+		const bound = verifyRelayState(relayState, samlSessionSecret());
+		if (bound.org !== orgId) {
+			throw new Error("RelayState organization mismatch");
 		}
 
+		const pending = await cacheGetDel<PendingSamlAuthn>(CacheKeys.samlAuthn(bound.rid));
+		if (!pending || pending.org_id !== orgId || pending.org_id !== bound.org) {
+			throw new Error("Unknown or expired SAML request");
+		}
+		if (pending.provider_id !== bound.pid) {
+			throw new Error("RelayState provider mismatch");
+		}
+
+		const provider = await SamlService.getProvider(pending.provider_id);
+		if (!provider.enabled || provider.org_id !== orgId) {
+			throw new Error("SAML provider is not available");
+		}
+
+		const acsUrl = SamlService.buildAcsUrl(orgId);
+		const spEntityId = SamlService.buildSpEntityId(orgId);
 		const result = await validateSamlResponse(
 			samlResponseBase64,
 			provider.certificate,
 			acsUrl,
+			spEntityId,
 		);
+
+		if (result.inResponseTo !== pending.request_id) {
+			throw new Error("SAML InResponseTo mismatch");
+		}
 
 		const { email, firstName, lastName } = result.attributes;
 		const fullName = [firstName, lastName].filter(Boolean).join(" ") || email;
-		const orgId = provider.org_id;
-
-		// Resolve or create user in the organization
 		const userId = await SamlService.resolveSamlUser({
 			email,
 			fullName,
 			orgId,
 		});
 
-		return { userId, email, orgId };
+		const db = await DB.getInstance();
+		await db
+			.updateTable("saml_providers")
+			.set({ last_sso_at: new Date(), updated_at: new Date() })
+			.where("id", "=", provider.id)
+			.execute();
+		await invalidateCache(CacheKeys.samlProvidersByOrg(orgId));
+
+		return {
+			userId,
+			email,
+			orgId,
+			providerId: provider.id,
+			providerType: provider.provider_type,
+		};
 	};
 
 	public static getMetadata = async (orgId: string): Promise<string> => {
 		const spEntityId = SamlService.buildSpEntityId(orgId);
 		const acsUrl = SamlService.buildAcsUrl(orgId);
 		return buildSpMetadata(spEntityId, acsUrl);
+	};
+
+	public static assertPublicOrgSaml = async (orgId: string): Promise<void> => {
+		try {
+			const org = await OrgService.getOrg(orgId);
+			if (!org) throw SSO_NOT_AVAILABLE();
+			await EntitlementService.assertFeature("saml");
+			await EntitlementService.assertOrgFeature(org.id, "saml");
+		} catch (err) {
+			if (
+				err instanceof ForbiddenError
+				|| err instanceof NotFoundError
+				|| err instanceof NoResultError
+				|| (err instanceof AppError && (err.statusCode === 403 || err.statusCode === 404))
+			) {
+				throw SSO_NOT_AVAILABLE();
+			}
+			throw err;
+		}
+	};
+
+	public static redactProvider = (
+		provider: SamlProviderRow,
+		includeCertificate = false,
+	) => {
+		const redacted = redactSamlCertificate(provider.certificate);
+		return {
+			...provider,
+			certificate: includeCertificate ? provider.certificate : undefined,
+			certificate_fingerprint: redacted.fingerprint,
+			certificate_not_after: redacted.notAfter,
+		};
+	};
+
+	public static apiBaseUrl = (): string => {
+		return (config.API_URL || `http://localhost:${config.PORT || 4000}`).replace(/\/$/, "");
+	};
+
+	public static buildSpEntityId = (orgId: string): string => {
+		return `${SamlService.apiBaseUrl()}/api/saml/metadata/${orgId}`;
+	};
+
+	public static buildAcsUrl = (orgId: string): string => {
+		return `${SamlService.apiBaseUrl()}/api/saml/acs/${orgId}`;
+	};
+
+	private static pickEnabledProvider = async (
+		orgId: string,
+		providerId?: string,
+	): Promise<SamlProviderRow> => {
+		if (providerId) {
+			try {
+				const provider = await SamlService.getProvider(providerId);
+				if (provider.org_id !== orgId || !provider.enabled) {
+					throw SSO_NOT_AVAILABLE();
+				}
+				return provider;
+			} catch (err) {
+				if (err instanceof AppError && err.code === "SSO_NOT_AVAILABLE") throw err;
+				throw SSO_NOT_AVAILABLE();
+			}
+		}
+
+		const enabled = (await SamlService.getProvidersByOrg(orgId)).filter(provider => provider.enabled);
+		const defaults = enabled.filter(provider => provider.is_default);
+		if (defaults.length === 1) return defaults[0];
+		if (enabled.length === 1) return enabled[0];
+		throw SSO_NOT_AVAILABLE();
+	};
+
+	private static clearDefaultForOrg = async (orgId: string): Promise<void> => {
+		const db = await DB.getInstance();
+		await db
+			.updateTable("saml_providers")
+			.set({ is_default: false, updated_at: new Date() })
+			.where("org_id", "=", orgId)
+			.where("is_default", "=", true)
+			.execute();
+	};
+
+	private static buildIdpRedirectUrl = (
+		ssoUrl: string,
+		encodedRequest: string,
+		relayState: string,
+	): string => {
+		const url = new URL(ssoUrl);
+		url.searchParams.set("SAMLRequest", encodedRequest);
+		url.searchParams.set("RelayState", relayState);
+		return url.toString();
 	};
 
 	/**
@@ -207,20 +403,14 @@ export class SamlService {
 		fullName: string;
 		orgId: string;
 	}): Promise<string> => {
-		// Check if user already exists in this org
 		const existing = await UserService.getOrgUserByEmail(input.orgId, input.email);
 		if (existing) {
 			await UserService.touchLastLogin(existing.id);
 			return existing.id;
 		}
 
-		// Ensure Keycloak identity exists (idempotent)
 		const keycloakId = await SamlService.ensureKeycloakIdentity(input.email, input.fullName);
-
-		// Find the default Developer role for this org
 		const roleId = await SamlService.getDefaultMemberRoleId(input.orgId);
-
-		// Create the membership record
 		const membership = await UserService.createMembershipForExistingIdentity({
 			email: input.email,
 			full_name: input.fullName,
@@ -235,7 +425,8 @@ export class SamlService {
 
 	/**
 	 * Ensure a Keycloak user exists for the given email. Returns the Keycloak user ID.
-	 * If the user already exists in Keycloak, returns the existing ID.
+	 * JIT users are created without a usable password. Pre-existing Keycloak users
+	 * keep their credentials.
 	 */
 	private static ensureKeycloakIdentity = async (
 		email: string,
@@ -248,24 +439,17 @@ export class SamlService {
 		const firstName = parts[0]?.slice(0, 200) ?? "User";
 		const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
 
-		// Generate a random password (SAML users authenticate via IdP, not password)
-		const randomPassword = crypto.randomUUID() + crypto.randomUUID();
-
 		const created = await createKeycloakUser({
 			userName: email,
 			email,
 			firstName,
 			lastName,
-			password: randomPassword,
+			passwordEnabled: false,
 		});
 
 		return created.id;
 	};
 
-	/**
-	 * Get the default "Developer" role ID for an organization.
-	 * Falls back to the first available role if Developer doesn't exist.
-	 */
 	private static getDefaultMemberRoleId = async (orgId: string): Promise<string> => {
 		const db = await DB.getInstance();
 
@@ -278,7 +462,6 @@ export class SamlService {
 
 		if (developerRole) return developerRole.id;
 
-		// Fallback: first non-admin role
 		const fallbackRole = await db
 			.selectFrom("org_role")
 			.select("id")
@@ -288,7 +471,6 @@ export class SamlService {
 
 		if (fallbackRole) return fallbackRole.id;
 
-		// Last resort: first role in the org
 		const anyRole = await orNotFound(
 			db
 				.selectFrom("org_role")
@@ -300,15 +482,5 @@ export class SamlService {
 		);
 
 		return anyRole.id;
-	};
-
-	private static buildSpEntityId = (orgId: string): string => {
-		const baseUrl = config.DASHBOARD_URL || "http://localhost:8001";
-		return `${baseUrl}/api/saml/metadata/${orgId}`;
-	};
-
-	private static buildAcsUrl = (orgId: string): string => {
-		const baseUrl = config.API_URL || "http://localhost:4000";
-		return `${baseUrl}/api/saml/acs/${orgId}`;
 	};
 }

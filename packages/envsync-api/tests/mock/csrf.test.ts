@@ -56,6 +56,24 @@ describe("csrfMiddleware", () => {
 		expect(await res.json()).toEqual({ ok: true });
 	});
 
+	test("allows public SAML ACS and start POSTs with leftover cookies", async () => {
+		const app = makeApp();
+		app.post("/api/saml/acs/org-1", ctx => ctx.json({ ok: true }));
+		app.post("/api/saml/sso/acme", ctx => ctx.json({ ok: true }));
+
+		const acs = await app.request("http://localhost/api/saml/acs/org-1", {
+			method: "POST",
+			headers: { Cookie: "access_token=session-token" },
+		});
+		expect(acs.status).toBe(200);
+
+		const start = await app.request("http://localhost/api/saml/sso/acme", {
+			method: "POST",
+			headers: { Cookie: "access_token=session-token" },
+		});
+		expect(start.status).toBe(200);
+	});
+
 	test("rejects cookie-auth request when csrf header and cookie do not match", async () => {
 		const app = makeApp();
 

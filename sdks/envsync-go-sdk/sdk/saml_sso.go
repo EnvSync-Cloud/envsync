@@ -8,9 +8,9 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
-type SamlSsoRequest struct {
-	// SAML provider ID to initiate SSO with
-	ProviderId string `json:"provider_id" url:"-"`
+type PublicSamlSsoRequest struct {
+	// Optional SAML provider ID. Must belong to the organization and be enabled.
+	ProviderId *string `json:"provider_id,omitempty" url:"-"`
 }
 
 type SamlSsoResponse struct {

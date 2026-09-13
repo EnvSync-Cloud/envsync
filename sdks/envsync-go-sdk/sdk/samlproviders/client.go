@@ -122,7 +122,7 @@ func (c *Client) CreateSamlProvider(
 	return response, nil
 }
 
-// Retrieve a specific SAML provider
+// Retrieve a specific SAML provider. Certificate PEM is omitted unless include=certificate.
 func (c *Client) GetSamlProvider(
 	ctx context.Context,
 	id string,
@@ -269,7 +269,7 @@ func (c *Client) DeleteSamlProvider(
 	return response, nil
 }
 
-// Retrieve SAML Service Provider metadata XML for the organization
+// Redirects to the public SP metadata URL for this organization
 func (c *Client) GetSamlMetadata(
 	ctx context.Context,
 	id string,

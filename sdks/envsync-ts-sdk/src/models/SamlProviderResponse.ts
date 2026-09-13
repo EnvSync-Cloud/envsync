@@ -9,8 +9,12 @@ export type SamlProviderResponse = {
     name: string;
     entity_id: string;
     sso_url: string;
-    certificate: string;
+    certificate?: string;
+    certificate_fingerprint?: string;
+    certificate_not_after?: string | null;
     enabled: boolean;
+    is_default: boolean;
+    last_sso_at?: string | null;
     created_at: string;
     updated_at: string;
 };

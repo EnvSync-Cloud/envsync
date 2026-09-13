@@ -32,21 +32,23 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 			]),
 	]);
 
-	const normalizedMemberships = memberships.length > 0
-		? memberships
-		: [
-			{
-				user_id: user.id,
-				org_id: org.id,
-				org_name: org.name,
-				org_slug: org.slug,
-				role_id: role.id,
-				role_name: role.name,
-				is_admin: role.is_admin,
-				is_master: role.is_master,
-				is_active: true,
-			},
-		];
+	const currentMembership = {
+		user_id: user.id,
+		org_id: org.id,
+		org_name: org.name,
+		org_slug: org.slug,
+		role_id: role.id,
+		role_name: role.name,
+		is_admin: role.is_admin,
+		is_master: role.is_master,
+		is_active: true,
+	};
+
+	const normalizedMemberships = options?.authType === "saml"
+		? [currentMembership]
+		: memberships.length > 0
+			? memberships
+			: [currentMembership];
 
 	const policy = EditionPolicyService.getPolicySnapshot();
 	const [features, install_features] = await Promise.all([
@@ -85,6 +87,16 @@ export class AuthController {
 	public static readonly switchOrg = async (c: Context) => {
 		if (!readAccessToken(c)) {
 			return c.json({ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" }, 401);
+		}
+
+		if (c.get("auth_type") === "saml") {
+			return c.json(
+				{
+					error: "SSO sessions are pinned to a single organization.",
+					code: "AUTH_SSO_ORG_PINNED",
+				},
+				403,
+			);
 		}
 
 		const payload = await c.req.json<{ org_id: string }>();

@@ -45,22 +45,20 @@ export const authMiddleware = (): MiddlewareHandler => {
 			return ctx.json({ error: "No token provided", code: "AUTH_MISSING" }, 401);
 		}
 
-		// Determine if this is an OIDC token or a Keycloak JWT
-		const authType = usesBearerToken && token ? detectAuthType(token) : "JWT";
+		const verifyAs = token ? detectAuthType(token) : "API_KEY";
 
-		const resolveJwt = async (jwtToken: string) => validateAccess({
-			token: jwtToken.replace("Bearer ", ""),
-			type: authType,
+		const resolveCredential = async (rawToken: string) => validateAccess({
+			token: rawToken.replace(/^Bearer\s+/i, ""),
+			type: verifyAs,
 		});
 
 		try {
 			let access_info: Awaited<ReturnType<typeof validateAccess>>;
 			if (token) {
 				try {
-					access_info = await resolveJwt(token);
+					access_info = await resolveCredential(token);
 				} catch (jwtError) {
-					// OIDC tokens don't support refresh — fail immediately
-					if (authType === "OIDC") {
+					if (verifyAs === "OIDC") {
 						return ctx.json(
 							{
 								error: jwtError instanceof Error ? jwtError.message : "OIDC authentication failed",
@@ -68,6 +66,20 @@ export const authMiddleware = (): MiddlewareHandler => {
 							},
 							401,
 						);
+					}
+
+					if (verifyAs === "SAML") {
+						if (usesCookieSession) {
+							clearWebAuthCookies(ctx);
+							return ctx.json(
+								{
+									error: "Session expired. Sign in again.",
+									code: "AUTH_RELOGIN_REQUIRED",
+								},
+								401,
+							);
+						}
+						throw jwtError;
 					}
 
 					if (!usesCookieSession || !refreshToken) {
@@ -82,7 +94,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 						);
 						setWebAuthCookies(ctx, refreshed);
 						token = refreshed.access_token;
-						access_info = await resolveJwt(token);
+						access_info = await resolveCredential(token);
 					} catch {
 						clearWebAuthCookies(ctx);
 						return ctx.json(
@@ -102,7 +114,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 			}
 
 			let user = await UserService.getUser(access_info.user_id);
-			if (usesCookieSession && access_info.auth_service_id) {
+			if (verifyAs !== "SAML" && usesCookieSession && access_info.auth_service_id) {
 				const requestedMembershipId = readActiveMembershipCookie(ctx);
 				user = await UserService.resolveActiveMembershipByIdpId(
 					access_info.auth_service_id,
@@ -113,7 +125,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 					await UserService.touchLastLogin(user.id);
 					setActiveMembershipCookie(ctx, user.id);
 				}
-			} else if (usesBearerToken && access_info.auth_service_id && requestedOrgHeader !== undefined) {
+			} else if (verifyAs !== "SAML" && usesBearerToken && access_info.auth_service_id && requestedOrgHeader !== undefined) {
 				const requestedOrgId = requestedOrgHeader.trim();
 				if (!requestedOrgId) {
 					throw new AppError(
