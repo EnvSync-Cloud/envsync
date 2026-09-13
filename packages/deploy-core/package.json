@@ -13,6 +13,15 @@
     "dist",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EnvSync-Cloud/envsync.git",
+    "directory": "packages/deploy-core"
+  },
+  "homepage": "https://github.com/EnvSync-Cloud/envsync/tree/main/packages/deploy-core#readme",
+  "bugs": {
+    "url": "https://github.com/EnvSync-Cloud/envsync/issues"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --out-dir dist",
     "test": "bun test"
