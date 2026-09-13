@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual, X509Certificate } from "node:crypto";
+import { deflateRawSync } from "node:zlib";
 import { v4 as uuidv4 } from "uuid";
 
 const SAML_NS = "urn:oasis:names:tc:SAML:2.0:assertion";
@@ -911,9 +912,9 @@ function extractAttributeValues(xml: string, name: string): string[] | null {
 // Utility
 // ---------------------------------------------------------------------------
 
+/** HTTP-Redirect SAMLRequest: raw DEFLATE (RFC 1951) then base64. Caller URL-encodes. */
 export function deflateAndEncode(xml: string): string {
-	const encoded = btoa(xml);
-	return encodeURIComponent(encoded);
+	return deflateRawSync(Buffer.from(xml, "utf8")).toString("base64");
 }
 
 export type SamlRelayStatePayload = {

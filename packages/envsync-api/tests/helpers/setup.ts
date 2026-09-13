@@ -209,6 +209,7 @@ if (!isE2E) {
 				findKeycloakUserByUsername: async () => null,
 				getKeycloakUserById: async () => null,
 				setKeycloakUserPassword: async () => {},
+				keycloakUserHasPassword: async () => true,
 				keycloakTokenExchange: async (code: string) => ({
 					access_token: `mock-access-token-${code}`,
 					id_token: `mock-id-token-${code}`,

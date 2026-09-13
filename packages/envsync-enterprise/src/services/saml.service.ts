@@ -6,6 +6,7 @@ import { CacheKeys, CacheTTL } from "envsync-api/ports/helpers";
 import {
 	buildAuthnRequest,
 	buildSpMetadata,
+	deflateAndEncode,
 	parseIdpMetadataXml,
 	redactSamlCertificate,
 	signRelayState,
@@ -16,6 +17,7 @@ import { samlSessionSecret } from "envsync-api/ports/helpers";
 import { DB } from "envsync-api/ports/db";
 import { AppError, ForbiddenError, NotFoundError, orNotFound } from "envsync-api/ports/errors";
 import { config } from "envsync-api/ports/env";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 import { createKeycloakUser, findKeycloakUserByUsername } from "envsync-api/ports/helpers";
 import { EntitlementService, OrgService, UserService } from "envsync-api/ports/services";
 import type { Database } from "envsync-api/ports/types-db";
@@ -232,7 +234,7 @@ export class SamlService {
 			{ v: 1, rid: requestId, org: org.id, pid: provider.id },
 			samlSessionSecret(),
 		);
-		const encodedRequest = btoa(xml);
+		const encodedRequest = deflateAndEncode(xml);
 		const redirectUrl = SamlService.buildIdpRedirectUrl(provider.sso_url, encodedRequest, relayState);
 
 		return { redirectUrl, requestId, orgId: org.id, provider };
@@ -302,6 +304,7 @@ export class SamlService {
 	public static getMetadata = async (orgId: string): Promise<string> => {
 		const spEntityId = SamlService.buildSpEntityId(orgId);
 		const acsUrl = SamlService.buildAcsUrl(orgId);
+		SamlService.warnIfLocalhostSpUrl(spEntityId);
 		return buildSpMetadata(spEntityId, acsUrl);
 	};
 
@@ -339,6 +342,21 @@ export class SamlService {
 
 	public static apiBaseUrl = (): string => {
 		return (config.API_URL || `http://localhost:${config.PORT || 4000}`).replace(/\/$/, "");
+	};
+
+	private static warnIfLocalhostSpUrl = (spEntityId: string): void => {
+		try {
+			const host = new URL(spEntityId).hostname;
+			if (host === "localhost" || host === "127.0.0.1") {
+				infoLogs(
+					`SAML SP entity ID is ${spEntityId}. Set API_URL to a public origin or IdPs cannot POST back to ACS.`,
+					LogTypes.ERROR,
+					"SAML",
+				);
+			}
+		} catch {
+			// ignore unparseable entity IDs
+		}
 	};
 
 	public static buildSpEntityId = (orgId: string): string => {

@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 
+import { inflateRawSync } from "node:zlib";
+
 import { issueSamlSessionToken, samlSessionSecret } from "@/helpers/access";
-import { signRelayState, verifyRelayState } from "@/helpers/saml";
+import { deflateAndEncode, signRelayState, verifyRelayState } from "@/helpers/saml";
 import { CacheClient } from "@/libs/cache";
 import { AppError } from "@/libs/errors";
 import { config } from "@/utils/env";
@@ -97,6 +99,18 @@ describe("public SAML routes", () => {
 		expect(body.redirect_url).toContain("SAMLRequest=");
 		expect(body.redirect_url).toContain("RelayState=");
 		expect(body.request_id.startsWith("_")).toBe(true);
+		const requestParam = new URL(body.redirect_url).searchParams.get("SAMLRequest");
+		expect(requestParam).toBeTruthy();
+		const inflated = inflateRawSync(Buffer.from(requestParam ?? "", "base64")).toString("utf8");
+		expect(inflated).toContain("<samlp:AuthnRequest");
+		expect(inflated).toContain(body.request_id);
+	});
+
+	test("deflateAndEncode is raw DEFLATE then base64, not zlib or plain btoa", () => {
+		const xml = "<samlp:AuthnRequest>ok</samlp:AuthnRequest>";
+		const encoded = deflateAndEncode(xml);
+		expect(encoded).not.toBe(Buffer.from(xml, "utf8").toString("base64"));
+		expect(inflateRawSync(Buffer.from(encoded, "base64")).toString("utf8")).toBe(xml);
 	});
 
 	test("GET public metadata for unknown org returns the same 404 body", async () => {
