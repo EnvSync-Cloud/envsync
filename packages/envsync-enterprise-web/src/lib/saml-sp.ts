@@ -36,6 +36,35 @@ export function publishedSpUrls(apiBaseUrl: string, orgId: string, orgSlug: stri
   };
 }
 
+function decodeXmlAttr(value: string) {
+  return value
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
+}
+
+/** Prefer server-published identifiers from SP metadata over dashboard apiBaseUrl. */
+export function parseSpMetadataXml(xml: string) {
+  const entityId = xml.match(/\bentityID="([^"]+)"/i)?.[1];
+  const acsUrl = xml.match(/<md:AssertionConsumerService\b[^>]*\bLocation="([^"]+)"/i)?.[1]
+    ?? xml.match(/<AssertionConsumerService\b[^>]*\bLocation="([^"]+)"/i)?.[1];
+  if (!entityId && !acsUrl) return null;
+  return {
+    entityId: entityId ? decodeXmlAttr(entityId) : undefined,
+    acsUrl: acsUrl ? decodeXmlAttr(acsUrl) : undefined,
+  };
+}
+
+export function startUrlFromEntityId(entityId: string, orgSlug: string) {
+  try {
+    return `${new URL(entityId).origin}/api/saml/sso/${encodeURIComponent(orgSlug)}`;
+  } catch {
+    return null;
+  }
+}
+
 export function isSafeHttpRedirectUrl(value: string) {
   try {
     const parsed = new URL(value);

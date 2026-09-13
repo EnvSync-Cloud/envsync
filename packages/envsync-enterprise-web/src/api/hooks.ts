@@ -497,15 +497,28 @@ export function useDeleteSamlProvider() {
   });
 }
 
+export async function getPublicSpMetadata(orgId: string) {
+  try {
+    return await getEnterpriseSDK().samlSso.getPublicSamlMetadata(orgId);
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export function useSpMetadata(orgId?: string) {
+  return useQuery({
+    queryKey: ["enterprise", "saml-sp-metadata", orgId],
+    queryFn: async () => {
+      if (!orgId) throw new Error("orgId is required");
+      return getPublicSpMetadata(orgId);
+    },
+    enabled: isEnterpriseUiEnabled() && Boolean(orgId),
+  });
+}
+
 export function useDownloadSpMetadata() {
   return useMutation({
-    mutationFn: async (orgId: string) => {
-      try {
-        return await getEnterpriseSDK().samlSso.getPublicSamlMetadata(orgId);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
+    mutationFn: getPublicSpMetadata,
   });
 }
 

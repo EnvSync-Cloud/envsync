@@ -60,9 +60,20 @@ interface SamlProviderSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   provider?: SamlProviderResponse | null;
+  /** First IdP should be the login default so /login POST {} is unambiguous. */
+  defaultNewAsDefault?: boolean;
+  existingEnabledCount?: number;
+  hasDefault?: boolean;
 }
 
-export function SamlProviderSheet({ open, onOpenChange, provider }: SamlProviderSheetProps) {
+export function SamlProviderSheet({
+  open,
+  onOpenChange,
+  provider,
+  defaultNewAsDefault = false,
+  existingEnabledCount = 0,
+  hasDefault = false,
+}: SamlProviderSheetProps) {
   const createProvider = useCreateSamlProvider();
   const updateProvider = useUpdateSamlProvider();
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -71,8 +82,14 @@ export function SamlProviderSheet({ open, onOpenChange, provider }: SamlProvider
 
   useEffect(() => {
     if (!open) return;
-    setForm(provider ? formFromProvider(provider) : emptyForm());
-  }, [open, provider]);
+    if (provider) {
+      setForm(formFromProvider(provider));
+      return;
+    }
+    const next = emptyForm();
+    next.is_default = defaultNewAsDefault;
+    setForm(next);
+  }, [open, provider, defaultNewAsDefault]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -88,6 +105,11 @@ export function SamlProviderSheet({ open, onOpenChange, provider }: SamlProvider
 
     try {
       if (editing && provider) {
+        const becomingEnabled = form.enabled && !provider.enabled;
+        if (becomingEnabled && existingEnabledCount >= 1 && !hasDefault && !form.is_default) {
+          toast.error("Set this IdP as default before enabling it. /login cannot pick among multiple enabled providers.");
+          return;
+        }
         const payload: Parameters<typeof updateProvider.mutateAsync>[0] = {
           id: provider.id,
           name,
@@ -105,6 +127,10 @@ export function SamlProviderSheet({ open, onOpenChange, provider }: SamlProvider
         await updateProvider.mutateAsync(payload);
         toast.success("Identity provider updated.");
       } else {
+        if (existingEnabledCount >= 1 && !hasDefault && !form.is_default) {
+          toast.error("Set this IdP as default. /login cannot pick among multiple enabled providers.");
+          return;
+        }
         const payload: CreateSamlProviderRequest = {
           name,
           provider_type: form.provider_type,
@@ -249,13 +275,19 @@ export function SamlProviderSheet({ open, onOpenChange, provider }: SamlProvider
             </>
           )}
 
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
+              className="mt-0.5"
               checked={form.is_default}
               onChange={(event) => setField("is_default", event.target.checked)}
             />
-            Set as default IdP for this organization
+            <span>
+              Set as default IdP for this organization
+              <span className="block text-xs text-muted-foreground">
+                /login does not send a provider id. A default is required when more than one IdP is enabled.
+              </span>
+            </span>
           </label>
 
           {editing && (
