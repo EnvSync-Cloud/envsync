@@ -1,6 +1,6 @@
 import type { ApiModule } from "envsync-kernel";
 
-import { startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
+import { startCmkRewrapWorker, startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
 
 /**
  * Canonical management / enterprise API module surface.
@@ -70,5 +70,11 @@ export const enterpriseManagementModules: ApiModule[] = [
 		name: "org_features",
 		mountPath: "/org-features",
 		createRouter: async () => (await import("./routes/org-features.route")).default,
+	},
+	{
+		name: "kms",
+		mountPath: "/kms",
+		createRouter: async () => (await import("./routes/kms.route")).default,
+		registerBackgroundHandlers: startCmkRewrapWorker,
 	},
 ];

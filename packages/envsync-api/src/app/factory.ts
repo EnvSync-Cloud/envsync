@@ -42,6 +42,7 @@ const ENTERPRISE_MANAGE_OPENAPI_TAGS = [
 	"Dynamic Secrets",
 	"Log Forwarding",
 	"Org Features",
+	"Enterprise CMK",
 ] as const;
 
 const ENTERPRISE_MANAGE_TAG_DESCRIPTION =

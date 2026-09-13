@@ -13,6 +13,7 @@ import (
 	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
 	dynamicsecrets "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/dynamicsecrets"
 	enterprise "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/enterprise"
+	enterprisecmk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/enterprisecmk"
 	environmenttypes "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmenttypes"
 	environmentvariables "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariables"
 	environmentvariablespointintime "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/environmentvariablespointintime"
@@ -84,6 +85,7 @@ type Client struct {
 	LogForwarding                   *logforwarding.Client
 	OrgFeatures                     *orgfeatures.Client
 	SamlSso                         *samlsso.Client
+	EnterpriseCmk                   *enterprisecmk.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -132,5 +134,6 @@ func NewClient(opts ...option.RequestOption) *Client {
 		LogForwarding:                   logforwarding.NewClient(opts...),
 		OrgFeatures:                     orgfeatures.NewClient(opts...),
 		SamlSso:                         samlsso.NewClient(opts...),
+		EnterpriseCmk:                   enterprisecmk.NewClient(opts...),
 	}
 }

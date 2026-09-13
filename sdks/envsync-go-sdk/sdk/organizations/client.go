@@ -40,7 +40,7 @@ func (c *Client) GetOrg(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/org"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) DeleteOrg(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/org"
 	headers := internal.MergeHeaders(
@@ -132,7 +132,7 @@ func (c *Client) UpdateOrg(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/org"
 	headers := internal.MergeHeaders(
@@ -179,7 +179,7 @@ func (c *Client) CheckIfSlugExists(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/org/check-slug"
 	queryParams, err := internal.QueryValues(request)

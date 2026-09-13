@@ -43,7 +43,7 @@ func (c *Client) GetOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",
@@ -103,7 +103,7 @@ func (c *Client) PutOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",
@@ -165,7 +165,7 @@ func (c *Client) DeleteOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",

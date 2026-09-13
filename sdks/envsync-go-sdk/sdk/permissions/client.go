@@ -40,7 +40,7 @@ func (c *Client) GetMyPermissions(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/permission/me"
 	headers := internal.MergeHeaders(
@@ -86,7 +86,7 @@ func (c *Client) GrantAppAccess(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/app/%v/grant",
@@ -137,7 +137,7 @@ func (c *Client) RevokeAppAccess(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/app/%v/revoke",
@@ -187,7 +187,7 @@ func (c *Client) ListAppGrants(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/app/%v/grants",
@@ -227,7 +227,7 @@ func (c *Client) GetAppEffectiveAccess(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/app/%v/effective-access",
@@ -268,7 +268,7 @@ func (c *Client) GrantEnvTypeAccess(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/env_type/%v/grant",
@@ -319,7 +319,7 @@ func (c *Client) RevokeEnvTypeAccess(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/env_type/%v/revoke",
@@ -369,7 +369,7 @@ func (c *Client) ListEnvTypeGrants(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/permission/env_type/%v/grants",

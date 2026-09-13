@@ -14,6 +14,7 @@ import { CertificatesService } from './services/CertificatesService';
 import { ChangeRequestsService } from './services/ChangeRequestsService';
 import { DynamicSecretsService } from './services/DynamicSecretsService';
 import { EnterpriseService } from './services/EnterpriseService';
+import { EnterpriseCmkService } from './services/EnterpriseCmkService';
 import { EnvironmentTypesService } from './services/EnvironmentTypesService';
 import { EnvironmentVariablesService } from './services/EnvironmentVariablesService';
 import { EnvironmentVariablesPointInTimeService } from './services/EnvironmentVariablesPointInTimeService';
@@ -51,6 +52,7 @@ export class EnvSyncAPISDK {
     public readonly changeRequests: ChangeRequestsService;
     public readonly dynamicSecrets: DynamicSecretsService;
     public readonly enterprise: EnterpriseService;
+    public readonly enterpriseCmk: EnterpriseCmkService;
     public readonly environmentTypes: EnvironmentTypesService;
     public readonly environmentVariables: EnvironmentVariablesService;
     public readonly environmentVariablesPointInTime: EnvironmentVariablesPointInTimeService;
@@ -80,7 +82,7 @@ export class EnvSyncAPISDK {
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
-            BASE: config?.BASE ?? 'http://localhost:4000',
+            BASE: config?.BASE ?? 'http://localhost:0',
             VERSION: config?.VERSION ?? '0.20.1',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
@@ -99,6 +101,7 @@ export class EnvSyncAPISDK {
         this.changeRequests = new ChangeRequestsService(this.request);
         this.dynamicSecrets = new DynamicSecretsService(this.request);
         this.enterprise = new EnterpriseService(this.request);
+        this.enterpriseCmk = new EnterpriseCmkService(this.request);
         this.environmentTypes = new EnvironmentTypesService(this.request);
         this.environmentVariables = new EnvironmentVariablesService(this.request);
         this.environmentVariablesPointInTime = new EnvironmentVariablesPointInTimeService(this.request);

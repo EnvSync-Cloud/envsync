@@ -41,6 +41,10 @@
     {
       "name": "Org Features",
       "description": "**Only available in Enterprise deployment.** Served at `/api/v1/manage/{module}/...` on this API process (not a separate service)."
+    },
+    {
+      "name": "Enterprise CMK",
+      "description": "**Only available in Enterprise deployment.** Served at `/api/v1/manage/{module}/...` on this API process (not a separate service)."
     }
   ],
   "components": {
@@ -8613,6 +8617,423 @@
             "description": "Optional SAML provider ID. Must belong to the organization and be enabled."
           }
         }
+      },
+      "OrgKmsVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "aws-kms",
+              "gcp-kms",
+              "azure-kv"
+            ],
+            "example": "managed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "rotating",
+              "unavailable",
+              "disabled"
+            ],
+            "example": "active"
+          },
+          "last_verified_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "ok",
+          "source",
+          "status",
+          "last_verified_at"
+        ]
+      },
+      "OrgKmsBreakGlassParam": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "example": "org_123"
+          }
+        },
+        "required": [
+          "orgId"
+        ]
+      },
+      "OrgKmsConfigResponse": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "aws-kms",
+              "gcp-kms",
+              "azure-kv"
+            ],
+            "example": "managed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "rotating",
+              "unavailable",
+              "disabled"
+            ],
+            "example": "active"
+          },
+          "key_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "credential_secret_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "kek_version": {
+            "type": "integer",
+            "example": 1
+          },
+          "last_verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "implicit": {
+            "type": "boolean",
+            "example": true
+          },
+          "credentials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgKmsCredentialResponse"
+            }
+          }
+        },
+        "required": [
+          "org_id",
+          "source",
+          "status",
+          "key_ref",
+          "region",
+          "credential_secret_id",
+          "kek_version",
+          "last_verified_at",
+          "last_error",
+          "implicit"
+        ]
+      },
+      "CreateOrgKmsCredentialRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "example": "aws-kms-prod"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "example": "AKIA..."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "AWS access key for org CMK"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "OrgKmsAppKeyInfo": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "example": "app_123"
+          },
+          "name": {
+            "type": "string",
+            "example": "api"
+          },
+          "key_version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "kv-1"
+          },
+          "version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 1
+          },
+          "encryption_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 0
+          },
+          "max_encryptions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 0
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          }
+        },
+        "required": [
+          "app_id",
+          "name",
+          "key_version_id",
+          "version",
+          "encryption_count",
+          "max_encryptions",
+          "status"
+        ]
+      },
+      "OrgKmsAppsResponse": {
+        "type": "object",
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgKmsAppKeyInfo"
+            }
+          }
+        },
+        "required": [
+          "apps"
+        ]
+      },
+      "OrgKmsCredentialResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "aws-kms-prod"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "AWS access key for org CMK"
+          },
+          "configured": {
+            "type": "boolean",
+            "const": true,
+            "example": true
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "key",
+          "description",
+          "configured",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "OrgKmsJobParam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "OrgKmsJobResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "app_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "kek_rewrap",
+              "dek_rewrap",
+              "detach_managed"
+            ],
+            "example": "detach_managed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "example": "pending"
+          },
+          "progress": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {}
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "user_123"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "app_id",
+          "kind",
+          "status",
+          "progress",
+          "error_message",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateOrgKmsConfigRequest": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "aws-kms",
+              "gcp-kms",
+              "azure-kv"
+            ],
+            "example": "managed"
+          },
+          "key_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "arn:aws:kms:us-east-1:123:key/abc"
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "us-east-1"
+          },
+          "credential_secret_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "secret_123"
+          }
+        },
+        "required": [
+          "source"
+        ]
       }
     }
   },
@@ -18324,6 +18745,491 @@
         "summary": "Bookmark SAML SSO start",
         "description": "Success redirects to the IdP. Any error redirects to the dashboard login page.",
         "security": []
+      }
+    },
+    "/api/v1/manage/kms/{orgId}/break-glass-detach": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Already on managed wrapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsJobResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Detach job enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid platform token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not hosted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "breakGlassDetachOrgKms",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [
+          {
+            "name": "X-EnvSync-Platform-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "param",
+            "name": "#/components/schemas/OrgKmsBreakGlassParam",
+            "schema": {
+              "$ref": "#/components/schemas/OrgKmsBreakGlassParam"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgId",
+            "required": true
+          }
+        ],
+        "summary": "Break-glass detach organization CMK",
+        "description": "Hosted platform API. Enqueues detach-to-managed even if the org lost the kms grant or status is unavailable. Does not call ensureTenantKek."
+      }
+    },
+    "/api/v1/manage/kms": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Organization KMS config",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsConfigResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getOrgKmsConfig",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Get organization KMS config",
+        "description": "Returns implicit managed/active when no org_kms_config row exists. Never returns key material."
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Organization KMS config updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsConfigResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cloud CMK is Hosted-only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A rewrap job is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateOrgKmsConfig",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Update organization KMS config",
+        "description": "Self-host cloud sources return 403 CMK_HOSTED_ONLY. Cloud attach is not wired until PR-8.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrgKmsConfigRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/manage/kms/credentials": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Credential created (value redacted)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsCredentialResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createOrgKmsCredential",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Create a purpose=kms org secret",
+        "description": "Encrypts the value under scope __kms_config__ before insert. Does not require the integrations feature.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgKmsCredentialRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/manage/kms/verify": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Verify result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsVerifyResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CMK unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "verifyOrgKms",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Verify organization KMS",
+        "description": "Managed source succeeds immediately. Cloud verify is PR-8."
+      }
+    },
+    "/api/v1/manage/kms/rotate-kek": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "KEK rotated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsConfigResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rotateOrgKmsKek",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Rotate organization KEK",
+        "description": "Re-wraps wrapped_kek under the same or new key_ref. Cloud-only; not wired until PR-8."
+      }
+    },
+    "/api/v1/manage/kms/attach": {
+      "post": {
+        "responses": {
+          "202": {
+            "description": "Attach job enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsJobResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Cloud attach not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "attachOrgKms",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Attach organization CMK",
+        "description": "Enqueues DEK rewrap under the tenant KEK. Cloud attach is PR-8."
+      }
+    },
+    "/api/v1/manage/kms/detach": {
+      "post": {
+        "responses": {
+          "202": {
+            "description": "Detach job enqueued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsJobResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A rewrap job is already running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "detachOrgKms",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "Detach organization CMK to managed",
+        "description": "Enqueues detach_managed. Does not call ensureTenantKek when status is unavailable."
+      }
+    },
+    "/api/v1/manage/kms/jobs/{id}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "KMS job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsJobResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getOrgKmsJob",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [
+          {
+            "in": "param",
+            "name": "#/components/schemas/OrgKmsJobParam",
+            "schema": {
+              "$ref": "#/components/schemas/OrgKmsJobParam"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Get organization KMS job"
+      }
+    },
+    "/api/v1/manage/kms/apps": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Per-app key metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgKmsAppsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "CMK unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listOrgKmsApps",
+        "tags": [
+          "Enterprise CMK"
+        ],
+        "parameters": [],
+        "summary": "List per-app KMS key info",
+        "description": "Calls GetKeyInfo per app. Never returns key material."
       }
     }
   }

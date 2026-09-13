@@ -39,7 +39,7 @@ func (c *Client) GetManagementLicenseStatus(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/license/status"
 	headers := internal.MergeHeaders(
@@ -82,7 +82,7 @@ func (c *Client) ActivateManagementLicense(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/license/activate"
 	headers := internal.MergeHeaders(
@@ -125,7 +125,7 @@ func (c *Client) VerifyManagementLicense(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/license/verify"
 	headers := internal.MergeHeaders(

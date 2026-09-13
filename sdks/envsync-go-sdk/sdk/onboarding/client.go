@@ -41,7 +41,7 @@ func (c *Client) CreateOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/onboarding/org"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetOrgInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/org/%v",
@@ -137,7 +137,7 @@ func (c *Client) AcceptOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/org/%v/accept",
@@ -187,7 +187,7 @@ func (c *Client) GetUserInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -236,7 +236,7 @@ func (c *Client) UpdateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -287,7 +287,7 @@ func (c *Client) AcceptUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v/accept",
@@ -336,7 +336,7 @@ func (c *Client) GetAllUserInvites(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -381,7 +381,7 @@ func (c *Client) CreateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -428,7 +428,7 @@ func (c *Client) DeleteUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/onboarding/user/%v",
@@ -476,7 +476,7 @@ func (c *Client) ManageCreateOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/onboarding/org"
 	headers := internal.MergeHeaders(
@@ -523,7 +523,7 @@ func (c *Client) ManageGetOrgInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/org/%v",
@@ -572,7 +572,7 @@ func (c *Client) ManageAcceptOrgInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/org/%v/accept",
@@ -622,7 +622,7 @@ func (c *Client) ManageGetUserInviteByCode(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/user/%v",
@@ -671,7 +671,7 @@ func (c *Client) ManageUpdateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/user/%v",
@@ -722,7 +722,7 @@ func (c *Client) ManageAcceptUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/user/%v/accept",
@@ -771,7 +771,7 @@ func (c *Client) ManageGetAllUserInvites(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -816,7 +816,7 @@ func (c *Client) ManageCreateUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/onboarding/user"
 	headers := internal.MergeHeaders(
@@ -863,7 +863,7 @@ func (c *Client) ManageDeleteUserInvite(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/onboarding/user/%v",

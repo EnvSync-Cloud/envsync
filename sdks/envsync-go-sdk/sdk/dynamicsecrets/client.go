@@ -40,7 +40,7 @@ func (c *Client) GetAllDynamicSecretEngines(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/dynamic_secret/engines"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) CreateDynamicSecretEngine(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/dynamic_secret/engines"
 	headers := internal.MergeHeaders(
@@ -142,7 +142,7 @@ func (c *Client) GetDynamicSecretEngine(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/engines/%v",
@@ -195,7 +195,7 @@ func (c *Client) DeleteDynamicSecretEngine(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/engines/%v",
@@ -254,7 +254,7 @@ func (c *Client) UpdateDynamicSecretEngine(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/engines/%v",
@@ -309,7 +309,7 @@ func (c *Client) GetDynamicSecretLeases(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/engines/%v/leases",
@@ -363,7 +363,7 @@ func (c *Client) CreateDynamicSecretLease(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/engines/%v/leases",
@@ -423,7 +423,7 @@ func (c *Client) GetDynamicSecretLease(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/leases/%v",
@@ -476,7 +476,7 @@ func (c *Client) RevokeDynamicSecretLease(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/dynamic_secret/leases/%v/revoke",
@@ -533,7 +533,7 @@ func (c *Client) CleanupExpiredLeases(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/v1/manage/dynamic_secret/leases/cleanup"
 	headers := internal.MergeHeaders(

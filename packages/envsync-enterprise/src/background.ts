@@ -15,3 +15,10 @@ export async function startLicenseHeartbeat() {
 	const { startLicenseHeartbeat: start } = await import("envsync-api/license");
 	await start();
 }
+
+export async function startCmkRewrapWorker() {
+	const { registerCmkTenantWrappingProvider } = await import("./services/cmk.service.ts");
+	const { CmkRewrapWorker } = await import("./services/cmk-rewrap.worker.ts");
+	registerCmkTenantWrappingProvider();
+	CmkRewrapWorker.start();
+}

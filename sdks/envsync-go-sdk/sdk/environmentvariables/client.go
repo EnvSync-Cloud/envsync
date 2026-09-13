@@ -41,7 +41,7 @@ func (c *Client) ExportEnvironment(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/export"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetEnvs(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env"
 	headers := internal.MergeHeaders(
@@ -135,7 +135,7 @@ func (c *Client) DeleteEnv(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env"
 	headers := internal.MergeHeaders(
@@ -183,7 +183,7 @@ func (c *Client) GetEnv(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/i/%v",
@@ -234,7 +234,7 @@ func (c *Client) UpdateEnv(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/i/%v",
@@ -284,7 +284,7 @@ func (c *Client) CreateEnv(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/single"
 	headers := internal.MergeHeaders(
@@ -331,7 +331,7 @@ func (c *Client) BatchCreateEnvs(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/batch"
 	headers := internal.MergeHeaders(
@@ -378,7 +378,7 @@ func (c *Client) DeleteBatchEnv(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/batch"
 	headers := internal.MergeHeaders(
@@ -425,7 +425,7 @@ func (c *Client) BatchUpdateEnvs(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/env/batch"
 	headers := internal.MergeHeaders(
