@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.20.4
+
+### Fixed
+
+- API HEALTHCHECK uses `bun fetch` instead of missing `wget` (Swarm exit 137).
+- `upgrade`/`deploy` issue or install the EE certificate bundle before rolling the API.
+- Certificate heartbeat errors lock the product instead of crashing the process.
+- `deploy-core` `repository.url` set so npm provenance can publish.
+
+---
+
 ## 0.20.3
 
 ### Fixed
