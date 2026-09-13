@@ -136,7 +136,7 @@ func (c *Client) GetOrgKmsConfig(
 	return response, nil
 }
 
-// Self-host cloud sources return 403 CMK_HOSTED_ONLY. Cloud attach is not wired until PR-8.
+// Self-host cloud sources return 403 CMK_HOSTED_ONLY. Hosted persists cloud source as pending until attach.
 func (c *Client) UpdateOrgKmsConfig(
 	ctx context.Context,
 	request *sdk.UpdateOrgKmsConfigRequest,
@@ -240,7 +240,7 @@ func (c *Client) CreateOrgKmsCredential(
 	return response, nil
 }
 
-// Managed source succeeds immediately. Cloud verify is PR-8.
+// Managed source succeeds immediately. Cloud verify unwraps or first-wraps the tenant KEK.
 func (c *Client) VerifyOrgKms(
 	ctx context.Context,
 	opts ...option.RequestOption,
@@ -289,7 +289,7 @@ func (c *Client) VerifyOrgKms(
 	return response, nil
 }
 
-// Re-wraps wrapped_kek under the same or new key_ref. Cloud-only; not wired until PR-8.
+// Re-wraps wrapped_kek under the current key_ref. Hosted cloud-only; does not rewrap DEKs.
 func (c *Client) RotateOrgKmsKek(
 	ctx context.Context,
 	opts ...option.RequestOption,
@@ -333,7 +333,7 @@ func (c *Client) RotateOrgKmsKek(
 	return response, nil
 }
 
-// Enqueues DEK rewrap under the tenant KEK. Cloud attach is PR-8.
+// Enqueues DEK rewrap under the tenant KEK with allow_root_unwrap during the attach window. Hosted only.
 func (c *Client) AttachOrgKms(
 	ctx context.Context,
 	opts ...option.RequestOption,
@@ -350,13 +350,18 @@ func (c *Client) AttachOrgKms(
 		options.ToHeader(),
 	)
 	errorCodes := internal.ErrorCodes{
-		500: func(apiError *core.APIError) error {
-			return &sdk.InternalServerError{
+		403: func(apiError *core.APIError) error {
+			return &sdk.ForbiddenError{
 				APIError: apiError,
 			}
 		},
-		501: func(apiError *core.APIError) error {
-			return &sdk.NotImplementedError{
+		409: func(apiError *core.APIError) error {
+			return &sdk.ConflictError{
+				APIError: apiError,
+			}
+		},
+		500: func(apiError *core.APIError) error {
+			return &sdk.InternalServerError{
 				APIError: apiError,
 			}
 		},
