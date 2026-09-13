@@ -2820,7 +2820,13 @@ function waitForApiSlotHealthy(config: DeployConfig, slot: ApiSlot, timeoutSecon
 		sleepSeconds(3);
 	}
 	const services = listStackServices(config);
-	throw new Error(`Timed out waiting for API ${slot} slot to become healthy: ${serviceHealth(services, serviceName)}`);
+	const ps = tryRun("docker", ["service", "ps", serviceName, "--no-trunc", "--format", "{{.CurrentState}} {{.Error}}"], {
+		quiet: true,
+	});
+	const logs = tryRun("docker", ["service", "logs", "--tail", "80", serviceName], { quiet: true });
+	throw new Error(
+		`Timed out waiting for API ${slot} slot to become healthy: ${serviceHealth(services, serviceName)}\n${ps}\n${logs}`,
+	);
 }
 
 function waitForHealthyServices(
@@ -3475,8 +3481,8 @@ async function cmdDeploy() {
 	logSection("Deploy");
 	const { config, generated } = loadState();
 	logReleaseContext(config);
-	if (!isOssConfig(config)) {
-		ensureEnterpriseLicenseFilesReadable();
+	if (!isOssConfig(config) && !currentOptions.dryRun) {
+		await ensureEnterpriseCertificateBundle(config);
 	}
 	assertSwarmManager();
 	assertBootstrapState(generated);
@@ -3874,7 +3880,7 @@ async function cmdUpgrade(targetVersion?: string) {
 	};
 	logReleaseContext(config);
 	if (!isOssConfig(config) && !currentOptions.dryRun) {
-		ensureEnterpriseLicenseFilesReadable();
+		await ensureEnterpriseCertificateBundle(config);
 	}
 	config.images = {
 		...config.images,

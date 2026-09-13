@@ -484,7 +484,17 @@ export class LicenseStateService {
 
 		if (this.usesCertificateMode()) {
 			this.#heartbeatStarted = true;
-			await this.validateCertificateNow();
+			try {
+				await this.validateCertificateNow();
+			} catch (error) {
+				await this.updateLicenseState({
+					status: "error",
+					last_verified_at: new Date(),
+					last_error_code: "LICENSE_CERT_MISSING",
+					last_error_message: error instanceof Error ? error.message : String(error),
+					validation_mode: "certificate",
+				});
+			}
 			return;
 		}
 

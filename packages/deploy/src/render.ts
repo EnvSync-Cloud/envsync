@@ -240,6 +240,7 @@ export function buildRuntimeEnv(
 		ENVSYNC_EDITION: oss ? "oss" : "enterprise",
 		// Self-host product install — never multi-tenant SaaS mode (program plan Phase 1).
 		ENVSYNC_DEPLOYMENT_MODE: "selfhosted",
+		SKIP_ROOT_ENV: "1",
 		ENVSYNC_MANAGEMENT_ENABLED: oss ? "false" : "true",
 		// Landing is Hosted-only; self-host does not ship marketing/signup surface.
 		ENVSYNC_LANDING_ENABLED: "false",
