@@ -1,6 +1,6 @@
 {
   "name": "envsync-api",
-  "version": "0.20.4",
+  "version": "0.20.5",
   "type": "module",
   "module": "index.ts",
   "exports": {
