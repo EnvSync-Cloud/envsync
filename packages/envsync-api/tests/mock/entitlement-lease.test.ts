@@ -54,6 +54,46 @@ describe("Entitlement from license-server signed_lease shape (H4)", () => {
 		});
 	});
 
+	test("lease mode does not hard-lock when signed_lease is a non-entitlement JWT", async () => {
+		const { LicenseStateService } = await import("@/services/license-state.service");
+		const { config } = await import("@/utils/env");
+		const originalMode = config.ENVSYNC_LICENSE_MODE;
+		const originalGetLicenseState = LicenseStateService.getLicenseState;
+		const originalVerifyJwt = EntitlementService.verifyJwt;
+
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			license_enforcement: true,
+		});
+		config.ENVSYNC_LICENSE_MODE = "lease";
+		LicenseStateService.getLicenseState = async () => ({
+			id: "default",
+			status: "active",
+			signed_lease: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsZWFzZSJ9.sig",
+			lease_expires_at: new Date(Date.now() + 60_000),
+			fingerprint: "fp",
+			last_verified_at: new Date(),
+			last_error_code: null,
+			last_error_message: null,
+			validation_mode: "lease",
+			created_at: new Date(),
+			updated_at: new Date(),
+		});
+		EntitlementService.verifyJwt = async () => {
+			throw new Error("not an Ed25519 entitlement JWT");
+		};
+
+		try {
+			const decision = await LicenseStateService.getEnforcementDecision();
+			expect(decision.locked).toBe(false);
+			expect(decision.state.status).toBe("active");
+		} finally {
+			config.ENVSYNC_LICENSE_MODE = originalMode;
+			LicenseStateService.getLicenseState = originalGetLicenseState;
+			EntitlementService.verifyJwt = originalVerifyJwt;
+		}
+	});
+
 	test("hosted still allows features without JWT under enforcement", async () => {
 		EditionPolicyService.setTestOverrides({
 			edition: "enterprise",

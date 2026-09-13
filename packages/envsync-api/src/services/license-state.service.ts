@@ -375,8 +375,18 @@ export class LicenseStateService {
 			};
 		}
 
-		// Entitlement JWT is primary authority when configured (file/env or mode=entitlement).
-		if (this.usesEntitlementMode() || config.ENVSYNC_ENTITLEMENT_JWT || config.ENVSYNC_ENTITLEMENT_JWT_PATH) {
+		// Entitlement JWT is authority only in entitlement mode (or when a JWT is
+		// configured and the operator did not pick lease/certificate). Hosted E2E
+		// and license-server leases use mode=lease and must not be forced through
+		// Ed25519 verify.
+		if (
+			this.usesEntitlementMode()
+			|| (
+				!this.usesCertificateMode()
+				&& config.ENVSYNC_LICENSE_MODE !== "lease"
+				&& Boolean(config.ENVSYNC_ENTITLEMENT_JWT || config.ENVSYNC_ENTITLEMENT_JWT_PATH)
+			)
+		) {
 			const state = await this.validateEntitlementNow();
 			const locked = state.status !== "active";
 			return {
@@ -389,11 +399,12 @@ export class LicenseStateService {
 
 		const state = await this.getLicenseState();
 
-		// Phase 4: if a stored signed_lease looks like a JWT, require crypto verify (blocks forged active+opaque).
+		// If signed_lease is an EnvSync entitlement JWT, crypto-verify and unlock.
+		// Hosted license-server tokens can also be JWT-shaped; verify failure must
+		// fall through to lease expiry, not hard-lock an otherwise active lease.
 		if (looksLikeJwt(state.signed_lease)) {
 			try {
 				await EntitlementService.verifyJwt(state.signed_lease, { apply: true });
-				// Crypto verify succeeded (incl. grace). DB status alone is not authority.
 				return {
 					required: true,
 					locked: false,
@@ -404,12 +415,7 @@ export class LicenseStateService {
 					},
 				};
 			} catch {
-				return {
-					required: true,
-					locked: true,
-					reason: "ENTITLEMENT_INVALID",
-					state,
-				};
+				// Not an Ed25519 entitlement JWT — treat as opaque lease below.
 			}
 		}
 
