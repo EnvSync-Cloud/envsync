@@ -277,6 +277,14 @@ function isMissingTenantKek(error: unknown): boolean {
 	return /wrapping key|tenant kek|no.*kek|kek.*missing/i.test(error.message);
 }
 
+function isGrpcDeadline(error: unknown): boolean {
+	return Boolean(
+		error instanceof Error
+			&& "code" in error
+			&& (error as grpc.ServiceError).code === grpc.status.DEADLINE_EXCEEDED,
+	);
+}
+
 function mapTenantWrappingError(error: unknown): never {
 	if (error instanceof AppError) {
 		throw error;
@@ -286,6 +294,13 @@ function mapTenantWrappingError(error: unknown): never {
 			"miniKMS sidecar does not support tenant wrapping RPCs.",
 			503,
 			"CMK_SIDECAR_RPC_UNAVAILABLE",
+		);
+	}
+	if (isGrpcDeadline(error)) {
+		throw new AppError(
+			"miniKMS tenant wrapping RPC timed out.",
+			504,
+			"KMS_JOB_TIMEOUT",
 		);
 	}
 	if (isMissingTenantKek(error)) {
@@ -414,6 +429,7 @@ export class KMSClient {
 		stub: grpc.Client,
 		method: string,
 		request: Record<string, unknown>,
+		timeoutMs = 10_000,
 	): Promise<TRes> {
 		const serviceNameMap = new Map<grpc.Client, string>([
 			[this.kmsStub, "minikms.v1.KMSService"],
@@ -439,7 +455,7 @@ export class KMSClient {
 			async () => {
 				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
 				return new Promise<TRes>((resolve, reject) => {
-					const deadline = new Date(Date.now() + 10_000);
+					const deadline = new Date(Date.now() + timeoutMs);
 					(stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
 						request,
 						{ deadline },
@@ -1131,7 +1147,7 @@ export class KMSClient {
 				kek: input.kek,
 				kek_version: input.kekVersion,
 				allow_root_unwrap: input.allowRootUnwrap ?? false,
-			});
+			}, 30_000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS SetTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
@@ -1149,7 +1165,7 @@ export class KMSClient {
 			);
 		}
 		try {
-			await this.rpcCall(this.kmsStub, "ClearTenantWrappingKey", { tenant_id: tenantId });
+			await this.rpcCall(this.kmsStub, "ClearTenantWrappingKey", { tenant_id: tenantId }, 30_000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS ClearTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
@@ -1171,11 +1187,12 @@ export class KMSClient {
 			);
 		}
 		try {
+			// Minutes-scale: first attach/detach of a large tenant cannot finish in 10s.
 			await this.rpcCall(this.kmsStub, "RewrapTenantDataKeys", {
 				tenant_id: input.tenantId,
 				target: input.target,
 				allow_root_unwrap: input.allowRootUnwrap ?? false,
-			});
+			}, 5 * 60 * 1000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS RewrapTenantDataKeys error: ${error.message}`, LogTypes.ERROR, "KMSClient");

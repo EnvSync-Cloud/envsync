@@ -13,7 +13,12 @@ import { OrgFeatureGrantService } from "@/services/org-feature-grant.service";
 
 import { cleanupDB, getDB, seedOrg, type SeedOrgResult } from "../helpers/db";
 import { resetFGA, setupUserOrgTuples } from "../helpers/fga";
-import { resetMockKmsTenantWrapping, resetVaultStore, setMockKmsTenantRewrap } from "../helpers/kms";
+import {
+	getMockTenantWrapping,
+	resetMockKmsTenantWrapping,
+	resetVaultStore,
+	setMockKmsTenantRewrap,
+} from "../helpers/kms";
 import { testRequest } from "../helpers/request";
 
 let seed: SeedOrgResult;
@@ -387,6 +392,162 @@ describe("Hosted CMK cloud attach", () => {
 		});
 	});
 
+	test("failed first attach still decrypts a pre-attach secret", async () => {
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		const kms = await KMSClient.getInstance();
+		const enc = await kms.encrypt(seed.org.id, "app-1", "pre-attach", "aad");
+
+		const sidecar: string[] = [];
+		setMockKmsTenantRewrap({
+			supports: true,
+			setWrapping: async () => {
+				sidecar.push("set");
+			},
+			clear: async () => {
+				sidecar.push("clear");
+			},
+			rewrap: async () => {
+				throw new AppError("rewrap exploded", 500, "KMS_JOB_FAILED");
+			},
+		});
+
+		const job = await CmkService.attach(seed.org.id, seed.masterUser.id);
+		await CmkRewrapWorker.processPendingJobs();
+		expect((await CmkService.getJob(seed.org.id, job.id)).status).toBe("failed");
+		expect(sidecar).toEqual(["set", "clear"]);
+		expect(getMockTenantWrapping(seed.org.id)).toBeNull();
+		expect((await kms.decrypt(seed.org.id, "app-1", enc.ciphertext, "aad", enc.keyVersionId)).plaintext).toBe(
+			"pre-attach",
+		);
+	});
+
+	test("verify then PUT managed / detach works without attach", async () => {
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		await CmkService.verify(seed.org.id);
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({ source: "aws-kms", status: "pending" });
+		const afterVerify = await CmkService.loadRow(seed.org.id);
+		expect(afterVerify?.wrapped_kek && afterVerify.wrapped_kek.length > 0).toBe(true);
+
+		const put = await testRequest("/api/v1/manage/kms", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { source: "managed" },
+		});
+		expect(put.status).toBe(200);
+		expect(await put.json()).toMatchObject({ source: "managed", status: "active" });
+
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		await CmkService.verify(seed.org.id);
+		let rewraps = 0;
+		setMockKmsTenantRewrap({
+			supports: true,
+			rewrap: async () => {
+				rewraps += 1;
+			},
+		});
+		const job = await CmkService.detach(seed.org.id, seed.masterUser.id);
+		await CmkRewrapWorker.processPendingJobs();
+		expect((await CmkService.getJob(seed.org.id, job.id)).status).toBe("succeeded");
+		expect((await CmkService.getJob(seed.org.id, job.id)).progress).toMatchObject({
+			never_attached: true,
+			skipped_rewrap: true,
+		});
+		expect(rewraps).toBe(0);
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({ source: "managed", status: "active" });
+	});
+
+	test("failed attach from unavailable stays unavailable", async () => {
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		setMockKmsTenantRewrap({
+			supports: true,
+			rewrap: async () => {},
+			setWrapping: async () => {},
+			clear: async () => {},
+		});
+		const first = await CmkService.attach(seed.org.id, seed.masterUser.id);
+		await CmkRewrapWorker.processPendingJobs();
+		expect((await CmkService.getJob(seed.org.id, first.id)).status).toBe("succeeded");
+		await CmkService.markUnavailable(seed.org.id, "AccessDeniedException");
+
+		setMockKmsTenantRewrap({
+			supports: true,
+			setWrapping: async () => {},
+			clear: async () => {},
+			rewrap: async () => {
+				throw new AppError("rewrap exploded", 500, "KMS_JOB_FAILED");
+			},
+		});
+		const job = await CmkService.attach(seed.org.id, seed.masterUser.id);
+		await CmkRewrapWorker.processPendingJobs();
+		expect((await CmkService.getJob(seed.org.id, job.id)).status).toBe("failed");
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({
+			source: "aws-kms",
+			status: "unavailable",
+		});
+	});
+
+	test("stale dek_rewrap reclaim clears sidecar KEK instead of kek-only", async () => {
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		const kms = await KMSClient.getInstance();
+		const enc = await kms.encrypt(seed.org.id, "app-1", "pre-attach", "aad");
+
+		const sidecar: string[] = [];
+		setMockKmsTenantRewrap({
+			supports: true,
+			setWrapping: async () => {
+				sidecar.push("set");
+			},
+			clear: async () => {
+				sidecar.push("clear");
+			},
+			rewrap: async () => {
+				throw new Error("should not rewrap stale job");
+			},
+		});
+		const job = await CmkService.attach(seed.org.id, seed.masterUser.id);
+		const db = await getDB();
+		await db
+			.updateTable("org_kms_rewrap_job")
+			.set({ status: "running", updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000) })
+			.where("id", "=", job.id)
+			.execute();
+
+		CmkRewrapWorker.staleRunningMs = 60_000;
+		await CmkRewrapWorker.reclaimStaleJobs();
+		expect((await CmkService.getJob(seed.org.id, job.id)).status).toBe("failed");
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({ source: "aws-kms", status: "pending" });
+		expect(sidecar).toEqual(["clear"]);
+		expect(getMockTenantWrapping(seed.org.id)).toBeNull();
+		expect((await kms.decrypt(seed.org.id, "app-1", enc.ciphertext, "aad", enc.keyVersionId)).plaintext).toBe(
+			"pre-attach",
+		);
+	});
+
+	test("PUT key_ref change on active is rejected", async () => {
+		await seedHostedCloudConfig();
+		CmkCloudProvider.setTestAdapter(createTestCloudAdapter());
+		setMockKmsTenantRewrap({
+			supports: true,
+			rewrap: async () => {},
+			setWrapping: async () => {},
+		});
+		const job = await CmkService.attach(seed.org.id, seed.masterUser.id);
+		await CmkRewrapWorker.processPendingJobs();
+		expect((await CmkService.getJob(seed.org.id, job.id)).status).toBe("succeeded");
+
+		await expect(
+			CmkService.updateConfig(seed.org.id, {
+				source: "aws-kms",
+				key_ref: "arn:aws:kms:us-east-1:123:key/other",
+			}),
+		).rejects.toMatchObject({ code: "CMK_ROTATE_KEK_REQUIRED" });
+	});
+
 	test("invalid cloud credential JSON is rejected before a provider SDK is used", async () => {
 		await expect(
 			CmkCloudProvider.wrap({
@@ -410,6 +571,19 @@ describe("Hosted CMK cloud attach", () => {
 				source: "azure-kv",
 				keyRef: "https://vault.vault.azure.net/keys/cmk",
 				credentials: JSON.stringify({ tenant_id: "t" }),
+				plaintext: randomBytes(32),
+			}),
+		).rejects.toMatchObject({ code: "CMK_CREDENTIAL_INVALID" });
+		await expect(
+			CmkCloudProvider.wrap({
+				source: "azure-kv",
+				keyRef: "https://vault.vault.azure.net/keys/cmk",
+				credentials: JSON.stringify({
+					tenant_id: "t",
+					client_id: "c",
+					client_secret: "s",
+					algorithm: "RSA1_5",
+				}),
 				plaintext: randomBytes(32),
 			}),
 		).rejects.toMatchObject({ code: "CMK_CREDENTIAL_INVALID" });

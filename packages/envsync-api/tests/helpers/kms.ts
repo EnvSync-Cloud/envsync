@@ -40,6 +40,9 @@ let mockRewrapImpl: ((input: { tenantId: string; target: RewrapTarget; allowRoot
 let mockClearImpl: ((tenantId: string) => Promise<void>) | null = null;
 let mockSetWrappingImpl: ((input: { tenantId: string; kek: Buffer; kekVersion: number; allowRootUnwrap?: boolean }) => Promise<void>) | null = null;
 
+type TenantWrapState = { kek: Buffer; allowRootUnwrap: boolean };
+const tenantWrapState = new Map<string, TenantWrapState>();
+
 export function setMockKmsTenantRewrap(options: {
 	supports?: boolean;
 	rewrap?: typeof mockRewrapImpl;
@@ -66,6 +69,11 @@ export function resetMockKmsTenantWrapping() {
 	mockRewrapImpl = null;
 	mockClearImpl = null;
 	mockSetWrappingImpl = null;
+	tenantWrapState.clear();
+}
+
+export function getMockTenantWrapping(tenantId: string): TenantWrapState | null {
+	return tenantWrapState.get(tenantId) ?? null;
 }
 
 async function beforeTenantOp(orgId: string, scopeId: string): Promise<void> {
@@ -88,11 +96,18 @@ function deriveTestKey(orgId: string, appId: string): Buffer {
 		.digest();
 }
 
+function deriveKekKey(orgId: string, appId: string, kek: Buffer): Buffer {
+	return createHash("sha256")
+		.update(kek)
+		.update(`:${orgId}:${appId}`)
+		.digest();
+}
+
 /**
  * In-memory store for key version IDs → metadata.
  * Allows the mock to track which key was used for encryption.
  */
-const keyVersionStore = new Map<string, { orgId: string; appId: string }>();
+const keyVersionStore = new Map<string, { orgId: string; appId: string; wrapping: "root" | "tenant" }>();
 
 // ── PKI in-memory state ─────────────────────────────────────────────
 
@@ -159,7 +174,11 @@ export const MockKMSClient = {
 		aad: string,
 	): Promise<{ ciphertext: string; keyVersionId: string }> {
 		await beforeTenantOp(orgId, appId);
-		const key = deriveTestKey(orgId, appId);
+		const wrap = appId === KMS_CONFIG_SCOPE_ID ? undefined : tenantWrapState.get(orgId);
+		const wrapping: "root" | "tenant" = wrap?.kek ? "tenant" : "root";
+		const key = wrapping === "tenant" && wrap?.kek
+			? deriveKekKey(orgId, appId, wrap.kek)
+			: deriveTestKey(orgId, appId);
 		const iv = randomBytes(12);
 		const cipher = createCipheriv("aes-256-gcm", key, iv);
 		cipher.setAAD(Buffer.from(aad, "utf-8"));
@@ -175,7 +194,7 @@ export const MockKMSClient = {
 		const ciphertext = combined.toString("base64");
 
 		const keyVersionId = `mock-v1-${randomUUID().slice(0, 8)}`;
-		keyVersionStore.set(keyVersionId, { orgId, appId });
+		keyVersionStore.set(keyVersionId, { orgId, appId, wrapping });
 
 		return { ciphertext, keyVersionId };
 	},
@@ -188,7 +207,18 @@ export const MockKMSClient = {
 		_keyVersionId: string,
 	): Promise<{ plaintext: string }> {
 		await beforeTenantOp(orgId, appId);
-		const key = deriveTestKey(orgId, appId);
+		const stored = keyVersionStore.get(_keyVersionId);
+		const wrap = appId === KMS_CONFIG_SCOPE_ID ? undefined : tenantWrapState.get(orgId);
+		const wrapping = stored?.wrapping ?? "root";
+		if (wrapping === "root" && wrap?.kek && !wrap.allowRootUnwrap) {
+			throw new Error("root-wrapped DEK is unreadable without allow_root_unwrap");
+		}
+		if (wrapping === "tenant" && !wrap?.kek) {
+			throw new Error("tenant-wrapped DEK is unreadable without tenant KEK");
+		}
+		const key = wrapping === "tenant" && wrap?.kek
+			? deriveKekKey(orgId, appId, wrap.kek)
+			: deriveTestKey(orgId, appId);
 		const combined = Buffer.from(ciphertext, "base64");
 
 		const iv = combined.subarray(0, 12);
@@ -376,6 +406,10 @@ export const MockKMSClient = {
 		if (mockSetWrappingImpl) {
 			await mockSetWrappingImpl(input);
 		}
+		tenantWrapState.set(input.tenantId, {
+			kek: Buffer.from(input.kek),
+			allowRootUnwrap: Boolean(input.allowRootUnwrap),
+		});
 	},
 
 	async clearTenantWrappingKey(tenantId: string): Promise<void> {
@@ -389,6 +423,7 @@ export const MockKMSClient = {
 		if (mockClearImpl) {
 			await mockClearImpl(tenantId);
 		}
+		tenantWrapState.delete(tenantId);
 	},
 
 	async rewrapTenantDataKeys(input: {
