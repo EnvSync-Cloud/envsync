@@ -31,6 +31,16 @@ export async function cacheAside<T>(key: string, ttl: number, loader: () => Prom
  * Patterns containing '*' or '?' are treated as globs.
  * Silently logs errors — never throws.
  */
+export async function cacheSetJson(key: string, value: unknown, ttl: number): Promise<void> {
+	await CacheClient.set(key, JSON.stringify(value), ttl);
+}
+
+export async function cacheGetDel<T>(key: string): Promise<T | null> {
+	const raw = await CacheClient.getdel(key);
+	if (raw === null) return null;
+	return JSON.parse(raw) as T;
+}
+
 export async function invalidateCache(...keysOrPatterns: string[]): Promise<void> {
 	for (const keyOrPattern of keysOrPatterns) {
 		try {

@@ -162,7 +162,9 @@ type SamlAuditActions =
 	| "saml_provider_created"
 	| "saml_provider_updated"
 	| "saml_provider_deleted"
-	| "saml_sso_success";
+	| "saml_sso_start"
+	| "saml_sso_success"
+	| "saml_sso_failure";
 
 type RotationAuditActions =
 	| "rotation_policy_created"

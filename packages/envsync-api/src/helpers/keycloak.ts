@@ -112,7 +112,8 @@ export interface KeycloakUserCreate {
 	email: string;
 	firstName: string;
 	lastName: string;
-	password: string;
+	password?: string;
+	passwordEnabled?: boolean;
 }
 
 export interface KeycloakUserRecord {
@@ -174,25 +175,64 @@ export async function findKeycloakUserByUsername(username: string): Promise<Keyc
 	}
 }
 
-export async function createKeycloakUser(payload: KeycloakUserCreate) {
+async function deleteKeycloakPasswordCredentials(userId: string) {
 	try {
+		const res = await adminFetch(`/users/${encodeURIComponent(userId)}/credentials`);
+		if (!res.ok) return;
+		const credentials = (await res.json()) as Array<{ id?: string; type?: string }>;
+		for (const credential of credentials) {
+			if (credential.type !== "password" || !credential.id) continue;
+			await adminFetch(
+				`/users/${encodeURIComponent(userId)}/credentials/${encodeURIComponent(credential.id)}`,
+				{ method: "DELETE" },
+			);
+		}
+	} catch (error) {
+		if (!isLocalHttpAdminFailure(error)) throw error;
+		try {
+			const raw = runLocalKeycloakAdmin([
+				`get users/${JSON.stringify(userId)}/credentials`,
+				`-r ${realm()}`,
+			]);
+			const credentials = (raw ? JSON.parse(raw) : []) as Array<{ id?: string; type?: string }>;
+			for (const credential of credentials) {
+				if (credential.type !== "password" || !credential.id) continue;
+				runLocalKeycloakAdmin([
+					`delete users/${JSON.stringify(userId)}/credentials/${JSON.stringify(credential.id)}`,
+					`-r ${realm()}`,
+				]);
+			}
+		} catch {
+			// Best-effort: JIT users must not keep a usable password.
+		}
+	}
+}
+
+export async function createKeycloakUser(payload: KeycloakUserCreate) {
+	const passwordEnabled = payload.passwordEnabled !== false && Boolean(payload.password);
+
+	try {
+		const body: Record<string, unknown> = {
+			username: payload.userName,
+			email: payload.email,
+			emailVerified: true,
+			enabled: true,
+			firstName: ensureNonEmptyName(payload.firstName, "User"),
+			lastName: ensureNonEmptyName(payload.lastName, "-"),
+		};
+		if (passwordEnabled && payload.password) {
+			body.credentials = [
+				{
+					type: "password",
+					value: payload.password,
+					temporary: false,
+				},
+			];
+		}
+
 		const res = await adminFetch("/users", {
 			method: "POST",
-			body: JSON.stringify({
-				username: payload.userName,
-				email: payload.email,
-				emailVerified: true,
-				enabled: true,
-				firstName: ensureNonEmptyName(payload.firstName, "User"),
-				lastName: ensureNonEmptyName(payload.lastName, "-"),
-				credentials: [
-					{
-						type: "password",
-						value: payload.password,
-						temporary: false,
-					},
-				],
-			}),
+			body: JSON.stringify(body),
 		});
 
 		if (!res.ok && res.status !== 201) {
@@ -200,16 +240,20 @@ export async function createKeycloakUser(payload: KeycloakUserCreate) {
 		}
 
 		const createdId = readIdFromLocationHeader(res.headers.get("location"));
-		if (createdId) return { id: createdId };
-
-		const lookup = await adminFetch(`/users?username=${encodeURIComponent(payload.userName)}&exact=true`);
-		if (!lookup.ok) {
-			throw new Error(`Keycloak user lookup failed after create: ${lookup.status} ${await lookup.text()}`);
+		let userId = createdId;
+		if (!userId) {
+			const lookup = await adminFetch(`/users?username=${encodeURIComponent(payload.userName)}&exact=true`);
+			if (!lookup.ok) {
+				throw new Error(`Keycloak user lookup failed after create: ${lookup.status} ${await lookup.text()}`);
+			}
+			const users = (await lookup.json()) as Array<{ id: string }>;
+			userId = users[0]?.id ?? null;
 		}
-		const users = (await lookup.json()) as Array<{ id: string }>;
-		const user = users[0];
-		if (!user?.id) throw new Error("Keycloak create user succeeded but no user id could be resolved");
-		return { id: user.id };
+		if (!userId) throw new Error("Keycloak create user succeeded but no user id could be resolved");
+		if (!passwordEnabled) {
+			await deleteKeycloakPasswordCredentials(userId);
+		}
+		return { id: userId };
 	} catch (error) {
 		if (!isLocalHttpAdminFailure(error)) throw error;
 
@@ -233,12 +277,16 @@ export async function createKeycloakUser(payload: KeycloakUserCreate) {
 		const user = users.find(candidate => candidate.username === payload.userName) ?? users[0];
 		if (!user?.id) throw new Error("Local Keycloak fallback created user but no user id could be resolved");
 
-		runLocalKeycloakAdmin([
-			"set-password",
-			`-r ${realm()}`,
-			`--userid ${JSON.stringify(user.id)}`,
-			`--new-password ${JSON.stringify(payload.password)}`,
-		]);
+		if (passwordEnabled && payload.password) {
+			runLocalKeycloakAdmin([
+				"set-password",
+				`-r ${realm()}`,
+				`--userid ${JSON.stringify(user.id)}`,
+				`--new-password ${JSON.stringify(payload.password)}`,
+			]);
+		} else {
+			await deleteKeycloakPasswordCredentials(user.id);
+		}
 
 		return { id: user.id };
 	}

@@ -48,7 +48,7 @@ export class SamlProvidersService {
     }
     /**
      * Get SAML Provider
-     * Retrieve a specific SAML provider
+     * Retrieve a specific SAML provider. Certificate PEM is omitted unless include=certificate.
      * @param id
      * @returns SamlProviderResponse SAML provider retrieved successfully
      * @throws ApiError
@@ -115,19 +115,22 @@ export class SamlProvidersService {
     }
     /**
      * Get SAML SP Metadata
-     * Retrieve SAML Service Provider metadata XML for the organization
+     * Redirects to the public SP metadata URL for this organization
      * @param id
-     * @returns string SP metadata XML
+     * @returns void
      * @throws ApiError
      */
     public getSamlMetadata(
         id: string,
-    ): CancelablePromise<string> {
+    ): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/api/v1/manage/saml/{id}/metadata',
             path: {
                 'id': id,
+            },
+            errors: {
+                302: `Redirect to /api/saml/metadata/{orgId}`,
             },
         });
     }

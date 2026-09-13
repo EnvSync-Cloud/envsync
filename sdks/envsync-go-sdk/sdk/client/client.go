@@ -79,11 +79,11 @@ type Client struct {
 	Enterprise                      *enterprise.Client
 	OidcProviders                   *oidcproviders.Client
 	SamlProviders                   *samlproviders.Client
-	SamlSso                         *samlsso.Client
 	Rotation                        *rotation.Client
 	DynamicSecrets                  *dynamicsecrets.Client
 	LogForwarding                   *logforwarding.Client
 	OrgFeatures                     *orgfeatures.Client
+	SamlSso                         *samlsso.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -127,10 +127,10 @@ func NewClient(opts ...option.RequestOption) *Client {
 		Enterprise:                      enterprise.NewClient(opts...),
 		OidcProviders:                   oidcproviders.NewClient(opts...),
 		SamlProviders:                   samlproviders.NewClient(opts...),
-		SamlSso:                         samlsso.NewClient(opts...),
 		Rotation:                        rotation.NewClient(opts...),
 		DynamicSecrets:                  dynamicsecrets.NewClient(opts...),
 		LogForwarding:                   logforwarding.NewClient(opts...),
 		OrgFeatures:                     orgfeatures.NewClient(opts...),
+		SamlSso:                         samlsso.NewClient(opts...),
 	}
 }

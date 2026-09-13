@@ -6,6 +6,7 @@
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
+import { testRequest } from "../../helpers/request";
 import { managementTestRequest } from "../helpers/management-request";
 import {
 	checkServiceHealth,
@@ -55,6 +56,8 @@ describe("SAML Provider E2E", () => {
 			entity_id: string;
 			sso_url: string;
 			enabled: boolean;
+			certificate?: string;
+			certificate_fingerprint?: string;
 		}>();
 		expect(body.id).toBeDefined();
 		expect(body.org_id).toBe(seed.org.id);
@@ -63,6 +66,8 @@ describe("SAML Provider E2E", () => {
 		expect(body.entity_id).toBe("http://www.okta.com/exk-e2e-test");
 		expect(body.sso_url).toBe("https://example.okta.com/app/exk-e2e/sso/saml");
 		expect(body.enabled).toBe(true);
+		expect(body.certificate).toBeUndefined();
+		expect(body.certificate_fingerprint).toBeDefined();
 		providerId = body.id;
 	});
 
@@ -121,6 +126,59 @@ describe("SAML Provider E2E", () => {
 		expect(body.sso_url).toBe("https://example.okta.com/app/exk-e2e-updated/sso/saml");
 	});
 
+	test("public POST start returns redirect_url", async () => {
+		const res = await testRequest(`/api/saml/sso/${seed.org.slug}`, {
+			method: "POST",
+			body: {},
+		});
+		expect(res.status).toBe(200);
+		const body = await res.json<{ redirect_url: string; request_id: string }>();
+		expect(body.redirect_url).toContain("SAMLRequest=");
+		expect(body.redirect_url).toContain("RelayState=");
+		expect(body.request_id).toBeDefined();
+	});
+
+	test("public GET metadata returns SP XML", async () => {
+		const res = await testRequest(`/api/saml/metadata/${seed.org.id}`);
+		expect(res.status).toBe(200);
+		const xml = await res.text();
+		expect(xml).toContain("EntityDescriptor");
+		expect(xml).toContain(`/api/saml/acs/${seed.org.id}`);
+	});
+
+	test("manage metadata redirects to the public URL", async () => {
+		const res = await managementTestRequest(`/api/saml/${providerId}/metadata`, {
+			token: seed.masterUser.token,
+		});
+		expect(res.status).toBe(302);
+		expect(res.headers.get("location") ?? "").toContain(`/api/saml/metadata/${seed.org.id}`);
+	});
+
+	test("manage ACS and manage SSO are gone", async () => {
+		const acs = await managementTestRequest(`/api/saml/acs/${seed.org.id}`, {
+			method: "POST",
+			body: { SAMLResponse: "dGVzdA==" },
+		});
+		expect(acs.status).toBe(401);
+		expect(acs.headers.get("location")).toBeNull();
+
+		const sso = await managementTestRequest("/api/saml/sso", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { provider_id: providerId },
+		});
+		expect([403, 404]).toContain(sso.status);
+	});
+
+	test("public ACS without RelayState is 401", async () => {
+		const res = await testRequest(`/api/saml/acs/${seed.org.id}`, {
+			method: "POST",
+			body: { SAMLResponse: "dGVzdA==" },
+		});
+		expect(res.status).toBe(401);
+		expect(await res.json()).toMatchObject({ code: "SAML_ACS_FAILED" });
+	});
+
 	test("disable SAML provider", async () => {
 		const res = await managementTestRequest(`/api/saml/${providerId}`, {
 			method: "PUT",
@@ -130,12 +188,16 @@ describe("SAML Provider E2E", () => {
 		expect(res.status).toBe(200);
 	});
 
-	test("get SAML SP metadata", async () => {
-		const res = await managementTestRequest(`/api/saml/${providerId}/metadata`, {
-			token: seed.masterUser.token,
+	test("public POST start with disabled IdP returns the same 404 body", async () => {
+		const res = await testRequest(`/api/saml/sso/${seed.org.slug}`, {
+			method: "POST",
+			body: {},
 		});
-		// Metadata endpoint may return XML or 200/500 depending on enterprise config
-		expect([200, 500]).toContain(res.status);
+		expect(res.status).toBe(404);
+		expect(await res.json<{ error: string; code: string }>()).toEqual({
+			error: "SSO is not available for this organization.",
+			code: "SSO_NOT_AVAILABLE",
+		});
 	});
 
 	test("delete SAML provider", async () => {

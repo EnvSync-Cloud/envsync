@@ -413,12 +413,10 @@
         "properties": {
           "name": {
             "type": "string",
-            "minLength": 1,
             "example": "My Application"
           },
           "description": {
             "type": "string",
-            "minLength": 1,
             "example": "Description of my application"
           },
           "enable_secrets": {
@@ -7279,9 +7277,31 @@
             "type": "string",
             "example": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----"
           },
+          "certificate_fingerprint": {
+            "type": "string",
+            "example": "A1:B2:C3:D4"
+          },
+          "certificate_not_after": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2035-01-01T00:00:00.000Z"
+          },
           "enabled": {
             "type": "boolean",
             "example": true
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": false
+          },
+          "last_sso_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "2026-09-13T00:00:00.000Z"
           },
           "created_at": {
             "type": "string",
@@ -7299,8 +7319,8 @@
           "name",
           "entity_id",
           "sso_url",
-          "certificate",
           "enabled",
+          "is_default",
           "created_at",
           "updated_at"
         ]
@@ -7347,14 +7367,21 @@
             "minLength": 1,
             "example": "-----BEGIN CERTIFICATE-----\nMIID...\n-----END CERTIFICATE-----",
             "description": "IdP X.509 certificate (PEM format) for signature validation"
+          },
+          "idp_metadata_xml": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional IdP metadata XML. When set, entity_id, sso_url, and certificate are parsed from it."
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": true,
+            "description": "Mark this provider as the default IdP for the organization"
           }
         },
         "required": [
           "provider_type",
-          "name",
-          "entity_id",
-          "sso_url",
-          "certificate"
+          "name"
         ]
       },
       "SamlProvidersResponse": {
@@ -7390,42 +7417,16 @@
           "enabled": {
             "type": "boolean",
             "example": true
+          },
+          "is_default": {
+            "type": "boolean",
+            "example": true
+          },
+          "idp_metadata_xml": {
+            "type": "string",
+            "minLength": 1
           }
         }
-      },
-      "SamlSsoResponse": {
-        "type": "object",
-        "properties": {
-          "redirect_url": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://example.okta.com/app/abc123/sso/saml?SAMLRequest=...",
-            "description": "URL to redirect the user to for IdP authentication"
-          },
-          "request_id": {
-            "type": "string",
-            "example": "_550e8400-e29b-41d4-a716-446655440000",
-            "description": "AuthnRequest ID for tracking"
-          }
-        },
-        "required": [
-          "redirect_url",
-          "request_id"
-        ]
-      },
-      "SamlSsoRequest": {
-        "type": "object",
-        "properties": {
-          "provider_id": {
-            "type": "string",
-            "format": "uuid",
-            "example": "550e8400-e29b-41d4-a716-446655440000",
-            "description": "SAML provider ID to initiate SSO with"
-          }
-        },
-        "required": [
-          "provider_id"
-        ]
       },
       "RotationPolicyResponse": {
         "type": "object",
@@ -8581,6 +8582,37 @@
         "required": [
           "features"
         ]
+      },
+      "SamlSsoResponse": {
+        "type": "object",
+        "properties": {
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.okta.com/app/abc123/sso/saml?SAMLRequest=...",
+            "description": "URL to redirect the user to for IdP authentication"
+          },
+          "request_id": {
+            "type": "string",
+            "example": "_550e8400-e29b-41d4-a716-446655440000",
+            "description": "AuthnRequest ID for tracking"
+          }
+        },
+        "required": [
+          "redirect_url",
+          "request_id"
+        ]
+      },
+      "PublicSamlSsoRequest": {
+        "type": "object",
+        "properties": {
+          "provider_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "Optional SAML provider ID. Must belong to the organization and be enabled."
+          }
+        }
       }
     }
   },
@@ -16615,7 +16647,7 @@
           }
         ],
         "summary": "Get SAML Provider",
-        "description": "Retrieve a specific SAML provider"
+        "description": "Retrieve a specific SAML provider. Certificate PEM is omitted unless include=certificate."
       },
       "put": {
         "responses": {
@@ -16710,15 +16742,8 @@
     "/api/v1/manage/saml/{id}/metadata": {
       "get": {
         "responses": {
-          "200": {
-            "description": "SP metadata XML",
-            "content": {
-              "application/xml": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+          "302": {
+            "description": "Redirect to /api/saml/metadata/{orgId}"
           }
         },
         "operationId": "getSamlMetadata",
@@ -16736,84 +16761,7 @@
           }
         ],
         "summary": "Get SAML SP Metadata",
-        "description": "Retrieve SAML Service Provider metadata XML for the organization"
-      }
-    },
-    "/api/v1/manage/saml/sso": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Redirect URL generated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SamlSsoResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "initiateSamlSso",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [],
-        "summary": "Initiate SAML SSO",
-        "description": "Start SP-initiated SAML SSO flow by generating an AuthnRequest redirect URL",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SamlSsoRequest"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/manage/saml/acs/{orgId}": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Authentication successful"
-          },
-          "401": {
-            "description": "Authentication failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "handleSamlAcs",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "orgId",
-            "required": true
-          }
-        ],
-        "summary": "SAML Assertion Consumer Service",
-        "description": "Receive and validate SAML Response from the identity provider (ACS endpoint)"
+        "description": "Redirects to the public SP metadata URL for this organization"
       }
     },
     "/api/v1/manage/rotation": {
@@ -18221,6 +18169,161 @@
         ],
         "summary": "Delete Organization Feature Grant",
         "description": "Drops the grant row so the organization is unrestricted."
+      }
+    },
+    "/api/saml/metadata/{orgId}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "SP metadata XML",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SSO is not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getPublicSamlMetadata",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgId",
+            "required": true
+          }
+        ],
+        "summary": "Get public SAML SP metadata",
+        "description": "Unauthenticated SP metadata XML for the organization",
+        "security": []
+      }
+    },
+    "/api/saml/acs/{orgId}": {
+      "post": {
+        "responses": {
+          "302": {
+            "description": "Authentication successful"
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "handlePublicSamlAcs",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgId",
+            "required": true
+          }
+        ],
+        "summary": "SAML Assertion Consumer Service",
+        "description": "Receive and validate a SAML Response from the identity provider",
+        "security": []
+      }
+    },
+    "/api/saml/sso/{orgSlug}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Redirect URL generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SamlSsoResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SSO is not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "startPublicSamlSso",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgSlug",
+            "required": true
+          }
+        ],
+        "summary": "Start SAML SSO",
+        "description": "Unauthenticated SP-initiated start. Returns a redirect URL for the login page or CLI.",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSamlSsoRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "302": {
+            "description": "Redirect to the IdP or /login?sso=failed"
+          }
+        },
+        "operationId": "startPublicSamlSsoRedirect",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgSlug",
+            "required": true
+          }
+        ],
+        "summary": "Bookmark SAML SSO start",
+        "description": "Success redirects to the IdP. Any error redirects to the dashboard login page.",
+        "security": []
       }
     }
   }

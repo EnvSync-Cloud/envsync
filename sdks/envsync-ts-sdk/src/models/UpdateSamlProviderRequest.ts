@@ -8,5 +8,7 @@ export type UpdateSamlProviderRequest = {
     sso_url?: string;
     certificate?: string;
     enabled?: boolean;
+    is_default?: boolean;
+    idp_metadata_xml?: string;
 };
 

@@ -2,10 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type SamlSsoRequest = {
+export type PublicSamlSsoRequest = {
     /**
-     * SAML provider ID to initiate SSO with
+     * Optional SAML provider ID. Must belong to the organization and be enabled.
      */
-    provider_id: string;
+    provider_id?: string;
 };
 

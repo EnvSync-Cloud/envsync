@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrProviderIDRequired     = errors.New("provider ID is required")
+	ErrOrgSlugRequired        = errors.New("organization slug is required")
 	ErrProviderTypeRequired   = errors.New("provider type is required")
 	ErrNameRequired           = errors.New("provider name is required")
 	ErrEntityIDRequired       = errors.New("entity ID is required")

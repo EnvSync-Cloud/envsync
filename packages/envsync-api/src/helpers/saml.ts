@@ -1,3 +1,4 @@
+import { createHash, createHmac, timingSafeEqual, X509Certificate } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 
 const SAML_NS = "urn:oasis:names:tc:SAML:2.0:assertion";
@@ -703,6 +704,7 @@ export async function validateSamlResponse(
 	samlResponseBase64: string,
 	idpCertificate: string,
 	expectedAcsUrl: string,
+	expectedAudience?: string,
 ): Promise<SamlParseResult> {
 	const xml = decodeBase64(samlResponseBase64);
 
@@ -722,6 +724,18 @@ export async function validateSamlResponse(
 	const inResponseTo = getFirstMatch(xml, /Response[^>]+InResponseTo="([^"]+)"/);
 	if (!inResponseTo) {
 		throw new Error("SAML response missing InResponseTo attribute");
+	}
+
+	// 3b. Audience must include the SP entity ID
+	if (expectedAudience) {
+		const audiences = [
+			...getAllMatches(xml, /<saml:Audience>([^<]+)<\/saml:Audience>/g),
+			...getAllMatches(xml, /<saml2:Audience>([^<]+)<\/saml2:Audience>/g),
+			...getAllMatches(xml, /<Audience>([^<]+)<\/Audience>/g),
+		];
+		if (!audiences.includes(expectedAudience)) {
+			throw new Error("SAML response audience mismatch");
+		}
 	}
 
 	// 4. Extract NameID
@@ -812,4 +826,90 @@ function extractAttributeValues(xml: string, name: string): string[] | null {
 export function deflateAndEncode(xml: string): string {
 	const encoded = btoa(xml);
 	return encodeURIComponent(encoded);
+}
+
+export type SamlRelayStatePayload = {
+	v: 1;
+	rid: string;
+	org: string;
+	pid: string;
+};
+
+export function signRelayState(payload: SamlRelayStatePayload, secret: string): string {
+	const json = JSON.stringify({ v: payload.v, rid: payload.rid, org: payload.org, pid: payload.pid });
+	const mac = createHmac("sha256", secret).update(json).digest("hex");
+	return `${Buffer.from(json, "utf8").toString("base64url")}.${mac}`;
+}
+
+export function verifyRelayState(relayState: string, secret: string): SamlRelayStatePayload {
+	const dot = relayState.lastIndexOf(".");
+	if (dot <= 0) {
+		throw new Error("Invalid RelayState");
+	}
+	const encoded = relayState.slice(0, dot);
+	const mac = relayState.slice(dot + 1);
+	let json: string;
+	try {
+		json = Buffer.from(encoded, "base64url").toString("utf8");
+	} catch {
+		throw new Error("Invalid RelayState");
+	}
+	const expected = createHmac("sha256", secret).update(json).digest("hex");
+	const macBuf = Buffer.from(mac, "utf8");
+	const expectedBuf = Buffer.from(expected, "utf8");
+	if (macBuf.length !== expectedBuf.length || !timingSafeEqual(macBuf, expectedBuf)) {
+		throw new Error("Invalid RelayState");
+	}
+	const parsed = JSON.parse(json) as Partial<SamlRelayStatePayload>;
+	if (parsed.v !== 1 || !parsed.rid || !parsed.org || !parsed.pid) {
+		throw new Error("Invalid RelayState");
+	}
+	return { v: 1, rid: parsed.rid, org: parsed.org, pid: parsed.pid };
+}
+
+export function parseIdpMetadataXml(xml: string): {
+	entity_id: string;
+	sso_url: string;
+	certificate: string;
+} {
+	const entityId = getFirstMatch(xml, /entityID="([^"]+)"/);
+	const ssoUrl =
+		getFirstMatch(xml, /SingleSignOnService[^>]+Binding="[^"]*HTTP-Redirect"[^>]+Location="([^"]+)"/)
+		?? getFirstMatch(xml, /SingleSignOnService[^>]+Location="([^"]+)"[^>]+Binding="[^"]*HTTP-Redirect"/)
+		?? getFirstMatch(xml, /SingleSignOnService[^>]+Location="([^"]+)"/);
+	const certB64 = (
+		getFirstMatch(xml, /<(?:ds:)?X509Certificate>([^<]+)<\/(?:ds:)?X509Certificate>/)
+		?? ""
+	).replace(/\s+/g, "");
+
+	if (!entityId || !ssoUrl || !certB64) {
+		throw new Error("IdP metadata XML is missing entityID, SingleSignOnService, or X509Certificate");
+	}
+
+	const pemBody = certB64.match(/.{1,64}/g)?.join("\n") ?? certB64;
+	return {
+		entity_id: entityId,
+		sso_url: ssoUrl,
+		certificate: `-----BEGIN CERTIFICATE-----\n${pemBody}\n-----END CERTIFICATE-----`,
+	};
+}
+
+export function redactSamlCertificate(certificate: string): {
+	fingerprint: string;
+	notAfter: string | null;
+} {
+	try {
+		const x509 = new X509Certificate(certificate.includes("BEGIN CERTIFICATE")
+			? certificate
+			: `-----BEGIN CERTIFICATE-----\n${certificate.replace(/\s+/g, "").match(/.{1,64}/g)?.join("\n") ?? certificate}\n-----END CERTIFICATE-----`);
+		return {
+			fingerprint: x509.fingerprint256,
+			notAfter: x509.validTo || null,
+		};
+	} catch {
+		const der = Buffer.from(extractCertPem(certificate), "base64");
+		const digest = createHash("sha256").update(der).digest("hex").toUpperCase();
+		const fingerprint = digest.match(/.{2}/g)?.join(":") ?? digest;
+		return { fingerprint, notAfter: null };
+	}
 }

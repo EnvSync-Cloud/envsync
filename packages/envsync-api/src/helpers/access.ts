@@ -1,12 +1,28 @@
 import { ApiKeyService } from "@/services/api_key.service";
 import { OidcService } from "@/services/oidc.service";
 import { UserService } from "@/services/user.service";
+import { AppError } from "@/libs/errors";
 import { verifyJWTToken } from "./jwt";
 import { verifyOidcToken, mightBeOidcToken } from "./oidc";
 import { getKeycloakIssuer } from "@/helpers/keycloak";
 import { config } from "@/utils/env";
 
 export type AuthTokenType = "JWT" | "API_KEY" | "OIDC" | "SAML";
+
+const SAML_SESSION_TTL_SECONDS = 8 * 3600;
+
+export function samlSessionSecret(): string {
+	const explicit = config.SAML_SESSION_SECRET || process.env.SAML_SESSION_SECRET;
+	if (explicit) return explicit;
+	if (config.NODE_ENV === "production") {
+		throw new AppError(
+			"SAML_SESSION_SECRET is required in production.",
+			500,
+			"SAML_SESSION_SECRET_MISSING",
+		);
+	}
+	return `saml-session:${config.KEYCLOAK_WEB_CLIENT_SECRET}:${config.KEYCLOAK_REALM}`;
+}
 
 export const validateAccess = async ({
 	token,
@@ -16,11 +32,13 @@ export const validateAccess = async ({
 	type: AuthTokenType;
 }): Promise<{
 	user_id: string;
+	org_id?: string;
 	auth_service_id?: string;
 	auth_type: AuthTokenType;
 }> => {
 	try {
 		let userId: string = "";
+		let orgId: string | undefined;
 		let authServiceId: string | undefined;
 
 		if (type === "JWT") {
@@ -45,9 +63,13 @@ export const validateAccess = async ({
 			if (!sub) {
 				throw new Error("SAML token subject claim is missing");
 			}
-			// SAML tokens use direct user ID lookup (not IdP-based)
 			const user = await UserService.getUser(sub);
+			const tokenOrgId = typeof decoded.org_id === "string" ? decoded.org_id : "";
+			if (!tokenOrgId || tokenOrgId !== user.org_id) {
+				throw new Error("SAML token organization claim mismatch");
+			}
 			userId = user.id;
+			orgId = user.org_id;
 		} else if (type === "OIDC") {
 			const enabledProviders = await OidcService.getAllEnabledProviders();
 			if (enabledProviders.length === 0) {
@@ -80,10 +102,12 @@ export const validateAccess = async ({
 
 		return {
 			user_id: userId,
+			org_id: orgId,
 			auth_service_id: authServiceId,
 			auth_type: type,
 		};
 	} catch (error) {
+		if (error instanceof AppError) throw error;
 		throw new Error(
 			"Unauthorized access: " + (error instanceof Error ? error.message : "Unknown error"),
 		);
@@ -128,13 +152,51 @@ function isSamlToken(token: string): boolean {
 	}
 }
 
+export async function issueSamlSessionToken(input: {
+	userId: string;
+	email: string;
+	orgId: string;
+}): Promise<string> {
+	const secret = samlSessionSecret();
+	const keyMaterial = new TextEncoder().encode(secret);
+	const key = await crypto.subtle.importKey(
+		"raw",
+		keyMaterial as unknown as BufferSource,
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+
+	const header = { alg: "HS256", typ: "JWT" };
+	const now = Math.floor(Date.now() / 1000);
+	const payload = {
+		sub: input.userId,
+		email: input.email,
+		org_id: input.orgId,
+		iss: "envsync-saml",
+		auth_type: "saml",
+		iat: now,
+		exp: now + SAML_SESSION_TTL_SECONDS,
+	};
+
+	const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+	const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+	const signingInput = `${headerB64}.${payloadB64}`;
+	const sig = new Uint8Array(
+		await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signingInput) as unknown as BufferSource),
+	);
+	const sigB64 = btoa(String.fromCharCode(...sig)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+	return `${signingInput}.${sigB64}`;
+}
+
 /**
  * Verify a SAML session token (HS256).
  * These tokens are issued by the SAML ACS endpoint and signed with a
  * derived secret from the SAML_SESSION_SECRET env var (or Keycloak config).
  */
 async function verifySamlToken(token: string): Promise<Record<string, unknown>> {
-	const secret = getSamlSessionSecret();
+	const secret = samlSessionSecret();
 	const keyMaterial = new TextEncoder().encode(secret);
 	const key = await crypto.subtle.importKey(
 		"raw",
@@ -169,15 +231,13 @@ async function verifySamlToken(token: string): Promise<Record<string, unknown>> 
 
 	// Check expiration
 	const now = Math.floor(Date.now() / 1000);
+	if (payload.iss !== "envsync-saml") {
+		throw new Error("SAML token issuer is invalid");
+	}
+
 	if (payload.exp && payload.exp < now) {
 		throw new Error("SAML token has expired");
 	}
 
 	return payload as Record<string, unknown>;
-}
-
-function getSamlSessionSecret(): string {
-	const explicit = process.env.SAML_SESSION_SECRET;
-	if (explicit) return explicit;
-	return `saml-session:${config.KEYCLOAK_WEB_CLIENT_SECRET}:${config.KEYCLOAK_REALM}`;
 }

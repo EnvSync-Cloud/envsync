@@ -3,7 +3,8 @@ import * as openid from "openid-client";
 
 import { config } from "@/utils/env";
 import { getKeycloakIssuer, getKeycloakPublicBaseUrl, getKeycloakRealm, keycloakPasswordLogin, keycloakTokenExchange } from "@/helpers/keycloak";
-import { clearWebAuthCookies, readLoginState, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
+import { detectAuthType } from "@/helpers/access";
+import { clearWebAuthCookies, readAccessToken, readLoginState, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
 import { UserService } from "@/services/user.service";
 import { verifyJWTToken } from "@/helpers/jwt";
 
@@ -145,7 +146,20 @@ export class AccessController {
 	};
 
 	public static readonly logoutWebLogin = async (c: Context) => {
+		const accessToken = readAccessToken(c) ?? "";
+		const authType = detectAuthType(accessToken);
 		clearWebAuthCookies(c);
+
+		if (authType === "SAML") {
+			const dashboard = (config.DASHBOARD_URL || "http://localhost:8080").replace(/\/$/, "");
+			return c.json(
+				{
+					message: "Web logout prepared successfully.",
+					logoutUrl: `${dashboard}/login`,
+				},
+				200,
+			);
+		}
 
 		const logoutUrl = new URL(
 			`${getKeycloakPublicBaseUrl()}/realms/${getKeycloakRealm()}/protocol/openid-connect/logout`,

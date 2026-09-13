@@ -1,61 +1,36 @@
 import { type Context } from "hono";
 
-import { assertEntitled } from "envsync-api/ports/helpers";
-import { setWebAuthCookies, setActiveMembershipCookie } from "envsync-api/ports/helpers";
+import { AppError, ForbiddenError, NotFoundError } from "envsync-api/ports/errors";
+import { issueSamlSessionToken, setActiveMembershipCookie, setWebAuthCookies } from "envsync-api/ports/helpers";
 import { SamlService } from "../services/saml.service";
-import { UserService } from "envsync-api/ports/services";
 import { AuditLogService } from "envsync-api/ports/services";
 import { config } from "envsync-api/ports/env";
 
-// Derive SAML session signing key from environment
-function getSamlSessionSecret(): string {
-	const explicit = process.env.SAML_SESSION_SECRET;
-	if (explicit) return explicit;
-	// Derive from existing Keycloak config so SAML sessions survive restarts
-	return `saml-session:${config.KEYCLOAK_WEB_CLIENT_SECRET}:${config.KEYCLOAK_REALM}`;
+const SSO_NOT_AVAILABLE_BODY = {
+	error: "SSO is not available for this organization.",
+	code: "SSO_NOT_AVAILABLE",
+} as const;
+
+const SAML_SESSION_TTL_SECONDS = 8 * 3600;
+
+function dashboardUrl() {
+	return (config.DASHBOARD_URL || "http://localhost:8080").replace(/\/$/, "");
 }
 
-/**
- * Generate a SAML-specific session JWT (HS256).
- * This token is used for SAML SSO sessions alongside the Keycloak JWT flow.
- * The auth middleware validates these via a separate code path in access.ts.
- */
-async function generateSamlSessionToken(userId: string, email: string): Promise<string> {
-	const secret = getSamlSessionSecret();
-	const keyMaterial = new TextEncoder().encode(secret);
-	const key = await crypto.subtle.importKey(
-		"raw",
-		keyMaterial as unknown as BufferSource,
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
+function isPublicSsoDeny(err: unknown): boolean {
+	if (err instanceof ForbiddenError || err instanceof NotFoundError) return true;
+	if (err instanceof AppError && (err.code === "SSO_NOT_AVAILABLE" || err.statusCode === 403 || err.statusCode === 404)) {
+		return true;
+	}
+	return false;
+}
 
-	const header = { alg: "HS256", typ: "JWT" };
-	const now = Math.floor(Date.now() / 1000);
-	const payload = {
-		sub: userId,
-		email,
-		iss: "envsync-saml",
-		iat: now,
-		exp: now + 60 * 60, // 1 hour
-		auth_type: "saml",
-	};
-
-	const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-	const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-	const signingInput = `${headerB64}.${payloadB64}`;
-	const sig = new Uint8Array(
-		await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signingInput) as unknown as BufferSource),
-	);
-	const sigB64 = btoa(String.fromCharCode(...sig)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
-	return `${signingInput}.${sigB64}`;
+function publicSsoNotAvailable(c: Context) {
+	return c.json(SSO_NOT_AVAILABLE_BODY, 404);
 }
 
 export class SamlController {
 	public static readonly createProvider = async (c: Context) => {
-		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const body = await c.req.json();
@@ -67,6 +42,8 @@ export class SamlController {
 			entity_id: body.entity_id,
 			sso_url: body.sso_url,
 			certificate: body.certificate,
+			idp_metadata_xml: body.idp_metadata_xml,
+			is_default: body.is_default,
 		});
 
 		await AuditLogService.notifyAuditSystem({
@@ -77,17 +54,17 @@ export class SamlController {
 			details: {
 				provider_id: provider.id,
 				provider_type: body.provider_type,
-				entity_id: body.entity_id,
+				entity_id: provider.entity_id,
 			},
 		});
 
-		return c.json(provider, 201);
+		return c.json(SamlService.redactProvider(provider), 201);
 	};
 
 	public static readonly getProvider = async (c: Context) => {
-		await assertEntitled("saml");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
+		const includeCertificate = c.req.query("include") === "certificate";
 
 		const provider = await SamlService.getProvider(id);
 
@@ -95,19 +72,16 @@ export class SamlController {
 			return c.json({ error: "SAML provider not found" }, 404);
 		}
 
-		return c.json(provider, 200);
+		return c.json(SamlService.redactProvider(provider, includeCertificate), 200);
 	};
 
 	public static readonly getAllProviders = async (c: Context) => {
-		await assertEntitled("saml");
 		const org_id = c.get("org_id");
 		const providers = await SamlService.getProvidersByOrg(org_id);
-		return c.json(providers, 200);
+		return c.json(providers.map(provider => SamlService.redactProvider(provider)), 200);
 	};
 
 	public static readonly updateProvider = async (c: Context) => {
-		await assertEntitled("saml");
-
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
@@ -125,6 +99,8 @@ export class SamlController {
 			sso_url: body.sso_url,
 			certificate: body.certificate,
 			enabled: body.enabled,
+			is_default: body.is_default,
+			idp_metadata_xml: body.idp_metadata_xml,
 		});
 
 		await AuditLogService.notifyAuditSystem({
@@ -139,7 +115,6 @@ export class SamlController {
 	};
 
 	public static readonly deleteProvider = async (c: Context) => {
-		await assertEntitled("saml");
 		const id = c.req.param("id");
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
@@ -164,98 +139,100 @@ export class SamlController {
 	};
 
 	public static readonly getMetadata = async (c: Context) => {
-		await assertEntitled("saml");
 		const org_id = c.get("org_id");
-		const metadata = await SamlService.getMetadata(org_id);
-		return c.text(metadata, 200, { "Content-Type": "application/xml" });
+		return c.redirect(`${SamlService.apiBaseUrl()}/api/saml/metadata/${org_id}`, 302);
 	};
 
-	public static readonly initiateSso = async (c: Context) => {
-		await assertEntitled("saml");
-		const org_id = c.get("org_id");
-		const body = await c.req.json();
-		const provider = await SamlService.getProvider(body.provider_id);
-
-		if (provider.org_id !== org_id) {
-			return c.json({ error: "SAML provider not found" }, 404);
+	public static readonly getPublicMetadata = async (c: Context) => {
+		const orgId = c.req.param("orgId");
+		try {
+			await SamlService.assertPublicOrgSaml(orgId);
+			const metadata = await SamlService.getMetadata(orgId);
+			return c.text(metadata, 200, { "Content-Type": "application/xml" });
+		} catch (err) {
+			if (isPublicSsoDeny(err)) return publicSsoNotAvailable(c);
+			throw err;
 		}
-
-		const acsUrl = `${c.req.url.split("/saml")[0]}/saml/acs/${org_id}`;
-		const { redirectUrl, requestId } = await SamlService.initiateSso(body.provider_id, acsUrl);
-
-		return c.json({ redirect_url: redirectUrl, request_id: requestId }, 200);
 	};
 
-	/**
-	 * ACS (Assertion Consumer Service) endpoint.
-	 *
-	 * This is an unauthenticated endpoint that receives the SAML Response from the IdP.
-	 * After validating the response and creating/updating the user, it:
-	 * 1. Generates a SAML session token
-	 * 2. Sets auth cookies (same pattern as Keycloak flow)
-	 * 3. Redirects to the dashboard callback URL
-	 */
-	public static readonly handleAcs = async (c: Context) => {
-		// NOTE: No assertEnterprise() here — this is an unauthenticated endpoint.
-		// The IdP POSTs directly to this URL without any auth context.
-		const org_id = c.req.param("orgId");
+	public static readonly startPublicSso = async (c: Context) => {
+		const orgSlug = c.req.param("orgSlug");
+		const body = (await c.req.json().catch(() => ({}))) as { provider_id?: string };
+		try {
+			const result = await SamlService.startByOrgSlug(orgSlug, body.provider_id);
+			await AuditLogService.notifyAuditSystem({
+				action: "saml_sso_start",
+				org_id: result.orgId,
+				user_id: result.orgId,
+				message: `SAML SSO start via ${result.provider.provider_type}`,
+				details: {
+					provider_id: result.provider.id,
+					request_id: result.requestId,
+				},
+			}).catch(() => undefined);
+			return c.json({ redirect_url: result.redirectUrl, request_id: result.requestId }, 200);
+		} catch (err) {
+			if (isPublicSsoDeny(err)) return publicSsoNotAvailable(c);
+			throw err;
+		}
+	};
+
+	public static readonly startPublicSsoRedirect = async (c: Context) => {
+		const orgSlug = c.req.param("orgSlug");
+		try {
+			const result = await SamlService.startByOrgSlug(orgSlug);
+			return c.redirect(result.redirectUrl, 302);
+		} catch {
+			return c.redirect(`${dashboardUrl()}/login?sso=failed`, 302);
+		}
+	};
+
+	public static readonly handlePublicAcs = async (c: Context) => {
+		const orgId = c.req.param("orgId");
 		const body = await c.req.parseBody();
 		const samlResponse = body.SAMLResponse;
+		const relayState = body.RelayState;
 
-		if (typeof samlResponse !== "string") {
-			return c.json({ error: "Missing SAMLResponse" }, 400);
+		if (typeof samlResponse !== "string" || typeof relayState !== "string" || !relayState) {
+			return c.json({ error: "SAML authentication failed", code: "SAML_ACS_FAILED" }, 401);
 		}
 
-		const providers = await SamlService.getProvidersByOrg(org_id);
-		const enabledProviders = providers.filter((p) => p.enabled);
+		try {
+			const result = await SamlService.handleBoundAcs(orgId, samlResponse, relayState);
+			const accessToken = await issueSamlSessionToken({
+				userId: result.userId,
+				email: result.email,
+				orgId: result.orgId,
+			});
 
-		if (enabledProviders.length === 0) {
-			return c.json({ error: "No SAML providers configured for this organization" }, 400);
+			setWebAuthCookies(c, {
+				access_token: accessToken,
+				expires_in: SAML_SESSION_TTL_SECONDS,
+			});
+			setActiveMembershipCookie(c, result.userId, SAML_SESSION_TTL_SECONDS);
+
+			await AuditLogService.notifyAuditSystem({
+				action: "saml_sso_success",
+				org_id: result.orgId,
+				user_id: result.userId,
+				message: `SAML SSO login via ${result.providerType}: ${result.email}`,
+				details: {
+					provider_id: result.providerId,
+					provider_type: result.providerType,
+					email: result.email,
+				},
+			});
+
+			return c.redirect(`${dashboardUrl()}/auth/callback`, 302);
+		} catch {
+			await AuditLogService.notifyAuditSystem({
+				action: "saml_sso_failure",
+				org_id: orgId,
+				user_id: orgId,
+				message: "SAML ACS failed",
+				details: { reason: "acs_failed" },
+			}).catch(() => undefined);
+			return c.json({ error: "SAML authentication failed", code: "SAML_ACS_FAILED" }, 401);
 		}
-
-		let lastError: Error | null = null;
-		for (const provider of enabledProviders) {
-			try {
-				const acsUrl = `${c.req.url.split("?")[0]}`;
-				const result = await SamlService.handleAcs(provider.id, samlResponse, acsUrl);
-
-				// Generate SAML session token
-				const accessToken = await generateSamlSessionToken(result.userId, result.email);
-
-				// Set auth cookies (same pattern as Keycloak flow)
-				setWebAuthCookies(c, {
-					access_token: accessToken,
-					expires_in: 3600,
-				});
-
-				// Set active membership cookie for multi-org support
-				await UserService.touchLastLogin(result.userId);
-				setActiveMembershipCookie(c, result.userId);
-
-				await AuditLogService.notifyAuditSystem({
-					action: "saml_sso_success",
-					org_id,
-					user_id: result.userId,
-					message: `SAML SSO login via ${provider.provider_type}: ${result.email}`,
-					details: {
-						provider_id: provider.id,
-						provider_type: provider.provider_type,
-						email: result.email,
-					},
-				});
-
-				// Redirect to dashboard callback (same as Keycloak flow)
-				const callbackUrl = config.DASHBOARD_URL || "http://localhost:8080";
-				return c.redirect(`${callbackUrl}/auth/callback`, 302);
-			} catch (err) {
-				lastError = err instanceof Error ? err : new Error(String(err));
-				continue;
-			}
-		}
-
-		return c.json({
-			error: "SAML authentication failed",
-			details: lastError?.message ?? "No matching provider could validate the response",
-		}, 401);
 	};
 }

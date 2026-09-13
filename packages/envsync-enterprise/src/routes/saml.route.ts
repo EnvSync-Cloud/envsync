@@ -5,20 +5,22 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { SamlController } from "../controllers/saml.controller";
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { requirePermission } from "envsync-api/ports/middlewares";
 import {
 	createSamlProviderRequestSchema,
 	samlProviderResponseSchema,
 	samlProvidersResponseSchema,
 	updateSamlProviderRequestSchema,
-	samlSsoRequestSchema,
-	samlSsoResponseSchema,
 } from "../validators/saml.validator";
 import { errorResponseSchema } from "envsync-api/ports/validators-common";
 
 const app = new Hono();
 
+app.use(authMiddleware());
 app.use(enterpriseGuard("saml"));
+app.use(requirePermission("can_manage_org_settings", "org"));
+app.use(orgFeatureGuard("saml"));
 
 app.post(
 	"/",
@@ -38,8 +40,6 @@ app.post(
 			},
 		},
 	}),
-	authMiddleware(),
-	requirePermission("can_manage_api_keys", "org"),
 	zValidator("json", createSamlProviderRequestSchema),
 	SamlController.createProvider,
 );
@@ -62,8 +62,6 @@ app.get(
 			},
 		},
 	}),
-	authMiddleware(),
-	requirePermission("can_manage_api_keys", "org"),
 	SamlController.getAllProviders,
 );
 
@@ -72,7 +70,7 @@ app.get(
 	describeRoute({
 		operationId: "getSamlProvider",
 		summary: "Get SAML Provider",
-		description: "Retrieve a specific SAML provider",
+		description: "Retrieve a specific SAML provider. Certificate PEM is omitted unless include=certificate.",
 		tags: ["SAML Providers"],
 		responses: {
 			200: {
@@ -85,8 +83,6 @@ app.get(
 			},
 		},
 	}),
-	authMiddleware(),
-	requirePermission("can_manage_api_keys", "org"),
 	SamlController.getProvider,
 );
 
@@ -108,8 +104,6 @@ app.put(
 			},
 		},
 	}),
-	authMiddleware(),
-	requirePermission("can_manage_api_keys", "org"),
 	zValidator("json", updateSamlProviderRequestSchema),
 	SamlController.updateProvider,
 );
@@ -132,8 +126,6 @@ app.delete(
 			},
 		},
 	}),
-	authMiddleware(),
-	requirePermission("can_manage_api_keys", "org"),
 	SamlController.deleteProvider,
 );
 
@@ -142,60 +134,15 @@ app.get(
 	describeRoute({
 		operationId: "getSamlMetadata",
 		summary: "Get SAML SP Metadata",
-		description: "Retrieve SAML Service Provider metadata XML for the organization",
+		description: "Redirects to the public SP metadata URL for this organization",
 		tags: ["SAML Providers"],
 		responses: {
-			200: {
-				description: "SP metadata XML",
-				content: { "application/xml": { schema: { type: "string" } } },
+			302: {
+				description: "Redirect to /api/saml/metadata/{orgId}",
 			},
 		},
 	}),
-	authMiddleware(),
 	SamlController.getMetadata,
-);
-
-app.post(
-	"/sso",
-	describeRoute({
-		operationId: "initiateSamlSso",
-		summary: "Initiate SAML SSO",
-		description: "Start SP-initiated SAML SSO flow by generating an AuthnRequest redirect URL",
-		tags: ["SAML SSO"],
-		responses: {
-			200: {
-				description: "Redirect URL generated",
-				content: { "application/json": { schema: resolver(samlSsoResponseSchema) } },
-			},
-			500: {
-				description: "Internal server error",
-				content: { "application/json": { schema: resolver(errorResponseSchema) } },
-			},
-		},
-	}),
-	authMiddleware(),
-	zValidator("json", samlSsoRequestSchema),
-	SamlController.initiateSso,
-);
-
-app.post(
-	"/acs/:orgId",
-	describeRoute({
-		operationId: "handleSamlAcs",
-		summary: "SAML Assertion Consumer Service",
-		description: "Receive and validate SAML Response from the identity provider (ACS endpoint)",
-		tags: ["SAML SSO"],
-		responses: {
-			200: {
-				description: "Authentication successful",
-			},
-			401: {
-				description: "Authentication failed",
-				content: { "application/json": { schema: resolver(errorResponseSchema) } },
-			},
-		},
-	}),
-	SamlController.handleAcs,
 );
 
 export default app;

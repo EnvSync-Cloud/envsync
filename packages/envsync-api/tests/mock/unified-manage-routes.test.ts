@@ -130,5 +130,8 @@ describe("unified manage surface /api/v1/manage/{module}/...", () => {
 			code: "ENTERPRISE_LICENSE_INVALID",
 			reason: "ENTERPRISE_LICENSE_EXPIRED",
 		});
+
+		const metadata = await coreApp.request("http://localhost/api/saml/metadata/org-1");
+		expect(metadata.status).not.toBe(423);
 	});
 });

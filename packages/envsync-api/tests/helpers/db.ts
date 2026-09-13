@@ -36,6 +36,8 @@ const TABLES_IN_ORDER = [
 	"org_role",
 	"license_state",
 	"install_state",
+	"saml_providers",
+	"org_feature_grant",
 	"orgs",
 ] as const;
 
