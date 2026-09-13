@@ -128,6 +128,9 @@ export const authorizationModelDef: { schema_version: string; type_definitions: 
 				can_view_audit_logs: {
 					computedUserset: { relation: "have_audit_access" },
 				},
+				// K8: admin ∪ master. Pinned OPENFGA_MODEL_ID stores stay on the
+				// previous master-only model until `bun run cli init` / e2e-setup
+				// writes a new model id.
 				can_manage_org_settings: {
 					union: {
 						child: [

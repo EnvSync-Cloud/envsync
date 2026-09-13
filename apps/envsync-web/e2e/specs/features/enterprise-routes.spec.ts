@@ -63,6 +63,17 @@ test.describe("enterprise dashboard routes", () => {
 		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
 		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
 
+		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+
+		const seededApp = await getAppByName(page, "Core Platform");
+		if (seededApp) {
+			await page.goto(`/applications/${seededApp.id}`, { waitUntil: "domcontentloaded" });
+			await expect(page.getByRole("button", { name: "Integrations" })).toHaveCount(0);
+		}
+
 		await page.goto("/organisation/integrations", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: /Integrations is not on this plan/i })).toBeVisible({
 			timeout: 30_000,

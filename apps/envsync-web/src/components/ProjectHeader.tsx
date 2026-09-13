@@ -28,8 +28,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuthContext } from "@/contexts/auth";
 import { appAccessPath, appDetailPath, appIntegrationsPath, appPointInTimePath, appSecretsPath } from "@/lib/app-routes";
-import { isEnterpriseDashboard } from "@/utils/runtime-config";
 import { EnvironmentType } from "@/constants";
 
 interface ProjectHeaderProps {
@@ -68,6 +68,7 @@ export const ProjectHeader = ({
   const navigate = useNavigate();
   const { appId } = useParams();
   const location = useLocation();
+  const { allowedScopes } = useAuthContext();
 
   const isSecretsPage = location.pathname.includes("/secrets");
   const isManageEnvironmentPage = location.pathname.includes("/manage-environments");
@@ -132,7 +133,7 @@ export const ProjectHeader = ({
     {
       key: "integrations",
       label: "Integrations",
-      hidden: !isEnterpriseDashboard,
+      hidden: !allowedScopes.includes("applications-integrations"),
       active: isIntegrationsPage,
     },
     {
