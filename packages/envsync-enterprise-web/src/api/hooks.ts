@@ -1,8 +1,10 @@
 import type {
   CreateOrgSecretRequest,
   CreateProviderConnectionRequest,
+  CreateSamlProviderRequest,
   UpdateOrgSecretRequest,
   UpdateProviderConnectionRequest,
+  UpdateSamlProviderRequest,
 } from "@envsync-cloud/envsync-ts-sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -426,6 +428,97 @@ export function useVerifyLicense() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["enterprise", "license-status"] });
       await queryClient.invalidateQueries({ queryKey: ["enterprise", "system-status"] });
+    },
+  });
+}
+
+export async function listSamlProviders() {
+  try {
+    return await getEnterpriseSDK().samlProviders.getAllSamlProviders();
+  } catch (error) {
+    throw new Error(enterpriseErrorMessage(error));
+  }
+}
+
+export function useSamlProviders() {
+  return useQuery({
+    queryKey: ["enterprise", "saml-providers"],
+    queryFn: listSamlProviders,
+    enabled: isEnterpriseUiEnabled(),
+  });
+}
+
+export function useCreateSamlProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateSamlProviderRequest) => {
+      try {
+        return await getEnterpriseSDK().samlProviders.createSamlProvider(payload);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "saml-providers"] });
+    },
+  });
+}
+
+export function useUpdateSamlProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string } & UpdateSamlProviderRequest) => {
+      const { id, ...body } = payload;
+      try {
+        return await getEnterpriseSDK().samlProviders.updateSamlProvider(id, body);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "saml-providers"] });
+    },
+  });
+}
+
+export function useDeleteSamlProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        return await getEnterpriseSDK().samlProviders.deleteSamlProvider(id);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["enterprise", "saml-providers"] });
+    },
+  });
+}
+
+export function useDownloadSpMetadata() {
+  return useMutation({
+    mutationFn: async (orgId: string) => {
+      try {
+        return await getEnterpriseSDK().samlSso.getPublicSamlMetadata(orgId);
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
+    },
+  });
+}
+
+export function useStartSamlTestLogin() {
+  return useMutation({
+    mutationFn: async (payload: { orgSlug: string; providerId: string }) => {
+      try {
+        return await getEnterpriseSDK().samlSso.startPublicSamlSso(payload.orgSlug, {
+          provider_id: payload.providerId,
+        });
+      } catch (error) {
+        throw new Error(enterpriseErrorMessage(error));
+      }
     },
   });
 }

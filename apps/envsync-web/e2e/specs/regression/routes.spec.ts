@@ -25,6 +25,7 @@ test.describe("route surface", () => {
 			{ path: "/organisation/integrations", heading: /Shared provider connections|Integrations/i },
 			{ path: "/organisation/license", heading: /License/i },
 			{ path: "/organisation/sync", heading: /Sync operations|Sync/i },
+			{ path: "/organisation/sso", heading: /^SSO$/ },
 			{ path: "/audit", heading: "Activity" },
 			{ path: "/apikeys", heading: "API Keys" },
 			{ path: "/webhooks", heading: "Webhooks" },

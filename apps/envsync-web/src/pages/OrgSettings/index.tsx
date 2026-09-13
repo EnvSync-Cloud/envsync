@@ -50,8 +50,9 @@ export const OrgSettings = () => {
   const showIntegrations = allowedScopes.includes("organisation-integrations");
   const showSync = allowedScopes.includes("organisation-sync");
   const showLicense = allowedScopes.includes("organisation-license");
+  const showSso = allowedScopes.includes("organisation-sso");
   const showEnterpriseCard =
-    runtimeConfig.edition === "enterprise" && (showIntegrations || showSync || showLicense);
+    runtimeConfig.edition === "enterprise" && (showIntegrations || showSync || showLicense || showSso);
 
   if (isLoading) {
     return <OrgSettingsLoadingPage />;
@@ -73,11 +74,13 @@ export const OrgSettings = () => {
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-200/80">Enterprise</p>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">
-                    {showIntegrations || showSync ? "Integrations, sync ops, and license" : "License"}
+                    {showIntegrations || showSync || showSso
+                      ? "Enterprise organization settings"
+                      : "License"}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                    {showIntegrations || showSync
-                      ? "Manage provider connections, org secrets, sync diagnostics, and license activation in the dashboard (no separate /manage SPA)."
+                    {showIntegrations || showSync || showSso
+                      ? "Manage SSO, provider connections, org secrets, sync diagnostics, and license activation in the dashboard (no separate /manage SPA)."
                       : "Activate or verify the enterprise entitlement for this install."}
                   </p>
                 </div>
@@ -96,6 +99,14 @@ export const OrgSettings = () => {
                       className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
                     >
                       Sync ops
+                    </Link>
+                  )}
+                  {showSso && (
+                    <Link
+                      to="/organisation/sso"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      SSO
                     </Link>
                   )}
                   {showLicense && (

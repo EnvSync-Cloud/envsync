@@ -55,6 +55,29 @@ const modules: WebModule[] = [
       "organisation-license": user => user.role.is_admin || user.role.is_master,
     },
   },
+  {
+    name: "enterprise-sso",
+    requiredFeature: "saml",
+    routes: [
+      {
+        id: "organisation-sso",
+        path: "organisation/sso",
+        loadComponent: async () => ({ default: () => null }),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          { id: "organisation-sso", name: "SSO", href: "/organisation/sso", icon: () => null },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-sso": user =>
+        (user.role.is_admin || user.role.is_master) && Boolean(user.features?.includes("saml")),
+    },
+  },
 ];
 
 function user(features: string[], role: { is_admin?: boolean; is_master?: boolean } = { is_admin: true }): WhoAmIResponse {
@@ -111,6 +134,7 @@ describe("entitlement-aware module shell", () => {
     const routes = getWebRoutes(modules);
     expect(routes.find(route => route.id === "organisation-integrations")?.requiredFeature).toBe("integrations");
     expect(routes.find(route => route.id === "organisation-license")?.requiredFeature).toBeUndefined();
+    expect(routes.find(route => route.id === "organisation-sso")?.requiredFeature).toBe("saml");
 
     const nav = getWebNavGroups(modules);
     expect(nav).toHaveLength(1);
@@ -118,6 +142,7 @@ describe("entitlement-aware module shell", () => {
       "organisation-integrations",
       "organisation-sync",
       "organisation-license",
+      "organisation-sso",
     ]);
   });
 
@@ -127,13 +152,18 @@ describe("entitlement-aware module shell", () => {
       "organisation-integrations": (session: WhoAmIResponse) => session.role.is_admin || session.role.is_master,
       "organisation-sync": (session: WhoAmIResponse) => session.role.is_admin || session.role.is_master,
       "organisation-license": (session: WhoAmIResponse) => session.role.is_admin || session.role.is_master,
+      "organisation-sso": (session: WhoAmIResponse) =>
+        (session.role.is_admin || session.role.is_master) && Boolean(session.features?.includes("saml")),
     };
     const restricted = user(["saml"]);
 
     expect(isScopeAllowed(restricted, "organisation-integrations", { scopeRules, featureMap })).toBe(false);
     expect(isScopeAllowed(restricted, "organisation-sync", { scopeRules, featureMap })).toBe(false);
     expect(isScopeAllowed(restricted, "organisation-license", { scopeRules, featureMap })).toBe(true);
+    expect(isScopeAllowed(restricted, "organisation-sso", { scopeRules, featureMap })).toBe(true);
     expect(isScopeAllowed(user(["integrations"]), "organisation-integrations", { scopeRules, featureMap })).toBe(true);
+    expect(isScopeAllowed(user(["integrations"]), "organisation-sso", { scopeRules, featureMap })).toBe(false);
     expect(isScopeAllowed(user(["integrations"], { is_admin: false }), "organisation-license", { scopeRules, featureMap })).toBe(false);
+    expect(isScopeAllowed(user(["saml"], { is_admin: false }), "organisation-sso", { scopeRules, featureMap })).toBe(false);
   });
 });
