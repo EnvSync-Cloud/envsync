@@ -35,6 +35,7 @@ export const useAuth = () => {
       setUser(undefined);
       if (isReloginError(error)) {
         setAuthError(null);
+        // /login and other public auth routes must render without a session.
         await redirectToLogin();
         return;
       }

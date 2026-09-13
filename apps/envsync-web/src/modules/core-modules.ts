@@ -20,6 +20,12 @@ export const coreWebModules: WebModule[] = [
     name: "core",
     routes: [
       {
+        id: "login",
+        layout: "standalone",
+        path: "/login",
+        loadComponent: () => import("@/pages/Login"),
+      },
+      {
         id: "auth-callback",
         layout: "standalone",
         path: "/auth/callback",
