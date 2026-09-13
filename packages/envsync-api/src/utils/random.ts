@@ -1,9 +1,5 @@
 export const slugifyName = (name: string): string => {
-	// convert to lowercase
-	// replace spaces with hyphens
-	// remove special characters except hyphens
-	// add a random suffix to ensure uniqueness with 6 digit random number
-	const randomSuffix = Math.floor(100000 + Math.random() * 900000).toString();
+	const randomSuffix = crypto.randomInt(100000, 1000000).toString();
 
 	return name
 		.toLowerCase()

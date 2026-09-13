@@ -100,11 +100,11 @@ export function getArtifactPath(...segments: string[]) {
 }
 
 export function uniqueName(prefix: string) {
-	const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+	const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
 	return `${prefix}_${Date.now()}_${suffix}`;
 }
 
 export function uniqueSlug(prefix: string) {
-	const suffix = Math.random().toString(36).slice(2, 8);
+	const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
 	return `${prefix}-${Date.now()}-${suffix}`.toLowerCase();
 }

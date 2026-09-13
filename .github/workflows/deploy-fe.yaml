@@ -11,6 +11,9 @@ on:
       - "sdks/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy-web:
     name: Deploy envsync-web (Hosted)

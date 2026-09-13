@@ -739,15 +739,15 @@ function main() {
 	}
 
 	console.error(`ClickStack operator email: ${operator.email}`);
-	console.error(`ClickStack operator password: ${SELFHOST_OPERATOR_PASSWORD}`);
-	console.error(`ClickStack access key: ${accessKey}`);
+	console.error("ClickStack operator password: [redacted]");
+	console.error("ClickStack access key: [redacted]");
 	if (browserApiKey) {
-		console.error(`ClickStack browser API key: ${browserApiKey}`);
+		console.error("ClickStack browser API key: [redacted]");
 	}
 	console.log(JSON.stringify({
 		operatorEmail: operator.email,
-		accessKey,
-		browserApiKey,
+		accessKey: accessKey ? "[redacted]" : undefined,
+		browserApiKey: browserApiKey ? "[redacted]" : undefined,
 		savedSearches,
 		alertWebhook,
 	}));

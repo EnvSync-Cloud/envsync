@@ -944,7 +944,7 @@ async function verifySeededVaultRoundTrip(
 ) {
 	const { EnvService } = await import("../src/services/env.service");
 
-	const key = `__seed_vault_probe_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+	const key = `__seed_vault_probe_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 	const value = `seed-probe-${Date.now()}`;
 
 	await EnvService.createEnv({

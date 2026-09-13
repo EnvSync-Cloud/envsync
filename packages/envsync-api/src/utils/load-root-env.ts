@@ -88,7 +88,9 @@ export function updateRootEnv(updates: Record<string, string>): void {
 		}
 	}
 	for (const [key, value] of Object.entries(updates)) {
-		const escaped = value.includes(" ") || value.includes("#") ? `"${value.replace(/"/g, '\\"')}"` : value;
+		const escaped = value.includes(" ") || value.includes("#")
+			? `"${value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")}"`
+			: value;
 		if (keyToLineIndex.has(key)) {
 			lines[keyToLineIndex.get(key)!] = `${key}=${escaped}`;
 		} else {
