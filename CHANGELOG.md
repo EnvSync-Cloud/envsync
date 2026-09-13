@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.20.3
+
+### Fixed
+
+- `@envsync-cloud/deploy` declares `zod` so the published CLI can resolve it.
+- Enterprise upgrade: `pg_dump` uses overlay host `postgres`; EE API image includes the migrate CLI.
+- Hosted license leases that look like JWTs no longer hard-lock the product after activate.
+
+### Changed
+
+- Public npm publishes use Trusted Publishing (OIDC); `NPM_TOKEN` is no longer required for those jobs.
+
+---
+
 ## 0.20.2
 
 ### Fixed
