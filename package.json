@@ -1,6 +1,6 @@
 {
   "name": "monorepo",
-  "version": "0.20.4",
+  "version": "0.20.5",
   "private": true,
   "workspaces": [
     "apps/*",

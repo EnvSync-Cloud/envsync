@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.5
+
+### Fixed
+
+- Install `wget` in API images and use it for Swarm HEALTHCHECK (bun -e was still 137).
+
+---
+
 ## 0.20.4
 
 ### Fixed
