@@ -4,6 +4,7 @@ import { registerCmkTenantWrappingProvider } from "envsync-enterprise/services/c
 import { CmkService } from "envsync-enterprise/services/cmk.service.ts";
 import { CmkCredentialService } from "envsync-enterprise/services/cmk-credential.service.ts";
 import { CmkRewrapWorker } from "envsync-enterprise/services/cmk-rewrap.worker.ts";
+import { EnterpriseIntegrationService } from "envsync-enterprise/services/enterprise-integration.service.ts";
 
 import { AppError } from "@/libs/errors";
 import { KMSClient } from "@/libs/kms/client";
@@ -79,6 +80,7 @@ beforeEach(async () => {
 
 afterEach(() => {
 	CmkRewrapWorker.stop();
+	CmkRewrapWorker.staleRunningMs = 2 * 60 * 60 * 1000;
 	KMSClient.setTenantWrappingProvider(null);
 	resetMockKmsTenantWrapping();
 	EditionPolicyService.clearTestOverrides();
@@ -125,6 +127,80 @@ describe("Enterprise CMK managed default", () => {
 		});
 		expect(res.status).toBe(403);
 		expect(await res.json()).toMatchObject({ code: "CMK_HOSTED_ONLY" });
+	});
+
+	test("Hosted implicit cloud PUT writes pending and does not 503 tenant encrypt", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		const implicit = await testRequest("/api/v1/manage/kms", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { source: "aws-kms", key_ref: "arn:aws:kms:us-east-1:123:key/x" },
+		});
+		expect(implicit.status).toBe(200);
+		expect(await implicit.json()).toMatchObject({ source: "aws-kms", status: "pending" });
+
+		const kms = await KMSClient.getInstance();
+		const enc = await kms.encrypt(seed.org.id, "app-1", "plain", "aad");
+		const dec = await kms.decrypt(seed.org.id, "app-1", enc.ciphertext, "aad", enc.keyVersionId);
+		expect(dec.plaintext).toBe("plain");
+	});
+
+	test("PUT managed then PUT aws-kms stays pending so encrypt still works", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		const managed = await testRequest("/api/v1/manage/kms", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { source: "managed" },
+		});
+		expect(managed.status).toBe(200);
+
+		const cloud = await testRequest("/api/v1/manage/kms", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { source: "aws-kms", key_ref: "arn:aws:kms:us-east-1:123:key/x" },
+		});
+		expect(cloud.status).toBe(200);
+		expect(await cloud.json()).toMatchObject({ source: "aws-kms", status: "pending", implicit: false });
+
+		const kms = await KMSClient.getInstance();
+		const enc = await kms.encrypt(seed.org.id, "app-1", "still-works", "aad");
+		expect((await kms.decrypt(seed.org.id, "app-1", enc.ciphertext, "aad", enc.keyVersionId)).plaintext).toBe(
+			"still-works",
+		);
+	});
+
+	test("PUT does not remap unavailable to pending", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		await insertCloudConfig("unavailable");
+		const updated = await CmkService.updateConfig(seed.org.id, {
+			source: "aws-kms",
+			key_ref: "arn:aws:kms:us-east-1:123:key/new",
+		});
+		expect(updated).toMatchObject({ source: "aws-kms", status: "unavailable" });
+	});
+
+	test("PUT managed undoes never-attached pending cloud without detach", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		await insertCloudConfig("pending");
+		const res = await testRequest("/api/v1/manage/kms", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: { source: "managed" },
+		});
+		expect(res.status).toBe(200);
+		expect(await res.json()).toMatchObject({ source: "managed", status: "active" });
 	});
 
 	test("POST /credentials encrypts under __kms_config__ and never returns the value", async () => {
@@ -249,6 +325,40 @@ describe("CMK break-glass + single-flight worker", () => {
 		expect(config).toMatchObject({ source: "managed", status: "active", key_ref: null });
 	});
 
+	test("never-attached pending detach resets to managed without sidecar rewrap", async () => {
+		await insertCloudConfig("pending");
+		let rewrapCalls = 0;
+		setMockKmsTenantRewrap({
+			supports: true,
+			rewrap: async () => {
+				rewrapCalls += 1;
+			},
+		});
+		const job = await CmkService.breakGlassDetach(seed.org.id, "platform");
+		await CmkRewrapWorker.processPendingJobs();
+		const finished = await CmkService.getJob(seed.org.id, job.id);
+		expect(finished.status).toBe("succeeded");
+		expect(finished.progress).toMatchObject({ never_attached: true, skipped_rewrap: true });
+		expect(rewrapCalls).toBe(0);
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({ source: "managed", status: "active" });
+	});
+
+	test("stale running jobs are reclaimed so a new detach can enqueue", async () => {
+		await insertCloudConfig("active");
+		const first = await CmkService.detach(seed.org.id, seed.masterUser.id);
+		const db = await getDB();
+		await db
+			.updateTable("org_kms_rewrap_job")
+			.set({ status: "running", updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000) })
+			.where("id", "=", first.id)
+			.execute();
+
+		CmkRewrapWorker.staleRunningMs = 60_000;
+		const second = await CmkService.breakGlassDetach(seed.org.id, "platform");
+		expect(second.status).toBe("pending");
+		expect(second.id).not.toBe(first.id);
+	});
+
 	test("unique active job index blocks a second detach (single-flight)", async () => {
 		await insertCloudConfig("active");
 		const first = await CmkService.detach(seed.org.id, seed.masterUser.id);
@@ -314,6 +424,45 @@ describe("CMK grant gate", () => {
 		const enc = await kms.encrypt(seed.org.id, "app-1", "plain", "aad");
 		const dec = await kms.decrypt(seed.org.id, "app-1", enc.ciphertext, "aad", enc.keyVersionId);
 		expect(dec.plaintext).toBe("plain");
+	});
+
+	test("active cloud unwrap fail persists status=unavailable", async () => {
+		await insertCloudConfig("active");
+		await expect(CmkService.ensureTenantKek(seed.org.id)).rejects.toMatchObject({
+			code: "CMK_UNAVAILABLE",
+			statusCode: 503,
+		});
+		expect(await CmkService.getConfig(seed.org.id)).toMatchObject({
+			source: "aws-kms",
+			status: "unavailable",
+			last_error: "cloud_unwrap_not_implemented",
+		});
+	});
+
+	test("vault ops also fail closed when CMK is unavailable", async () => {
+		await insertCloudConfig("unavailable");
+		const kms = await KMSClient.getInstance();
+		await expect(kms.vaultList(seed.org.id, "app-1", "secret", undefined, "tok")).rejects.toMatchObject({
+			code: "CMK_UNAVAILABLE",
+		});
+	});
+
+	test("integrations list/update skip purpose=kms org secrets", async () => {
+		const cred = await CmkCredentialService.create({
+			org_id: seed.org.id,
+			key: "aws-prod",
+			value: "super-secret",
+		});
+		await EnterpriseIntegrationService.createOrgSecret({
+			org_id: seed.org.id,
+			key: "github-token",
+			value: "ghp_test",
+		});
+		const listed = await EnterpriseIntegrationService.listOrgSecrets(seed.org.id);
+		expect(listed.map(row => row.key)).toEqual(["github-token"]);
+		await expect(
+			EnterpriseIntegrationService.updateOrgSecret(cred.id, seed.org.id, { value: "overwrite" }),
+		).rejects.toMatchObject({ code: "CMK_CREDENTIAL_LOCKED" });
 	});
 
 	test("GET /apps returns GetKeyInfo per app", async () => {

@@ -65,6 +65,49 @@ function isCloudSource(source: string): source is CloudKmsSource {
 	return (CLOUD_KMS_SOURCES as readonly string[]).includes(source);
 }
 
+function hasWrappedKek(value: Buffer | Uint8Array | null | undefined): boolean {
+	return Boolean(value && value.length > 0);
+}
+
+/** Never-attached: persist-as-pending cloud config with no tenant KEK written yet. */
+export function isNeverAttachedConfig(row: {
+	source: string;
+	status: string;
+	wrapped_kek?: Buffer | Uint8Array | null;
+} | null | undefined): boolean {
+	if (!row || row.source === "managed") {
+		return true;
+	}
+	return row.status === "pending" && !hasWrappedKek(row.wrapped_kek);
+}
+
+/**
+ * Cloud PUT must not brick a managed org (keep pending) or fail-open an
+ * unavailable attached org (keep unavailable). Preserve active/rotating only
+ * for same-source metadata updates after attach.
+ */
+export function nextCloudPutStatus(
+	existing: { source: string; status: string } | undefined,
+	nextSource: KmsSource,
+): KmsStatus {
+	if (!existing || existing.source === "managed") {
+		return "pending";
+	}
+	if (existing.status === "unavailable" || existing.status === "disabled") {
+		return existing.status;
+	}
+	if (existing.status === "pending") {
+		return "pending";
+	}
+	if (
+		(existing.status === "active" || existing.status === "rotating")
+		&& existing.source === nextSource
+	) {
+		return existing.status;
+	}
+	return "pending";
+}
+
 function isMissingKmsTable(error: unknown): boolean {
 	const err = error as { code?: string; message?: string };
 	if (err?.code === "42P01") {
@@ -184,16 +227,17 @@ export class CmkService {
 			await CmkCredentialService.getForOrg(orgId, input.credential_secret_id);
 		}
 
-		// Persist pending cloud config; attach/unwrap is PR-8.
+		// Persist-as-pending until attach (PR-8). Never promote managed→active cloud.
 		const now = new Date();
 		const db = await DB.getInstance();
 		const existing = await this.loadRow(orgId);
+		const nextStatus = nextCloudPutStatus(existing, input.source);
 		if (existing) {
 			await db
 				.updateTable("org_kms_config")
 				.set({
 					source: input.source,
-					status: existing.status === "active" || existing.status === "rotating" ? existing.status : "pending",
+					status: nextStatus,
 					key_ref: input.key_ref ?? null,
 					region: input.region ?? null,
 					credential_secret_id: input.credential_secret_id ?? null,
@@ -246,12 +290,34 @@ export class CmkService {
 		}
 
 		// Cloud unwrap + SetTenantWrappingKey is PR-8. Fail closed; do not root-fallback.
+		await this.markUnavailable(orgId, "cloud_unwrap_not_implemented");
 		infoLogs(`kms_unavailable org=${orgId} reason=cloud_unwrap_not_implemented`, LogTypes.ERROR, "CmkService");
 		throw new AppError(
 			"Customer-managed key is unavailable for this organization.",
 			503,
 			"CMK_UNAVAILABLE",
 		);
+	}
+
+	public static async markUnavailable(orgId: string, lastError: string): Promise<void> {
+		try {
+			const db = await DB.getInstance();
+			await db
+				.updateTable("org_kms_config")
+				.set({
+					status: "unavailable",
+					last_error: lastError,
+					updated_at: new Date(),
+				})
+				.where("org_id", "=", orgId)
+				.where("source", "!=", "managed")
+				.execute();
+		} catch (error) {
+			if (isMissingKmsTable(error)) {
+				return;
+			}
+			throw error;
+		}
 	}
 
 	public static async verify(orgId: string) {
@@ -435,7 +501,7 @@ export class CmkService {
 		const db = await DB.getInstance();
 		const existing = await this.loadRow(orgId);
 		if (existing) {
-			if (existing.source !== "managed") {
+			if (existing.source !== "managed" && !isNeverAttachedConfig(existing)) {
 				throw new ValidationError("Detach to managed before clearing a cloud source.", "CMK_DETACH_REQUIRED");
 			}
 			await db
@@ -475,6 +541,8 @@ export class CmkService {
 	}
 
 	private static async assertNoActiveJob(orgId: string) {
+		const { CmkRewrapWorker } = await import("./cmk-rewrap.worker");
+		await CmkRewrapWorker.reclaimStaleJobs();
 		const db = await DB.getInstance();
 		try {
 			const active = await db

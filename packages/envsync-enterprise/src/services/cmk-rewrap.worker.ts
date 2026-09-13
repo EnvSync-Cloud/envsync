@@ -5,7 +5,7 @@ import { AppError } from "envsync-api/ports/errors";
 import { KMSClient } from "envsync-api/ports/kms";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
-import { CmkService } from "./cmk.service";
+import { CmkService, isNeverAttachedConfig } from "./cmk.service";
 
 type ClaimedJob = {
 	id: string;
@@ -22,6 +22,8 @@ let workerTimer: ReturnType<typeof setInterval> | null = null;
 let isWorkerPassRunning = false;
 
 const WORKER_INTERVAL_MS = 15_000;
+/** Crash after claim leaves status=running; reclaim so break-glass can enqueue again. */
+const DEFAULT_STALE_RUNNING_MS = 2 * 60 * 60 * 1000;
 
 function isMissingKmsTable(error: unknown): boolean {
 	const err = error as { code?: string; message?: string };
@@ -33,6 +35,8 @@ function isMissingKmsTable(error: unknown): boolean {
 }
 
 export class CmkRewrapWorker {
+	public static staleRunningMs = DEFAULT_STALE_RUNNING_MS;
+
 	public static start() {
 		if (workerTimer) {
 			return;
@@ -62,6 +66,30 @@ export class CmkRewrapWorker {
 		}
 	}
 
+	public static async reclaimStaleJobs(): Promise<number> {
+		try {
+			const db = await DB.getInstance();
+			const cutoff = new Date(Date.now() - this.staleRunningMs);
+			const result = await db
+				.updateTable("org_kms_rewrap_job")
+				.set({
+					status: "failed",
+					progress: { code: "KMS_JOB_STALE" },
+					error_message: "KMS_JOB_STALE: running job exceeded its lease and was reclaimed.",
+					updated_at: new Date(),
+				})
+				.where("status", "=", "running")
+				.where("updated_at", "<", cutoff)
+				.executeTakeFirst();
+			return Number(result.numUpdatedRows ?? 0);
+		} catch (error) {
+			if (isMissingKmsTable(error)) {
+				return 0;
+			}
+			throw error;
+		}
+	}
+
 	public static async processPendingJobs(limit = 10): Promise<number> {
 		if (isWorkerPassRunning) {
 			return 0;
@@ -69,6 +97,7 @@ export class CmkRewrapWorker {
 		isWorkerPassRunning = true;
 		let processed = 0;
 		try {
+			await this.reclaimStaleJobs();
 			for (let i = 0; i < limit; i++) {
 				const claimed = await this.claimNextJob();
 				if (!claimed) {
@@ -138,9 +167,21 @@ export class CmkRewrapWorker {
 	 * (that path is 503 by design and would block recovery).
 	 */
 	private static async runDetachManaged(job: ClaimedJob): Promise<void> {
-		const config = await CmkService.getConfig(job.org_id);
-		if (config.source === "managed") {
+		const row = await CmkService.loadRow(job.org_id);
+		if (!row || row.source === "managed") {
 			await this.succeedJob(job.id, { already_managed: true });
+			return;
+		}
+
+		// Never-attached persist-as-pending has no sidecar KEK. Undo without rewrap.
+		if (isNeverAttachedConfig(row)) {
+			await CmkService.resetToManaged(job.org_id);
+			infoLogs(
+				`kms_dek_rewrap_succeeded job=${job.id} org=${job.org_id} kind=detach_managed never_attached=true`,
+				LogTypes.LOGS,
+				"CmkRewrapWorker",
+			);
+			await this.succeedJob(job.id, { never_attached: true, skipped_rewrap: true });
 			return;
 		}
 

@@ -241,6 +241,7 @@ export const MockKMSClient = {
 		orgId: string,
 		orgName: string,
 	): Promise<{ certPem: string; serialHex: string }> {
+		await beforeTenantOp(orgId, "");
 		if (orgCAs.has(orgId)) {
 			throw new Error("Org CA already exists for this org");
 		}
@@ -263,6 +264,7 @@ export const MockKMSClient = {
 		orgId: string,
 		_role: string,
 	): Promise<{ certPem: string; keyPem: string; serialHex: string }> {
+		await beforeTenantOp(orgId, "");
 		if (!orgCAs.has(orgId)) {
 			throw new Error("Org CA not initialized");
 		}
@@ -284,6 +286,7 @@ export const MockKMSClient = {
 		orgId: string,
 		_reason: number,
 	): Promise<{ success: boolean }> {
+		await beforeTenantOp(orgId, "");
 		const cert = pkiCerts.get(serialHex);
 		if (!cert || cert.orgId !== orgId) {
 			throw new Error("Certificate not found");
@@ -297,6 +300,7 @@ export const MockKMSClient = {
 		orgId: string,
 		deltaOnly: boolean,
 	): Promise<{ crlDer: Buffer; crlNumber: number; isDelta: boolean }> {
+		await beforeTenantOp(orgId, "");
 		// Return a fake DER buffer that, when base64-encoded, is a recognisable placeholder
 		const fakeDer = Buffer.from("MOCK-CRL-DER-DATA");
 		return { crlDer: fakeDer, crlNumber: 1, isDelta: deltaOnly };
@@ -306,6 +310,7 @@ export const MockKMSClient = {
 		serialHex: string,
 		orgId: string,
 	): Promise<{ status: number; revokedAt: string }> {
+		await beforeTenantOp(orgId, "");
 		const cert = pkiCerts.get(serialHex);
 		if (!cert || cert.orgId !== orgId) {
 			return { status: 2, revokedAt: "" }; // unknown
@@ -410,6 +415,7 @@ export const MockKMSClient = {
 	},
 
 	async vaultWrite(req: VaultWriteRequest, _sessionToken: string): Promise<VaultWriteResult> {
+		await beforeTenantOp(req.orgId, req.scopeId);
 		const k = vaultKey(req.orgId, req.scopeId, req.entryType, req.key, req.envTypeId);
 		const existing = vaultStore.get(k);
 		const version = (existing?.version || 0) + 1;
@@ -418,6 +424,7 @@ export const MockKMSClient = {
 	},
 
 	async vaultRead(req: VaultReadRequest, _sessionToken: string): Promise<VaultReadResult> {
+		await beforeTenantOp(req.orgId, req.scopeId);
 		const k = vaultKey(req.orgId, req.scopeId, req.entryType, req.key, req.envTypeId);
 		const entry = vaultStore.get(k);
 		if (!entry) {
@@ -441,6 +448,7 @@ export const MockKMSClient = {
 		envTypeId: string | undefined,
 		_sessionToken: string,
 	): Promise<boolean> {
+		await beforeTenantOp(orgId, scopeId);
 		const k = vaultKey(orgId, scopeId, entryType, key, envTypeId);
 		return vaultStore.delete(k);
 	},
@@ -454,6 +462,7 @@ export const MockKMSClient = {
 		_version: number,
 		_sessionToken: string,
 	): Promise<number> {
+		await beforeTenantOp(orgId, scopeId);
 		const k = vaultKey(orgId, scopeId, entryType, key, envTypeId);
 		return vaultStore.delete(k) ? 1 : 0;
 	},
@@ -465,6 +474,7 @@ export const MockKMSClient = {
 		envTypeId: string | undefined,
 		_sessionToken: string,
 	): Promise<VaultListEntry[]> {
+		await beforeTenantOp(orgId, scopeId);
 		const prefix = `${orgId}:${scopeId}:${entryType}:${envTypeId || ""}:`;
 		const entries: VaultListEntry[] = [];
 		for (const [k, v] of vaultStore) {
@@ -477,19 +487,21 @@ export const MockKMSClient = {
 	},
 
 	async vaultHistory(
-		_orgId: string,
-		_scopeId: string,
+		orgId: string,
+		scopeId: string,
 		_entryType: string,
 		_key: string,
 		_envTypeId: string | undefined,
 		_sessionToken: string,
 	): Promise<VaultVersionEntry[]> {
+		await beforeTenantOp(orgId, scopeId);
 		return [];
 	},
 
 	// ─── Session service mock methods ───────────────────────────────
 
 	async createSessionManaged(req: CreateSessionManagedRequest): Promise<CreateSessionResult> {
+		await beforeTenantOp(req.orgId, "");
 		return {
 			sessionToken: `mock-session-${req.memberId}-${req.orgId}`,
 			expiresAt: String(Math.floor(Date.now() / 1000) + 3600),
@@ -505,7 +517,8 @@ export const MockKMSClient = {
 		return true;
 	},
 
-	async revokeMemberSessions(_memberId: string, _orgId: string): Promise<number> {
+	async revokeMemberSessions(_memberId: string, orgId: string): Promise<number> {
+		await beforeTenantOp(orgId, "");
 		return 0;
 	},
 };
