@@ -3,6 +3,7 @@
 export const CacheTTL = {
 	SHORT: 300, // 5 min — users, api keys, apps, env types, teams, webhooks
 	LONG: 600, // 10 min — orgs, roles (change less frequently)
+	SAML_AUTHN: 600, // 10 min — pending SP-initiated AuthnRequest
 } as const;
 
 export const CacheKeys = {
@@ -56,6 +57,10 @@ export const CacheKeys = {
 
 	// SAML Providers
 	samlProvidersByOrg: (orgId: string) => `es:org:${orgId}:saml_providers`,
+	samlAuthn: (requestId: string) => `es:saml:authn:${requestId}`,
+
+	// Hosted org feature grant overlay
+	orgFeatureGrant: (orgId: string) => `es:org:${orgId}:feature_grant`,
 
 	// Glob patterns for cascade invalidation
 	allForUser: (userId: string) => `es:user:${userId}*`,

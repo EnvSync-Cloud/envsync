@@ -31,55 +31,8 @@ func NewClient(opts ...option.RequestOption) *Client {
 	}
 }
 
-// Start SP-initiated SAML SSO flow by generating an AuthnRequest redirect URL
-func (c *Client) InitiateSamlSso(
-	ctx context.Context,
-	request *sdk.SamlSsoRequest,
-	opts ...option.RequestOption,
-) (*sdk.SamlSsoResponse, error) {
-	options := core.NewRequestOptions(opts...)
-	baseURL := internal.ResolveBaseURL(
-		options.BaseURL,
-		c.baseURL,
-		"http://localhost:4000",
-	)
-	endpointURL := baseURL + "/api/v1/manage/saml/sso"
-	headers := internal.MergeHeaders(
-		c.header.Clone(),
-		options.ToHeader(),
-	)
-	headers.Set("Content-Type", "application/json")
-	errorCodes := internal.ErrorCodes{
-		500: func(apiError *core.APIError) error {
-			return &sdk.InternalServerError{
-				APIError: apiError,
-			}
-		},
-	}
-
-	var response *sdk.SamlSsoResponse
-	if err := c.caller.Call(
-		ctx,
-		&internal.CallParams{
-			URL:             endpointURL,
-			Method:          http.MethodPost,
-			Headers:         headers,
-			MaxAttempts:     options.MaxAttempts,
-			BodyProperties:  options.BodyProperties,
-			QueryParameters: options.QueryParameters,
-			Client:          options.HTTPClient,
-			Request:         request,
-			Response:        &response,
-			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
-		},
-	); err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
-// Receive and validate SAML Response from the identity provider (ACS endpoint)
-func (c *Client) HandleSamlAcs(
+// Unauthenticated SP metadata XML for the organization
+func (c *Client) GetPublicSamlMetadata(
 	ctx context.Context,
 	orgId string,
 	opts ...option.RequestOption,
@@ -91,7 +44,53 @@ func (c *Client) HandleSamlAcs(
 		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
-		baseURL+"/api/v1/manage/saml/acs/%v",
+		baseURL+"/api/saml/metadata/%v",
+		orgId,
+	)
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	errorCodes := internal.ErrorCodes{
+		404: func(apiError *core.APIError) error {
+			return &sdk.NotFoundError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Receive and validate a SAML Response from the identity provider
+func (c *Client) HandlePublicSamlAcs(
+	ctx context.Context,
+	orgId string,
+	opts ...option.RequestOption,
+) error {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/api/saml/acs/%v",
 		orgId,
 	)
 	headers := internal.MergeHeaders(
@@ -122,4 +121,93 @@ func (c *Client) HandleSamlAcs(
 		return err
 	}
 	return nil
+}
+
+// Success redirects to the IdP. Any error redirects to the dashboard login page.
+func (c *Client) StartPublicSamlSsoRedirect(
+	ctx context.Context,
+	orgSlug string,
+	opts ...option.RequestOption,
+) error {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/api/saml/sso/%v",
+		orgSlug,
+	)
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Unauthenticated SP-initiated start. Returns a redirect URL for the login page or CLI.
+func (c *Client) StartPublicSamlSso(
+	ctx context.Context,
+	orgSlug string,
+	request *sdk.PublicSamlSsoRequest,
+	opts ...option.RequestOption,
+) (*sdk.SamlSsoResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/api/saml/sso/%v",
+		orgSlug,
+	)
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+	errorCodes := internal.ErrorCodes{
+		404: func(apiError *core.APIError) error {
+			return &sdk.NotFoundError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	var response *sdk.SamlSsoResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
 }

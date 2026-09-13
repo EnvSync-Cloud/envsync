@@ -458,6 +458,144 @@ func (l *LicenseStatusResponse) String() string {
 	return fmt.Sprintf("%#v", l)
 }
 
+type OrgFeatureGrantParam struct {
+	OrgId string `json:"orgId" url:"orgId"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (o *OrgFeatureGrantParam) GetOrgId() string {
+	if o == nil {
+		return ""
+	}
+	return o.OrgId
+}
+
+func (o *OrgFeatureGrantParam) GetExtraProperties() map[string]interface{} {
+	return o.extraProperties
+}
+
+func (o *OrgFeatureGrantParam) UnmarshalJSON(data []byte) error {
+	type unmarshaler OrgFeatureGrantParam
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*o = OrgFeatureGrantParam(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *o)
+	if err != nil {
+		return err
+	}
+	o.extraProperties = extraProperties
+	o.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (o *OrgFeatureGrantParam) String() string {
+	if len(o.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(o.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(o); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", o)
+}
+
+type OrgKmsBreakGlassParam struct {
+	OrgId string `json:"orgId" url:"orgId"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (o *OrgKmsBreakGlassParam) GetOrgId() string {
+	if o == nil {
+		return ""
+	}
+	return o.OrgId
+}
+
+func (o *OrgKmsBreakGlassParam) GetExtraProperties() map[string]interface{} {
+	return o.extraProperties
+}
+
+func (o *OrgKmsBreakGlassParam) UnmarshalJSON(data []byte) error {
+	type unmarshaler OrgKmsBreakGlassParam
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*o = OrgKmsBreakGlassParam(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *o)
+	if err != nil {
+		return err
+	}
+	o.extraProperties = extraProperties
+	o.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (o *OrgKmsBreakGlassParam) String() string {
+	if len(o.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(o.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(o); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", o)
+}
+
+type OrgKmsJobParam struct {
+	Id string `json:"id" url:"id"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (o *OrgKmsJobParam) GetId() string {
+	if o == nil {
+		return ""
+	}
+	return o.Id
+}
+
+func (o *OrgKmsJobParam) GetExtraProperties() map[string]interface{} {
+	return o.extraProperties
+}
+
+func (o *OrgKmsJobParam) UnmarshalJSON(data []byte) error {
+	type unmarshaler OrgKmsJobParam
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*o = OrgKmsJobParam(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *o)
+	if err != nil {
+		return err
+	}
+	o.extraProperties = extraProperties
+	o.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (o *OrgKmsJobParam) String() string {
+	if len(o.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(o.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(o); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", o)
+}
+
 type RoleResponse struct {
 	Id                 string  `json:"id" url:"id"`
 	Name               string  `json:"name" url:"name"`

@@ -19,15 +19,15 @@ func NewInitiateSamlSsoUseCase() InitiateSamlSsoUseCase {
 	}
 }
 
-func (uc *initiateSamlSsoUseCase) Execute(ctx context.Context, providerID string) (*domain.SamlSsoResult, error) {
+func (uc *initiateSamlSsoUseCase) Execute(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "saml.sso")
 	defer span.End()
 
-	if strings.TrimSpace(providerID) == "" {
-		return nil, NewValidationError("provider ID is required", ErrProviderIDRequired)
+	if strings.TrimSpace(orgSlug) == "" {
+		return nil, NewValidationError("organization slug is required", ErrOrgSlugRequired)
 	}
 
-	result, err := uc.service.InitiateSso(ctx, providerID)
+	result, err := uc.service.InitiateSso(ctx, orgSlug, providerID)
 	if err != nil {
 		return nil, NewServiceError("failed to initiate SAML SSO", err)
 	}

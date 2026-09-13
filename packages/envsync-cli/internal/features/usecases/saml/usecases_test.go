@@ -19,8 +19,8 @@ type mockSamlService struct {
 	getProviderFn    func(ctx context.Context, id string) (*domain.SamlProvider, error)
 	updateProviderFn func(ctx context.Context, input domain.UpdateSamlProviderInput) error
 	deleteProviderFn func(ctx context.Context, id string) error
-	getMetadataFn    func(ctx context.Context, id string) error
-	initiateSsoFn    func(ctx context.Context, providerID string) (*domain.SamlSsoResult, error)
+	getMetadataFn    func(ctx context.Context, orgSlug string) (string, error)
+	initiateSsoFn    func(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error)
 }
 
 func (m *mockSamlService) CreateProvider(ctx context.Context, input domain.CreateSamlProviderInput) (*domain.SamlProvider, error) {
@@ -43,12 +43,12 @@ func (m *mockSamlService) DeleteProvider(ctx context.Context, id string) error {
 	return m.deleteProviderFn(ctx, id)
 }
 
-func (m *mockSamlService) GetMetadata(ctx context.Context, id string) error {
-	return m.getMetadataFn(ctx, id)
+func (m *mockSamlService) GetMetadata(ctx context.Context, orgSlug string) (string, error) {
+	return m.getMetadataFn(ctx, orgSlug)
 }
 
-func (m *mockSamlService) InitiateSso(ctx context.Context, providerID string) (*domain.SamlSsoResult, error) {
-	return m.initiateSsoFn(ctx, providerID)
+func (m *mockSamlService) InitiateSso(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error) {
+	return m.initiateSsoFn(ctx, orgSlug, providerID)
 }
 
 // --- CreateSamlProviderUseCase ---
@@ -677,40 +677,40 @@ func TestDeleteSamlProviderUseCase_Execute(t *testing.T) {
 func TestGetSamlMetadataUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
-		id          string
-		mockFn      func(ctx context.Context, id string) error
+		orgSlug     string
+		mockFn      func(ctx context.Context, orgSlug string) (string, error)
 		wantErr     bool
 		wantErrIs   error
 		wantErrCode string
 	}{
 		{
-			name: "success",
-			id:   "saml-123",
-			mockFn: func(_ context.Context, _ string) error {
-				return nil
+			name:    "success",
+			orgSlug: "acme",
+			mockFn: func(_ context.Context, _ string) (string, error) {
+				return "<EntityDescriptor/>", nil
 			},
 		},
 		{
-			name:        "validation error - empty ID",
-			id:          "",
+			name:        "validation error - empty slug",
+			orgSlug:     "",
 			mockFn:      nil,
 			wantErr:     true,
-			wantErrIs:   ErrProviderIDRequired,
+			wantErrIs:   ErrOrgSlugRequired,
 			wantErrCode: SamlErrorCodeValidation,
 		},
 		{
-			name:        "validation error - whitespace ID",
-			id:          "   \t ",
+			name:        "validation error - whitespace slug",
+			orgSlug:     "   \t ",
 			mockFn:      nil,
 			wantErr:     true,
-			wantErrIs:   ErrProviderIDRequired,
+			wantErrIs:   ErrOrgSlugRequired,
 			wantErrCode: SamlErrorCodeValidation,
 		},
 		{
-			name: "service error",
-			id:   "saml-123",
-			mockFn: func(_ context.Context, _ string) error {
-				return errors.New("metadata fetch failed")
+			name:    "service error",
+			orgSlug: "acme",
+			mockFn: func(_ context.Context, _ string) (string, error) {
+				return "", errors.New("metadata fetch failed")
 			},
 			wantErr:     true,
 			wantErrCode: SamlErrorCodeServiceError,
@@ -723,7 +723,7 @@ func TestGetSamlMetadataUseCase_Execute(t *testing.T) {
 				service: &mockSamlService{getMetadataFn: tt.mockFn},
 			}
 
-			err := uc.Execute(context.Background(), tt.id)
+			_, err := uc.Execute(context.Background(), tt.orgSlug)
 
 			if tt.wantErr {
 				if err == nil {
@@ -754,17 +754,17 @@ func TestGetSamlMetadataUseCase_Execute(t *testing.T) {
 func TestInitiateSamlSsoUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name          string
-		providerID    string
-		mockFn        func(ctx context.Context, providerID string) (*domain.SamlSsoResult, error)
+		orgSlug       string
+		mockFn        func(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error)
 		wantErr       bool
 		wantErrIs     error
 		wantErrCode   string
 		wantNilResult bool
 	}{
 		{
-			name:       "success",
-			providerID: "saml-123",
-			mockFn: func(_ context.Context, providerID string) (*domain.SamlSsoResult, error) {
+			name:    "success",
+			orgSlug: "acme",
+			mockFn: func(_ context.Context, orgSlug string, _ string) (*domain.SamlSsoResult, error) {
 				return &domain.SamlSsoResult{
 					RedirectURL: "https://idp.example.com/sso?SAMLRequest=...",
 					RequestID:   "req-abc123",
@@ -772,27 +772,27 @@ func TestInitiateSamlSsoUseCase_Execute(t *testing.T) {
 			},
 		},
 		{
-			name:          "validation error - empty provider ID",
-			providerID:    "",
+			name:          "validation error - empty org slug",
+			orgSlug:       "",
 			mockFn:        nil,
 			wantErr:       true,
-			wantErrIs:     ErrProviderIDRequired,
+			wantErrIs:     ErrOrgSlugRequired,
 			wantErrCode:   SamlErrorCodeValidation,
 			wantNilResult: true,
 		},
 		{
-			name:          "validation error - whitespace provider ID",
-			providerID:    "   \t  ",
+			name:          "validation error - whitespace org slug",
+			orgSlug:       "   \t  ",
 			mockFn:        nil,
 			wantErr:       true,
-			wantErrIs:     ErrProviderIDRequired,
+			wantErrIs:     ErrOrgSlugRequired,
 			wantErrCode:   SamlErrorCodeValidation,
 			wantNilResult: true,
 		},
 		{
-			name:       "service error",
-			providerID: "saml-123",
-			mockFn: func(_ context.Context, _ string) (*domain.SamlSsoResult, error) {
+			name:    "service error",
+			orgSlug: "acme",
+			mockFn: func(_ context.Context, _ string, _ string) (*domain.SamlSsoResult, error) {
 				return nil, errors.New("SSO initiation failed")
 			},
 			wantErr:       true,
@@ -807,7 +807,7 @@ func TestInitiateSamlSsoUseCase_Execute(t *testing.T) {
 				service: &mockSamlService{initiateSsoFn: tt.mockFn},
 			}
 
-			result, err := uc.Execute(context.Background(), tt.providerID)
+			result, err := uc.Execute(context.Background(), tt.orgSlug, "")
 
 			if tt.wantErr {
 				if err == nil {

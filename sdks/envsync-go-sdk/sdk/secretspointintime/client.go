@@ -41,7 +41,7 @@ func (c *Client) GetSecretHistory(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/secret/history"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetSecretsAtPointInTime(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/secret/pit"
 	headers := internal.MergeHeaders(
@@ -135,7 +135,7 @@ func (c *Client) GetSecretsAtTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/secret/timestamp"
 	headers := internal.MergeHeaders(
@@ -182,7 +182,7 @@ func (c *Client) GetSecretDiff(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/secret/diff"
 	headers := internal.MergeHeaders(
@@ -229,7 +229,7 @@ func (c *Client) GetSecretDiffByTimestampRange(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/secret/diff/timestamp-range"
 	headers := internal.MergeHeaders(
@@ -277,7 +277,7 @@ func (c *Client) GetSecretVariableTimeline(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/secret/timeline/%v",

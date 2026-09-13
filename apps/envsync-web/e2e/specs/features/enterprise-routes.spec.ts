@@ -6,7 +6,7 @@ import { getAppByName } from "../../helpers/app-data";
 import { test, expect } from "../../fixtures/test";
 
 test.describe("enterprise dashboard routes", () => {
-	test("organisation integrations, license, and sync ops pages load", async ({ page }) => {
+	test("organisation integrations, license, sync ops, SSO, and key management pages load", async ({ page }) => {
 		const routeChecks: Array<{ path: string; heading: RegExp | string }> = [
 			{
 				path: "/organisation/integrations",
@@ -19,6 +19,14 @@ test.describe("enterprise dashboard routes", () => {
 			{
 				path: "/organisation/sync",
 				heading: /Sync operations|Sync/i,
+			},
+			{
+				path: "/organisation/sso",
+				heading: /^SSO$/,
+			},
+			{
+				path: "/organisation/keys",
+				heading: /^Key management$/,
 			},
 		];
 
@@ -43,6 +51,88 @@ test.describe("enterprise dashboard routes", () => {
 			page.getByRole("heading", { name: /Integrations|Integration/i }).first(),
 		).toBeVisible({ timeout: 30_000 });
 		await expect(page.getByText(/not found|page you are looking for/i)).toHaveCount(0);
+	});
+
+	// Hosted-only grant-org-features would hide Integrations on a second harness org.
+	// UI e2e is not Hosted-gated, so intercept whoami.features instead.
+	test("restricted whoami features hide Integrations nav and deep-link to upgrade", async ({ page }) => {
+		await page.route("**/api/auth/me", async route => {
+			const response = await route.fetch();
+			const body = await response.json() as { features?: string[] };
+			const features = (body.features ?? []).filter(feature => feature !== "integrations");
+			await route.fulfill({
+				response,
+				json: { ...body, features },
+			});
+		});
+
+		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "SSO" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "Key management" })).toBeVisible();
+
+		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "SSO" })).toBeVisible();
+		await expect(page.getByRole("link", { name: "Key management" })).toBeVisible();
+
+		const seededApp = await getAppByName(page, "Core Platform");
+		if (seededApp) {
+			await page.goto(`/applications/${seededApp.id}`, { waitUntil: "domcontentloaded" });
+			await expect(page.getByRole("button", { name: "Integrations" })).toHaveCount(0);
+		}
+
+		await page.goto("/organisation/integrations", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("heading", { name: /Integrations is not on this plan/i })).toBeVisible({
+			timeout: 30_000,
+		});
+	});
+
+	test("restricted whoami features hide SSO nav and deep-link to upgrade", async ({ page }) => {
+		await page.route("**/api/auth/me", async route => {
+			const response = await route.fetch();
+			const body = await response.json() as { features?: string[] };
+			const features = (body.features ?? []).filter(feature => feature !== "saml");
+			await route.fulfill({
+				response,
+				json: { ...body, features },
+			});
+		});
+
+		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "SSO" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+
+		await page.goto("/organisation/sso", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("heading", { name: /SSO is not on this plan/i })).toBeVisible({
+			timeout: 30_000,
+		});
+	});
+
+	test("restricted whoami features hide Key management and deep-link to upgrade", async ({ page }) => {
+		await page.route("**/api/auth/me", async route => {
+			const response = await route.fetch();
+			const body = await response.json() as { features?: string[] };
+			const features = (body.features ?? []).filter(feature => feature !== "kms");
+			await route.fulfill({
+				response,
+				json: { ...body, features },
+			});
+		});
+
+		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "Key management" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+
+		await page.goto("/organisation/keys", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("heading", { name: /Key management is not on this plan/i })).toBeVisible({
+			timeout: 30_000,
+		});
+		await expect(page.getByText(/Existing encryption continues/i)).toBeVisible();
 	});
 
 	test("legacy /manage SPA path is not a live product surface", async ({ page }) => {

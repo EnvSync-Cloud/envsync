@@ -48,7 +48,8 @@ export const Header = () => {
   );
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
   const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
-  const canSwitchOrganizations = runtimeConfig.edition === "enterprise";
+  const canSwitchOrganizations =
+    runtimeConfig.edition === "enterprise" && user?.auth_type !== "saml";
   const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
 
   const handleLogout = async () => {

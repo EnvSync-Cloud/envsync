@@ -1,6 +1,9 @@
 import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
+import { isPublicAuthPath } from "@/lib/login-auth";
 import { env, type Function } from "@/utils/env";
 import { runtimeConfig } from "@/utils/runtime-config";
+
+export { isPublicAuthPath };
 
 let loginRedirectInFlight = false;
 
@@ -42,19 +45,11 @@ export function isReloginError(error: unknown) {
 }
 
 export async function redirectToLogin() {
+  if (typeof window === "undefined") return;
+  if (isPublicAuthPath(window.location.pathname)) return;
   if (loginRedirectInFlight) return;
   loginRedirectInFlight = true;
-  try {
-    const response = await getSDK().access.createWebLogin();
-    if (response?.loginUrl) {
-      window.location.href = response.loginUrl;
-      return;
-    }
-  } catch (error) {
-    console.error("Failed to create web login:", error);
-  }
-  // Don't reset loginRedirectInFlight on failure - prevents infinite retry loop
-  // The guard stays set until the page navigates or reloads
+  window.location.href = "/login";
 }
 
 export async function logoutWebSession() {

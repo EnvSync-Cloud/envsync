@@ -41,6 +41,8 @@ const ENTERPRISE_MANAGE_OPENAPI_TAGS = [
 	"Rotation",
 	"Dynamic Secrets",
 	"Log Forwarding",
+	"Org Features",
+	"Enterprise CMK",
 ] as const;
 
 const ENTERPRISE_MANAGE_TAG_DESCRIPTION =
@@ -241,7 +243,8 @@ export async function createApiApp(surface: ApiSurface) {
 	const coreAllow = isManagement
 		? []
 		: ["/api/system/status", "/api/setup/status", "/api/setup/org"];
-	app.use("/api/*", enterpriseLicenseLockMiddleware([...coreAllow, ...manageAllow]));
+	const publicSamlAllow = manageMounted ? ["/api/saml/metadata"] : [];
+	app.use("/api/*", enterpriseLicenseLockMiddleware([...coreAllow, ...manageAllow, ...publicSamlAllow]));
 
 	app.use(logger());
 	app.use(prettyJSON());
@@ -275,6 +278,8 @@ export async function createApiApp(surface: ApiSurface) {
 	// Single manage product path (core + optional second process).
 	if (manageMounted) {
 		app.route(MANAGE_API_PREFIX, await createApiRoutes("management"));
+		const { publicSamlRouter } = await import("envsync-enterprise");
+		app.route("/api/saml", publicSamlRouter);
 	}
 
 	const openApiDocumentation = {

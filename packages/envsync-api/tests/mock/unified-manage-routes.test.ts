@@ -50,6 +50,18 @@ describe("unified manage surface /api/v1/manage/{module}/...", () => {
 			created_at: new Date(),
 			updated_at: new Date(),
 			org_count: 2,
+			deployment_mode: "hosted",
+			max_orgs: null,
+			public_signup_enabled: true,
+			can_create_organization: true,
+			entitlement: {
+				present: false,
+				source: null,
+				in_grace: false,
+				features: [],
+				max_orgs: null,
+				expires_at: null,
+			},
 		});
 		LicenseStateService.getEnforcementDecision = async () => ({
 			required: true,
@@ -118,5 +130,8 @@ describe("unified manage surface /api/v1/manage/{module}/...", () => {
 			code: "ENTERPRISE_LICENSE_INVALID",
 			reason: "ENTERPRISE_LICENSE_EXPIRED",
 		});
+
+		const metadata = await coreApp.request("http://localhost/api/saml/metadata/org-1");
+		expect(metadata.status).not.toBe(423);
 	});
 });

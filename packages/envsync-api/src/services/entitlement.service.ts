@@ -9,11 +9,13 @@ import { config } from "@/utils/env";
 import {
 	ALL_ENTERPRISE_FEATURES,
 	DEFAULT_ENTERPRISE_FEATURE_SET,
+	isEnterpriseFeature,
 	type EnterpriseFeature,
 	type EntitlementClaims,
 	type VerifiedEntitlement,
 } from "@/services/entitlement.types";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { OrgFeatureGrantService } from "@/services/org-feature-grant.service";
 
 const ENTITLEMENT_ISS = "envsync-license-server";
 const DEFAULT_GRACE_SECONDS = 72 * 60 * 60; // 72h grace after exp (Coder-like)
@@ -35,10 +37,6 @@ function bundledPublicKeyPem() {
 		path.join(import.meta.dir, "../assets/license/envsync-entitlement-public.pem"),
 		"utf8",
 	);
-}
-
-function isEnterpriseFeature(value: string): value is EnterpriseFeature {
-	return (ALL_ENTERPRISE_FEATURES as readonly string[]).includes(value);
 }
 
 function normalizeFeatures(raw: unknown): EnterpriseFeature[] {
@@ -264,13 +262,36 @@ export class EntitlementService {
 		return ent.claims.max_orgs ?? 1;
 	}
 
-	/**
-	 * Feature gate for EE routes.
-	 * - Hosted: always allow (platform billing).
-	 * - OSS: always deny.
-	 * - Self-host enterprise without enforcement: allow if edition=enterprise (dev DX).
-	 * - Self-host enterprise with enforcement: require verified entitlement + feature.
-	 */
+	public static async getInstallFeatures(): Promise<EnterpriseFeature[]> {
+		if (EditionPolicyService.isOss()) {
+			return [];
+		}
+		if (EditionPolicyService.isHosted()) {
+			return [...ALL_ENTERPRISE_FEATURES];
+		}
+		if (!EditionPolicyService.requiresEnterpriseLicense()) {
+			return EditionPolicyService.isEnterprise() ? [...ALL_ENTERPRISE_FEATURES] : [];
+		}
+		const entitlement = await this.resolve();
+		if (!entitlement) {
+			return [];
+		}
+		return [...entitlement.claims.features];
+	}
+
+	public static async getOrgFeatures(orgId: string): Promise<EnterpriseFeature[]> {
+		const ceiling = await this.getInstallFeatures();
+		if (!EditionPolicyService.isHosted() || !orgId) {
+			return ceiling;
+		}
+		const grant = await OrgFeatureGrantService.getGrant(orgId);
+		if (!grant) {
+			return ceiling;
+		}
+		const granted = new Set(grant.features);
+		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
+	}
+
 	public static async assertFeature(feature: EnterpriseFeature) {
 		if (EditionPolicyService.isOss()) {
 			throw new ForbiddenError(
@@ -278,18 +299,24 @@ export class EntitlementService {
 				"ENTERPRISE_FEATURE_REQUIRED",
 			);
 		}
-		if (EditionPolicyService.isHosted()) {
+
+		const ceiling = await this.getInstallFeatures();
+		if (ceiling.includes(feature)) {
 			return;
 		}
-		// selfhosted enterprise
+
+		if (EditionPolicyService.isHosted()) {
+			throw new ForbiddenError(
+				`This feature is not included in the current entitlement (${feature}).`,
+				"ENTITLEMENT_FEATURE_MISSING",
+			);
+		}
+
 		if (!EditionPolicyService.requiresEnterpriseLicense()) {
-			if (!EditionPolicyService.isEnterprise()) {
-				throw new ForbiddenError(
-					"This feature requires an enterprise license.",
-					"ENTERPRISE_FEATURE_REQUIRED",
-				);
-			}
-			return;
+			throw new ForbiddenError(
+				"This feature requires an enterprise license.",
+				"ENTERPRISE_FEATURE_REQUIRED",
+			);
 		}
 
 		const entitlement = await this.resolve();
@@ -299,10 +326,30 @@ export class EntitlementService {
 				"ENTITLEMENT_REQUIRED",
 			);
 		}
-		if (!this.hasFeature(feature, entitlement)) {
+		throw new ForbiddenError(
+			`This feature is not included in the current entitlement (${feature}).`,
+			"ENTITLEMENT_FEATURE_MISSING",
+		);
+	}
+
+	public static async assertOrgFeature(orgId: string, feature: EnterpriseFeature) {
+		await this.assertFeature(feature);
+
+		if (!EditionPolicyService.isHosted()) {
+			return;
+		}
+
+		const grant = await OrgFeatureGrantService.getGrant(orgId);
+		if (!grant) {
+			return;
+		}
+		if (feature === "multi_org") {
+			return;
+		}
+		if (!grant.features.includes(feature)) {
 			throw new ForbiddenError(
-				`This feature is not included in the current entitlement (${feature}).`,
-				"ENTITLEMENT_FEATURE_MISSING",
+				`This organization is not entitled for this feature (${feature}).`,
+				"ORG_FEATURE_MISSING",
 			);
 		}
 	}

@@ -75,6 +75,7 @@ type SystemStatusState struct {
 	LandingEnabled            bool                             `json:"landing_enabled" url:"landing_enabled"`
 	FirstBootstrapCompletedAt *string                          `json:"first_bootstrap_completed_at,omitempty" url:"first_bootstrap_completed_at,omitempty"`
 	OrgCount                  float64                          `json:"org_count" url:"org_count"`
+	Entitlement               *SystemStatusStateEntitlement    `json:"entitlement,omitempty" url:"entitlement,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -164,6 +165,13 @@ func (s *SystemStatusState) GetOrgCount() float64 {
 	return s.OrgCount
 }
 
+func (s *SystemStatusState) GetEntitlement() *SystemStatusStateEntitlement {
+	if s == nil {
+		return nil
+	}
+	return s.Entitlement
+}
+
 func (s *SystemStatusState) GetExtraProperties() map[string]interface{} {
 	return s.extraProperties
 }
@@ -238,4 +246,90 @@ func NewSystemStatusStateEditionFromString(s string) (SystemStatusStateEdition, 
 
 func (s SystemStatusStateEdition) Ptr() *SystemStatusStateEdition {
 	return &s
+}
+
+type SystemStatusStateEntitlement struct {
+	Present   bool     `json:"present" url:"present"`
+	Source    *string  `json:"source,omitempty" url:"source,omitempty"`
+	InGrace   bool     `json:"in_grace" url:"in_grace"`
+	Features  []string `json:"features" url:"features"`
+	MaxOrgs   *float64 `json:"max_orgs,omitempty" url:"max_orgs,omitempty"`
+	ExpiresAt *string  `json:"expires_at,omitempty" url:"expires_at,omitempty"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (s *SystemStatusStateEntitlement) GetPresent() bool {
+	if s == nil {
+		return false
+	}
+	return s.Present
+}
+
+func (s *SystemStatusStateEntitlement) GetSource() *string {
+	if s == nil {
+		return nil
+	}
+	return s.Source
+}
+
+func (s *SystemStatusStateEntitlement) GetInGrace() bool {
+	if s == nil {
+		return false
+	}
+	return s.InGrace
+}
+
+func (s *SystemStatusStateEntitlement) GetFeatures() []string {
+	if s == nil {
+		return nil
+	}
+	return s.Features
+}
+
+func (s *SystemStatusStateEntitlement) GetMaxOrgs() *float64 {
+	if s == nil {
+		return nil
+	}
+	return s.MaxOrgs
+}
+
+func (s *SystemStatusStateEntitlement) GetExpiresAt() *string {
+	if s == nil {
+		return nil
+	}
+	return s.ExpiresAt
+}
+
+func (s *SystemStatusStateEntitlement) GetExtraProperties() map[string]interface{} {
+	return s.extraProperties
+}
+
+func (s *SystemStatusStateEntitlement) UnmarshalJSON(data []byte) error {
+	type unmarshaler SystemStatusStateEntitlement
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*s = SystemStatusStateEntitlement(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *s)
+	if err != nil {
+		return err
+	}
+	s.extraProperties = extraProperties
+	s.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (s *SystemStatusStateEntitlement) String() string {
+	if len(s.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(s); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", s)
 }

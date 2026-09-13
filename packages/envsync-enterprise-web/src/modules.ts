@@ -1,6 +1,9 @@
-import { KeyRound, Link2, Workflow } from "lucide-react";
+import { Fingerprint, KeyRound, Link2, LockKeyhole, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
+
+const isOrgAdmin = (user: { role: { is_admin: boolean; is_master: boolean } }) =>
+  user.role.is_admin || user.role.is_master;
 
 /**
  * Canonical enterprise dashboard modules (D10 / Phase 5b–5c).
@@ -9,6 +12,7 @@ import type { WebModule } from "./types";
 export const enterpriseWebModules: WebModule[] = [
   {
     name: "enterprise-integrations",
+    requiredFeature: "integrations",
     routes: [
       {
         id: "applications-integrations",
@@ -53,12 +57,6 @@ export const enterpriseWebModules: WebModule[] = [
         loadComponent: () => import("./pages/OrgIntegrations"),
       },
       {
-        id: "organisation-license",
-        layout: "root",
-        path: "organisation/license",
-        loadComponent: () => import("./pages/LicenseSettings"),
-      },
-      {
         id: "organisation-sync",
         layout: "root",
         path: "organisation/sync",
@@ -81,6 +79,36 @@ export const enterpriseWebModules: WebModule[] = [
             href: "/organisation/sync",
             icon: Workflow,
           },
+        ],
+      },
+    ],
+    scopeRules: {
+      "applications-integrations": user =>
+        (user.role.can_edit || user.role.is_admin || user.role.is_master)
+        && Boolean(user.features?.includes("integrations")),
+      "organisation-integrations": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("integrations")),
+      "organisation-sync": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("integrations")),
+    },
+    settingsSections: [
+      { id: "integrations", label: "Integrations" },
+    ],
+  },
+  {
+    name: "enterprise-license",
+    routes: [
+      {
+        id: "organisation-license",
+        layout: "root",
+        path: "organisation/license",
+        loadComponent: () => import("./pages/LicenseSettings"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
           {
             id: "organisation-license",
             name: "License",
@@ -91,14 +119,74 @@ export const enterpriseWebModules: WebModule[] = [
       },
     ],
     scopeRules: {
-      "applications-integrations": user => user.role.can_edit || user.role.is_admin || user.role.is_master,
-      "organisation-integrations": user => user.role.is_admin || user.role.is_master,
-      "organisation-license": user => user.role.is_admin || user.role.is_master,
-      "organisation-sync": user => user.role.is_admin || user.role.is_master,
+      "organisation-license": isOrgAdmin,
     },
     settingsSections: [
       { id: "license", label: "License" },
-      { id: "integrations", label: "Integrations" },
+    ],
+  },
+  {
+    name: "enterprise-sso",
+    requiredFeature: "saml",
+    routes: [
+      {
+        id: "organisation-sso",
+        layout: "root",
+        path: "organisation/sso",
+        loadComponent: () => import("./pages/OrgSso"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-sso",
+            name: "SSO",
+            href: "/organisation/sso",
+            icon: Fingerprint,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-sso": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("saml")),
+    },
+    settingsSections: [
+      { id: "sso", label: "SSO" },
+    ],
+  },
+  {
+    name: "enterprise-kms",
+    requiredFeature: "kms",
+    routes: [
+      {
+        id: "organisation-keys",
+        layout: "root",
+        path: "organisation/keys",
+        loadComponent: () => import("./pages/KeyManagement"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-keys",
+            name: "Key management",
+            href: "/organisation/keys",
+            icon: LockKeyhole,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-keys": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("kms")),
+    },
+    settingsSections: [
+      { id: "keys", label: "Key management" },
     ],
   },
 ];

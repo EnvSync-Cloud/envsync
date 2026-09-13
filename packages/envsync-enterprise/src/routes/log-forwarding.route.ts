@@ -4,6 +4,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { LogForwardingController } from "../controllers/log-forwarding.controller";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { requirePermission } from "envsync-api/ports/middlewares";
 import {
     createLogForwardingRequestSchema,
@@ -19,6 +20,7 @@ const app = new Hono();
 app.use(authMiddleware());
 app.use(cliMiddleware());
 app.use(enterpriseGuard("log_forwarding"));
+app.use(orgFeatureGuard("log_forwarding"));
 
 app.post(
     "/",

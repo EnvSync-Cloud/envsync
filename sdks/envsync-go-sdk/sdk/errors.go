@@ -127,6 +127,30 @@ func (n *NotFoundError) Unwrap() error {
 	return n.APIError
 }
 
+// CMK unavailable
+type ServiceUnavailableError struct {
+	*core.APIError
+	Body *ErrorResponse
+}
+
+func (s *ServiceUnavailableError) UnmarshalJSON(data []byte) error {
+	var body *ErrorResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return err
+	}
+	s.StatusCode = 503
+	s.Body = body
+	return nil
+}
+
+func (s *ServiceUnavailableError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Body)
+}
+
+func (s *ServiceUnavailableError) Unwrap() error {
+	return s.APIError
+}
+
 // Cookie session required
 type UnauthorizedError struct {
 	*core.APIError

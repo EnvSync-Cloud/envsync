@@ -94,12 +94,16 @@ async function fetchJson(url: string, init: RequestInit, allowStatuses: number[]
 export class EnterpriseProviderSyncService {
 	private static async getOrgSecretValue(org_id: string, key: string) {
 		const db = await DB.getInstance();
-		const secret = await db
+		const secrets = await db
 			.selectFrom("org_secret")
 			.selectAll()
 			.where("org_id", "=", org_id)
 			.where("key", "=", key)
-			.executeTakeFirst();
+			.execute();
+		const secret = secrets.find(row => {
+			const metadata = row.metadata as { purpose?: unknown } | null;
+			return metadata?.purpose !== "kms";
+		});
 		if (!secret) {
 			throw new NotFoundError("OrgSecret", key, "ENTERPRISE_ORG_SECRET_NOT_FOUND");
 		}

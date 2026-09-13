@@ -1,7 +1,7 @@
 import { DB } from "envsync-api/ports/db";
 import log, { LogTypes } from "envsync-api/ports/logger";
-import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
-import { EnvService } from "envsync-api/ports/services";
+import { ForbiddenError, NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import { EntitlementService, EnvService } from "envsync-api/ports/services";
 import { EnterpriseProviderSyncService } from "./enterprise-provider-sync.service";
 import { EnvTypeService } from "envsync-api/ports/services";
 import { SecretService } from "envsync-api/ports/services";
@@ -108,6 +108,15 @@ export class EnterpriseSyncService {
 				.execute();
 
 			for (const run of pendingRuns) {
+				try {
+					await EntitlementService.assertOrgFeature(run.org_id, "integrations");
+				} catch (error) {
+					if (error instanceof ForbiddenError) {
+						await this.failUnentitledRun(run, error);
+						continue;
+					}
+					throw error;
+				}
 				await this.executeRun(run.id);
 			}
 		} finally {
@@ -220,6 +229,46 @@ export class EnterpriseSyncService {
 		}
 
 		return db.selectFrom("sync_run").selectAll().where("id", "=", activeRun.id).executeTakeFirstOrThrow();
+	}
+
+	private static async failUnentitledRun(
+		run: { id: string; org_id: string; app_id: string | null; provider_type: EnterpriseProvider; actor_user_id: string | null },
+		error: ForbiddenError,
+	) {
+		const db = await DB.getInstance();
+		const message = `${error.code}: ${error.message}`;
+		await db
+			.updateTable("sync_run")
+			.set({
+				status: "failed",
+				completed_at: new Date(),
+				error_message: message,
+				updated_at: new Date(),
+			})
+			.where("id", "=", run.id)
+			.where("status", "=", "pending")
+			.execute();
+
+		log(
+			`Failed sync run ${run.id} for org ${run.org_id}: ${error.code}`,
+			LogTypes.LOGS,
+			"EnterpriseSyncService",
+		);
+
+		await this.appendAuditEvent({
+			org_id: run.org_id,
+			sync_run_id: run.id,
+			app_id: run.app_id,
+			env_type_id: null,
+			provider_type: run.provider_type,
+			action: "sync_run_failed",
+			result: "error",
+			actor_user_id: run.actor_user_id,
+			details: {
+				error: message,
+				code: error.code,
+			},
+		});
 	}
 
 	private static async runExecutionPlan(run: SyncRunRow) {

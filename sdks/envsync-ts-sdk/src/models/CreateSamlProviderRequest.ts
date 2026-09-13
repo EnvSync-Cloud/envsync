@@ -14,15 +14,23 @@ export type CreateSamlProviderRequest = {
     /**
      * SAML entity ID (issuer) from the IdP metadata
      */
-    entity_id: string;
+    entity_id?: string;
     /**
      * IdP SSO login URL
      */
-    sso_url: string;
+    sso_url?: string;
     /**
      * IdP X.509 certificate (PEM format) for signature validation
      */
-    certificate: string;
+    certificate?: string;
+    /**
+     * Optional IdP metadata XML. When set, entity_id, sso_url, and certificate are parsed from it.
+     */
+    idp_metadata_xml?: string;
+    /**
+     * Mark this provider as the default IdP for the organization
+     */
+    is_default?: boolean;
 };
 export namespace CreateSamlProviderRequest {
     /**

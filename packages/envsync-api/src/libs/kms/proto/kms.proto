@@ -15,6 +15,10 @@ service KMSService {
     rpc RotateDataKey(RotateDataKeyRequest) returns (RotateDataKeyResponse);
     rpc ReEncrypt(ReEncryptRequest) returns (ReEncryptResponse);
     rpc GetKeyInfo(GetKeyInfoRequest) returns (GetKeyInfoResponse);
+    // Tenant KEK attach/detach (Enterprise CMK). Sidecar persists KEK + allow_root_unwrap.
+    rpc SetTenantWrappingKey(SetTenantWrappingKeyRequest) returns (SetTenantWrappingKeyResponse);
+    rpc ClearTenantWrappingKey(ClearTenantWrappingKeyRequest) returns (ClearTenantWrappingKeyResponse);
+    rpc RewrapTenantDataKeys(RewrapTenantDataKeysRequest) returns (RewrapTenantDataKeysResponse);
 }
 
 message EncryptRequest {
@@ -117,3 +121,32 @@ message GetKeyInfoResponse {
     int64 max_encryptions = 4;
     string status = 5;
 }
+
+// RewrapTarget selects which wrapping key RewrapTenantDataKeys writes under.
+enum RewrapTarget {
+    TENANT_KEK = 0;  // attach: write DEKs under the current tenant KEK
+    ROOT = 1;        // detach / break-glass: write DEKs under MINIKMS_ROOT_KEY
+}
+
+message SetTenantWrappingKeyRequest {
+    string tenant_id = 1;
+    bytes kek = 2;               // 32-byte AES-256, never logged
+    int32 kek_version = 3;
+    bool allow_root_unwrap = 4;  // attach window only: read DEKs wrapped by root OR tenant KEK
+}
+
+message SetTenantWrappingKeyResponse {}
+
+message ClearTenantWrappingKeyRequest {
+    string tenant_id = 1;
+}
+
+message ClearTenantWrappingKeyResponse {}
+
+message RewrapTenantDataKeysRequest {
+    string tenant_id = 1;
+    RewrapTarget target = 2;
+    bool allow_root_unwrap = 3;  // attach (TENANT_KEK) only
+}
+
+message RewrapTenantDataKeysResponse {}

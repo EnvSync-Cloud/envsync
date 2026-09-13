@@ -122,6 +122,13 @@ export function setWebAuthCookies(c: Context, tokens: WebSessionTokens) {
 			...cookieBaseOptions("/api"),
 			maxAge: Math.max(tokens.refresh_expires_in ?? 7 * 24 * 60 * 60, 60),
 		});
+	} else {
+		const domain = sharedCookieDomain();
+		deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/api" });
+		deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/" });
+		if (domain) {
+			deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: "/api", domain });
+		}
 	}
 
 	setCookie(c, CSRF_COOKIE, csrfToken, {

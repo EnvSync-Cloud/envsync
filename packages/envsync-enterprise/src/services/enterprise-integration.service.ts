@@ -9,6 +9,13 @@ import {
 	type EnterpriseProvider,
 } from "./enterprise-provider.service";
 
+function isKmsPurpose(metadata: unknown): boolean {
+	if (!metadata || typeof metadata !== "object") {
+		return false;
+	}
+	return (metadata as { purpose?: unknown }).purpose === "kms";
+}
+
 export class EnterpriseIntegrationService {
 	public static listProviderConnections(org_id: string) {
 		return DB.getInstance().then(db =>
@@ -88,9 +95,15 @@ export class EnterpriseIntegrationService {
 	}
 
 	public static listOrgSecrets(org_id: string) {
-		return DB.getInstance().then(db =>
-			db.selectFrom("org_secret").selectAll().where("org_id", "=", org_id).orderBy("created_at", "desc").execute(),
-		);
+		return DB.getInstance().then(async db => {
+			const rows = await db
+				.selectFrom("org_secret")
+				.selectAll()
+				.where("org_id", "=", org_id)
+				.orderBy("created_at", "desc")
+				.execute();
+			return rows.filter(row => !isKmsPurpose(row.metadata));
+		});
 	}
 
 	public static async createOrgSecret(input: {
@@ -100,6 +113,12 @@ export class EnterpriseIntegrationService {
 		description?: string | null;
 		metadata?: Record<string, unknown>;
 	}) {
+		if (isKmsPurpose(input.metadata)) {
+			throw new ValidationError(
+				"KMS credentials must be created on the Key management page.",
+				"CMK_CREDENTIAL_LOCKED",
+			);
+		}
 		const db = await DB.getInstance();
 		const row = {
 			id: uuidv4(),
@@ -130,6 +149,12 @@ export class EnterpriseIntegrationService {
 			.executeTakeFirst();
 		if (!existing) {
 			throw new NotFoundError("OrgSecret", id);
+		}
+		if (isKmsPurpose(existing.metadata) || isKmsPurpose(input.metadata)) {
+			throw new ValidationError(
+				"KMS credentials cannot be updated via Integrations.",
+				"CMK_CREDENTIAL_LOCKED",
+			);
 		}
 
 		await db

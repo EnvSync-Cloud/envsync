@@ -59,6 +59,7 @@ export const BaseEnvSchema = z.object({
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string().default("http://localhost:8080"),
+	API_URL: z.string().optional(),
 	// OpenAPI server URL for legacy management process; product clients use /api/v1/manage on core.
 	MANAGEMENT_API_URL: z.string().default("http://localhost:4000/api/v1/manage"),
 	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
@@ -74,6 +75,8 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE: z.string().optional(),
 	// Operator setup token for self-host org create (Phase 1b). Not an end-user session.
 	ENVSYNC_SETUP_TOKEN: z.string().optional(),
+	// Hosted platform/billing token for org feature grants (and later break-glass).
+	ENVSYNC_PLATFORM_ADMIN_TOKEN: z.string().optional(),
 	ENVSYNC_OBSERVABILITY_ENABLED: z.string().default("true"),
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),
@@ -110,7 +113,7 @@ export const BaseEnvSchema = z.object({
 	OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default("http://localhost:14318"),
 	OTEL_SERVICE_NAME: z.string().default("envsync-api"),
 	OTEL_SDK_DISABLED: z.string().default("false"),
-	// SAML SSO configuration (optional — derived from Keycloak config if absent)
+	// Required in production to issue/verify SAML session cookies. Dev may fall back to a derived secret.
 	SAML_SESSION_SECRET: z.string().optional(),
 	SAML_SP_CERT: z.string().optional(),
 	SAML_SP_KEY: z.string().optional(),

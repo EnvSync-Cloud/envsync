@@ -230,6 +230,8 @@ const requiredEeMigrations = [
 	"023_secret_rotation.ts",
 	"024_log_forwarding_configs.ts",
 	"024_saml_providers.ts",
+	"025_saml_sso_login_path.ts",
+	"026_org_feature_grant.ts",
 ];
 for (const name of requiredEeMigrations) {
 	const eeMig = path.join(eeMigrationsDir, name);
@@ -403,6 +405,34 @@ if (!deployCliEntry.includes("@envsync-cloud/deploy/cli") || deployCliEntry.spli
 	fail("deploy-cli entry must be a thin wrapper importing @envsync-cloud/deploy/cli");
 } else {
 	ok("deploy-cli is a thin EE entry over OSS deploy engine");
+}
+
+// Hosted CMK wrap/unwrap SDKs stay in envsync-enterprise. Core must not import them.
+const hostedCmkSdks = ["@aws-sdk/client-kms", "@google-cloud/kms", "@azure/keyvault-keys", "@azure/identity"];
+const apiSrcRoot = path.join(root, "packages/envsync-api/src");
+let apiCloudSdkHits = 0;
+for (const file of walkTsFiles(apiSrcRoot)) {
+	const text = fs.readFileSync(file, "utf8");
+	for (const pkg of hostedCmkSdks) {
+		if (text.includes(`from "${pkg}"`) || text.includes(`from '${pkg}'`) || text.includes(`import("${pkg}")`) || text.includes(`import('${pkg}')`)) {
+			fail(`envsync-api must not import ${pkg} (Hosted CMK wrap lives in envsync-enterprise): ${path.relative(root, file)}`);
+			apiCloudSdkHits++;
+		}
+	}
+}
+if (apiCloudSdkHits === 0) {
+	ok("envsync-api does not import AWS/GCP/Azure KMS wrap SDKs");
+}
+const eePkgJson = JSON.parse(
+	fs.readFileSync(path.join(root, "packages/envsync-enterprise/package.json"), "utf8"),
+) as { dependencies?: Record<string, string> };
+for (const pkg of hostedCmkSdks) {
+	if (!eePkgJson.dependencies?.[pkg]) {
+		fail(`envsync-enterprise must depend on ${pkg} for Hosted CMK attach`);
+	}
+}
+if (hostedCmkSdks.every(pkg => eePkgJson.dependencies?.[pkg])) {
+	ok("envsync-enterprise owns Hosted AWS/GCP/Azure CMK wrap SDKs");
 }
 
 if (failed) {

@@ -12,3 +12,5 @@ export * from "./validators-license";
 export * from "./middlewares";
 export * from "./helpers";
 export * from "./services";
+export * from "./kms";
+

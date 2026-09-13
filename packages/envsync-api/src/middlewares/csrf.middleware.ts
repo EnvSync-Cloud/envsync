@@ -12,9 +12,14 @@ function isLogoutRequest(ctx: Context) {
 	return ctx.req.path === "/api/access/web/logout";
 }
 
+function isPublicSamlPath(ctx: Context) {
+	const path = ctx.req.path;
+	return path.startsWith("/api/saml/acs") || path.startsWith("/api/saml/sso");
+}
+
 export const csrfMiddleware = (): MiddlewareHandler => {
 	return async (ctx: Context, next: Next) => {
-		if (SAFE_METHODS.has(ctx.req.method) || usesHeaderAuth(ctx) || isLogoutRequest(ctx)) {
+		if (SAFE_METHODS.has(ctx.req.method) || usesHeaderAuth(ctx) || isLogoutRequest(ctx) || isPublicSamlPath(ctx)) {
 			await next();
 			return;
 		}

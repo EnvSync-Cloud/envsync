@@ -369,6 +369,8 @@ export interface SamlProvider extends BaseTable {
 	sso_url: ColumnType<string>;
 	certificate: ColumnType<string>;
 	enabled: ColumnType<boolean>;
+	is_default: ColumnType<boolean>;
+	last_sso_at?: ColumnType<Date | null>;
 }
 
 export interface RotationPolicy extends BaseTable {
@@ -420,6 +422,43 @@ export interface LogForwardingConfig extends BaseTable {
 	enabled: ColumnType<boolean>;
 }
 
+export interface OrgFeatureGrant {
+	org_id: ColumnType<string>;
+	features: ColumnType<string[]>;
+	source: ColumnType<string>;
+	updated_by?: ColumnType<string | null>;
+	created_at: ColumnType<Date>;
+	updated_at: ColumnType<Date>;
+}
+
+export interface OrgKmsConfig {
+	org_id: ColumnType<string>;
+	source: ColumnType<"managed" | "aws-kms" | "gcp-kms" | "azure-kv">;
+	status: ColumnType<"active" | "pending" | "rotating" | "unavailable" | "disabled">;
+	key_ref?: ColumnType<string | null>;
+	region?: ColumnType<string | null>;
+	credential_secret_id?: ColumnType<string | null>;
+	wrapped_kek?: ColumnType<Buffer | null>;
+	kek_version: ColumnType<number>;
+	last_verified_at?: ColumnType<Date | null>;
+	last_error?: ColumnType<string | null>;
+	created_at: ColumnType<Date>;
+	updated_at: ColumnType<Date>;
+}
+
+export interface OrgKmsRewrapJob {
+	id: ColumnType<string>;
+	org_id: ColumnType<string>;
+	app_id?: ColumnType<string | null>;
+	kind: ColumnType<"kek_rewrap" | "dek_rewrap" | "detach_managed">;
+	status: ColumnType<"pending" | "running" | "succeeded" | "failed">;
+	progress: ColumnType<Record<string, unknown>>;
+	error_message?: ColumnType<string | null>;
+	created_by?: ColumnType<string | null>;
+	created_at: ColumnType<Date>;
+	updated_at: ColumnType<Date>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -459,6 +498,9 @@ export interface BaseDatabase {
 	rotation_policies: RotationPolicy;
 	rotation_state: RotationState;
 	log_forwarding_configs: LogForwardingConfig;
+	org_feature_grant: OrgFeatureGrant;
+	org_kms_config: OrgKmsConfig;
+	org_kms_rewrap_job: OrgKmsRewrapJob;
 }
 
 /**

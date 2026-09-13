@@ -41,7 +41,7 @@ func (c *Client) InitOrgCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/ca/init"
 	headers := internal.MergeHeaders(
@@ -87,7 +87,7 @@ func (c *Client) GetOrgCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/ca"
 	headers := internal.MergeHeaders(
@@ -131,7 +131,7 @@ func (c *Client) GetRootCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/root-ca"
 	headers := internal.MergeHeaders(
@@ -176,7 +176,7 @@ func (c *Client) IssueMemberCert(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/issue"
 	headers := internal.MergeHeaders(
@@ -222,7 +222,7 @@ func (c *Client) GetCrl(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/crl"
 	headers := internal.MergeHeaders(
@@ -266,7 +266,7 @@ func (c *Client) GetMyCertificateBundle(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate/me"
 	headers := internal.MergeHeaders(
@@ -310,7 +310,7 @@ func (c *Client) ListCertificates(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := baseURL + "/api/certificate"
 	headers := internal.MergeHeaders(
@@ -355,7 +355,7 @@ func (c *Client) GetCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v",
@@ -404,7 +404,7 @@ func (c *Client) RevokeCert(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/revoke",
@@ -455,7 +455,7 @@ func (c *Client) RenewCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/renew",
@@ -506,7 +506,7 @@ func (c *Client) RotateCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/rotate",
@@ -556,7 +556,7 @@ func (c *Client) CheckOcsp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:4000",
+		"http://localhost:0",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/ocsp",

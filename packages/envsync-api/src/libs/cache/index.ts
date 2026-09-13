@@ -156,6 +156,36 @@ export class CacheClient {
 	}
 
 	/**
+	 * Atomically get and delete a key (Redis GETDEL). Used for one-time SAML AuthnRequests.
+	 */
+	static async getdel(key: string): Promise<string | null> {
+		this.ensureInitialized();
+		const redisUrl = config.REDIS_URL ? new URL(config.REDIS_URL) : undefined;
+		const isRedis = this._clientMode === "production";
+		return withSpan("cache GETDEL", {
+			"db.system": isRedis ? "redis" : "node-cache",
+			"db.operation.name": "GETDEL",
+			"cache.key": key,
+			...(isRedis ? {
+				"peer.service": "redis",
+				"server.address": redisUrl?.hostname ?? "redis",
+				"server.port": Number(redisUrl?.port || "6379"),
+				"network.peer.address": redisUrl?.hostname ?? "redis",
+			} : {}),
+		}, async () => {
+			cacheOperations.add(1, { "db.operation.name": "GETDEL" });
+			if (this._clientMode === "production") {
+				return await this._redisClient.getDel(key);
+			}
+			const value = (this._nodeClient.get(key) as string) || null;
+			if (value !== null) {
+				this._nodeClient.del(key);
+			}
+			return value;
+		}, isRedis ? SpanKind.CLIENT : SpanKind.INTERNAL);
+	}
+
+	/**
 	 * Delete a single key from cache
 	 * @param key Key to delete
 	 */

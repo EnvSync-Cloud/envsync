@@ -14,6 +14,7 @@ import { CertificatesService } from './services/CertificatesService';
 import { ChangeRequestsService } from './services/ChangeRequestsService';
 import { DynamicSecretsService } from './services/DynamicSecretsService';
 import { EnterpriseService } from './services/EnterpriseService';
+import { EnterpriseCmkService } from './services/EnterpriseCmkService';
 import { EnvironmentTypesService } from './services/EnvironmentTypesService';
 import { EnvironmentVariablesService } from './services/EnvironmentVariablesService';
 import { EnvironmentVariablesPointInTimeService } from './services/EnvironmentVariablesPointInTimeService';
@@ -25,6 +26,7 @@ import { LogForwardingService } from './services/LogForwardingService';
 import { OidcProvidersService } from './services/OidcProvidersService';
 import { OnboardingService } from './services/OnboardingService';
 import { OrganizationsService } from './services/OrganizationsService';
+import { OrgFeaturesService } from './services/OrgFeaturesService';
 import { PermissionsService } from './services/PermissionsService';
 import { RolesService } from './services/RolesService';
 import { RotationService } from './services/RotationService';
@@ -50,6 +52,7 @@ export class EnvSyncAPISDK {
     public readonly changeRequests: ChangeRequestsService;
     public readonly dynamicSecrets: DynamicSecretsService;
     public readonly enterprise: EnterpriseService;
+    public readonly enterpriseCmk: EnterpriseCmkService;
     public readonly environmentTypes: EnvironmentTypesService;
     public readonly environmentVariables: EnvironmentVariablesService;
     public readonly environmentVariablesPointInTime: EnvironmentVariablesPointInTimeService;
@@ -61,6 +64,7 @@ export class EnvSyncAPISDK {
     public readonly oidcProviders: OidcProvidersService;
     public readonly onboarding: OnboardingService;
     public readonly organizations: OrganizationsService;
+    public readonly orgFeatures: OrgFeaturesService;
     public readonly permissions: PermissionsService;
     public readonly roles: RolesService;
     public readonly rotation: RotationService;
@@ -78,8 +82,8 @@ export class EnvSyncAPISDK {
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
-            BASE: config?.BASE ?? 'http://localhost:4000',
-            VERSION: config?.VERSION ?? '0.20.0',
+            BASE: config?.BASE ?? 'http://localhost:0',
+            VERSION: config?.VERSION ?? '0.20.1',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
             TOKEN: config?.TOKEN,
@@ -97,6 +101,7 @@ export class EnvSyncAPISDK {
         this.changeRequests = new ChangeRequestsService(this.request);
         this.dynamicSecrets = new DynamicSecretsService(this.request);
         this.enterprise = new EnterpriseService(this.request);
+        this.enterpriseCmk = new EnterpriseCmkService(this.request);
         this.environmentTypes = new EnvironmentTypesService(this.request);
         this.environmentVariables = new EnvironmentVariablesService(this.request);
         this.environmentVariablesPointInTime = new EnvironmentVariablesPointInTimeService(this.request);
@@ -108,6 +113,7 @@ export class EnvSyncAPISDK {
         this.oidcProviders = new OidcProvidersService(this.request);
         this.onboarding = new OnboardingService(this.request);
         this.organizations = new OrganizationsService(this.request);
+        this.orgFeatures = new OrgFeaturesService(this.request);
         this.permissions = new PermissionsService(this.request);
         this.roles = new RolesService(this.request);
         this.rotation = new RotationService(this.request);

@@ -25,12 +25,14 @@ export interface WebRouteDefinition {
   path?: string;
   index?: boolean;
   loadComponent: () => Promise<{ default: ComponentType }>;
+  requiredFeature?: string;
 }
 
 export type ScopeRule = (user: WhoAmIResponse) => boolean;
 
 export interface WebModule {
   name: string;
+  requiredFeature?: string;
   routes: WebRouteDefinition[];
   navGroups: WebNavGroup[];
   scopeRules?: Record<string, ScopeRule>;

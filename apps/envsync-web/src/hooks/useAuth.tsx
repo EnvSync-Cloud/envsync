@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiRequest, isReloginError, redirectToLogin, sdk } from "@/api";
+import { apiRequest, isPublicAuthPath, isReloginError, redirectToLogin, sdk } from "@/api";
 import { identifyUser } from "@/telemetry";
-import { normalizeAuthSession, type AuthSession } from "@/types/auth-session";
+import { normalizeAuthSession, type EntitledAuthSession } from "@/types/auth-session";
 
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthSession | undefined>(undefined);
+  const [user, setUser] = useState<EntitledAuthSession | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -13,7 +13,7 @@ export const useAuth = () => {
   const [isCreatingOrganization, setIsCreatingOrganization] = useState(false);
   const queryClient = useQueryClient();
 
-  const syncIdentity = useCallback((userData: AuthSession) => {
+  const syncIdentity = useCallback((userData: EntitledAuthSession) => {
     identifyUser(userData.user.id, {
       email: userData.user.email,
       name: userData.user.full_name,
@@ -30,14 +30,18 @@ export const useAuth = () => {
       setIsAuthenticated(true);
       syncIdentity(userData);
     } catch (error) {
-      console.error("Failed to fetch user:", error);
       setIsAuthenticated(false);
       setUser(undefined);
+      const onPublicAuth = typeof window !== "undefined" && isPublicAuthPath(window.location.pathname);
       if (isReloginError(error)) {
         setAuthError(null);
-        await redirectToLogin();
+        if (!onPublicAuth) {
+          console.error("Failed to fetch user:", error);
+          await redirectToLogin();
+        }
         return;
       }
+      console.error("Failed to fetch user:", error);
       setAuthError("Could not load your session. Check the API is running and try again.");
     } finally {
       setIsLoading(false);
@@ -68,7 +72,7 @@ export const useAuth = () => {
 
     try {
       const switchedSession = normalizeAuthSession(
-        await apiRequest<AuthSession>("/api/auth/switch-org", {
+        await apiRequest<EntitledAuthSession>("/api/auth/switch-org", {
           method: "POST",
           body: JSON.stringify({ org_id: orgId }),
         }),
@@ -103,7 +107,7 @@ export const useAuth = () => {
 
     try {
       const createdSession = normalizeAuthSession(
-        await apiRequest<AuthSession>("/api/auth/create-organization", {
+        await apiRequest<EntitledAuthSession>("/api/auth/create-organization", {
           method: "POST",
           body: JSON.stringify({ name: trimmedName }),
         }),

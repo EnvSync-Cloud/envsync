@@ -27,9 +27,9 @@ type DeleteSamlProviderUseCase interface {
 }
 
 type GetSamlMetadataUseCase interface {
-	Execute(ctx context.Context, id string) error
+	Execute(ctx context.Context, orgSlug string) (string, error)
 }
 
 type InitiateSamlSsoUseCase interface {
-	Execute(ctx context.Context, providerID string) (*domain.SamlSsoResult, error)
+	Execute(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error)
 }

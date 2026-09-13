@@ -19,6 +19,7 @@ interface SessionStatus {
 	onAppOrigin: boolean;
 	onAuthOrigin: boolean;
 	onCallbackUrl: boolean;
+	onLoginPage: boolean;
 }
 
 function ensureParentDir(filePath: string) {
@@ -150,6 +151,18 @@ function isOnCallbackUrl(page: Page) {
 	}
 }
 
+function isOnLoginPage(page: Page) {
+	try {
+		const currentUrl = page.url();
+		if (!currentUrl) {
+			return false;
+		}
+		return new URL(currentUrl).pathname === "/login";
+	} catch {
+		return false;
+	}
+}
+
 async function hasRequiredSessionCookies(context: BrowserContext) {
 	const config = getUiHarnessConfig();
 	const cookies = await getSessionCookies(context);
@@ -182,6 +195,7 @@ async function getSessionStatus(page: Page): Promise<SessionStatus> {
 		onAppOrigin: Boolean(currentUrl) && isOnOrigin(currentUrl, config.baseUrl),
 		onAuthOrigin: isOnAuthOrigin(page),
 		onCallbackUrl: isOnCallbackUrl(page),
+		onLoginPage: isOnLoginPage(page),
 	};
 }
 
@@ -194,6 +208,7 @@ function formatSessionStatus(status: SessionStatus) {
 		`on_app_origin=${status.onAppOrigin}`,
 		`on_auth_origin=${status.onAuthOrigin}`,
 		`on_callback=${status.onCallbackUrl}`,
+		`on_login=${status.onLoginPage}`,
 		`cookies=${status.cookieNames.join(",") || "(none)"}`,
 	].join(" ");
 }
@@ -211,7 +226,7 @@ async function settleAuthenticatedPage(page: Page) {
 	while (Date.now() < deadline) {
 		lastStatus = await getSessionStatus(page);
 		if (lastStatus.authenticated && lastStatus.hasAccessToken && lastStatus.hasCsrfToken) {
-			if (lastStatus.onAppOrigin && !lastStatus.onCallbackUrl) {
+			if (lastStatus.onAppOrigin && !lastStatus.onCallbackUrl && !lastStatus.onLoginPage) {
 				return;
 			}
 
@@ -250,7 +265,27 @@ async function recoverSessionIntoApp(page: Page) {
 	return await isSessionReady(page);
 }
 
-async function startWebLogin(page: Page) {
+async function startWebLoginFromChooser(page: Page) {
+	const config = getUiHarnessConfig();
+	if (!isOnLoginPage(page)) {
+		await page.goto(new URL("/login", config.baseUrl).toString(), { waitUntil: "domcontentloaded" });
+	}
+
+	const keycloakButton = page.getByTestId("login-keycloak");
+	await keycloakButton.waitFor({ state: "visible", timeout: 10_000 });
+	await Promise.all([
+		page.waitForURL((url) => {
+			try {
+				return new URL(url).pathname !== "/login";
+			} catch {
+				return false;
+			}
+		}, { timeout: config.actionTimeoutMs, waitUntil: "commit" }),
+		keycloakButton.click(),
+	]);
+}
+
+async function startWebLoginFromApi(page: Page) {
 	const config = getUiHarnessConfig();
 	const response = await page.goto(`${config.apiBaseUrl}/api/access/web`, { waitUntil: "commit" });
 	if (!response) {
@@ -263,9 +298,20 @@ async function startWebLogin(page: Page) {
 	if (!payload.loginUrl) {
 		throw new Error("Web login response did not include a loginUrl");
 	}
-	const loginUrl = payload.loginUrl;
 
-	await page.goto(loginUrl, { waitUntil: "domcontentloaded" });
+	await page.goto(payload.loginUrl, { waitUntil: "domcontentloaded" });
+}
+
+async function startWebLogin(page: Page) {
+	try {
+		await startWebLoginFromChooser(page);
+		return;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn(`[ui-login] login chooser Keycloak bounce failed, falling back to API (${message})`);
+	}
+
+	await startWebLoginFromApi(page);
 }
 
 async function startLocalDevSession(page: Page, credential: AuthCredential) {

@@ -10,19 +10,44 @@ import {
 import { isEnterpriseUiEnabled } from "../api/client";
 import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
+import { useAuthContext } from "@shell/contexts/auth";
 
 /**
  * Enterprise license + install status (absorbed from envsync-management-web).
  * Route: /organisation/license
  */
+function FeatureList({ label, features }: { label: string; features: string[] }) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">{label}</h3>
+      {features.length === 0 ? (
+        <p className="text-sm text-muted-foreground">None</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {features.map((feature) => (
+            <Badge key={feature} variant="outline" className="font-mono">
+              {feature}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LicenseSettings() {
   const enabled = isEnterpriseUiEnabled();
+  const { user } = useAuthContext();
   const { data: status, isLoading, isError, error, refetch, isFetching } = useManagementSystemStatus();
   const activate = useActivateLicense();
   const verify = useVerifyLicense();
 
   const license = status?.license;
   const system = status?.system;
+  const orgFeatures = user?.features ?? [];
+  const installFeatures = system?.entitlement?.features ?? [];
+  const showIntegrationsLink = orgFeatures.includes("integrations");
+  const showSsoLink = orgFeatures.includes("saml");
   const busy = activate.isPending || verify.isPending;
 
   const onActivate = async () => {
@@ -48,8 +73,7 @@ export default function LicenseSettings() {
       <div className="mx-auto max-w-4xl space-y-4 px-6 py-8">
         <h1 className="text-2xl font-semibold">License</h1>
         <p className="text-sm text-muted-foreground">
-          Management API is not configured for this deployment. Set{" "}
-          <code className="text-xs">managementApiUrl</code> in runtime config for enterprise license controls.
+          Enterprise modules are not enabled on this dashboard build.
         </p>
       </div>
     );
@@ -65,12 +89,28 @@ export default function LicenseSettings() {
           <div>
             <h1 className="text-3xl font-semibold text-foreground">License & install</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Activate or verify the self-host enterprise entitlement against the management API.
-              Provider connections and org secrets live under{" "}
-              <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/integrations">
-                Organisation → Integrations
-              </Link>
-              .
+              Activate or verify the self-host enterprise entitlement. Effective org features come from whoami;
+              install ceiling is the entitlement catalog on this deployment.
+              {showSsoLink ? (
+                <>
+                  {" "}
+                  SAML identity providers live under{" "}
+                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/sso">
+                    Organisation → SSO
+                  </Link>
+                  .
+                </>
+              ) : null}
+              {showIntegrationsLink ? (
+                <>
+                  {" "}
+                  Provider connections live under{" "}
+                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/integrations">
+                    Organisation → Integrations
+                  </Link>
+                  .
+                </>
+              ) : null}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
@@ -143,14 +183,18 @@ export default function LicenseSettings() {
                 <dd className="font-medium">{system?.single_org_mode ? "yes" : "no"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Management API</dt>
-                <dd className="font-medium">{system?.management_enabled ? "enabled" : "disabled"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Observability</dt>
                 <dd className="font-medium">{system?.observability_enabled ? "enabled" : "disabled"}</dd>
               </div>
             </dl>
+          </article>
+
+          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4 md:col-span-2">
+            <h2 className="text-lg font-medium">Features</h2>
+            <div className="grid gap-6 md:grid-cols-2">
+              <FeatureList label="Organization (whoami)" features={orgFeatures} />
+              <FeatureList label="Install entitlement" features={installFeatures} />
+            </div>
           </article>
         </div>
       )}
