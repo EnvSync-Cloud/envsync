@@ -1949,7 +1949,7 @@ function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toV
 		"postgres:17",
 		"sh",
 		"-lc",
-		`pg_dump -h ${config.services.stack_name}_postgres -U postgres -d envsync -Fc -f /backup/${fileName}`,
+		`pg_dump -h postgres -U postgres -d envsync -Fc -f /backup/${fileName}`,
 	]);
 	logSuccess(`API DB upgrade snapshot created at ${hostPath}`);
 	return hostPath;
@@ -1974,7 +1974,7 @@ function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
 		"postgres:17",
 		"sh",
 		"-lc",
-		`pg_restore --clean --if-exists --no-owner --no-privileges -h ${config.services.stack_name}_postgres -U postgres -d envsync /backup/${fileName}`,
+		`pg_restore --clean --if-exists --no-owner --no-privileges -h postgres -U postgres -d envsync /backup/${fileName}`,
 	]);
 	logSuccess(`API DB upgrade snapshot restored from ${backupPath}`);
 }
@@ -2424,6 +2424,7 @@ function runApiMigrationJsonCommand(config: DeployConfig, image: string, args: s
 		};
 	}
 
+	const migrateCli = args.map(arg => JSON.stringify(arg)).join(" ");
 	const output = run(
 		"docker",
 		[
@@ -2436,11 +2437,14 @@ function runApiMigrationJsonCommand(config: DeployConfig, image: string, args: s
 			"-e",
 			"SKIP_ROOT_ENV=1",
 			image,
-			"bun",
-			"run",
-			"scripts/migrate.ts",
-			...args,
-			"--json",
+			"sh",
+			"-lc",
+			[
+				"if [ -d /app/packages/envsync-api ]; then cd /app/packages/envsync-api; fi",
+				`if [ -f scripts/migrate.enterprise.ts ]; then exec bun run scripts/migrate.enterprise.ts ${migrateCli} --json`,
+				`elif [ -f scripts/migrate.ts ]; then exec bun run scripts/migrate.ts ${migrateCli} --json`,
+				"else echo 'Migration CLI missing from API image (expected scripts/migrate.ts)' >&2; exit 1; fi",
+			].join("; "),
 		],
 		{ quiet: true },
 	);
@@ -3544,7 +3548,12 @@ async function cmdDeploy() {
 			const rollbackTarget = preUpgradeHead ?? "zero";
 			try {
 				logWarn(`Candidate deploy failed after migration. Rolling schema back to ${rollbackTarget}.`);
-				runApiMigrationJsonCommand(config, config.images.api, ["rollback_to", rollbackTarget]);
+				try {
+					runApiMigrationJsonCommand(config, config.images.api, ["rollback_to", rollbackTarget]);
+				} catch {
+					logWarn(`Rollback with ${config.images.api} failed; retrying with ${activeImageBeforeUpgrade}.`);
+					runApiMigrationJsonCommand(config, activeImageBeforeUpgrade, ["rollback_to", rollbackTarget]);
+				}
 			} catch (rollbackError) {
 				if (!snapshotPath) {
 					throw new Error(

@@ -22,11 +22,13 @@ WORKDIR /app
 
 RUN addgroup -S envsync && adduser -S envsync -G envsync
 
-COPY --from=build /app/packages/envsync-api/dist/entrypoint.enterprise.js ./dist/entrypoint.enterprise.js
-COPY --from=build /app/packages/envsync-api/dist/templates ./dist/templates
-COPY --from=build /app/packages/envsync-api/dist/libs ./dist/libs
-COPY --from=build /app/packages/envsync-api/dist/assets ./dist/assets
-COPY --from=build /app/packages/envsync-api/package.json ./package.json
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/packages/envsync-kernel ./packages/envsync-kernel
+COPY --from=build /app/packages/envsync-enterprise ./packages/envsync-enterprise
+COPY --from=build /app/packages/envsync-api ./packages/envsync-api
+
+WORKDIR /app/packages/envsync-api
 
 RUN chown -R envsync:envsync /app
 
