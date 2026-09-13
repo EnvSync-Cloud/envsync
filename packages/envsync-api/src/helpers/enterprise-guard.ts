@@ -38,10 +38,7 @@ export async function assertEnterprise() {
 	}
 }
 
-/**
- * Coder-style per-feature gate (Phase 4).
- * Hosted: always allow. OSS: deny. Self-host + enforcement: verified claim required.
- */
+/** Install-ceiling feature gate. Use assertOrgFeature after auth for Hosted SKUs. */
 export async function assertEntitled(feature: EnterpriseFeature) {
 	await EntitlementService.assertFeature(feature);
 }

@@ -11,6 +11,7 @@ export const ENTERPRISE_FEATURES = [
 	"log_forwarding",
 	"integrations",
 	"multi_org",
+	"kms",
 ] as const;
 
 export type EnterpriseFeature = (typeof ENTERPRISE_FEATURES)[number];
@@ -26,7 +27,12 @@ export const DEFAULT_ENTERPRISE_FEATURE_SET: EnterpriseFeature[] = [
 	"dynamic_secrets",
 	"log_forwarding",
 	"integrations",
+	"kms",
 ];
+
+export function isEnterpriseFeature(value: string): value is EnterpriseFeature {
+	return (ALL_ENTERPRISE_FEATURES as readonly string[]).includes(value);
+}
 
 export type EntitlementClaims = {
 	/** Claim schema version */

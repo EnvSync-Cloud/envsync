@@ -5,6 +5,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { OidcController } from "../controllers/oidc.controller";
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { requirePermission } from "envsync-api/ports/middlewares";
 import {
 	createOidcProviderRequestSchema,
@@ -19,6 +20,7 @@ const app = new Hono();
 app.use(authMiddleware());
 app.use(enterpriseGuard("oidc"));
 app.use(requirePermission("can_manage_api_keys", "org"));
+app.use(orgFeatureGuard("oidc"));
 
 app.post(
 	"/",

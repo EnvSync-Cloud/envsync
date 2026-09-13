@@ -26,6 +26,7 @@ import (
 	onboarding "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/onboarding"
 	option "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	organizations "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/organizations"
+	orgfeatures "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/orgfeatures"
 	permissions "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/permissions"
 	roles "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/roles"
 	rotation "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/rotation"
@@ -82,6 +83,7 @@ type Client struct {
 	Rotation                        *rotation.Client
 	DynamicSecrets                  *dynamicsecrets.Client
 	LogForwarding                   *logforwarding.Client
+	OrgFeatures                     *orgfeatures.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -129,5 +131,6 @@ func NewClient(opts ...option.RequestOption) *Client {
 		Rotation:                        rotation.NewClient(opts...),
 		DynamicSecrets:                  dynamicsecrets.NewClient(opts...),
 		LogForwarding:                   logforwarding.NewClient(opts...),
+		OrgFeatures:                     orgfeatures.NewClient(opts...),
 	}
 }

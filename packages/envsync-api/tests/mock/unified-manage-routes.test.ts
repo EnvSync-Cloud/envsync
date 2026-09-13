@@ -50,6 +50,18 @@ describe("unified manage surface /api/v1/manage/{module}/...", () => {
 			created_at: new Date(),
 			updated_at: new Date(),
 			org_count: 2,
+			deployment_mode: "hosted",
+			max_orgs: null,
+			public_signup_enabled: true,
+			can_create_organization: true,
+			entitlement: {
+				present: false,
+				source: null,
+				in_grace: false,
+				features: [],
+				max_orgs: null,
+				expires_at: null,
+			},
 		});
 		LicenseStateService.getEnforcementDecision = async () => ({
 			required: true,

@@ -1407,6 +1407,65 @@ async function createDevUser() {
 	await ensureOrgResourceAccess(org.id);
 }
 
+function getFeaturesFlag(rawArgs: string[]): string | undefined {
+	const inlinePrefix = "--features=";
+	for (const arg of rawArgs) {
+		if (arg.startsWith(inlinePrefix)) {
+			return arg.slice(inlinePrefix.length);
+		}
+	}
+	const index = rawArgs.indexOf("--features");
+	if (index === -1) {
+		return undefined;
+	}
+	const next = rawArgs[index + 1];
+	if (next === undefined || next.startsWith("--")) {
+		return "";
+	}
+	return next;
+}
+
+async function grantOrgFeatures() {
+	const rawArgs = process.argv.slice(3);
+	const orgSlug = getFlagValue(rawArgs, "org-slug");
+	if (!orgSlug) {
+		throw new Error("--org-slug is required");
+	}
+
+	const db = await DB.getInstance();
+	const org = await db.selectFrom("orgs").selectAll().where("slug", "=", orgSlug).executeTakeFirst();
+	if (!org) {
+		throw new Error(`Organization not found for slug ${orgSlug}`);
+	}
+
+	const { OrgFeatureGrantService } = await import("../src/services/org-feature-grant.service");
+	const clear = rawArgs.includes("--clear");
+	if (clear) {
+		await OrgFeatureGrantService.deleteGrant(org.id);
+		console.log(`Cleared org feature grant for ${org.slug} (${org.id}); unrestricted`);
+		return;
+	}
+
+	const rawFeatures = getFeaturesFlag(rawArgs);
+	if (rawFeatures === undefined) {
+		throw new Error("--features is required unless --clear is set");
+	}
+	const features = rawFeatures
+		.split(",")
+		.map(value => value.trim())
+		.filter(Boolean);
+	const source = getFlagValue(rawArgs, "source") ?? "seed";
+	const grant = await OrgFeatureGrantService.replaceGrant({
+		orgId: org.id,
+		features,
+		source,
+		updatedBy: "cli",
+	});
+	console.log(
+		`Set org feature grant for ${org.slug} (${org.id}): [${grant.features.join(", ")}] source=${grant.source}`,
+	);
+}
+
 const cmd = process.argv[2];
 if (cmd === "init") {
 	await init();
@@ -1414,6 +1473,8 @@ if (cmd === "init") {
 	await createDevUser();
 } else if (cmd === "bootstrap-ui-harness") {
 	await bootstrapUiHarness();
+} else if (cmd === "grant-org-features") {
+	await grantOrgFeatures();
 } else if (cmd === "bootstrap-org") {
 	const rawArgs = process.argv.slice(3);
 	const orgName = getFlagValue(rawArgs, "org-name") ?? DEV_ORG_NAME;
@@ -1428,6 +1489,8 @@ if (cmd === "init") {
 	});
 	console.log(`Bootstrap completed for org ${org.slug} (${org.id})`);
 } else {
-	console.log("Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org>");
+	console.log(
+		"Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org|grant-org-features>",
+	);
 	process.exit(cmd ? 1 : 0);
 }

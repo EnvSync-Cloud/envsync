@@ -4,10 +4,13 @@ import { UserService } from "@/services/user.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { EntitlementService } from "@/services/entitlement.service";
 import { OrganizationProvisioningService } from "@/services/organization-provisioning.service";
 import { readAccessToken, setActiveMembershipCookie } from "@/helpers/web-auth";
 
-async function buildSessionPayload(userId: string) {
+export type SessionAuthType = "jwt" | "saml" | "oidc" | "api_key";
+
+async function buildSessionPayload(userId: string, options?: { authType?: SessionAuthType }) {
 	const user = await UserService.getUser(userId);
 	const [org, role, memberships] = await Promise.all([
 		OrgService.getOrg(user.org_id),
@@ -46,6 +49,10 @@ async function buildSessionPayload(userId: string) {
 		];
 
 	const policy = EditionPolicyService.getPolicySnapshot();
+	const [features, install_features] = await Promise.all([
+		EntitlementService.getOrgFeatures(user.org_id),
+		EntitlementService.getInstallFeatures(),
+	]);
 
 	return {
 		user,
@@ -64,12 +71,15 @@ async function buildSessionPayload(userId: string) {
 		max_orgs: policy.max_orgs,
 		public_signup_enabled: policy.public_signup_enabled,
 		can_create_organization: policy.can_create_organization,
+		features,
+		install_features,
+		auth_type: options?.authType ?? "jwt",
 	};
 }
 
 export class AuthController {
 	public static readonly whoami = async (c: Context) => {
-		return c.json(await buildSessionPayload(c.get("user_id")));
+		return c.json(await buildSessionPayload(c.get("user_id"), { authType: c.get("auth_type") ?? "jwt" }));
 	};
 
 	public static readonly switchOrg = async (c: Context) => {
@@ -87,7 +97,7 @@ export class AuthController {
 		try {
 			const user = await UserService.switchActiveMembership(currentUser.auth_service_id, payload.org_id);
 			setActiveMembershipCookie(c, user.id);
-			return c.json(await buildSessionPayload(user.id));
+			return c.json(await buildSessionPayload(user.id, { authType: c.get("auth_type") ?? "jwt" }));
 		} catch (error) {
 			return c.json(
 				{
@@ -133,6 +143,6 @@ export class AuthController {
 			source: "hosted_dashboard",
 		});
 		setActiveMembershipCookie(c, result.user_id);
-		return c.json(await buildSessionPayload(result.user_id));
+		return c.json(await buildSessionPayload(result.user_id, { authType: c.get("auth_type") ?? "jwt" }));
 	};
 }

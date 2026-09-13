@@ -6,6 +6,7 @@ import { EnterpriseController } from "../controllers/enterprise.controller";
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { cliMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { requirePermission } from "envsync-api/ports/middlewares";
 import { errorResponseSchema } from "envsync-api/ports/validators-common";
 import {
@@ -38,6 +39,7 @@ const app = new Hono();
 app.use(authMiddleware());
 app.use(cliMiddleware());
 app.use(enterpriseGuard("integrations"));
+app.use(orgFeatureGuard("integrations"));
 
 app.get(
 	"/providers",

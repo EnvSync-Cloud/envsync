@@ -4,6 +4,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { RotationController } from "../controllers/rotation.controller";
 import {
 	createRotationPolicySchema,
@@ -22,6 +23,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(enterpriseGuard("rotation"));
+app.use(orgFeatureGuard("rotation"));
 
 // ── Policy CRUD ─────────────────────────────────────────────────────────
 

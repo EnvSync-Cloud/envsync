@@ -4,6 +4,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
+import { orgFeatureGuard } from "envsync-api/ports/middlewares";
 import { requirePermission } from "envsync-api/ports/middlewares";
 import { cliMiddleware } from "envsync-api/ports/middlewares";
 import { DynamicSecretController } from "../controllers/dynamic_secret.controller";
@@ -25,6 +26,7 @@ const app = new Hono();
 app.use(authMiddleware());
 app.use(cliMiddleware());
 app.use(enterpriseGuard("dynamic_secrets"));
+app.use(orgFeatureGuard("dynamic_secrets"));
 
 // ── Engine CRUD ─────────────────────────────────────────────────────────
 
