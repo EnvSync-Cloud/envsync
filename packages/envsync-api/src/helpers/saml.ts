@@ -5,6 +5,124 @@ import { v4 as uuidv4 } from "uuid";
 const SAML_NS = "urn:oasis:names:tc:SAML:2.0:assertion";
 const SAMLP_NS = "urn:oasis:names:tc:SAML:2.0:protocol";
 const DS_NS = "http://www.w3.org/2000/09/xmldsig#";
+const MAX_SAML_XML_CHARS = 256 * 1024;
+
+function xmlLocalName(tagName: string): string {
+	const colon = tagName.indexOf(":");
+	return colon >= 0 ? tagName.slice(colon + 1) : tagName;
+}
+
+function* eachRawElement(
+	xml: string,
+	localName: string,
+): Generator<{ raw: string; open: string; inner: string }> {
+	let from = 0;
+	while (from < xml.length) {
+		const hit = indexOfStartTag(xml, localName, from);
+		if (!hit) return;
+		const gt = xml.indexOf(">", hit.start);
+		if (gt < 0) return;
+		const open = xml.slice(hit.start, gt + 1);
+		if (xml[gt - 1] === "/") {
+			yield { raw: open, open, inner: "" };
+			from = gt + 1;
+			continue;
+		}
+		const close = `</${hit.qname}>`;
+		const end = xml.indexOf(close, hit.start);
+		if (end < 0) return;
+		yield {
+			raw: xml.slice(hit.start, end + close.length),
+			open,
+			inner: xml.slice(gt + 1, end),
+		};
+		from = end + close.length;
+	}
+}
+
+function isNameChar(code: number): boolean {
+	return (code >= 65 && code <= 90)
+		|| (code >= 97 && code <= 122)
+		|| (code >= 48 && code <= 57)
+		|| code === 58
+		|| code === 95
+		|| code === 45
+		|| code === 46;
+}
+
+function isTagDelimiter(code: number): boolean {
+	return code === 32 || code === 9 || code === 10 || code === 13 || code === 62 || code === 47;
+}
+
+/** Linear scan for a start tag whose local name matches. Safe on untrusted XML. */
+function indexOfStartTag(xml: string, localName: string, from = 0): { start: number; qname: string } | null {
+	let searchFrom = from;
+	while (searchFrom < xml.length) {
+		const lt = xml.indexOf("<", searchFrom);
+		if (lt < 0) return null;
+		if (xml.startsWith("<!", lt) || xml.startsWith("<?", lt) || xml.startsWith("</", lt)) {
+			searchFrom = lt + 1;
+			continue;
+		}
+		const nameStart = lt + 1;
+		let i = nameStart;
+		while (i < xml.length && isNameChar(xml.charCodeAt(i))) i++;
+		const qname = xml.slice(nameStart, i);
+		if (xmlLocalName(qname) === localName && isTagDelimiter(xml.charCodeAt(i))) {
+			return { start: lt, qname };
+		}
+		searchFrom = lt + 1;
+	}
+	return null;
+}
+
+function extractRawElement(xml: string, localName: string): string | null {
+	for (const el of eachRawElement(xml, localName)) return el.raw;
+	return null;
+}
+
+function rawElementInner(xml: string, localName: string): string | null {
+	const raw = extractRawElement(xml, localName);
+	if (!raw) return null;
+	const gt = raw.indexOf(">");
+	const close = raw.lastIndexOf("</");
+	if (gt < 0 || close < 0) return null;
+	return raw.slice(gt + 1, close);
+}
+
+function rawOpenTag(xml: string, localName: string): string | null {
+	const start = indexOfStartTag(xml, localName);
+	if (!start) return null;
+	const gt = xml.indexOf(">", start.start);
+	if (gt < 0) return null;
+	return xml.slice(start.start, gt + 1);
+}
+
+function attrFromOpenTag(openTag: string, attrName: string): string | null {
+	for (const quote of ['"', "'"] as const) {
+		const key = `${attrName}=${quote}`;
+		let from = 0;
+		while (from < openTag.length) {
+			const i = openTag.indexOf(key, from);
+			if (i < 0) break;
+			if (i > 0 && !isTagDelimiter(openTag.charCodeAt(i - 1))) {
+				from = i + 1;
+				continue;
+			}
+			const valStart = i + key.length;
+			const valEnd = openTag.indexOf(quote, valStart);
+			if (valEnd < 0) return null;
+			return openTag.slice(valStart, valEnd);
+		}
+	}
+	return null;
+}
+
+function wrapPemBody(b64: string): string {
+	const lines: string[] = [];
+	for (let i = 0; i < b64.length; i += 64) lines.push(b64.slice(i, i + 64));
+	return lines.join("\n");
+}
 
 export interface SamlAssertionAttributes {
 	email: string;
@@ -296,12 +414,12 @@ export async function verifyXmlSignature(
 	xml: string,
 	idpCertificate: string,
 ): Promise<boolean> {
-	const signatureValue = getFirstMatch(xml, /<ds:SignatureValue[^>]*>([\s\S]*?)<\/ds:SignatureValue>/);
+	const signatureValue = rawElementInner(xml, "SignatureValue");
 	if (!signatureValue) {
 		throw new Error("SAML response missing SignatureValue");
 	}
 
-	const signedInfoBlock = getFirstMatch(xml, /<ds:SignedInfo[^>]*>([\s\S]*?)<\/ds:SignedInfo>/);
+	const signedInfoBlock = rawElementInner(xml, "SignedInfo");
 	if (!signedInfoBlock) {
 		throw new Error("SAML response missing SignedInfo");
 	}
@@ -345,12 +463,12 @@ export async function verifyXmlSignature(
  * Verify the DigestValue in the XML signature matches the canonicalized assertion.
  */
 async function verifyAssertionDigest(xml: string): Promise<void> {
-	const digestValue = getFirstMatch(xml, /<ds:DigestValue[^>]*>([^<]+)<\/ds:DigestValue>/);
+	const digestValue = rawElementInner(xml, "DigestValue");
 	if (!digestValue) {
 		throw new Error("SAML signature missing DigestValue");
 	}
 
-	const referenceUri = getFirstMatch(xml, /<ds:Reference[^>]+URI="([^"]+)"/);
+	const referenceUri = attrFromOpenTag(rawOpenTag(xml, "Reference") ?? "", "URI");
 	if (!referenceUri) {
 		throw new Error("SAML signature missing Reference URI");
 	}
@@ -377,15 +495,18 @@ async function verifyAssertionDigest(xml: string): Promise<void> {
  * Extract an Assertion element by its ID attribute from the SAML response.
  */
 function extractAssertionById(xml: string, assertionId: string): string | null {
-	// Try with saml namespace prefix
-	const escapedId = escapeXml(assertionId);
-	const patterns = [
-		new RegExp(`(<saml:Assertion[^>]+ID="${escapedId}"[\\s\\S]*?<\\/saml:Assertion>)`),
-		new RegExp(`(<Assertion[^>]+ID="${escapedId}"[\\s\\S]*?<\\/Assertion>)`),
-	];
-	for (const pattern of patterns) {
-		const match = xml.match(pattern);
-		if (match?.[1]) return match[1];
+	let from = 0;
+	while (from < xml.length) {
+		const hit = indexOfStartTag(xml, "Assertion", from);
+		if (!hit) return null;
+		const gt = xml.indexOf(">", hit.start);
+		if (gt < 0) return null;
+		const id = attrFromOpenTag(xml.slice(hit.start, gt + 1), "ID");
+		const close = `</${hit.qname}>`;
+		const end = xml.indexOf(close, hit.start);
+		if (end < 0) return null;
+		if (id === assertionId) return xml.slice(hit.start, end + close.length);
+		from = end + close.length;
 	}
 	return null;
 }
@@ -649,12 +770,19 @@ export async function buildSpMetadata(
 // ---------------------------------------------------------------------------
 
 function decodeBase64(base64: string): string {
+	if (base64.length > MAX_SAML_XML_CHARS * 2) {
+		throw new Error("SAML XML exceeds size limit");
+	}
 	const raw = atob(base64);
 	const bytes = new Uint8Array(raw.length);
 	for (let i = 0; i < raw.length; i++) {
 		bytes[i] = raw.charCodeAt(i);
 	}
-	return new TextDecoder().decode(bytes);
+	const xml = new TextDecoder().decode(bytes);
+	if (xml.length > MAX_SAML_XML_CHARS) {
+		throw new Error("SAML XML exceeds size limit");
+	}
+	return xml;
 }
 
 function base64ToUint8Array(b64: string): Uint8Array {
@@ -668,20 +796,6 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 	let binary = "";
 	for (const byte of bytes) binary += String.fromCharCode(byte);
 	return btoa(binary);
-}
-
-function getFirstMatch(xml: string, pattern: RegExp): string | null {
-	const match = xml.match(pattern);
-	return match?.[1] ?? null;
-}
-
-function getAllMatches(xml: string, pattern: RegExp): string[] {
-	const matches: string[] = [];
-	let match: RegExpExecArray | null;
-	while ((match = pattern.exec(xml)) !== null) {
-		matches.push(match[1]);
-	}
-	return matches;
 }
 
 function extractCertPem(certificate: string): string {
@@ -709,67 +823,55 @@ export async function validateSamlResponse(
 ): Promise<SamlParseResult> {
 	const xml = decodeBase64(samlResponseBase64);
 
-	// 1. Check status code
-	const statusCode = getFirstMatch(xml, /StatusCode\s+Value="([^"]+)"/);
+	const statusCode = attrFromOpenTag(rawOpenTag(xml, "StatusCode") ?? "", "Value");
 	if (!statusCode || !statusCode.includes("Success")) {
 		throw new Error("SAML response indicates authentication failure");
 	}
 
-	// 2. Verify destination
-	const destination = getFirstMatch(xml, /Response[^>]+Destination="([^"]+)"/);
+	const responseOpen = rawOpenTag(xml, "Response") ?? "";
+	const destination = attrFromOpenTag(responseOpen, "Destination");
 	if (destination && destination !== expectedAcsUrl) {
 		throw new Error("SAML response destination mismatch");
 	}
 
-	// 3. Verify InResponseTo
-	const inResponseTo = getFirstMatch(xml, /Response[^>]+InResponseTo="([^"]+)"/);
+	const inResponseTo = attrFromOpenTag(responseOpen, "InResponseTo");
 	if (!inResponseTo) {
 		throw new Error("SAML response missing InResponseTo attribute");
 	}
 
-	// 3b. Audience must include the SP entity ID
 	if (expectedAudience) {
-		const audiences = [
-			...getAllMatches(xml, /<saml:Audience>([^<]+)<\/saml:Audience>/g),
-			...getAllMatches(xml, /<saml2:Audience>([^<]+)<\/saml2:Audience>/g),
-			...getAllMatches(xml, /<Audience>([^<]+)<\/Audience>/g),
-		];
+		const audiences = [...eachRawElement(xml, "Audience")].map(el => el.inner.trim());
 		if (!audiences.includes(expectedAudience)) {
 			throw new Error("SAML response audience mismatch");
 		}
 	}
 
-	// 4. Extract NameID
-	const nameId = getFirstMatch(xml, /NameID[^>]*>([^<]+)<\/saml:NameID>/)
-		?? getFirstMatch(xml, /NameID[^>]*>([^<]+)<\/NameID>/);
+	const nameId = rawElementInner(xml, "NameID")?.trim() ?? "";
 	if (!nameId) {
 		throw new Error("SAML response missing NameID");
 	}
 
-	// 5. Verify time conditions
-	const notBefore = getFirstMatch(xml, /Conditions[^>]+NotBefore="([^"]+)"/);
-	const notOnOrAfter = getFirstMatch(xml, /Conditions[^>]+NotOnOrAfter="([^"]+)"/);
+	const conditionsOpen = rawOpenTag(xml, "Conditions") ?? "";
+	const notBefore = attrFromOpenTag(conditionsOpen, "NotBefore");
+	const notOnOrAfter = attrFromOpenTag(conditionsOpen, "NotOnOrAfter");
 	if (notBefore && notOnOrAfter) {
 		const now = Date.now();
 		const start = new Date(notBefore).getTime();
 		const end = new Date(notOnOrAfter).getTime();
-		// Allow 5-minute clock skew
 		const clockSkew = 5 * 60 * 1000;
 		if (now < start - clockSkew || now >= end + clockSkew) {
 			throw new Error("SAML assertion is outside the valid time window");
 		}
 	}
 
-	// 6. Verify XML signature (the critical security check)
 	const certPem = extractCertPem(idpCertificate);
-	if (certPem.length > 0 && xml.includes("<ds:Signature")) {
+	const hasSignature = indexOfStartTag(xml, "Signature") !== null;
+	if (certPem.length > 0 && hasSignature) {
 		await verifyXmlSignature(xml, idpCertificate);
 	} else if (certPem.length > 0) {
-		// Certificate provided but no signature found — reject
 		throw new Error("SAML response is not signed but IdP certificate is configured");
 	}
 
-	// 7. Extract attributes
 	const email = extractAttribute(xml, "email")
 		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
 		?? nameId;
@@ -793,31 +895,23 @@ export async function validateSamlResponse(
 }
 
 function extractAttribute(xml: string, name: string): string | null {
-	const escapedName = escapeXml(name);
-	const pattern = new RegExp(
-		`<saml:Attribute[^>]+Name="${escapedName}"[^>]*>\\s*<saml:AttributeValue[^>]*>([^<]+)<\\/saml:AttributeValue>`,
-	);
-	return getFirstMatch(xml, pattern)
-		?? getFirstMatch(xml, new RegExp(
-			`<Attribute[^>]+Name="${escapedName}"[^>]*>\\s*<AttributeValue[^>]*>([^<]+)<\\/AttributeValue>`,
-		));
+	for (const el of eachRawElement(xml, "Attribute")) {
+		if (attrFromOpenTag(el.open, "Name") !== name) continue;
+		const value = rawElementInner(el.raw, "AttributeValue")?.trim();
+		if (value) return value;
+	}
+	return null;
 }
 
 function extractAttributeValues(xml: string, name: string): string[] | null {
-	const escapedName = escapeXml(name);
-	const pattern = new RegExp(
-		`<saml:Attribute[^>]+Name="${escapedName}"[^>]*>([\\s\\S]*?)<\\/saml:Attribute>`,
-	);
-	const block = getFirstMatch(xml, pattern)
-		?? getFirstMatch(xml, new RegExp(
-			`<Attribute[^>]+Name="${escapedName}"[^>]*>([\\s\\S]*?)<\\/Attribute>`,
-		));
-	if (!block) return null;
-
-	const values = getAllMatches(block, /<saml:AttributeValue[^>]*>([^<]+)<\/saml:AttributeValue>/g);
-	if (values.length > 0) return values;
-
-	return getAllMatches(block, /<AttributeValue[^>]*>([^<]+)<\/AttributeValue>/g);
+	for (const el of eachRawElement(xml, "Attribute")) {
+		if (attrFromOpenTag(el.open, "Name") !== name) continue;
+		const values = [...eachRawElement(el.raw, "AttributeValue")]
+			.map(v => v.inner.trim())
+			.filter(Boolean);
+		return values.length > 0 ? values : null;
+	}
+	return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -873,25 +967,23 @@ export function parseIdpMetadataXml(xml: string): {
 	sso_url: string;
 	certificate: string;
 } {
-	const entityId = getFirstMatch(xml, /entityID="([^"]+)"/);
-	const ssoUrl =
-		getFirstMatch(xml, /SingleSignOnService[^>]+Binding="[^"]*HTTP-Redirect"[^>]+Location="([^"]+)"/)
-		?? getFirstMatch(xml, /SingleSignOnService[^>]+Location="([^"]+)"[^>]+Binding="[^"]*HTTP-Redirect"/)
-		?? getFirstMatch(xml, /SingleSignOnService[^>]+Location="([^"]+)"/);
-	const certB64 = (
-		getFirstMatch(xml, /<(?:ds:)?X509Certificate>([^<]+)<\/(?:ds:)?X509Certificate>/)
-		?? ""
-	).replace(/\s+/g, "");
+	if (xml.length > MAX_SAML_XML_CHARS) {
+		throw new Error("SAML XML exceeds size limit");
+	}
+	const entityId = attrFromOpenTag(rawOpenTag(xml, "EntityDescriptor") ?? "", "entityID");
+	const services = [...eachRawElement(xml, "SingleSignOnService")];
+	const redirect = services.find(el => (attrFromOpenTag(el.open, "Binding") ?? "").includes("HTTP-Redirect"));
+	const ssoUrl = attrFromOpenTag((redirect ?? services[0])?.open ?? "", "Location");
+	const certB64 = (rawElementInner(xml, "X509Certificate") ?? "").replace(/\s+/g, "");
 
 	if (!entityId || !ssoUrl || !certB64) {
 		throw new Error("IdP metadata XML is missing entityID, SingleSignOnService, or X509Certificate");
 	}
 
-	const pemBody = certB64.match(/.{1,64}/g)?.join("\n") ?? certB64;
 	return {
 		entity_id: entityId,
 		sso_url: ssoUrl,
-		certificate: `-----BEGIN CERTIFICATE-----\n${pemBody}\n-----END CERTIFICATE-----`,
+		certificate: `-----BEGIN CERTIFICATE-----\n${wrapPemBody(certB64)}\n-----END CERTIFICATE-----`,
 	};
 }
 
