@@ -44,6 +44,7 @@ describe("API module surface boundaries", () => {
 			"rotation",
 			"dynamic_secret",
 			"log_forwarding",
+			"org_features",
 		]);
 		expect(moduleNames).not.toContain("app");
 		expect(moduleNames).not.toContain("auth");
