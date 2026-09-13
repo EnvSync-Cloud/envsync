@@ -57,5 +57,20 @@ export const whoAmIResponseSchema = z
 		role: roleResponseSchema,
 		memberships: z.array(membershipSummarySchema),
 		active_membership_user_id: z.string().openapi({ example: "user_123" }),
+		features: z.array(z.string()).openapi({ example: ["saml", "kms"] }),
+		install_features: z.array(z.string()).openapi({
+			example: [
+				"management",
+				"oidc",
+				"saml",
+				"rotation",
+				"dynamic_secrets",
+				"log_forwarding",
+				"integrations",
+				"multi_org",
+				"kms",
+			],
+		}),
+		auth_type: z.enum(["jwt", "saml", "oidc", "api_key"]).openapi({ example: "jwt" }),
 	})
 	.openapi({ ref: "WhoAmIResponse" });

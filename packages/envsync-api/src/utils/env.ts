@@ -74,6 +74,8 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_MAX_ORGS_SUPPORT_OVERRIDE: z.string().optional(),
 	// Operator setup token for self-host org create (Phase 1b). Not an end-user session.
 	ENVSYNC_SETUP_TOKEN: z.string().optional(),
+	// Hosted platform/billing token for org feature grants (and later break-glass).
+	ENVSYNC_PLATFORM_ADMIN_TOKEN: z.string().optional(),
 	ENVSYNC_OBSERVABILITY_ENABLED: z.string().default("true"),
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),

@@ -39,5 +39,16 @@ export type WhoAmIResponse = {
         is_active: boolean;
     }>;
     active_membership_user_id: string;
+    features: Array<string>;
+    install_features: Array<string>;
+    auth_type: WhoAmIResponse.auth_type;
 };
+export namespace WhoAmIResponse {
+    export enum auth_type {
+        JWT = 'jwt',
+        SAML = 'saml',
+        OIDC = 'oidc',
+        API_KEY = 'api_key',
+    }
+}
 

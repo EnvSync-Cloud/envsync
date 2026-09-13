@@ -66,4 +66,9 @@ export const enterpriseManagementModules: ApiModule[] = [
 		mountPath: "/log_forwarding",
 		createRouter: async () => (await import("./routes/log-forwarding.route")).default,
 	},
+	{
+		name: "org_features",
+		mountPath: "/org-features",
+		createRouter: async () => (await import("./routes/org-features.route")).default,
+	},
 ];

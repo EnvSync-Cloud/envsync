@@ -57,6 +57,9 @@ export const CacheKeys = {
 	// SAML Providers
 	samlProvidersByOrg: (orgId: string) => `es:org:${orgId}:saml_providers`,
 
+	// Hosted org feature grant overlay
+	orgFeatureGrant: (orgId: string) => `es:org:${orgId}:feature_grant`,
+
 	// Glob patterns for cascade invalidation
 	allForUser: (userId: string) => `es:user:${userId}*`,
 	allForOrg: (orgId: string) => `es:org:${orgId}:*`,

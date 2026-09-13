@@ -15,6 +15,14 @@ export type SystemStatusState = {
     landing_enabled: boolean;
     first_bootstrap_completed_at?: string | null;
     org_count: number;
+    entitlement?: {
+        present: boolean;
+        source: string | null;
+        in_grace: boolean;
+        features: Array<string>;
+        max_orgs: number | null;
+        expires_at: string | null;
+    };
 };
 export namespace SystemStatusState {
     export enum edition {

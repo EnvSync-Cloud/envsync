@@ -17,6 +17,16 @@ export const systemStatusStateSchema = z.object({
 	landing_enabled: z.boolean(),
 	first_bootstrap_completed_at: z.coerce.date().nullable().optional(),
 	org_count: z.number(),
+	entitlement: z
+		.object({
+			present: z.boolean(),
+			source: z.string().nullable(),
+			in_grace: z.boolean(),
+			features: z.array(z.string()),
+			max_orgs: z.number().nullable(),
+			expires_at: z.string().nullable(),
+		})
+		.optional(),
 }).openapi({ ref: "SystemStatusState" });
 
 export const systemStatusResponseSchema = z.object({

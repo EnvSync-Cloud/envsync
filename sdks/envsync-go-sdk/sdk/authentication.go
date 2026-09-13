@@ -22,6 +22,9 @@ type WhoAmIResponse struct {
 	Role                   *RoleResponse                    `json:"role" url:"role"`
 	Memberships            []*WhoAmIResponseMembershipsItem `json:"memberships" url:"memberships"`
 	ActiveMembershipUserId string                           `json:"active_membership_user_id" url:"active_membership_user_id"`
+	Features               []string                         `json:"features" url:"features"`
+	InstallFeatures        []string                         `json:"install_features" url:"install_features"`
+	AuthType               WhoAmIResponseAuthType           `json:"auth_type" url:"auth_type"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -62,6 +65,27 @@ func (w *WhoAmIResponse) GetActiveMembershipUserId() string {
 	return w.ActiveMembershipUserId
 }
 
+func (w *WhoAmIResponse) GetFeatures() []string {
+	if w == nil {
+		return nil
+	}
+	return w.Features
+}
+
+func (w *WhoAmIResponse) GetInstallFeatures() []string {
+	if w == nil {
+		return nil
+	}
+	return w.InstallFeatures
+}
+
+func (w *WhoAmIResponse) GetAuthType() WhoAmIResponseAuthType {
+	if w == nil {
+		return ""
+	}
+	return w.AuthType
+}
+
 func (w *WhoAmIResponse) GetExtraProperties() map[string]interface{} {
 	return w.extraProperties
 }
@@ -92,6 +116,34 @@ func (w *WhoAmIResponse) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", w)
+}
+
+type WhoAmIResponseAuthType string
+
+const (
+	WhoAmIResponseAuthTypeJwt    WhoAmIResponseAuthType = "jwt"
+	WhoAmIResponseAuthTypeSaml   WhoAmIResponseAuthType = "saml"
+	WhoAmIResponseAuthTypeOidc   WhoAmIResponseAuthType = "oidc"
+	WhoAmIResponseAuthTypeApiKey WhoAmIResponseAuthType = "api_key"
+)
+
+func NewWhoAmIResponseAuthTypeFromString(s string) (WhoAmIResponseAuthType, error) {
+	switch s {
+	case "jwt":
+		return WhoAmIResponseAuthTypeJwt, nil
+	case "saml":
+		return WhoAmIResponseAuthTypeSaml, nil
+	case "oidc":
+		return WhoAmIResponseAuthTypeOidc, nil
+	case "api_key":
+		return WhoAmIResponseAuthTypeApiKey, nil
+	}
+	var t WhoAmIResponseAuthType
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (w WhoAmIResponseAuthType) Ptr() *WhoAmIResponseAuthType {
+	return &w
 }
 
 type WhoAmIResponseMembershipsItem struct {

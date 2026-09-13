@@ -25,6 +25,7 @@ import { LogForwardingService } from './services/LogForwardingService';
 import { OidcProvidersService } from './services/OidcProvidersService';
 import { OnboardingService } from './services/OnboardingService';
 import { OrganizationsService } from './services/OrganizationsService';
+import { OrgFeaturesService } from './services/OrgFeaturesService';
 import { PermissionsService } from './services/PermissionsService';
 import { RolesService } from './services/RolesService';
 import { RotationService } from './services/RotationService';
@@ -61,6 +62,7 @@ export class EnvSyncAPISDK {
     public readonly oidcProviders: OidcProvidersService;
     public readonly onboarding: OnboardingService;
     public readonly organizations: OrganizationsService;
+    public readonly orgFeatures: OrgFeaturesService;
     public readonly permissions: PermissionsService;
     public readonly roles: RolesService;
     public readonly rotation: RotationService;
@@ -79,7 +81,7 @@ export class EnvSyncAPISDK {
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
             BASE: config?.BASE ?? 'http://localhost:4000',
-            VERSION: config?.VERSION ?? '0.20.0',
+            VERSION: config?.VERSION ?? '0.20.1',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
             TOKEN: config?.TOKEN,
@@ -108,6 +110,7 @@ export class EnvSyncAPISDK {
         this.oidcProviders = new OidcProvidersService(this.request);
         this.onboarding = new OnboardingService(this.request);
         this.organizations = new OrganizationsService(this.request);
+        this.orgFeatures = new OrgFeaturesService(this.request);
         this.permissions = new PermissionsService(this.request);
         this.roles = new RolesService(this.request);
         this.rotation = new RotationService(this.request);

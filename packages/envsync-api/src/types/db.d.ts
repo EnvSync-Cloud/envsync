@@ -420,6 +420,15 @@ export interface LogForwardingConfig extends BaseTable {
 	enabled: ColumnType<boolean>;
 }
 
+export interface OrgFeatureGrant {
+	org_id: ColumnType<string>;
+	features: ColumnType<string[]>;
+	source: ColumnType<string>;
+	updated_by?: ColumnType<string | null>;
+	created_at: ColumnType<Date>;
+	updated_at: ColumnType<Date>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -459,6 +468,7 @@ export interface BaseDatabase {
 	rotation_policies: RotationPolicy;
 	rotation_state: RotationState;
 	log_forwarding_configs: LogForwardingConfig;
+	org_feature_grant: OrgFeatureGrant;
 }
 
 /**

@@ -5,6 +5,8 @@ export { AuthorizationService } from "@/services/authorization.service";
 export { EnvService } from "@/services/env.service";
 export { EnvTypeService } from "@/services/env_type.service";
 export { LicenseStateService } from "@/services/license-state.service";
+export { OrgFeatureGrantService } from "@/services/org-feature-grant.service";
+export { OrgService } from "@/services/org.service";
 export { RoleService } from "@/services/role.service";
 export { SecretService } from "@/services/secret.service";
 export { UserService } from "@/services/user.service";

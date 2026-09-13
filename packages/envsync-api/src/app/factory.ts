@@ -41,6 +41,7 @@ const ENTERPRISE_MANAGE_OPENAPI_TAGS = [
 	"Rotation",
 	"Dynamic Secrets",
 	"Log Forwarding",
+	"Org Features",
 ] as const;
 
 const ENTERPRISE_MANAGE_TAG_DESCRIPTION =

@@ -103,6 +103,7 @@ export class SystemStateService {
 			public_signup_enabled: policy.public_signup_enabled,
 			can_create_organization: policy.can_create_organization,
 			org_count: Number(orgCountResult.count),
+			entitlement: policy.entitlement,
 		};
 	}
 
