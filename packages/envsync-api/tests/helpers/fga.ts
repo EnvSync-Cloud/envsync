@@ -66,7 +66,7 @@ function checkPermission(user: string, relation: string, object: string): boolea
 				);
 
 			case "can_manage_org_settings":
-				return hasTuple(user, "master", object);
+				return hasTuple(user, "admin", object) || hasTuple(user, "master", object);
 
 			// GPG key management
 			case "can_manage_gpg_keys":

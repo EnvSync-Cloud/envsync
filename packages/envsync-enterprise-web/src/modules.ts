@@ -2,13 +2,18 @@ import { KeyRound, Link2, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
 
+const isOrgAdmin = (user: { role: { is_admin: boolean; is_master: boolean } }) =>
+  user.role.is_admin || user.role.is_master;
+
 /**
  * Canonical enterprise dashboard modules (D10 / Phase 5b–5c).
  * Wired into the shell via Vite alias `@enterprise-modules`.
+ * SSO / Key management pages land in later PRs — do not add them here.
  */
 export const enterpriseWebModules: WebModule[] = [
   {
     name: "enterprise-integrations",
+    requiredFeature: "integrations",
     routes: [
       {
         id: "applications-integrations",
@@ -53,12 +58,6 @@ export const enterpriseWebModules: WebModule[] = [
         loadComponent: () => import("./pages/OrgIntegrations"),
       },
       {
-        id: "organisation-license",
-        layout: "root",
-        path: "organisation/license",
-        loadComponent: () => import("./pages/LicenseSettings"),
-      },
-      {
         id: "organisation-sync",
         layout: "root",
         path: "organisation/sync",
@@ -81,6 +80,36 @@ export const enterpriseWebModules: WebModule[] = [
             href: "/organisation/sync",
             icon: Workflow,
           },
+        ],
+      },
+    ],
+    scopeRules: {
+      "applications-integrations": user =>
+        (user.role.can_edit || user.role.is_admin || user.role.is_master)
+        && Boolean(user.features?.includes("integrations")),
+      "organisation-integrations": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("integrations")),
+      "organisation-sync": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("integrations")),
+    },
+    settingsSections: [
+      { id: "integrations", label: "Integrations" },
+    ],
+  },
+  {
+    name: "enterprise-license",
+    routes: [
+      {
+        id: "organisation-license",
+        layout: "root",
+        path: "organisation/license",
+        loadComponent: () => import("./pages/LicenseSettings"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
           {
             id: "organisation-license",
             name: "License",
@@ -91,14 +120,10 @@ export const enterpriseWebModules: WebModule[] = [
       },
     ],
     scopeRules: {
-      "applications-integrations": user => user.role.can_edit || user.role.is_admin || user.role.is_master,
-      "organisation-integrations": user => user.role.is_admin || user.role.is_master,
-      "organisation-license": user => user.role.is_admin || user.role.is_master,
-      "organisation-sync": user => user.role.is_admin || user.role.is_master,
+      "organisation-license": isOrgAdmin,
     },
     settingsSections: [
       { id: "license", label: "License" },
-      { id: "integrations", label: "Integrations" },
     ],
   },
 ];

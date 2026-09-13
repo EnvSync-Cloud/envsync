@@ -12,13 +12,34 @@ export interface AuthMembershipSummary {
   is_active: boolean;
 }
 
+export type AuthSessionAuthType = "jwt" | "saml" | "oidc" | "api_key";
+
 export type AuthSession = WhoAmIResponse & {
   memberships: AuthMembershipSummary[];
   active_membership_user_id: string;
 };
 
-export function normalizeAuthSession(session: WhoAmIResponse | AuthSession): AuthSession {
-  const authSession = session as Partial<AuthSession> & WhoAmIResponse;
+/** Local fallback until every caller uses the generated whoami fields. */
+export type EntitledAuthSession = AuthSession & {
+  features: string[];
+  install_features: string[];
+  auth_type: AuthSessionAuthType;
+};
+
+const AUTH_TYPES = new Set<AuthSessionAuthType>(["jwt", "saml", "oidc", "api_key"]);
+
+function asStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function asAuthType(value: unknown): AuthSessionAuthType {
+  return typeof value === "string" && AUTH_TYPES.has(value as AuthSessionAuthType)
+    ? (value as AuthSessionAuthType)
+    : "jwt";
+}
+
+export function normalizeAuthSession(session: WhoAmIResponse | AuthSession): EntitledAuthSession {
+  const authSession = session as Partial<EntitledAuthSession> & WhoAmIResponse;
   const memberships = Array.isArray(authSession.memberships) && authSession.memberships.length > 0
     ? authSession.memberships
     : [{
@@ -37,5 +58,8 @@ export function normalizeAuthSession(session: WhoAmIResponse | AuthSession): Aut
     ...authSession,
     memberships,
     active_membership_user_id: authSession.active_membership_user_id ?? authSession.user.id,
+    features: asStringList(authSession.features),
+    install_features: asStringList(authSession.install_features),
+    auth_type: asAuthType(authSession.auth_type),
   };
 }

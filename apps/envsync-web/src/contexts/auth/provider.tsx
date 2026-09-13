@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthContext } from ".";
-import { getRegisteredScopeIds, getWebScopeRuleMap } from "@/modules/load-modules";
+import { getRegisteredScopeIds, getWebFeatureMap, getWebScopeRuleMap, isScopeAllowed } from "@/modules/load-modules";
 
 export const AuthContextProvider = ({
   children,
@@ -21,14 +21,13 @@ export const AuthContextProvider = ({
   } = useAuth();
   const registeredScopes = useMemo(() => getRegisteredScopeIds(), []);
   const scopeRules = useMemo(() => getWebScopeRuleMap(), []);
+  const featureMap = useMemo(() => getWebFeatureMap(), []);
 
   const contextValue = useMemo(() => {
     const memberships = user?.memberships ?? [];
-    const allowedScopes = registeredScopes.filter((scope) => {
-      if (!user) return false;
-
-      return scopeRules[scope]?.(user) ?? true;
-    });
+    const allowedScopes = registeredScopes.filter((scope) =>
+      isScopeAllowed(user, scope, { scopeRules, featureMap }),
+    );
 
     return {
       token,
@@ -52,6 +51,7 @@ export const AuthContextProvider = ({
     authError,
     registeredScopes,
     scopeRules,
+    featureMap,
     switchOrg,
     isSwitchingOrg,
     createOrganization,

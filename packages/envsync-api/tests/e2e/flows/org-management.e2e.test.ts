@@ -2,7 +2,7 @@
  * E2E: Org management — get → check slug → update → verify
  *
  * Uses real PostgreSQL and OpenFGA.
- * Master has can_manage_org_settings via FGA model's master → computed relation.
+ * can_manage_org_settings is admin ∪ master (K8). Master still covers this flow.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

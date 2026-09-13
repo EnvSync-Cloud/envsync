@@ -3,6 +3,7 @@ import { Suspense, lazy, useMemo } from "react";
 import { RouteChangeTracker } from "@/telemetry";
 import { getWebRoutes } from "@/modules/load-modules";
 
+import { FeatureGate } from "@/components/FeatureGate";
 import RootLayout from "@/layout/root";
 import type { WebRouteDefinition } from "@/modules/types";
 
@@ -23,7 +24,9 @@ function RouteElement({ route }: { route: WebRouteDefinition }) {
 
   return (
     <Suspense fallback={<RouteFallback />}>
-      <Component />
+      <FeatureGate feature={route.requiredFeature}>
+        <Component />
+      </FeatureGate>
     </Suspense>
   );
 }

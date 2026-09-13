@@ -45,6 +45,30 @@ test.describe("enterprise dashboard routes", () => {
 		await expect(page.getByText(/not found|page you are looking for/i)).toHaveCount(0);
 	});
 
+	// Hosted-only grant-org-features would hide Integrations on a second harness org.
+	// UI e2e is not Hosted-gated, so intercept whoami.features instead.
+	test("restricted whoami features hide Integrations nav and deep-link to upgrade", async ({ page }) => {
+		await page.route("**/api/auth/me", async route => {
+			const response = await route.fetch();
+			const body = await response.json() as { features?: string[] };
+			const features = (body.features ?? []).filter(feature => feature !== "integrations");
+			await route.fulfill({
+				response,
+				json: { ...body, features },
+			});
+		});
+
+		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
+		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+
+		await page.goto("/organisation/integrations", { waitUntil: "domcontentloaded" });
+		await expect(page.getByRole("heading", { name: /Integrations is not on this plan/i })).toBeVisible({
+			timeout: 30_000,
+		});
+	});
+
 	test("legacy /manage SPA path is not a live product surface", async ({ page }) => {
 		await page.goto("/manage", { waitUntil: "domcontentloaded" });
 		// SPA client router: expect not-found shell, not an old management dashboard chrome
