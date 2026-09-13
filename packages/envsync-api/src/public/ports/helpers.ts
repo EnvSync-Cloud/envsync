@@ -9,6 +9,7 @@ export { clearJwksCache } from "@/helpers/oidc";
 export {
 	buildAuthnRequest,
 	buildSpMetadata,
+	deflateAndEncode,
 	parseIdpMetadataXml,
 	redactSamlCertificate,
 	signRelayState,

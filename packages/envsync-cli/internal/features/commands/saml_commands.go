@@ -134,12 +134,12 @@ func samlDeleteCommand(handler *handlers.SamlHandler) *cli.Command {
 func samlMetadataCommand(handler *handlers.SamlHandler) *cli.Command {
 	return &cli.Command{
 		Name:   "metadata",
-		Usage:  "Retrieve public SAML Service Provider metadata XML",
+		Usage:  "Retrieve public SAML Service Provider metadata XML (requires a logged-in session to resolve --org-slug to an org id)",
 		Action: handler.Metadata,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:     "org-slug",
-				Usage:    "Organization slug",
+				Usage:    "Organization slug (resolved via whoami; login required)",
 				Required: true,
 			},
 		},

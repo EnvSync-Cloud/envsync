@@ -4,6 +4,7 @@ import {
 	updateKeycloakUser,
 	deleteKeycloakUser,
 	sendKeycloakPasswordReset,
+	keycloakUserHasPassword,
 } from "@/helpers/keycloak";
 import { UserService } from "@/services/user.service";
 import { AuditLogService } from "@/services/audit_log.service";
@@ -195,6 +196,16 @@ export class UserController {
 		}
 
 		if (user.auth_service_id) {
+			const hasPassword = await keycloakUserHasPassword(user.auth_service_id);
+			if (!hasPassword) {
+				return c.json(
+					{
+						error: "This user signs in with SSO and has no password to reset.",
+						code: "AUTH_SSO_PASSWORD_DISABLED",
+					},
+					409,
+				);
+			}
 			await sendKeycloakPasswordReset(user.auth_service_id);
 		}
 

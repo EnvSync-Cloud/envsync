@@ -175,6 +175,27 @@ export async function findKeycloakUserByUsername(username: string): Promise<Keyc
 	}
 }
 
+export async function keycloakUserHasPassword(userId: string): Promise<boolean> {
+	try {
+		const res = await adminFetch(`/users/${encodeURIComponent(userId)}/credentials`);
+		if (!res.ok) return false;
+		const credentials = (await res.json()) as Array<{ type?: string }>;
+		return credentials.some(credential => credential.type === "password");
+	} catch (error) {
+		if (!isLocalHttpAdminFailure(error)) throw error;
+		try {
+			const raw = runLocalKeycloakAdmin([
+				`get users/${JSON.stringify(userId)}/credentials`,
+				`-r ${realm()}`,
+			]);
+			const credentials = (raw ? JSON.parse(raw) : []) as Array<{ type?: string }>;
+			return credentials.some(credential => credential.type === "password");
+		} catch {
+			return false;
+		}
+	}
+}
+
 async function deleteKeycloakPasswordCredentials(userId: string) {
 	try {
 		const res = await adminFetch(`/users/${encodeURIComponent(userId)}/credentials`);
