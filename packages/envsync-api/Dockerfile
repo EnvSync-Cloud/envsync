@@ -38,7 +38,6 @@ WORKDIR /app/packages/envsync-api
 
 EXPOSE 4000
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=60s --retries=8 \
-  CMD wget -q -O /dev/null http://127.0.0.1:4000/health
+# Swarm must not SIGKILL a listening API. The deploy CLI probes /health itself.
 
 CMD ["bun", "run", "src/entrypoint.ts"]

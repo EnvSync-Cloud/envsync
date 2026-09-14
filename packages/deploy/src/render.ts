@@ -1070,11 +1070,7 @@ ${renderEnvList({
 ${apiLicenseVolume}
     networks: [envsync]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 8
-      start_period: 60s
+      disable: true
     deploy:
       replicas: ${slotHasApiDeployment(deployment.slots.blue) ? 1 : 0}
 
@@ -1089,11 +1085,7 @@ ${renderEnvList({
 ${apiLicenseVolume}
     networks: [envsync]
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 8
-      start_period: 60s
+      disable: true
     deploy:
       replicas: ${slotHasApiDeployment(deployment.slots.green) ? 1 : 0}` : ""}${netutilsService}${vpnResult?.serviceBlock ?? ""}
 
