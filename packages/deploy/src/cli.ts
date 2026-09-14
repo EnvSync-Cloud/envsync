@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { createHash, generateKeyPairSync, randomBytes, randomInt } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -147,6 +147,7 @@ interface DeployGeneratedState {
 		keycloak_api_client_secret: string;
 		openfga_db_password: string;
 		minikms_root_key: string;
+		minikms_session_signing_key: string;
 		minikms_db_password: string;
 	};
 	bootstrap: {
@@ -286,6 +287,7 @@ const NGINX_VPN_CONF = path.join(DEPLOY_ROOT, "nginx-vpn.conf");
 const OTEL_AGENT_CONF = path.join(DEPLOY_ROOT, "otel-agent.yaml");
 const CLICKSTACK_CLICKHOUSE_CONF = path.join(DEPLOY_ROOT, "clickhouse-listen.xml");
 const INTERNAL_CONFIG_JSON = path.join(DEPLOY_ROOT, "config.json");
+const MINIKMS_SESSION_SIGNING_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-session-signing-key.pem");
 const UPGRADE_BACKUPS_ROOT = path.join(BACKUPS_ROOT, "upgrade");
 const WIREGUARD_STATE_FILE = path.join(WIREGUARD_ROOT, "state.json");
 const WIREGUARD_PRIVATE_KEY_FILE = path.join(WIREGUARD_ROOT, "server-private.key");
@@ -665,6 +667,11 @@ function exists(target: string) {
 
 function randomSecret(bytes = 24) {
 	return randomBytes(bytes).toString("hex");
+}
+
+function generateMinikmsSessionSigningKey() {
+	const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+	return privateKey.export({ type: "pkcs8", format: "pem" }).toString();
 }
 
 function deterministicInstallFingerprint(rootDomain: string, stackName: string) {
@@ -1444,6 +1451,7 @@ function emptyGeneratedState(): DeployGeneratedState {
 			keycloak_api_client_secret: "",
 			openfga_db_password: "",
 			minikms_root_key: "",
+			minikms_session_signing_key: "",
 			minikms_db_password: "",
 		},
 		bootstrap: {
@@ -1483,6 +1491,8 @@ function normalizeGeneratedState(raw?: Partial<DeployGeneratedState>): DeployGen
 			keycloak_api_client_secret: raw?.secrets?.keycloak_api_client_secret ?? defaults.secrets.keycloak_api_client_secret,
 			openfga_db_password: raw?.secrets?.openfga_db_password ?? defaults.secrets.openfga_db_password,
 			minikms_root_key: raw?.secrets?.minikms_root_key ?? defaults.secrets.minikms_root_key,
+			minikms_session_signing_key:
+				raw?.secrets?.minikms_session_signing_key ?? defaults.secrets.minikms_session_signing_key,
 			minikms_db_password: raw?.secrets?.minikms_db_password ?? defaults.secrets.minikms_db_password,
 		},
 		bootstrap: {
@@ -1537,6 +1547,8 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 			keycloak_api_client_secret: env.KEYCLOAK_API_CLIENT_SECRET ?? normalized.secrets.keycloak_api_client_secret,
 			openfga_db_password: env.OPENFGA_DB_PASSWORD ?? normalized.secrets.openfga_db_password,
 			minikms_root_key: env.MINIKMS_ROOT_KEY ?? normalized.secrets.minikms_root_key,
+			minikms_session_signing_key:
+				env.MINIKMS_SESSION_SIGNING_KEY ?? normalized.secrets.minikms_session_signing_key,
 			minikms_db_password: env.MINIKMS_DB_PASSWORD ?? normalized.secrets.minikms_db_password,
 		},
 		bootstrap: normalized.bootstrap,
@@ -1567,6 +1579,8 @@ function ensureGeneratedRuntimeState(config: DeployConfig, generated: DeployGene
 			keycloak_api_client_secret: generated.secrets.keycloak_api_client_secret || randomSecret(),
 			openfga_db_password: generated.secrets.openfga_db_password || randomSecret(),
 			minikms_root_key: generated.secrets.minikms_root_key || randomBytes(32).toString("hex"),
+			minikms_session_signing_key:
+				generated.secrets.minikms_session_signing_key || generateMinikmsSessionSigningKey(),
 			minikms_db_password: generated.secrets.minikms_db_password || randomSecret(),
 		},
 		bootstrap: generated.bootstrap,
@@ -1762,6 +1776,9 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	if (!currentOptions.dryRun) {
 		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
 		logInfo(`Setup token fingerprint: ${orgSetup.setupTokenFingerprint(setupToken)} (${SETUP_TOKEN_FILE})`);
+	}
+	if (generated.secrets.minikms_session_signing_key) {
+		writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o600);
 	}
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
 	writeFileMaybe(

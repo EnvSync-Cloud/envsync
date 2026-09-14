@@ -187,9 +187,12 @@ services:
     restart: unless-stopped
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
+      MINIKMS_SESSION_SIGNING_KEY_FILE: /run/secrets/minikms-session-signing-key
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
+    volumes:
+      - ./docker/minikms/session-signing-key.dev.pem:/run/secrets/minikms-session-signing-key:ro
     depends_on:
       - minikms_migrate
       - redis

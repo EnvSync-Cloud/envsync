@@ -133,6 +133,7 @@ export interface DeployGeneratedState {
 		keycloak_api_client_secret: string;
 		openfga_db_password: string;
 		minikms_root_key: string;
+		minikms_session_signing_key: string;
 		minikms_db_password: string;
 	};
 	bootstrap: {
@@ -1017,11 +1018,14 @@ ${includeRuntimeInfra ? `
     environment:
 ${renderEnvList({
 		MINIKMS_ROOT_KEY: runtimeEnv.MINIKMS_ROOT_KEY,
+		MINIKMS_SESSION_SIGNING_KEY_FILE: "/run/secrets/minikms-session-signing-key",
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
 		MINIKMS_TLS_ENABLED: "false",
 	})}
+    volumes:
+      - ${paths.deployRoot}/minikms-session-signing-key.pem:/run/secrets/minikms-session-signing-key:ro
     networks: [envsync]` : ""}
 
   clickstack:

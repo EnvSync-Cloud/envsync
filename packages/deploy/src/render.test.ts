@@ -153,6 +153,7 @@ const generated: DeployGeneratedState = {
 		keycloak_api_client_secret: "api-client-secret",
 		openfga_db_password: "openfga-db-pass",
 		minikms_root_key: "minikms-root-key",
+		minikms_session_signing_key: "-----BEGIN PRIVATE KEY-----\nDEV\n-----END PRIVATE KEY-----\n",
 		minikms_db_password: "minikms-db-pass",
 	},
 	bootstrap: {
@@ -209,6 +210,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
 		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-9ffbf53");
+		expect(stackFull).toContain("MINIKMS_SESSION_SIGNING_KEY_FILE=/run/secrets/minikms-session-signing-key");
 		expect(stackFull).not.toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
