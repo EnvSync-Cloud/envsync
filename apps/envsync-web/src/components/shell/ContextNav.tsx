@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Database,
   DatabaseBackup,
+  GitPullRequest,
   LayoutDashboard,
   LockKeyhole,
   PlugZap,
@@ -13,9 +14,10 @@ import { useMemo } from "react";
 import { navGroups } from "@/constants";
 import {
   appAccessPath,
+  appApprovalsPath,
   appDetailPath,
+  appEnvironmentsPath,
   appIntegrationsPath,
-  appManageEnvironmentsPath,
   appPointInTimePath,
   appSecretsPath,
 } from "@/lib/app-routes";
@@ -37,6 +39,9 @@ function isItemActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/" || pathname === "/dashboard";
   if (href === "/projects") {
     return pathname === "/projects" || pathname.startsWith("/projects/create");
+  }
+  if (href.endsWith("/environments") && pathname.endsWith("/manage-environments")) {
+    return true;
   }
   if (pathname === href) return true;
   if (/^\/projects\/[^/]+$/.test(href)) return false;
@@ -156,10 +161,19 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       const projectItems: WebNavItem[] = [
         { id: "project-variables", name: "Variables", href: appDetailPath(appId), icon: Database },
         { id: "project-secrets", name: "Secrets", href: appSecretsPath(appId), icon: Shield },
-        { id: "project-environments", name: "Environments", href: appManageEnvironmentsPath(appId), icon: Settings },
+        { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
         { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
         { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
       ];
+
+      if (allowedScopes.includes("change-requests")) {
+        projectItems.splice(4, 0, {
+          id: "project-approvals",
+          name: "Approvals",
+          href: appApprovalsPath(appId),
+          icon: GitPullRequest,
+        });
+      }
 
       if (allowedScopes.includes("applications-integrations")) {
         projectItems.push({

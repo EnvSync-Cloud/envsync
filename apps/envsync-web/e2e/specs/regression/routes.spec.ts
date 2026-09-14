@@ -14,8 +14,15 @@ test.describe("route surface", () => {
 			{ path: `/projects/${seededId}`, heading: "Variables" },
 			{ path: `/projects/${seededId}/secrets`, heading: "Secrets" },
 			{ path: `/projects/${seededId}/manage-environments`, heading: /Manage Environments|Environments/ },
+			{ path: `/projects/${seededId}/environments`, heading: /Manage Environments|Environments/ },
 			{ path: `/projects/${seededId}/access`, heading: "Project Access" },
+			{ path: `/projects/${seededId}/approvals`, heading: "Approvals" },
+			{ path: `/projects/${seededId}/change-requests`, heading: "Approvals", url: new RegExp(`/projects/${seededId}/approvals`) },
 			{ path: `/projects/${seededId}/pit`, heading: "Core Platform" },
+			{ path: "/org/access", heading: "Users", url: /\/org\/access\/users\/?$/ },
+			{ path: "/org/access/users", heading: "Users" },
+			{ path: "/org/access/teams", heading: "Teams" },
+			{ path: "/org/access/roles", heading: "Roles" },
 			{ path: "/org/roles", heading: "Roles" },
 			{ path: "/org/users", heading: "Users" },
 			{ path: "/org/teams", heading: "Teams" },
@@ -57,6 +64,15 @@ test.describe("route surface", () => {
 			}
 			await expect(page.getByRole("heading", { name: routeCheck.heading }).first()).toBeVisible();
 		}
+
+		await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
+		await expect(page.getByTestId("org-access-tabs")).toBeVisible();
+		await page.getByTestId("org-access-tab-teams").click();
+		await expect(page).toHaveURL(/\/org\/access\/teams\/?$/);
+		await expect(page.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
+		await page.getByTestId("org-access-tab-roles").click();
+		await expect(page).toHaveURL(/\/org\/access\/roles\/?$/);
+		await expect(page.getByRole("heading", { name: "Roles" }).first()).toBeVisible();
 
 		await page.goto(`/applications/${seededId}?selected=keep-me`, { waitUntil: "domcontentloaded" });
 		await expect(page).toHaveURL(new RegExp(`/projects/${seededId}\\?selected=keep-me`));

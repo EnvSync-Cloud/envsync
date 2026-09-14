@@ -7,9 +7,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Settings,
-  ShieldAlert,
   ShieldCheck,
-  User,
   Users,
 } from "lucide-react";
 
@@ -90,10 +88,28 @@ export const coreWebModules: WebModule[] = [
         loadComponent: () => import("@/pages/ManageEnvironment"),
       },
       {
+        id: "projects-environments",
+        layout: "root",
+        path: "projects/:appId/environments",
+        loadComponent: () => import("@/pages/ManageEnvironment"),
+      },
+      {
         id: "projects-access",
         layout: "root",
         path: "projects/:appId/access",
         loadComponent: () => import("@/pages/ProjectAccess"),
+      },
+      {
+        id: "projects-approvals",
+        layout: "root",
+        path: "projects/:appId/approvals",
+        loadComponent: () => import("@/pages/ChangeRequests"),
+      },
+      {
+        id: "projects-change-requests",
+        layout: "root",
+        path: "projects/:appId/change-requests",
+        redirectTo: "/projects/:appId/approvals",
       },
       {
         id: "projects-pit",
@@ -106,6 +122,18 @@ export const coreWebModules: WebModule[] = [
         layout: "root",
         path: "projects/:appId/pit/secrets",
         loadComponent: () => import("@/pages/PointInTimeVariables"),
+      },
+      {
+        id: "org-access",
+        layout: "root",
+        path: "org/access",
+        loadComponent: () => import("@/pages/OrgAccess"),
+      },
+      {
+        id: "org-access-tab",
+        layout: "root",
+        path: "org/access/:tab",
+        loadComponent: () => import("@/pages/OrgAccess"),
       },
       {
         id: "org-users",
@@ -211,9 +239,7 @@ export const coreWebModules: WebModule[] = [
       {
         label: "Collaboration",
         items: [
-          { id: "users", name: "Users", href: "/org/users", icon: User },
-          { id: "teams", name: "Teams", href: "/org/teams", icon: Users },
-          { id: "roles", name: "Roles", href: "/org/roles", icon: ShieldAlert },
+          { id: "access", name: "Access", href: "/org/access", icon: Users },
           { id: "change-requests", name: "Change Requests", href: "/org/change-requests", icon: ShieldCheck },
           { id: "webhooks", name: "Webhooks", href: "/org/webhooks", icon: Anchor },
         ],
@@ -234,6 +260,7 @@ export const coreWebModules: WebModule[] = [
       users: () => true,
       teams: () => true,
       roles: user => user.role.is_admin || user.role.is_master,
+      access: () => true,
       "change-requests": user => user.role.can_edit || user.role.is_admin || user.role.is_master,
       organisation: user => user.role.is_admin || user.role.is_master,
       audit: user => user.role.is_admin || user.role.is_master,

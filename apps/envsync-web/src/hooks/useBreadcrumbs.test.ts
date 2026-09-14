@@ -12,6 +12,9 @@ describe("breadcrumb labels", () => {
     expect(labelForSegment("projects")).toBe("Projects");
     expect(labelForSegment("certificates")).toBe("Certificates");
     expect(labelForSegment("pit")).toBe("Recovery");
+    expect(labelForSegment("access")).toBe("Access");
+    expect(labelForSegment("approvals")).toBe("Approvals");
+    expect(labelForSegment("environments")).toBe("Environments");
   });
 
   test("treats project ids as detail segments", () => {
@@ -33,6 +36,21 @@ describe("breadcrumb labels", () => {
     expect(buildBreadcrumbs("/org/users").map((crumb) => crumb.label)).toEqual([
       "Organization",
       "Users",
+    ]);
+    expect(buildBreadcrumbs("/org/access/users").map((crumb) => crumb.label)).toEqual([
+      "Organization",
+      "Access",
+      "Users",
+    ]);
+    expect(buildBreadcrumbs(`/projects/${APP_ID}/approvals`, apps).map((crumb) => crumb.label)).toEqual([
+      "Projects",
+      "Core Platform",
+      "Approvals",
+    ]);
+    expect(buildBreadcrumbs(`/projects/${APP_ID}/environments`, apps).map((crumb) => crumb.label)).toEqual([
+      "Projects",
+      "Core Platform",
+      "Environments",
     ]);
   });
 });

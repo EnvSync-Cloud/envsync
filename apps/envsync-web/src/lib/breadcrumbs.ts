@@ -9,7 +9,9 @@ const ROUTE_LABELS: Record<string, string> = {
   create: "Create Project",
   secrets: "Secrets",
   "manage-environments": "Environments",
+  environments: "Environments",
   access: "Access",
+  approvals: "Approvals",
   integrations: "Integrations",
   pit: "Recovery",
   roles: "Roles",
@@ -78,7 +80,16 @@ export function buildBreadcrumbs(
 
     if (isAppDetailPage) {
       const subSection = segments[2];
-      const knownSubSections = ["secrets", "manage-environments", "access", "integrations", "pit"];
+      const knownSubSections = [
+        "secrets",
+        "manage-environments",
+        "environments",
+        "access",
+        "approvals",
+        "change-requests",
+        "integrations",
+        "pit",
+      ];
 
       if (!subSection || !knownSubSections.includes(subSection)) {
         crumbs.push({ label: "Variables", href: currentPath });

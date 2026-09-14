@@ -2,10 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import {
   LEGACY_REDIRECTS,
+  appApprovalsPath,
   appDetailPath,
+  appEnvironmentsPath,
   appIntegrationsPath,
   appPointInTimePath,
   applyRouteParams,
+  isOrgAccessTab,
+  orgAccessPath,
   orgCertificatesPath,
   orgIntegrationsPath,
   orgUsersPath,
@@ -15,7 +19,15 @@ describe("app routes", () => {
   test("canonical project and org paths", () => {
     expect(appDetailPath("app-1")).toBe("/projects/app-1");
     expect(appPointInTimePath("app-1")).toBe("/projects/app-1/pit");
+    expect(appApprovalsPath("app-1")).toBe("/projects/app-1/approvals");
+    expect(appEnvironmentsPath("app-1")).toBe("/projects/app-1/environments");
     expect(orgUsersPath()).toBe("/org/users");
+    expect(orgAccessPath()).toBe("/org/access");
+    expect(orgAccessPath("users")).toBe("/org/access/users");
+    expect(orgAccessPath("teams")).toBe("/org/access/teams");
+    expect(orgAccessPath("roles")).toBe("/org/access/roles");
+    expect(isOrgAccessTab("users")).toBe(true);
+    expect(isOrgAccessTab("billing")).toBe(false);
     expect(orgCertificatesPath()).toBe("/org/certificates");
   });
 

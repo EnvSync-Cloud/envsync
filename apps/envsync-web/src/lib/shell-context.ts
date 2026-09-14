@@ -15,7 +15,7 @@ export interface ShellContext {
 export const PRODUCTS: ProductDefinition[] = [
   { id: "secrets", name: "Secret Management", homeHref: "/projects" },
   { id: "certificates", name: "Certificates", homeHref: "/org/certificates" },
-  { id: "organization", name: "Organization", homeHref: "/org/users" },
+  { id: "organization", name: "Organization", homeHref: "/org/access" },
 ];
 
 export const LAST_PROJECT_STORAGE_PREFIX = "envsync-last-project-id";

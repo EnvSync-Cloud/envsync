@@ -69,7 +69,7 @@ describe("shell context", () => {
   });
 
   test("keeps organization and certificate product homes stable", () => {
-    expect(productHomeHref("organization")).toBe("/org/users");
+    expect(productHomeHref("organization")).toBe("/org/access");
     expect(productHomeHref("certificates")).toBe("/org/certificates");
   });
 
