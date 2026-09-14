@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.6
+
+### Fixed
+
+- API listens before license/DB background work.
+- Swarm HEALTHCHECK disabled; deploy CLI probes `/health` itself (stops exit 137).
+
+---
+
 ## 0.20.5
 
 ### Fixed
