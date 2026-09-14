@@ -1,3 +1,4 @@
+import { firstPartyOtelUrl } from "@/utils/first-party-otel";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 export interface TelemetryConfig {
@@ -13,10 +14,10 @@ export function getTelemetryConfig(): TelemetryConfig {
   const disabled = runtimeConfig.hyperdxDisabled ?? (import.meta.env.VITE_OTEL_SDK_DISABLED === "true");
   return {
     endpoint:
-      runtimeConfig.otelEndpoint ||
-      runtimeConfig.hyperdxUrl ||
-      import.meta.env.VITE_OTEL_ENDPOINT ||
-      import.meta.env.VITE_HYPERDX_URL ||
+      firstPartyOtelUrl(runtimeConfig.hyperdxUrl) ||
+      firstPartyOtelUrl(runtimeConfig.otelEndpoint) ||
+      firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) ||
+      firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) ||
       "http://localhost:4318",
     serviceName: import.meta.env.VITE_OTEL_SERVICE_NAME || "envsync-web",
     disabled,

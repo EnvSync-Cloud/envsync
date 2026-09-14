@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.12
+
+### Fixed
+
+- Browser OTLP (`/v1/traces`, `/v1/logs`, `/v1/metrics`) uses `https://t.<root>/obs`, not `obs.<root>`. Hosted CF no longer bakes `ENVSYNC_OBS_URL` into ingest.
+
+---
+
 ## 0.20.11
 
 ### Fixed

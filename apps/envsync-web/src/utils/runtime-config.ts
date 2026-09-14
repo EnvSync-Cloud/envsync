@@ -1,5 +1,7 @@
 import z from "zod";
 
+import { firstPartyOtelUrl } from "./first-party-otel";
+
 const runtimeConfigSchema = z.object({
   apiBaseUrl: z.string().url(),
   appBaseUrl: z.string().url(),
@@ -106,9 +108,9 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
     licenseStatus: undefined,
     licenseLocked: false,
-    otelEndpoint: `${protocol}//obs.${rootHost}`,
+    otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || `${protocol}//t.${rootHost}/obs`,
     hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
-    hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || `${protocol}//t.${rootHost}/obs`,
+    hyperdxUrl: firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) || `${protocol}//t.${rootHost}/obs`,
     hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
     hyperdxAdvancedNetworkCapture: false,
     posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
@@ -143,7 +145,11 @@ function getRuntimeConfig(): RuntimeConfig {
     if (!onLocalPage && isLocalDevUrl(parsed.apiBaseUrl)) {
       return inferFallbackRuntimeConfig();
     }
-    return parsed;
+    return {
+      ...parsed,
+      otelEndpoint: firstPartyOtelUrl(parsed.otelEndpoint) ?? parsed.otelEndpoint,
+      hyperdxUrl: firstPartyOtelUrl(parsed.hyperdxUrl) ?? parsed.hyperdxUrl,
+    };
   } catch (error) {
     console.warn("Runtime config validation failed, using defaults:", error);
     return fallbackRuntimeConfig;
