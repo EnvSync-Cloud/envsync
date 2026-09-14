@@ -28,18 +28,24 @@ import {
   XCircle,
   Save,
   History,
+  Plus,
+  RefreshCw,
+  Upload,
+  Settings,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EnvironmentVariable, EnvironmentType, SingleItemEnvVarUpdateData } from "@/constants";
 import { useCopy } from "@/hooks/useClipboard";
 import { cn } from "@/lib/utils";
 import { Count } from "../ui/count";
 
-/** Detect keys that look like secrets even when API doesn't mark them sensitive */
-const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(?:secret|password|token|auth|credential|private|api[_-]?key)(?:[_-]|$)/i;
 
-function isSensitiveVariable(variable: EnvironmentVariable): boolean {
-  return variable.sensitive || SENSITIVE_KEY_PATTERN.test(variable.key);
-}
 
 interface InlineEditState {
   value: string;
@@ -59,6 +65,13 @@ interface EnvironmentVariablesTableProps {
   onBulkDelete?: (variables: EnvironmentVariable[]) => void;
   onBulkExport?: (variables: EnvironmentVariable[]) => void;
   isSecrets?: boolean;
+  isRefetching?: boolean;
+  onAdd?: () => void;
+  onRefresh?: () => void;
+  onBulkImport?: () => void;
+  onExport?: () => void;
+  onRollback?: () => void;
+  onManageEnvironments?: () => void;
 }
 
 export const EnvironmentVariablesTable = ({
@@ -74,6 +87,13 @@ export const EnvironmentVariablesTable = ({
   onBulkDelete,
   onBulkExport,
   isSecrets,
+  isRefetching,
+  onAdd,
+  onRefresh,
+  onBulkImport,
+  onExport,
+  onRollback,
+  onManageEnvironments,
 }: EnvironmentVariablesTableProps) => {
   const [lastCopiedValue, setLastCopiedValue] = useState<string | null>(null);
   const copy = useCopy({
@@ -99,11 +119,7 @@ export const EnvironmentVariablesTable = ({
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (variable) =>
-          variable.key.toLowerCase().includes(query) ||
-          (!isSensitiveVariable(variable) && variable.value.toLowerCase().includes(query))
-      );
+      filtered = filtered.filter((variable) => variable.key.toLowerCase().includes(query));
     }
 
     if (selectedEnvironment !== "all") {
@@ -287,7 +303,7 @@ export const EnvironmentVariablesTable = ({
   return (
     <Card>
       <CardHeader className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center">
             {isSecrets ? (
               <Shield className="size-6 mr-2 text-destructive" />
@@ -303,6 +319,78 @@ export const EnvironmentVariablesTable = ({
             />
           </CardTitle>
 
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
+              <SelectTrigger className="h-8 w-[180px] text-xs" aria-label="Environment">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {environmentTypes.map((envType) => (
+                  <SelectItem key={envType.id} value={envType.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="size-2 rounded-full"
+                        style={{ backgroundColor: envType.color }}
+                      />
+                      <span>{envType.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canEdit && onAdd ? (
+              <Button
+                onClick={onAdd}
+                size="sm"
+                className="h-8"
+                data-testid={isSecrets ? "project-secrets-primary-action" : "project-variables-primary-action"}
+              >
+                <Plus className="mr-1.5 size-3.5" />
+                {isSecrets ? "Add Secret" : "Add Variable"}
+              </Button>
+            ) : null}
+            {(onBulkImport || onExport || onRefresh || onRollback || onManageEnvironments) ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="More actions">
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {onBulkImport ? (
+                    <DropdownMenuItem onClick={onBulkImport}>
+                      <Upload className="mr-2 size-4" />
+                      Bulk Import
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onExport ? (
+                    <DropdownMenuItem onClick={onExport}>
+                      <Download className="mr-2 size-4" />
+                      Export
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onRefresh ? (
+                    <DropdownMenuItem onClick={onRefresh} disabled={isRefetching}>
+                      <RefreshCw className={cn("mr-2 size-4", isRefetching && "animate-spin")} />
+                      Refresh
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onRollback ? (
+                    <DropdownMenuItem onClick={onRollback}>
+                      <History className="mr-2 size-4" />
+                      Recovery
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onManageEnvironments ? (
+                    <DropdownMenuItem onClick={onManageEnvironments}>
+                      <Settings className="mr-2 size-4" />
+                      Manage Environments
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -548,7 +636,7 @@ export const EnvironmentVariablesTable = ({
                               value={editState?.value || ""}
                               onChange={(e) => updateEditValue(variable.id, e.target.value)}
                               onKeyDown={(e) => handleKeyDown(e, variable)}
-                              type={isSensitiveVariable(variable) ? "password" : "text"}
+                              type={showSensitive[variable.id] ? "text" : "password"}
                               className="font-mono text-sm"
                               disabled={isSaving}
                               autoFocus
@@ -582,54 +670,31 @@ export const EnvironmentVariablesTable = ({
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2 max-w-xs">
-                            {isSensitiveVariable(variable) ? (
-                              <div className="flex items-center space-x-2">
-                                <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
-                                  {showSensitive[variable.id]
-                                    ? variable.value
-                                    : "••••••••"}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() =>
-                                    toggleSensitiveVisibility(variable.id)
-                                  }
-                                  aria-label={showSensitive[variable.id] ? "Hide value" : "Show value"}
-                                >
-                                  {showSensitive[variable.id] ? (
-                                    <EyeOff className="h-3 w-3" />
-                                  ) : (
-                                    <Eye className="h-3 w-3" />
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => copy.mutate(variable.value)}
-                                  aria-label="Copy value"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <code className="hdx-mask select-all text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
-                                  {variable.value}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => copy.mutate(variable.value)}
-                                  aria-label="Copy value"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
+                            <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
+                              {showSensitive[variable.id] ? variable.value : "••••••••"}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => toggleSensitiveVisibility(variable.id)}
+                              aria-label={showSensitive[variable.id] ? "Hide value" : "Show value"}
+                            >
+                              {showSensitive[variable.id] ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => copy.mutate(variable.value)}
+                              aria-label="Copy value"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
                           </div>
                         )}
                       </td>
