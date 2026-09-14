@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
@@ -7,12 +5,6 @@ import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { orNotFound } from "@/libs/errors";
 import { SecretKeyGenerator } from "sk-keygen";
-
-function hashApiKey(key: string) {
-	// Cache/lookup fingerprint for an API key, not a password KDF.
-	// codeql[js/insufficient-password-hash]
-	return createHash("sha256").update(key).digest("hex");
-}
 
 export class ApiKeyService {
 	public static createKey = async ({
@@ -112,7 +104,6 @@ export class ApiKeyService {
 			.execute();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByHash(hashApiKey(existing.key)),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 			CacheKeys.apiKeysByUser(existing.user_id),
 		);
@@ -135,7 +126,6 @@ export class ApiKeyService {
 		await db.deleteFrom("api_keys").where("id", "=", id).executeTakeFirstOrThrow();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByHash(hashApiKey(existing.key)),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 			CacheKeys.apiKeysByUser(existing.user_id),
 		);
@@ -169,7 +159,6 @@ export class ApiKeyService {
 			.execute();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByHash(hashApiKey(existing.key)),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 		);
 
@@ -200,20 +189,18 @@ export class ApiKeyService {
 	};
 
 	public static getKeyByCreds = async (api_key: string) => {
-		return cacheAside(CacheKeys.apiKeyByHash(hashApiKey(api_key)), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+		const db = await DB.getInstance();
 
-			const key = await orNotFound(
-				db
-					.selectFrom("api_keys")
-					.where("key", "=", api_key)
-					.select(["id", "user_id", "org_id", "is_active"])
-					.executeTakeFirstOrThrow(),
-				"API Key",
-			);
+		const key = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.where("key", "=", api_key)
+				.select(["id", "user_id", "org_id", "is_active"])
+				.executeTakeFirstOrThrow(),
+			"API Key",
+		);
 
-			return key;
-		});
+		return key;
 	};
 
 	public static registerKeyUsage = async (id: string) => {

@@ -1,18 +1,16 @@
 import { test, expect } from "../../fixtures/test";
+import { getUiHarnessConfig } from "../../helpers/config";
 
 async function getAuthSession(page: import("@playwright/test").Page) {
-  return await page.evaluate(async () => {
-    const runtimeConfig = window.__ENVSYNC_RUNTIME_CONFIG__ as { apiBaseUrl?: string } | undefined;
-    const apiBaseUrl = runtimeConfig?.apiBaseUrl ?? window.location.origin;
-    const response = await fetch(`${apiBaseUrl}/api/auth/me`, { credentials: "include" });
-    if (!response.ok) {
-      throw new Error(`Failed to load auth session: ${response.status}`);
-    }
-    return await response.json() as {
-      org: { id: string; name: string; slug: string };
-      memberships: Array<{ org_id: string; org_name: string; org_slug: string }>;
-    };
-  });
+  const { apiBaseUrl } = getUiHarnessConfig();
+  const response = await page.context().request.get(`${apiBaseUrl}/api/auth/me`);
+  if (!response.ok()) {
+    throw new Error(`Failed to load auth session: ${response.status()}`);
+  }
+  return await response.json() as {
+    org: { id: string; name: string; slug: string };
+    memberships: Array<{ org_id: string; org_name: string; org_slug: string }>;
+  };
 }
 
 test.describe("organization switcher", () => {

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, test } from "bun:test";
 
-import { canCreateOrganizationInUi, type RuntimeConfig } from "./runtime-config";
+import { canCreateOrganizationInUi, inferPageApiBaseUrl, type RuntimeConfig } from "./runtime-config";
 
 function config(overrides: Partial<RuntimeConfig>): RuntimeConfig {
   return {
@@ -38,6 +38,19 @@ describe("canCreateOrganizationInUi", () => {
   test("missing deployment mode fails closed", () => {
     expect(canCreateOrganizationInUi(config({ edition: "enterprise" }))).toBe(false);
     expect(canCreateOrganizationInUi(config({ edition: "oss" }))).toBe(false);
+  });
+});
+
+describe("inferPageApiBaseUrl", () => {
+  test("does not reuse the dashboard port on local lvh.me", () => {
+    const local = inferPageApiBaseUrl("app.lvh.me");
+    expect(local).not.toContain(":8001");
+    expect(new URL(local).port).toBe("4000");
+    expect(inferPageApiBaseUrl("localhost")).toBe(local);
+  });
+
+  test("derives the API host from a hosted app hostname", () => {
+    expect(inferPageApiBaseUrl("app.envsync.cloud", "https:")).toBe("https://api.envsync.cloud");
   });
 });
 

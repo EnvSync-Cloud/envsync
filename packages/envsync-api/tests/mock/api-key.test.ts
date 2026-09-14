@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { beforeAll, describe, expect, test } from "bun:test";
 
 import { CacheClient } from "@/libs/cache";
@@ -86,31 +84,19 @@ describe("GET /api/api_key/:id", () => {
 });
 
 describe("API key cache", () => {
-	test("looks up by hash and does not store the raw secret", async () => {
+	test("looks up credentials without caching the secret", async () => {
 		const res = await testRequest("/api/api_key", {
 			method: "POST",
 			token: seed.masterUser.token,
 			body: { name: "Cache key", description: "Cache key" },
 		});
 		const created = await res.json<{ id: string; key: string }>();
-		const hashed = createHash("sha256").update(created.key).digest("hex");
 
-		await ApiKeyService.getKeyByCreds(created.key);
+		const lookedUp = await ApiKeyService.getKeyByCreds(created.key);
+		expect(lookedUp.id).toBe(created.id);
+		expect(lookedUp.is_active).toBe(true);
 
-		const rawKey = await CacheClient.get(CacheKeys.apiKeyByHash(created.key));
-		expect(rawKey).toBeNull();
-		const cached = await CacheClient.get(CacheKeys.apiKeyByHash(hashed));
-		expect(cached).toBeTruthy();
-		expect(cached).not.toContain(created.key);
-		const parsed = JSON.parse(cached as string) as {
-			id: string;
-			user_id: string;
-			org_id: string;
-			is_active: boolean;
-		};
-		expect(parsed.id).toBe(created.id);
-		expect(parsed.is_active).toBe(true);
-		expect(Object.keys(parsed).sort()).toEqual(["id", "is_active", "org_id", "user_id"]);
+		expect(await CacheClient.get(CacheKeys.apiKeyByHash(created.key))).toBeNull();
 	});
 
 	test("getKeyByUserId does not return or cache the raw secret", async () => {

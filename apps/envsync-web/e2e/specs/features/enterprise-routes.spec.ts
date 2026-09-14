@@ -3,6 +3,7 @@
  * Shell-only OSS stubs would 404 these routes.
  */
 import { getAppByName } from "../../helpers/app-data";
+import { mockWhoamiWithoutFeature } from "../../helpers/whoami";
 import { test, expect } from "../../fixtures/test";
 
 test.describe("enterprise dashboard routes", () => {
@@ -87,15 +88,7 @@ test.describe("enterprise dashboard routes", () => {
 	// Hosted-only grant-org-features would hide Integrations on a second harness org.
 	// UI e2e is not Hosted-gated, so intercept whoami.features instead.
 	test("restricted whoami features hide Integrations nav and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "integrations");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "integrations");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
@@ -126,15 +119,7 @@ test.describe("enterprise dashboard routes", () => {
 	});
 
 	test("restricted whoami features hide SSO nav and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "saml");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "saml");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
@@ -149,15 +134,7 @@ test.describe("enterprise dashboard routes", () => {
 	});
 
 	test("restricted whoami features hide Key management and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "kms");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "kms");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
