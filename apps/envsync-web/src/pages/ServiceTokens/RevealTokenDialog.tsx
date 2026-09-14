@@ -68,7 +68,7 @@ export function RevealTokenDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Close
           </Button>
           <Button onClick={() => token && copy.mutate(token)} disabled={!token}>
