@@ -42,7 +42,11 @@ export async function openTimeRangeMode(page: Page) {
 
 export async function switchPitKind(page: Page, kind: "variables" | "secrets") {
 	await page.getByRole("button", { name: kind === "secrets" ? "Secrets" : "Variables" }).click();
-	await expect(page).toHaveURL(kind === "secrets" ? /\/applications\/pit\/.+\/secrets\?env=/ : /\/applications\/pit\/[^/]+\?env=/);
+	await expect(page).toHaveURL(
+		kind === "secrets"
+			? /\/(?:applications\/pit\/.+\/secrets|projects\/.+\/pit\/secrets)\?env=/
+			: /\/(?:applications\/pit\/[^/]+|projects\/[^/]+\/pit)\?env=/,
+	);
 }
 
 export async function previewTimeRangeDiff(page: Page) {

@@ -101,18 +101,20 @@ describe("pit.utils", () => {
 
 	test("derives variables as the default PiT kind", () => {
 		expect(getPitKindFromPathname("/applications/pit/app-123")).toBe("variables");
+		expect(getPitKindFromPathname("/projects/app-123/pit")).toBe("variables");
 	});
 
 	test("derives secrets from the PiT secrets route", () => {
 		expect(getPitKindFromPathname("/applications/pit/app-123/secrets")).toBe("secrets");
+		expect(getPitKindFromPathname("/projects/app-123/pit/secrets")).toBe("secrets");
 	});
 
 	test("builds PiT hrefs that preserve the selected environment", () => {
 		expect(buildPitHref("app-123", "variables", "development")).toBe(
-			"/applications/pit/app-123?env=development"
+			"/projects/app-123/pit?env=development"
 		);
 		expect(buildPitHref("app-123", "secrets", "staging")).toBe(
-			"/applications/pit/app-123/secrets?env=staging"
+			"/projects/app-123/pit/secrets?env=staging"
 		);
 	});
 

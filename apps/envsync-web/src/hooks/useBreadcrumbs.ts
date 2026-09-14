@@ -10,6 +10,7 @@ interface Breadcrumb {
 
 const ROUTE_LABELS: Record<string, string> = {
   applications: "Projects",
+  projects: "Projects",
   create: "Create Project",
   secrets: "Secrets",
   "manage-environments": "Environments",
@@ -19,9 +20,11 @@ const ROUTE_LABELS: Record<string, string> = {
   roles: "Roles",
   users: "Users",
   settings: "Account",
-  organisation: "Organisation",
+  org: "Organization",
+  organisation: "Organization",
   sso: "SSO",
   license: "License",
+  keys: "Key management",
   sync: "Sync ops",
   audit: "Activity",
   apikeys: "API Keys",
@@ -30,6 +33,7 @@ const ROUTE_LABELS: Record<string, string> = {
   certificates: "Certificates",
   dashboard: "Dashboard",
   teams: "Teams",
+  "change-requests": "Change Requests",
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -76,15 +80,16 @@ export function useBreadcrumbs(): Breadcrumb[] {
       }
     }
 
-    if (segments.length >= 2 && segments[0] === "applications") {
+    const projectRoot = segments[0] === "applications" || segments[0] === "projects";
+    if (segments.length >= 2 && projectRoot && segments[1] !== "create" && segments[1] !== "pit") {
       const isAppDetailPage = UUID_REGEX.test(segments[1]) || apps?.some(
         (a) => a.name === segments[1] || `${a.name}-${a.id}` === segments[1]
       );
-      
+
       if (isAppDetailPage) {
         const subSection = segments[2];
         const knownSubSections = ["secrets", "manage-environments", "access", "integrations", "pit"];
-        
+
         if (!subSection || !knownSubSections.includes(subSection)) {
           crumbs.push({ label: "Variables", href: currentPath });
         }

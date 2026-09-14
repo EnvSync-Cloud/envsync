@@ -1,4 +1,4 @@
-import { Search, Bell, LogOut, Settings, Globe, Sparkles, ChevronsUpDown, Check, Loader2, Plus } from "lucide-react";
+import { Search, Bell, LogOut, Settings, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import { useAuthContext } from "@/contexts/auth";
@@ -17,40 +17,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment } from "react";
 import { logoutWebSession } from "@/api";
-import { canCreateOrganizationInUi, runtimeConfig } from "@/utils/runtime-config";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { CreateOrganizationDialog } from "@/components/auth/CreateOrganizationDialog";
+import { runtimeConfig } from "@/utils/runtime-config";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const Header = () => {
-  const { user, memberships, activeMembershipUserId, switchOrg, isSwitchingOrg, isCreatingOrganization } = useAuthContext();
+  const { user } = useAuthContext();
   const breadcrumbs = useBreadcrumbs();
   const navigate = useNavigate();
-  const [orgSwitcherOpen, setOrgSwitcherOpen] = useState(false);
-  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
-  const activeMembership = useMemo(
-    () =>
-      memberships.find((membership) => membership.user_id === activeMembershipUserId)
-      ?? memberships.find((membership) => membership.is_active)
-      ?? null,
-    [activeMembershipUserId, memberships],
-  );
-  const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
-  const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
-  const canSwitchOrganizations =
-    runtimeConfig.edition === "enterprise" && user?.auth_type !== "saml";
-  const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
 
   const handleLogout = async () => {
     try {
@@ -63,108 +38,9 @@ export const Header = () => {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 
   return (
-    <>
-      <header className="border-b border-border bg-background/70 px-6 py-3 backdrop-blur-xl">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <header className="border-b border-border bg-background/70 px-6 py-3 backdrop-blur-xl">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            {canSwitchOrganizations ? (
-              <Popover open={orgSwitcherOpen} onOpenChange={setOrgSwitcherOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    data-testid="organization-switcher-trigger"
-                    className="inline-flex items-center gap-3 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-left text-primary-foreground transition-colors hover:border-primary/30 hover:bg-primary/14"
-                  >
-                    <span className="inline-flex size-6 items-center justify-center rounded-full border border-primary/20 bg-primary/15">
-                      <Sparkles className="size-3 text-primary" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-primary">
-                        {activeOrgName}
-                      </span>
-                    </span>
-                    {isSwitchingOrg || isCreatingOrganization ? (
-                      <Loader2 className="size-4 animate-spin text-primary/70" />
-                    ) : (
-                      <ChevronsUpDown className="size-4 text-primary/70" />
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-[340px] border-border bg-popover p-0">
-                  <Command className="bg-transparent text-foreground">
-                    <div className="border-b border-border px-4 py-3">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active organization</p>
-                      <p className="mt-1 truncate text-sm font-medium text-foreground">{activeOrgName}</p>
-                      <p className="truncate text-xs text-tertiary">{activeRole}</p>
-                    </div>
-                    <CommandInput placeholder="Search organizations..." className="text-foreground placeholder:text-tertiary" />
-                    <CommandList className="max-h-[320px]">
-                      <CommandEmpty className="text-tertiary">No organizations found.</CommandEmpty>
-                      <CommandGroup heading="Your organizations">
-                        {memberships.map((membership) => {
-                          const isActive = membership.user_id === activeMembershipUserId || membership.is_active;
-                          return (
-                            <CommandItem
-                              key={membership.user_id}
-                              data-testid={`organization-switcher-item-${membership.org_slug}`}
-                              value={`${membership.org_name} ${membership.org_slug} ${membership.role_name}`}
-                              onSelect={() => {
-                                setOrgSwitcherOpen(false);
-                                void switchOrg(membership.org_id);
-                              }}
-                              disabled={isSwitchingOrg || isCreatingOrganization}
-                              className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-muted"
-                            >
-                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                                <Globe className="size-4" />
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium text-foreground">
-                                  {membership.org_name}
-                                </span>
-                                <span className="block truncate text-xs text-tertiary">
-                                  {membership.org_slug} · {membership.role_name}
-                                </span>
-                              </span>
-                              {isActive && <Check className="size-4 text-primary" />}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                      {canCreateOrganization && (
-                        <>
-                          <CommandSeparator className="bg-border" />
-                          <CommandGroup heading="Organization">
-                            <CommandItem
-                              data-testid="create-organization-action"
-                              value="create new organization"
-                              onSelect={() => {
-                                setOrgSwitcherOpen(false);
-                                setCreateOrganizationOpen(true);
-                              }}
-                              disabled={isSwitchingOrg || isCreatingOrganization}
-                              className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
-                            >
-                              <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                                <Plus className="size-4" />
-                              </span>
-                              <span className="text-sm font-medium">+ Create organization</span>
-                            </CommandItem>
-                          </CommandGroup>
-                        </>
-                      )}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            ) : (
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                <Sparkles className="size-3" />
-                {activeOrgName}
-              </span>
-            )}
-          </div>
-
           <Breadcrumb>
             <BreadcrumbList>
               {breadcrumbs.map((crumb, index) => (
@@ -276,7 +152,7 @@ export const Header = () => {
                 className="text-foreground focus:bg-muted focus:text-foreground cursor-pointer"
               >
                 <Globe className="size-4 mr-2" />
-                Organisation
+                Organization
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
@@ -289,12 +165,7 @@ export const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        </div>
-      </header>
-      <CreateOrganizationDialog
-        open={createOrganizationOpen}
-        onOpenChange={setCreateOrganizationOpen}
-      />
-    </>
+      </div>
+    </header>
   );
 };

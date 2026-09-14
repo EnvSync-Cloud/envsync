@@ -14,15 +14,31 @@ import { navItems, API_KEYS } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { sdk } from "@/api/base";
 import {
+  appDetailPath,
+  orgRolesPath,
+  orgUsersPath,
+  projectCreatePath,
+} from "@/lib/app-routes";
+import { PRODUCTS, productHomeHref } from "@/lib/shell-context";
+import {
+  Building2,
   Database,
   Plus,
   UserPlus,
   Key,
+  KeyRound,
   Users,
   Shield,
+  ShieldCheck,
   Clock,
   Trash2,
 } from "lucide-react";
+
+const PRODUCT_ICONS = {
+  secrets: KeyRound,
+  certificates: ShieldCheck,
+  organization: Building2,
+} as const;
 
 interface RecentItem {
   id: string;
@@ -224,10 +240,10 @@ export function CommandPalette() {
       id: project.id,
       type: "project",
       name: project.name,
-      href: `/applications/${project.id}`,
+      href: appDetailPath(project.id),
     });
     runAction(() =>
-      navigate(`/applications/${project.id}`)
+      navigate(appDetailPath(project.id))
     );
   };
 
@@ -236,9 +252,9 @@ export function CommandPalette() {
       id: user.id,
       type: "user",
       name: user.full_name || user.email,
-      href: `/users`,
+      href: orgUsersPath(),
     });
-    runAction(() => navigate(`/users`));
+    runAction(() => navigate(orgUsersPath()));
   };
 
   const navigateToTeam = (team: { id: string; name: string }) => {
@@ -246,9 +262,9 @@ export function CommandPalette() {
       id: team.id,
       type: "team",
       name: team.name,
-      href: `/teams`,
+      href: "/org/teams",
     });
-    runAction(() => navigate(`/teams`));
+    runAction(() => navigate("/org/teams"));
   };
 
   const navigateToApiKey = (key: { id: string; description: string }) => {
@@ -429,7 +445,7 @@ export function CommandPalette() {
             <CommandGroup heading="Quick Actions">
               <CommandItem
                 onSelect={() =>
-                  runAction(() => navigate("/applications/create"))
+                  runAction(() => navigate(projectCreatePath()))
                 }
                 value="create-project"
               >
@@ -437,7 +453,7 @@ export function CommandPalette() {
                 <span>Create Project</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate("/users"))}
+                onSelect={() => runAction(() => navigate(orgUsersPath()))}
                 value="invite-member"
               >
                 <UserPlus className="mr-2 size-4" />
@@ -451,12 +467,25 @@ export function CommandPalette() {
                 <span>Manage API Keys</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate("/roles"))}
+                onSelect={() => runAction(() => navigate(orgRolesPath()))}
                 value="manage-roles"
               >
                 <Shield className="mr-2 size-4" />
                 <span>Manage Roles</span>
               </CommandItem>
+              {PRODUCTS.map((product) => {
+                const Icon = PRODUCT_ICONS[product.id];
+                return (
+                  <CommandItem
+                    key={product.id}
+                    onSelect={() => runAction(() => navigate(productHomeHref(product.id)))}
+                    value={`switch-product-${product.id}`}
+                  >
+                    <Icon className="mr-2 size-4" />
+                    <span>Open {product.name}</span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </>
         )}

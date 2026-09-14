@@ -240,7 +240,7 @@ export async function createProject(page: Page, projectName: string) {
 	expect(typeof trackedResponse.responseBody.id).toBe("string");
 	const appId = trackedResponse.responseBody.id as string;
 	await page.goto(`/applications/${appId}`, { waitUntil: "domcontentloaded" });
-	await expect(page).toHaveURL(new RegExp(`/applications/${escapeRegExp(appId)}(?:\\?|$)`));
+	await expect(page).toHaveURL(new RegExp(`/(?:applications|projects)/${escapeRegExp(appId)}(?:\\?|$)`));
 	await ensureEnvironmentTypeExists(page, appId, "Development");
 	await ensureEnvironmentTypeExists(page, appId, "Staging");
 	await ensureEnvironmentTypeExists(page, appId, "Production");

@@ -1,5 +1,4 @@
-import { Header } from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
+import { AppShell } from "@/components/AppShell";
 import { CommandPalette } from "@/components/CommandPalette";
 import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -107,42 +106,14 @@ export const RootLayout = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/[0.035] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/[0.025] rounded-full blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_45%)]" />
-      </div>
-
-      <div
-        className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 ease-in-out ${
-          sidebarExpanded ? "w-64" : "w-16"
-        }`}
-      >
-        <Sidebar expanded={sidebarExpanded} onToggle={toggleSidebar} />
-      </div>
-
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          sidebarExpanded ? "ml-64" : "ml-16"
-        }`}
-      >
-        <div className="flex-shrink-0">
-          <Header />
-        </div>
-
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1600px] px-5 py-6 md:px-6">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-
+    <>
+      <AppShell sidebarExpanded={sidebarExpanded} onToggleSidebar={toggleSidebar}>
+        <Outlet />
+      </AppShell>
       <CommandPalette />
       <KeyboardShortcutsDialog />
       <NotificationCenter />
-    </div>
+    </>
   );
 };
 

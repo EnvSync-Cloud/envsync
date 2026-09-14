@@ -67,6 +67,8 @@ test.describe("enterprise dashboard routes", () => {
 		});
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await page.getByTestId("product-switcher-trigger").click();
+		await page.getByTestId("product-switcher-item-organization").click();
 		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
 		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
 		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
@@ -104,6 +106,8 @@ test.describe("enterprise dashboard routes", () => {
 		});
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await page.getByTestId("product-switcher-trigger").click();
+		await page.getByTestId("product-switcher-item-organization").click();
 		await expect(page.getByRole("link", { name: "SSO" })).toHaveCount(0);
 		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
 
@@ -125,6 +129,8 @@ test.describe("enterprise dashboard routes", () => {
 		});
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+		await page.getByTestId("product-switcher-trigger").click();
+		await page.getByTestId("product-switcher-item-organization").click();
 		await expect(page.getByRole("link", { name: "Key management" })).toHaveCount(0);
 		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
 

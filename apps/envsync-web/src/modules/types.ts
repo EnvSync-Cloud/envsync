@@ -24,7 +24,8 @@ export interface WebRouteDefinition {
   layout?: "root" | "standalone";
   path?: string;
   index?: boolean;
-  loadComponent: () => Promise<{ default: ComponentType }>;
+  loadComponent?: () => Promise<{ default: ComponentType }>;
+  redirectTo?: string;
   requiredFeature?: string;
 }
 

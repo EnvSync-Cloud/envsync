@@ -15,7 +15,7 @@ test.describe("UI smoke", () => {
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 		await expect(page.getByText("Projects").first()).toBeVisible();
-		await expect(page.getByText("Security").first()).toBeVisible();
+		await expect(page.getByTestId("product-switcher-trigger")).toBeVisible();
 
 		const projectName = makeName("UI_SMOKE_APP");
 		const { appId } = await createProject(page, projectName);

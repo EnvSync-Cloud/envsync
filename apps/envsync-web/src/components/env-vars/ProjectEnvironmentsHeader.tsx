@@ -69,10 +69,10 @@ export const ProjectEnvironmentsHeader = ({
   const location = useLocation();
   const { allowedScopes } = useAuthContext();
 
-  const isSecretsPage = location.pathname.includes("/secrets");
+  const isPointInTimePage = /(?:^|\/)pit(?:\/|$)/.test(location.pathname);
+  const isSecretsPage = location.pathname.includes("/secrets") && !isPointInTimePage;
   const isManageEnvironmentPage = location.pathname.includes("/manage-environments");
   const isAccessPage = location.pathname.includes("/access");
-  const isPointInTimePage = location.pathname.includes("/pit/");
   const isIntegrationsPage = location.pathname.includes("/integrations");
   const currentSection = isSecretsPage
     ? "Secrets"
