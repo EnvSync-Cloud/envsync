@@ -29,8 +29,15 @@ export function RevealTokenDialog({
   const copy = useCopy();
   const title = mode === "rotated" ? "Service Token Rotated" : "Service Token Created";
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      copy.reset();
+    }
+    onOpenChange(nextOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent data-testid="reveal-service-token-dialog">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

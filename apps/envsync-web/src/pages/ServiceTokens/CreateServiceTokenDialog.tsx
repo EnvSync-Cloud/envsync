@@ -267,7 +267,7 @@ export function CreateServiceTokenDialog({
                     data-testid="service-token-access-write"
                   />
                   <Label htmlFor="service-token-access-write" className="font-normal">
-                    Write
+                    Read & Write
                   </Label>
                 </div>
               </RadioGroup>

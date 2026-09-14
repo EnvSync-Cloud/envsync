@@ -47,11 +47,46 @@ export type RotateServiceTokenInput = {
   grace_hours?: number;
 };
 
+const LIST_PAGE_SIZE = 100;
+
+type ServiceTokenPayload = ServiceToken & { token?: string };
+
+function toPublicServiceToken(record: ServiceTokenPayload): ServiceToken {
+  const { token: _token, ...rest } = record;
+  return rest;
+}
+
+async function fetchAllServiceTokens(): Promise<ServiceToken[]> {
+  const tokens: ServiceToken[] = [];
+  const seen = new Set<string>();
+  let page = 1;
+
+  while (true) {
+    const batch = await apiRequest<ServiceTokenPayload[]>(
+      `/api/service_token?page=${page}&per_page=${LIST_PAGE_SIZE}`,
+    );
+    let added = 0;
+
+    for (const record of batch) {
+      const token = toPublicServiceToken(record);
+      if (seen.has(token.id)) continue;
+      seen.add(token.id);
+      tokens.push(token);
+      added += 1;
+    }
+
+    if (batch.length < LIST_PAGE_SIZE || added === 0 || page >= 50) break;
+    page += 1;
+  }
+
+  return tokens;
+}
+
 const useServiceTokens = (appId?: string, { enabled = true }: { enabled?: boolean } = {}) => {
   return useQuery({
     queryKey: [API_KEYS.ALL_SERVICE_TOKENS, appId],
     queryFn: async () => {
-      const tokens = await apiRequest<ServiceToken[]>("/api/service_token");
+      const tokens = await fetchAllServiceTokens();
       if (!appId) return tokens;
       return tokens.filter((token) => token.app_id === appId);
     },
@@ -69,6 +104,7 @@ const useCreateServiceToken = ({
   const { invalidateServiceTokens } = useInvalidateQueries();
 
   return useMutation({
+    gcTime: 0,
     mutationFn: async (input: CreateServiceTokenInput) => {
       before?.(input);
       return apiRequest<RevealedServiceToken>("/api/service_token", {
@@ -95,6 +131,7 @@ const useRotateServiceToken = ({
   const { invalidateServiceTokens } = useInvalidateQueries();
 
   return useMutation({
+    gcTime: 0,
     mutationFn: async ({ id, grace_hours = 24 }: RotateServiceTokenInput) => {
       before?.({ id, grace_hours });
       return apiRequest<RevealedServiceToken>(`/api/service_token/${id}/rotate`, {

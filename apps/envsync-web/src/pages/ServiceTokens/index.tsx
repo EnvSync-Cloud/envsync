@@ -5,10 +5,9 @@ import { KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/api";
-import { sdk } from "@/api/base";
+import { ApiRequestError, sdk } from "@/api/base";
 import type { ServiceToken } from "@/api/service-tokens.api";
 import { PageShell } from "@/components/PageShell";
-import { TabPills } from "@/components/primitives/TabPills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +34,11 @@ function tokenStatus(token: ServiceToken) {
 }
 
 function accessLabel(token: ServiceToken) {
-  return token.permissions?.write ? "Write" : "Read";
+  return token.permissions?.write ? "Read & Write" : "Read";
+}
+
+function isForbiddenError(error: unknown) {
+  return error instanceof ApiRequestError && error.status === 403;
 }
 
 export const ServiceTokens = () => {
@@ -51,11 +54,19 @@ export const ServiceTokens = () => {
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
   const {
+    data: permissions,
+    isPending: permissionsPending,
+  } = api.permissions.getMyPermissions({ enabled: authEnabled });
+  const canManage = Boolean(permissions?.can_manage_api_keys);
+
+  const {
     data: tokens = [],
-    isLoading,
+    isPending: tokensPending,
     error,
     refetch,
-  } = api.serviceTokens.getServiceTokens(appId, { enabled: authEnabled });
+  } = api.serviceTokens.getServiceTokens(appId, {
+    enabled: authEnabled && canManage,
+  });
 
   const { data: environments = [] } = useQuery({
     queryKey: [API_KEYS.ALL_ENVIRONMENT_TYPES, appId],
@@ -124,7 +135,7 @@ export const ServiceTokens = () => {
 
   const handleRotate = useCallback(
     (token: ServiceToken) => {
-      if (actionLoading[token.id] || rotateToken.isPending || token.grace_until) return;
+      if (!canManage || actionLoading[token.id] || rotateToken.isPending || token.grace_until) return;
       if (
         !window.confirm(
           "Rotate this service token? The previous value stays valid for 24 hours.",
@@ -134,12 +145,12 @@ export const ServiceTokens = () => {
       }
       rotateToken.mutate({ id: token.id, grace_hours: 24 });
     },
-    [actionLoading, rotateToken],
+    [actionLoading, canManage, rotateToken],
   );
 
   const handleRevoke = useCallback(
     (token: ServiceToken) => {
-      if (actionLoading[token.id] || deleteToken.isPending) return;
+      if (!canManage || actionLoading[token.id] || deleteToken.isPending) return;
       if (
         !window.confirm(
           "Revoke this service token? Clients using it will lose access immediately.",
@@ -149,10 +160,25 @@ export const ServiceTokens = () => {
       }
       deleteToken.mutate(token.id);
     },
-    [actionLoading, deleteToken],
+    [actionLoading, canManage, deleteToken],
   );
 
-  if (error) {
+  const handleRevealOpenChange = useCallback(
+    (open: boolean) => {
+      setIsRevealOpen(open);
+      if (!open) {
+        setRevealedToken(null);
+        createToken.reset();
+        rotateToken.reset();
+      }
+    },
+    [createToken, rotateToken],
+  );
+
+  const isPageLoading = !authEnabled || permissionsPending || (canManage && tokensPending);
+  const isForbidden = isForbiddenError(error) || (!permissionsPending && !canManage && authEnabled);
+
+  if (error && !isForbiddenError(error)) {
     return (
       <PageError
         title="Failed to load service tokens"
@@ -162,7 +188,7 @@ export const ServiceTokens = () => {
     );
   }
 
-  const isEmpty = !isLoading && tokens.length === 0;
+  const isEmpty = !isPageLoading && !isForbidden && tokens.length === 0;
 
   return (
     <div className="animate-page-enter space-y-6">
@@ -170,22 +196,18 @@ export const ServiceTokens = () => {
         title="Service Tokens"
         description="Create project-scoped service tokens with environment and secrets-path access."
         icon={KeyRound}
+        isLoading={isPageLoading}
         actions={
-          <Button
-            onClick={() => setIsCreateOpen(true)}
-            disabled={createToken.isPending}
-            data-testid="create-service-token"
-          >
-            <Plus className="mr-2 size-4" />
-            Create Service Token
-          </Button>
-        }
-        secondaryNav={
-          <TabPills
-            tabs={[{ id: "service-tokens", label: "Service Tokens" }]}
-            active="service-tokens"
-            onChange={() => undefined}
-          />
+          canManage ? (
+            <Button
+              onClick={() => setIsCreateOpen(true)}
+              disabled={createToken.isPending}
+              data-testid="create-service-token"
+            >
+              <Plus className="mr-2 size-4" />
+              Create Service Token
+            </Button>
+          ) : undefined
         }
       >
         <CreateServiceTokenDialog
@@ -200,7 +222,7 @@ export const ServiceTokens = () => {
         />
         <RevealTokenDialog
           open={isRevealOpen}
-          onOpenChange={setIsRevealOpen}
+          onOpenChange={handleRevealOpenChange}
           token={revealedToken}
           mode={revealMode}
         />
@@ -214,7 +236,17 @@ export const ServiceTokens = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isEmpty ? (
+            {isForbidden ? (
+              <div className="py-12 text-center" data-testid="service-tokens-forbidden">
+                <KeyRound className="mx-auto mb-4 size-16 text-muted-foreground" />
+                <h3 className="mb-2 text-xl font-medium text-foreground">
+                  You do not have access
+                </h3>
+                <p className="mx-auto max-w-md text-muted-foreground">
+                  Service tokens require the manage API keys permission.
+                </p>
+              </div>
+            ) : isEmpty ? (
               <div className="py-12 text-center">
                 <KeyRound className="mx-auto mb-4 size-16 text-muted-foreground" />
                 <h3 className="mb-2 text-xl font-medium text-foreground">No service tokens</h3>
@@ -248,7 +280,7 @@ export const ServiceTokens = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {isLoading
+                    {isPageLoading
                       ? Array.from({ length: 4 }, (_, index) => (
                           <tr key={index} className="animate-pulse">
                             {Array.from({ length: 7 }, (__, cellIndex) => (

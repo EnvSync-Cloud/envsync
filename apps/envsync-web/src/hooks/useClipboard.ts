@@ -21,9 +21,8 @@ export const useCopy = (options: CopyOptions = {}) => {
 
       const content = `${options.prefix || ""}${text}${options.suffix || ""}`;
       await navigator.clipboard.writeText(content);
-      return text;
     },
-    onSuccess: (data) => options.onSuccess?.(data),
+    onSuccess: (_data, text) => options.onSuccess?.(text),
     onError: (error) => options.onError?.(error),
   });
 };

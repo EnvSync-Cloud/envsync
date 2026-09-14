@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 
+import { api } from "@/api";
 import { navGroups } from "@/constants";
+import { useAuthContext } from "@/contexts/auth";
 import {
   appAccessPath,
   appApprovalsPath,
@@ -145,6 +147,11 @@ function filterGroups(
 
 export function ContextNav({ expanded, product, appId, allowedScopes }: ContextNavProps) {
   const { pathname } = useLocation();
+  const { isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
+  const { data: permissions } = api.permissions.getMyPermissions({
+    enabled: !isAuthLoading && isAuthenticated,
+  });
+  const canManageApiKeys = Boolean(permissions?.can_manage_api_keys);
 
   const groups = useMemo(() => {
     if (product === "certificates") {
@@ -166,7 +173,6 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
         { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
         { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
-        { id: "project-settings", name: "Settings", href: appSettingsPath(appId), icon: Settings2 },
       ];
 
       if (allowedScopes.includes("change-requests")) {
@@ -175,6 +181,15 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
           name: "Approvals",
           href: appApprovalsPath(appId),
           icon: GitPullRequest,
+        });
+      }
+
+      if (canManageApiKeys) {
+        projectItems.push({
+          id: "project-settings",
+          name: "Settings",
+          href: appSettingsPath(appId),
+          icon: Settings2,
         });
       }
 
@@ -200,7 +215,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       allowedScopes,
       (item) => item.id === "dashboard" || item.id === "applications",
     );
-  }, [allowedScopes, appId, product]);
+  }, [allowedScopes, appId, canManageApiKeys, product]);
 
   const fallbackGroups = useMemo(() => {
     if (groups.length > 0) return groups;
