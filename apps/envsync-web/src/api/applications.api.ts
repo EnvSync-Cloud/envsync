@@ -35,7 +35,6 @@ const useApplications = ({
     enabled,
     refetchInterval, // Refetch every 5 minutes
     retry: 3,
-    initialData: [],
   });
 };
 

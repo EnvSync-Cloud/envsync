@@ -16,6 +16,7 @@ import {
   orgCertificatesPath,
   orgIntegrationsPath,
   orgRolesPath,
+  orgSettingsPath,
   orgTeamsPath,
   orgUsersPath,
 } from "./app-routes";
@@ -36,6 +37,7 @@ describe("app routes", () => {
     expect(isOrgAccessTab("users")).toBe(true);
     expect(isOrgAccessTab("billing")).toBe(false);
     expect(orgCertificatesPath()).toBe("/org/certificates");
+    expect(orgSettingsPath()).toBe("/org");
     expect(Object.fromEntries(PALETTE_ORG_LINKS.map((link) => [link.id, link.href]))).toEqual({
       users: "/org/access/users",
       teams: "/org/access/teams",
@@ -63,10 +65,11 @@ describe("app routes", () => {
     expect(byPath.certificates).toBe("/org/certificates");
     expect(byPath.webhooks).toBe("/org/webhooks");
     expect(byPath["change-requests"]).toBe("/org/change-requests");
+    expect(byPath.organisation).toBe("/org");
   });
 
   test("does not redirect EE stay-put org surfaces", () => {
-    expect(LEGACY_REDIRECTS.some((item) => item.path.startsWith("organisation"))).toBe(false);
+    expect(LEGACY_REDIRECTS.some((item) => item.path.startsWith("organisation/"))).toBe(false);
     expect(appIntegrationsPath("x")).toBe("/projects/x/integrations");
     expect(orgIntegrationsPath()).toBe("/organisation/integrations");
     expect(orgUsersPath()).toBe(orgAccessPath("users"));

@@ -25,7 +25,7 @@ test.describe("nightly: full product lifecycle", () => {
 			"/org/certificates",
 			"/audit",
 			"/settings",
-			"/organisation",
+			"/org",
 		];
 
 		for (const route of routes) {

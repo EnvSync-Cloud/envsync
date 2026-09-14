@@ -21,6 +21,7 @@ import { Fragment } from "react";
 import { logoutWebSession } from "@/api";
 import { runtimeConfig } from "@/utils/runtime-config";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { orgSettingsPath } from "@/lib/app-routes";
 
 export const Header = () => {
   const { user } = useAuthContext();
@@ -148,7 +149,7 @@ export const Header = () => {
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => navigate("/organisation")}
+                onClick={() => navigate(orgSettingsPath())}
                 className="text-foreground focus:bg-muted focus:text-foreground cursor-pointer"
               >
                 <Globe className="size-4 mr-2" />

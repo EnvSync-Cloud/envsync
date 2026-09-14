@@ -41,7 +41,7 @@ test.describe("UI smoke", () => {
 		await expect(page.getByRole("heading", { name: "Account Settings" }).first()).toBeVisible();
 		await expect(page.getByTestId("my-certs-status-row")).toBeVisible();
 
-		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
+		await page.goto("/org", { waitUntil: "domcontentloaded" });
 		await expect(
 			page.getByRole("heading", { name: "Organization Settings", exact: true }).or(
 				page.getByRole("heading", { name: "Organisation Settings", exact: true }),

@@ -15,7 +15,7 @@ export type WebhookType = "DISCORD" | "SLACK" | "CUSTOM"
 
 const urlSetMap = {
     apps: config.DASHBOARD_URL + "/projects",
-    org: config.DASHBOARD_URL + "/organisation",
+    org: config.DASHBOARD_URL + "/org",
     users: config.DASHBOARD_URL + "/org/access/users",
     roles: config.DASHBOARD_URL + "/org/access/roles",
     audit: config.DASHBOARD_URL + "/audit",

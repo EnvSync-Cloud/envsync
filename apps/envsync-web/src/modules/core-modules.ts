@@ -188,12 +188,6 @@ export const coreWebModules: WebModule[] = [
         loadComponent: () => import("@/pages/UserSettings"),
       },
       {
-        id: "organisation",
-        layout: "root",
-        path: "organisation",
-        loadComponent: () => import("@/pages/OrgSettings"),
-      },
-      {
         id: "audit",
         layout: "root",
         path: "audit",

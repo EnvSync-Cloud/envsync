@@ -84,8 +84,9 @@ describe("shell context", () => {
     expect(productHomeHref("secrets", ["app-a"], "org-b")).toBe("/projects");
     expect(lastProjectStorageKey("org-a")).toBe("envsync-last-project-id:org-a");
 
-    clearLastProjectId();
+    clearLastProjectId("org-a");
     expect(secretsHomeHref(["app-a"], "org-a")).toBe("/projects");
+    expect(secretsHomeHref(["app-b"], "org-b")).toBe("/projects/app-b");
   });
 });
 

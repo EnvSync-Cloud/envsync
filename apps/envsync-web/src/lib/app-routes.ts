@@ -26,7 +26,7 @@ export const orgRolesPath = () => orgAccessPath("roles");
 export const orgCertificatesPath = () => "/org/certificates";
 export const orgWebhooksPath = () => "/org/webhooks";
 export const orgChangeRequestsPath = () => "/org/change-requests";
-export const orgSettingsPath = () => "/organisation";
+export const orgSettingsPath = () => "/org";
 export const orgIntegrationsPath = () => "/organisation/integrations";
 export const apiKeysPath = () => "/apikeys";
 
@@ -61,6 +61,7 @@ export const LEGACY_REDIRECTS: Array<{ id: string; path: string; to: string }> =
   { id: "legacy-certificates", path: "certificates", to: "/org/certificates" },
   { id: "legacy-webhooks", path: "webhooks", to: "/org/webhooks" },
   { id: "legacy-change-requests", path: "change-requests", to: "/org/change-requests" },
+  { id: "legacy-organisation", path: "organisation", to: "/org" },
 ];
 
 export function applyRouteParams(pattern: string, params: Record<string, string | undefined>) {

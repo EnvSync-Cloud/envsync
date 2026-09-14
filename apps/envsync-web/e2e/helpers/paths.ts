@@ -18,5 +18,5 @@ export const uiPaths = {
 	projectIntegrations: (appId: string) => `/projects/${appId}/integrations`,
 	orgAccess: (tab: "users" | "teams" | "roles" = "users") => `/org/access/${tab}`,
 	orgChangeRequests: () => "/org/change-requests",
-	orgSettings: () => "/organisation",
+	orgSettings: () => "/org",
 } as const;

@@ -75,7 +75,7 @@ test.describe("enterprise dashboard routes", () => {
 		await expect(page.getByTestId("shell-nav-organisation-sso")).toBeVisible();
 		await expect(page.getByTestId("shell-nav-organisation-keys")).toBeVisible();
 
-		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
+		await page.goto("/org", { waitUntil: "domcontentloaded" });
 		await expect(page.getByTestId("shell-nav-organisation-integrations")).toHaveCount(0);
 		await expect(page.getByTestId("shell-nav-organisation-sync")).toHaveCount(0);
 		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();

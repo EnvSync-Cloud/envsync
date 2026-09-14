@@ -30,7 +30,7 @@ test.describe("route surface", () => {
 			{ path: "/org/teams", heading: "Teams", url: /\/org\/access\/teams\/?$/ },
 			{ path: "/org/change-requests", heading: "Change Requests" },
 			{ path: "/settings", heading: "Account Settings" },
-			{ path: "/organisation", heading: /^(Organization|Organisation) Settings$/i, url: /\/organisation\/?$/ },
+			{ path: "/organisation", heading: /^(Organization|Organisation) Settings$/i, url: /\/org\/?$/ },
 			{ path: "/org", heading: /^(Organization|Organisation) Settings$/i, url: /\/org\/?$/ },
 			// Enterprise modules (default Vite license ≠ oss). Full EE suite: features/enterprise-routes.spec.ts
 			{ path: "/organisation/integrations", heading: /Shared provider connections|Integrations/i, url: /\/organisation\/integrations\/?$/ },
