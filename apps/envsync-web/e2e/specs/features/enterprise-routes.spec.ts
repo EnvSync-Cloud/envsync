@@ -69,23 +69,23 @@ test.describe("enterprise dashboard routes", () => {
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
 		await page.getByTestId("product-switcher-item-organization").click();
-		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "SSO" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "Key management" })).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-integrations")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-sync")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-sso")).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-keys")).toBeVisible();
 
 		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
-		await expect(page.getByRole("link", { name: "Integrations" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "Sync ops" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "SSO" })).toBeVisible();
-		await expect(page.getByRole("link", { name: "Key management" })).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-integrations")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-sync")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-sso")).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-keys")).toBeVisible();
 
 		const seededApp = await getAppByName(page, "Core Platform");
 		if (seededApp) {
 			await page.goto(`/applications/${seededApp.id}`, { waitUntil: "domcontentloaded" });
-			await expect(page.getByRole("button", { name: "Integrations" })).toHaveCount(0);
+			await expect(page.getByTestId("shell-nav-applications-integrations")).toHaveCount(0);
 		}
 
 		await page.goto("/organisation/integrations", { waitUntil: "domcontentloaded" });
@@ -108,8 +108,8 @@ test.describe("enterprise dashboard routes", () => {
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
 		await page.getByTestId("product-switcher-item-organization").click();
-		await expect(page.getByRole("link", { name: "SSO" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-sso")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();
 
 		await page.goto("/organisation/sso", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: /SSO is not on this plan/i })).toBeVisible({
@@ -131,8 +131,8 @@ test.describe("enterprise dashboard routes", () => {
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
 		await page.getByTestId("product-switcher-item-organization").click();
-		await expect(page.getByRole("link", { name: "Key management" })).toHaveCount(0);
-		await expect(page.getByRole("link", { name: "License" })).toBeVisible();
+		await expect(page.getByTestId("shell-nav-organisation-keys")).toHaveCount(0);
+		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();
 
 		await page.goto("/organisation/keys", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: /Key management is not on this plan/i })).toBeVisible({
