@@ -25,6 +25,7 @@ RUN apk add --no-cache wget \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/packages/envsync-kernel ./packages/envsync-kernel
+COPY --from=deps /app/packages/envsync-analytics ./packages/envsync-analytics
 COPY --from=deps /app/packages/envsync-api/package.json ./packages/envsync-api/package.json
 COPY packages/envsync-api/src ./packages/envsync-api/src
 COPY packages/envsync-api/scripts ./packages/envsync-api/scripts
