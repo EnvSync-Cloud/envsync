@@ -80,10 +80,10 @@ jobs:
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core
       - name: Run deploy package tests
-        run: bun test
+        run: bun run test
         working-directory: packages/deploy
       - name: Run deploy CLI tests
-        run: bun test
+        run: bun run test
         working-directory: packages/deploy-cli
       - name: Run mock tests
         run: bun run test:mock

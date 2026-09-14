@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Ban, Check, GitPullRequest, ShieldAlert, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,19 +34,24 @@ const getStatusClass = (status: string) => {
 };
 
 const ChangeRequests = () => {
+  const { appId: routeAppId } = useParams();
+  const isProjectScoped = Boolean(routeAppId);
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
   const authEnabled = !isAuthLoading && isAuthenticated;
   const canReview = Boolean(user?.role?.is_admin || user?.role?.is_master);
 
-  const { data: requests = [] } = api.changeRequests.getChangeRequests(undefined, {
-    enabled: authEnabled,
-  });
+  const { data: requests = [] } = api.changeRequests.getChangeRequests(
+    { appId: routeAppId },
+    {
+      enabled: authEnabled,
+    },
+  );
   const { data: apps = [] } = api.applications.allApplications({
     enabled: authEnabled,
   });
 
   const [activeView, setActiveView] = useState<ActiveView>("requests");
-  const [selectedAppId, setSelectedAppId] = useState("");
+  const [selectedAppId, setSelectedAppId] = useState(routeAppId ?? "");
   const [mode, setMode] = useState<RequestMode>("direct");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
@@ -67,6 +73,10 @@ const ChangeRequests = () => {
   const [appDetail, setAppDetail] = useState<
     Awaited<ReturnType<typeof sdk.applications.getApp>> | null
   >(null);
+
+  useEffect(() => {
+    if (routeAppId) setSelectedAppId(routeAppId);
+  }, [routeAppId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,7 +208,7 @@ const ChangeRequests = () => {
           appName: app?.name || request.app_id,
         };
       }),
-    [apps, requests]
+    [apps, requests],
   );
 
   const pendingRequests = requestRows.filter(
@@ -213,8 +223,12 @@ const ChangeRequests = () => {
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
-        title="Change Requests"
-        description="Route protected environment changes through a reviewable, auditable workflow."
+        title={isProjectScoped ? "Approvals" : "Change Requests"}
+        description={
+          isProjectScoped
+            ? "Review and request protected changes for this project."
+            : "Route protected environment changes through a reviewable, auditable workflow."
+        }
         icon={GitPullRequest}
         stats={[
           {
@@ -293,6 +307,7 @@ const ChangeRequests = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  {!isProjectScoped && (
                   <div className="space-y-2">
                     <Label className="text-foreground">Project *</Label>
                     <Select value={selectedAppId} onValueChange={setSelectedAppId}>
@@ -311,6 +326,7 @@ const ChangeRequests = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">

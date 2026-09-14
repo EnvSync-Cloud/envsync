@@ -14,15 +14,36 @@ import { navItems, API_KEYS } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { sdk } from "@/api/base";
 import {
+  PALETTE_ORG_LINKS,
+  appDetailPath,
+  orgRolesPath,
+  orgUsersPath,
+  projectCreatePath,
+} from "@/lib/app-routes";
+import { PRODUCTS, productHomeHref } from "@/lib/shell-context";
+import {
+  Building2,
   Database,
   Plus,
   UserPlus,
   Key,
+  KeyRound,
   Users,
   Shield,
+  ShieldCheck,
   Clock,
   Trash2,
 } from "lucide-react";
+
+const PRODUCT_ICONS = {
+  secrets: KeyRound,
+  certificates: ShieldCheck,
+  organization: Building2,
+} as const;
+
+function paletteOrgHref(id: (typeof PALETTE_ORG_LINKS)[number]["id"], fallback: string) {
+  return PALETTE_ORG_LINKS.find((link) => link.id === id)?.href ?? fallback;
+}
 
 interface RecentItem {
   id: string;
@@ -61,7 +82,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-  const { allowedScopes } = useAuthContext();
+  const { allowedScopes, user } = useAuthContext();
+  const orgId = user?.org?.id;
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
   useEffect(() => {
@@ -224,41 +246,44 @@ export function CommandPalette() {
       id: project.id,
       type: "project",
       name: project.name,
-      href: `/applications/${project.id}`,
+      href: appDetailPath(project.id),
     });
     runAction(() =>
-      navigate(`/applications/${project.id}`)
+      navigate(appDetailPath(project.id))
     );
   };
 
   const navigateToUser = (user: { id: string; full_name: string | null; email: string }) => {
+    const href = paletteOrgHref("users", orgUsersPath());
     addRecentItem({
       id: user.id,
       type: "user",
       name: user.full_name || user.email,
-      href: `/users`,
+      href,
     });
-    runAction(() => navigate(`/users`));
+    runAction(() => navigate(href));
   };
 
   const navigateToTeam = (team: { id: string; name: string }) => {
+    const href = paletteOrgHref("teams", orgUsersPath());
     addRecentItem({
       id: team.id,
       type: "team",
       name: team.name,
-      href: `/teams`,
+      href,
     });
-    runAction(() => navigate(`/teams`));
+    runAction(() => navigate(href));
   };
 
   const navigateToApiKey = (key: { id: string; description: string }) => {
+    const href = paletteOrgHref("apikeys", "/apikeys");
     addRecentItem({
       id: key.id,
       type: "apikey",
       name: key.description || "API Key",
-      href: `/apikeys`,
+      href,
     });
-    runAction(() => navigate(`/apikeys`));
+    runAction(() => navigate(href));
   };
 
   return (
@@ -429,7 +454,7 @@ export function CommandPalette() {
             <CommandGroup heading="Quick Actions">
               <CommandItem
                 onSelect={() =>
-                  runAction(() => navigate("/applications/create"))
+                  runAction(() => navigate(projectCreatePath()))
                 }
                 value="create-project"
               >
@@ -437,7 +462,11 @@ export function CommandPalette() {
                 <span>Create Project</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate("/users"))}
+                onSelect={() =>
+                  runAction(() =>
+                    navigate(paletteOrgHref("users", orgUsersPath())),
+                  )
+                }
                 value="invite-member"
               >
                 <UserPlus className="mr-2 size-4" />
@@ -451,12 +480,33 @@ export function CommandPalette() {
                 <span>Manage API Keys</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate("/roles"))}
+                onSelect={() =>
+                  runAction(() =>
+                    navigate(paletteOrgHref("roles", orgRolesPath())),
+                  )
+                }
                 value="manage-roles"
               >
                 <Shield className="mr-2 size-4" />
                 <span>Manage Roles</span>
               </CommandItem>
+              {PRODUCTS.map((product) => {
+                const Icon = PRODUCT_ICONS[product.id];
+                return (
+                  <CommandItem
+                    key={product.id}
+                    onSelect={() =>
+                      runAction(() =>
+                        navigate(productHomeHref(product.id, projects.map((project) => project.id), orgId)),
+                      )
+                    }
+                    value={`switch-product-${product.id}`}
+                  >
+                    <Icon className="mr-2 size-4" />
+                    <span>Open {product.name}</span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </>
         )}

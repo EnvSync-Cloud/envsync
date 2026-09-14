@@ -1,5 +1,6 @@
 import { ApiKeyService } from "@/services/api_key.service";
 import { OidcService } from "@/services/oidc.service";
+import { ServiceTokenService } from "@/services/service_token.service";
 import { UserService } from "@/services/user.service";
 import { AppError } from "@/libs/errors";
 import { verifyJWTToken } from "./jwt";
@@ -7,7 +8,7 @@ import { verifyOidcToken, mightBeOidcToken } from "./oidc";
 import { getKeycloakIssuer } from "@/helpers/keycloak";
 import { config } from "@/utils/env";
 
-export type AuthTokenType = "JWT" | "API_KEY" | "OIDC" | "SAML";
+export type AuthTokenType = "JWT" | "API_KEY" | "OIDC" | "SAML" | "SERVICE_TOKEN";
 
 const SAML_SESSION_TTL_SECONDS = 8 * 3600;
 
@@ -35,6 +36,7 @@ export const validateAccess = async ({
 	org_id?: string;
 	auth_service_id?: string;
 	auth_type: AuthTokenType;
+	service_token?: Awaited<ReturnType<typeof ServiceTokenService.validateTokenByHash>>;
 }> => {
 	try {
 		let userId: string = "";
@@ -84,6 +86,23 @@ export const validateAccess = async ({
 
 			userId = provider.machine_user_id;
 			authServiceId = `oidc:${provider.id}`;
+		} else if (type === "SERVICE_TOKEN") {
+			const serviceToken = await ServiceTokenService.validateTokenByHash(token);
+			if (!serviceToken) {
+				throw new Error("Invalid service token");
+			}
+
+			await ServiceTokenService.registerUsage(serviceToken.id);
+			userId = serviceToken.created_by_user_id;
+			orgId = serviceToken.org_id;
+
+			return {
+				user_id: userId,
+				org_id: orgId,
+				auth_service_id: authServiceId,
+				auth_type: type,
+				service_token: serviceToken,
+			};
 		} else if (type === "API_KEY") {
 			const apiKey = await ApiKeyService.getKeyByCreds(token);
 
@@ -123,6 +142,10 @@ export const validateAccess = async ({
  */
 export function detectAuthType(bearerToken: string): AuthTokenType {
 	const cleanToken = bearerToken.replace(/^Bearer\s+/i, "");
+
+	if (ServiceTokenService.isServiceTokenValue(cleanToken)) {
+		return "SERVICE_TOKEN";
+	}
 
 	// Fast check: SAML tokens have a distinctive issuer
 	if (isSamlToken(cleanToken)) {

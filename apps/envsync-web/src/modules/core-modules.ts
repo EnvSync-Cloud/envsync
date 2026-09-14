@@ -7,13 +7,20 @@ import {
   KeyRound,
   LayoutDashboard,
   Settings,
-  ShieldAlert,
   ShieldCheck,
-  User,
   Users,
 } from "lucide-react";
 
-import type { WebModule } from "./types";
+import { LEGACY_REDIRECTS } from "@/lib/app-routes";
+
+import type { WebModule, WebRouteDefinition } from "./types";
+
+const legacyRedirectRoutes: WebRouteDefinition[] = LEGACY_REDIRECTS.map((redirect) => ({
+  id: redirect.id,
+  layout: "root",
+  path: redirect.path,
+  redirectTo: redirect.to,
+}));
 
 export const coreWebModules: WebModule[] = [
   {
@@ -51,76 +58,136 @@ export const coreWebModules: WebModule[] = [
         loadComponent: () => import("@/pages/Dashboard"),
       },
       {
-        id: "applications",
+        id: "projects",
         layout: "root",
-        path: "applications",
+        path: "projects",
         loadComponent: () => import("@/pages/Applications"),
       },
       {
-        id: "applications-create",
+        id: "projects-create",
         layout: "root",
-        path: "applications/create",
+        path: "projects/create",
         loadComponent: () => import("@/pages/CreateProject"),
       },
       {
-        id: "applications-detail",
+        id: "projects-detail",
         layout: "root",
-        path: "applications/:appId",
+        path: "projects/:appId",
         loadComponent: () => import("@/pages/ProjectVariables"),
       },
       {
-        id: "applications-secrets",
+        id: "projects-secrets",
         layout: "root",
-        path: "applications/:appId/secrets",
+        path: "projects/:appId/secrets",
         loadComponent: () => import("@/pages/ProjectSecrets"),
       },
       {
-        id: "applications-manage-environments",
+        id: "projects-manage-environments",
         layout: "root",
-        path: "applications/:appId/manage-environments",
+        path: "projects/:appId/manage-environments",
         loadComponent: () => import("@/pages/ManageEnvironment"),
       },
       {
-        id: "applications-access",
+        id: "projects-environments",
         layout: "root",
-        path: "applications/:appId/access",
+        path: "projects/:appId/environments",
+        loadComponent: () => import("@/pages/ManageEnvironment"),
+      },
+      {
+        id: "projects-access",
+        layout: "root",
+        path: "projects/:appId/access",
         loadComponent: () => import("@/pages/ProjectAccess"),
       },
       {
-        id: "applications-pit",
+        id: "projects-approvals",
         layout: "root",
-        path: "applications/pit/:appId",
+        path: "projects/:appId/approvals",
+        loadComponent: () => import("@/pages/ChangeRequests"),
+      },
+      {
+        id: "projects-change-requests",
+        layout: "root",
+        path: "projects/:appId/change-requests",
+        redirectTo: "/projects/:appId/approvals",
+      },
+      {
+        id: "projects-settings",
+        layout: "root",
+        path: "projects/:appId/settings",
+        redirectTo: "/projects/:appId/settings/service-tokens",
+      },
+      {
+        id: "projects-service-tokens",
+        layout: "root",
+        path: "projects/:appId/settings/service-tokens",
+        loadComponent: () => import("@/pages/ServiceTokens"),
+      },
+      {
+        id: "projects-pit",
+        layout: "root",
+        path: "projects/:appId/pit",
         loadComponent: () => import("@/pages/PointInTimeVariables"),
       },
       {
-        id: "applications-pit-secrets",
+        id: "projects-pit-secrets",
         layout: "root",
-        path: "applications/pit/:appId/secrets",
+        path: "projects/:appId/pit/secrets",
         loadComponent: () => import("@/pages/PointInTimeVariables"),
       },
       {
-        id: "roles",
+        id: "org-access",
         layout: "root",
-        path: "roles",
-        loadComponent: () => import("@/pages/Roles"),
+        path: "org/access",
+        loadComponent: () => import("@/pages/OrgAccess"),
       },
       {
-        id: "users",
+        id: "org-access-tab",
         layout: "root",
-        path: "users",
+        path: "org/access/:tab",
+        loadComponent: () => import("@/pages/OrgAccess"),
+      },
+      {
+        id: "org-users",
+        layout: "root",
+        path: "org/users",
         loadComponent: () => import("@/pages/Users"),
       },
       {
-        id: "teams",
+        id: "org-teams",
         layout: "root",
-        path: "teams",
+        path: "org/teams",
         loadComponent: () => import("@/pages/Teams"),
       },
       {
-        id: "change-requests",
+        id: "org-roles",
         layout: "root",
-        path: "change-requests",
+        path: "org/roles",
+        loadComponent: () => import("@/pages/Roles"),
+      },
+      {
+        id: "org-certificates",
+        layout: "root",
+        path: "org/certificates",
+        loadComponent: () => import("@/pages/Certificates"),
+      },
+      {
+        id: "org-webhooks",
+        layout: "root",
+        path: "org/webhooks",
+        loadComponent: () => import("@/pages/Webhooks"),
+      },
+      {
+        id: "org-change-requests",
+        layout: "root",
+        path: "org/change-requests",
         loadComponent: () => import("@/pages/ChangeRequests"),
+      },
+      {
+        id: "org-index",
+        layout: "root",
+        path: "org",
+        loadComponent: () => import("@/pages/OrgSettings"),
       },
       {
         id: "settings",
@@ -147,23 +214,12 @@ export const coreWebModules: WebModule[] = [
         loadComponent: () => import("@/pages/ApiKeys"),
       },
       {
-        id: "webhooks",
-        layout: "root",
-        path: "webhooks",
-        loadComponent: () => import("@/pages/Webhooks"),
-      },
-      {
         id: "gpgkeys",
         layout: "root",
         path: "gpgkeys",
         loadComponent: () => import("@/pages/GpgKeys"),
       },
-      {
-        id: "certificates",
-        layout: "root",
-        path: "certificates",
-        loadComponent: () => import("@/pages/Certificates"),
-      },
+      ...legacyRedirectRoutes,
       {
         id: "not-found",
         layout: "standalone",
@@ -181,7 +237,7 @@ export const coreWebModules: WebModule[] = [
       {
         label: "Projects",
         items: [
-          { id: "applications", name: "Projects", href: "/applications", icon: Database },
+          { id: "applications", name: "Projects", href: "/projects", icon: Database },
         ],
       },
       {
@@ -189,17 +245,15 @@ export const coreWebModules: WebModule[] = [
         items: [
           { id: "apikeys", name: "API Keys", href: "/apikeys", icon: Key },
           { id: "gpgkeys", name: "GPG Keys", href: "/gpgkeys", icon: KeyRound },
-          { id: "certificates", name: "Certificates", href: "/certificates", icon: ShieldCheck },
+          { id: "certificates", name: "Certificates", href: "/org/certificates", icon: ShieldCheck },
         ],
       },
       {
         label: "Collaboration",
         items: [
-          { id: "users", name: "Users", href: "/users", icon: User },
-          { id: "teams", name: "Teams", href: "/teams", icon: Users },
-          { id: "roles", name: "Roles", href: "/roles", icon: ShieldAlert },
-          { id: "change-requests", name: "Change Requests", href: "/change-requests", icon: ShieldCheck },
-          { id: "webhooks", name: "Webhooks", href: "/webhooks", icon: Anchor },
+          { id: "access", name: "Access", href: "/org/access", icon: Users },
+          { id: "change-requests", name: "Change Requests", href: "/org/change-requests", icon: ShieldCheck },
+          { id: "webhooks", name: "Webhooks", href: "/org/webhooks", icon: Anchor },
         ],
       },
       {
@@ -207,7 +261,7 @@ export const coreWebModules: WebModule[] = [
         items: [
           { id: "audit", name: "Activity", href: "/audit", icon: Activity },
           { id: "settings", name: "Account", href: "/settings", icon: Settings },
-          { id: "organisation", name: "Organisation", href: "/organisation", icon: Globe },
+          { id: "organisation", name: "Organization", href: "/organisation", icon: Globe },
         ],
       },
     ],
@@ -218,6 +272,7 @@ export const coreWebModules: WebModule[] = [
       users: () => true,
       teams: () => true,
       roles: user => user.role.is_admin || user.role.is_master,
+      access: () => true,
       "change-requests": user => user.role.can_edit || user.role.is_admin || user.role.is_master,
       organisation: user => user.role.is_admin || user.role.is_master,
       audit: user => user.role.is_admin || user.role.is_master,

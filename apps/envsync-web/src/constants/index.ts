@@ -19,6 +19,7 @@ export enum API_KEYS {
   APP_GRANTS = "permissions/app/grants",
   APP_EFFECTIVE_ACCESS = "permissions/app/effective-access",
   CHANGE_REQUESTS = "change-requests/all",
+  ALL_SERVICE_TOKENS = "service-tokens/all",
 }
 
 export const SCOPES = getRegisteredScopeIds();

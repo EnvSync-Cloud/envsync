@@ -29,7 +29,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuthContext } from "@/contexts/auth";
-import { appAccessPath, appDetailPath, appIntegrationsPath, appPointInTimePath, appSecretsPath } from "@/lib/app-routes";
+import {
+  appAccessPath,
+  appApprovalsPath,
+  appDetailPath,
+  appEnvironmentsPath,
+  appIntegrationsPath,
+  appPointInTimePath,
+  appSecretsPath,
+} from "@/lib/app-routes";
 import { EnvironmentType } from "@/constants";
 
 interface ProjectHeaderProps {
@@ -70,23 +78,25 @@ export const ProjectHeader = ({
   const location = useLocation();
   const { allowedScopes } = useAuthContext();
 
-  const isSecretsPage = location.pathname.includes("/secrets");
-  const isManageEnvironmentPage = location.pathname.includes("/manage-environments");
+  const isPointInTimePage = /(?:^|\/)pit(?:\/|$)/.test(location.pathname);
+  const isSecretsPage = location.pathname.includes("/secrets") && !isPointInTimePage;
+  const isManageEnvironmentPage = /\/(manage-environments|environments)(?:\/|$)/.test(location.pathname);
   const isAccessPage = location.pathname.includes("/access");
-  const isPointInTimePage = location.pathname.includes("/pit/");
+  const isApprovalsPage = /\/approvals(?:\/|$)/.test(location.pathname);
   const isIntegrationsPage = location.pathname.includes("/integrations");
 
   const currentEnv = environmentTypes.find((e) => e.id === selectedEnvironment);
 
   const handleSectionChange = (
-    section: "variables" | "secrets" | "environments" | "access" | "pit" | "integrations"
+    section: "variables" | "secrets" | "environments" | "access" | "approvals" | "pit" | "integrations"
   ) => {
     if (!appId) return;
 
     let targetPath = appDetailPath(appId);
     if (section === "secrets") targetPath = appSecretsPath(appId);
-    if (section === "environments") targetPath = `${appDetailPath(appId)}/manage-environments`;
+    if (section === "environments") targetPath = appEnvironmentsPath(appId);
     if (section === "access") targetPath = appAccessPath(appId);
+    if (section === "approvals") targetPath = appApprovalsPath(appId);
     if (section === "integrations") targetPath = appIntegrationsPath(appId);
     if (section === "pit") {
       targetPath = appPointInTimePath(appId);
@@ -110,7 +120,7 @@ export const ProjectHeader = ({
       key: "variables",
       label: "Variables",
       hidden: false,
-      active: !isSecretsPage && !isManageEnvironmentPage && !isAccessPage && !isPointInTimePage && !isIntegrationsPage,
+      active: !isSecretsPage && !isManageEnvironmentPage && !isAccessPage && !isApprovalsPage && !isPointInTimePage && !isIntegrationsPage,
     },
     {
       key: "secrets",
@@ -123,6 +133,12 @@ export const ProjectHeader = ({
       label: "Environments",
       hidden: false,
       active: isManageEnvironmentPage,
+    },
+    {
+      key: "approvals",
+      label: "Approvals",
+      hidden: !allowedScopes.includes("change-requests"),
+      active: isApprovalsPage,
     },
     {
       key: "access",
@@ -226,7 +242,7 @@ export const ProjectHeader = ({
               key={tab.key}
               variant="ghost"
               size="sm"
-              onClick={() => handleSectionChange(tab.key as "variables" | "secrets" | "environments" | "access" | "pit" | "integrations")}
+              onClick={() => handleSectionChange(tab.key as "variables" | "secrets" | "environments" | "access" | "approvals" | "pit" | "integrations")}
               className={cn(
                 "rounded-none border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                 tab.active

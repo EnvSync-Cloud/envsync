@@ -339,6 +339,11 @@ export interface SyncAuditEvent extends BaseTable {
 	details: ColumnType<Record<string, unknown>>;
 }
 
+export interface ServiceTokenScope {
+	env_type_id?: string | null;
+	path: string;
+}
+
 export interface ServiceToken extends BaseTable {
 	org_id: ColumnType<string>;
 	created_by_user_id: ColumnType<string>;
@@ -347,6 +352,9 @@ export interface ServiceToken extends BaseTable {
 	app_id?: ColumnType<string | null>;
 	env_type_id?: ColumnType<string | null>;
 	permissions: ColumnType<Record<string, boolean>>;
+	scopes: ColumnType<ServiceTokenScope[]>;
+	rotated_from_id?: ColumnType<string | null>;
+	grace_until?: ColumnType<Date | null>;
 	expires_at: ColumnType<Date>;
 	last_used_at?: ColumnType<Date | null>;
 }

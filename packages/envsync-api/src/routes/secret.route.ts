@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { serviceTokenScopeMiddleware } from "@/middlewares/service-token-scope.middleware";
 import { SecretController } from "@/controllers/secret.controller";
 import {
 	createSecretRequestSchema,
@@ -40,6 +41,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
+app.use(serviceTokenScopeMiddleware());
 
 // Note: Route-level requirePermission middleware is intentionally omitted here.
 // Each controller method performs inline FGA authorization checks via

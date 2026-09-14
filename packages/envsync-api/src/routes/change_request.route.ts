@@ -59,7 +59,7 @@ app.get(
 	describeRoute({
 		operationId: "listChangeRequests",
 		summary: "List Change Requests",
-		description: "List change requests for the current organization.",
+		description: "List change requests for the current organization. Pass app_id to limit the list to one project.",
 		tags: ["Change Requests"],
 		responses: {
 			200: {

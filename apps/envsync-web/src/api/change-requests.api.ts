@@ -56,11 +56,19 @@ export interface PromotionChangeRequestPayload {
   message: string;
 }
 
-const useChangeRequests = (status?: string, { enabled = true }: { enabled?: boolean } = {}) =>
+const useChangeRequests = (
+  filters: { status?: string; appId?: string } = {},
+  { enabled = true }: { enabled?: boolean } = {},
+) =>
   useQuery({
-    queryKey: [API_KEYS.CHANGE_REQUESTS, status || "all"],
-    queryFn: () =>
-      apiRequest<ChangeRequest[]>(`/api/change_request${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+    queryKey: [API_KEYS.CHANGE_REQUESTS, filters.status || "all", filters.appId || "all"],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filters.status) params.set("status", filters.status);
+      if (filters.appId) params.set("app_id", filters.appId);
+      const query = params.toString();
+      return apiRequest<ChangeRequest[]>(`/api/change_request${query ? `?${query}` : ""}`);
+    },
     enabled,
   });
 

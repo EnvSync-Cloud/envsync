@@ -4,6 +4,7 @@ import { RouteChangeTracker } from "@/telemetry";
 import { getWebRoutes } from "@/modules/load-modules";
 
 import { FeatureGate } from "@/components/FeatureGate";
+import { LegacyRedirect } from "@/components/LegacyRedirect";
 import RootLayout from "@/layout/root";
 import type { WebRouteDefinition } from "@/modules/types";
 
@@ -20,7 +21,11 @@ function RouteFallback() {
 }
 
 function RouteElement({ route }: { route: WebRouteDefinition }) {
-  const Component = useMemo(() => lazy(route.loadComponent), [route.loadComponent]);
+  const loader = route.loadComponent;
+  const Component = useMemo(
+    () => (loader ? lazy(loader) : () => null),
+    [loader],
+  );
 
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -32,6 +37,16 @@ function RouteElement({ route }: { route: WebRouteDefinition }) {
 }
 
 function renderRoute(route: WebRouteDefinition) {
+  if (route.redirectTo) {
+    return (
+      <Route
+        key={route.id}
+        path={route.path}
+        element={<LegacyRedirect to={route.redirectTo} />}
+      />
+    );
+  }
+
   if (route.index) {
     return <Route key={route.id} index element={<RouteElement route={route} />} />;
   }

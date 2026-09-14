@@ -22,7 +22,7 @@ import { useAuthContext } from "@/contexts/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
 import { getDefaultEnvironmentType } from "@/lib/utils";
-import { appManageEnvironmentsPath } from "@/lib/app-routes";
+import { appEnvironmentsPath } from "@/lib/app-routes";
 
 export const ProjectEnvironments = () => {
   const navigate = useNavigate();
@@ -290,7 +290,7 @@ export const ProjectEnvironments = () => {
         onAddVariable={() => setShowAddModal(true)}
         onBulkImport={() => setShowBulkImportModal(true)}
         onExport={handleExport}
-        onManageEnvironments={() => navigate(appManageEnvironmentsPath(appId ?? ""))}
+        onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
       />
 
       <div className="mx-auto max-w-[1600px] px-5 md:px-6 py-6">

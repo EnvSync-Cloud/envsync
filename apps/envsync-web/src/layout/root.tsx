@@ -1,8 +1,8 @@
-import { Header } from "@/components/Header";
-import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { Header } from "@/components/Header";
 import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { Sidebar } from "@/components/Sidebar";
 import { useAuthContext } from "@/contexts/auth";
 import { useSidebar } from "@/hooks/useSidebar";
 import { redirectToLogin } from "@/api";
@@ -107,42 +107,39 @@ export const RootLayout = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/[0.035] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/[0.025] rounded-full blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_45%)]" />
-      </div>
-
-      <div
-        className={`fixed left-0 top-0 h-full z-30 transition-all duration-300 ease-in-out ${
-          sidebarExpanded ? "w-64" : "w-16"
-        }`}
-      >
-        <Sidebar expanded={sidebarExpanded} onToggle={toggleSidebar} />
-      </div>
-
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
-          sidebarExpanded ? "ml-64" : "ml-16"
-        }`}
-      >
-        <div className="flex-shrink-0">
-          <Header />
+    <>
+      <div data-testid="app-shell" className="flex h-screen overflow-hidden bg-background text-foreground">
+        <div className="pointer-events-none fixed inset-0">
+          <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-primary/[0.035] blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-primary/[0.025] blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_45%)]" />
         </div>
-
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1600px] px-5 py-6 md:px-6">
-            <Outlet />
+        <div
+          className={`fixed left-0 top-0 z-30 h-full transition-all duration-300 ease-in-out ${
+            sidebarExpanded ? "w-64" : "w-16"
+          }`}
+        >
+          <Sidebar expanded={sidebarExpanded} onToggle={toggleSidebar} />
+        </div>
+        <div
+          className={`flex h-screen flex-1 flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+            sidebarExpanded ? "ml-64" : "ml-16"
+          }`}
+        >
+          <div className="flex-shrink-0">
+            <Header />
           </div>
-        </main>
+          <main className="flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-[1600px] px-5 py-6 md:px-6">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-
       <CommandPalette />
       <KeyboardShortcutsDialog />
       <NotificationCenter />
-    </div>
+    </>
   );
 };
 

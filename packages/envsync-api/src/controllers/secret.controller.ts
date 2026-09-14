@@ -6,6 +6,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
+import { ServiceTokenService } from "@/services/service_token.service";
 import { smartEncrypt, kmsDecrypt, rsaLayerDecrypt } from "@/helpers/key-store";
 import { secretOperations } from "@/libs/telemetry/metrics";
 
@@ -576,11 +577,14 @@ export class SecretController {
 			org_id,
 			user_id,
 		});
+		const scopedSecrets = c.get("service_token")
+			? ServiceTokenService.filterKeysByScope(c.get("service_token"), env_type_id, secrets)
+			: secrets;
 
 		// Return RSA blobs directly — BYOK clients decrypt with their private key
-		secretOperations.add(secrets.length, { operation: "decrypted" });
+		secretOperations.add(scopedSecrets.length, { operation: "decrypted" });
 
-		return c.json(secrets);
+		return c.json(scopedSecrets);
 	};
 
 	public static readonly getSecret = async (c: Context) => {
