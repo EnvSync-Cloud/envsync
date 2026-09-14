@@ -29,6 +29,8 @@ Browser / CLI / SDKs
         ▼
    api.<domain>  ── /api/*              (product)
                  └── /api/v1/manage/*   (Enterprise only)
+   t.<domain>    ── /ph/*               (PostHog first-party proxy)
+                 └── /obs/*             (OTLP first-party proxy)
    app.<domain>  ── dashboard
    auth.<domain> ── Keycloak
 ```
@@ -56,7 +58,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
          └─────────────┬─────────────┘
                        ▼
               Your API host (VPS / k8s)
-         Traefik → api.*  / auth.*  / obs.*  / s3.*
+         Traefik → api.*  / t.*  / auth.*  / obs.*  / s3.*
          envsync-api (+ manage /api/v1/manage)
          Postgres, Redis, Keycloak, OpenFGA, miniKMS, RustFS, …
 ```
@@ -77,6 +79,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
 | `app.envsync.example` | Cloudflare (Workers/Pages) |
 | Apex / marketing | Cloudflare (landing) |
 | `api.envsync.example` | VPS A-record / LB → Traefik |
+| `t.envsync.example` | VPS → Traefik → API `/ph` (PostHog) and `/obs` (OTLP) |
 | `auth.envsync.example` | VPS → Keycloak |
 | `obs.` / `s3.` | VPS (optional) |
 

@@ -4,6 +4,7 @@ import { DotTexture } from "@/components/primitives/DotTexture"
 import { Terminal, type TerminalLine } from "@/components/primitives/Terminal"
 import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
+import { trackAction } from "@/telemetry"
 import { VERSION } from "./Footer"
 
 const terminalLines: TerminalLine[] = [
@@ -51,12 +52,12 @@ const NewHero = () => {
 
           {/* CTA row */}
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
-            <Link to="/onboarding">
+            <Link to="/onboarding" onClick={() => trackAction("landing_cta_clicked", { placement: "hero" })}>
               <Button variant="hero" size="lg">
                 Start for free
               </Button>
             </Link>
-            <a href="https://github.com/EnvSync-Cloud/envsync">
+            <a href="https://github.com/EnvSync-Cloud/envsync" onClick={() => trackAction("landing_github_clicked", { placement: "hero" })}>
               <Button
                 variant="hero"
                 size="lg"

@@ -2,6 +2,7 @@ import { Button, ThemeToggle } from "@/components/primitives";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { trackAction } from "@/telemetry";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 const navLinks = [
@@ -77,7 +78,7 @@ const Header = () => {
               Sign In
             </Button>
           </a>
-          <Link to="/onboarding">
+          <Link to="/onboarding" onClick={() => trackAction("landing_cta_clicked", { placement: "header" })}>
             <Button variant="nav-cta" size="sm">
               Get Started
             </Button>

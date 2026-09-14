@@ -204,6 +204,7 @@ export const CreateProject = () => {
 
       setIsCreating(true);
       setCreationProgress("Creating project...");
+      trackAction("app_create_started", { enable_secrets: formData.enableSecrets });
 
       try {
         // Step 1: Create the project

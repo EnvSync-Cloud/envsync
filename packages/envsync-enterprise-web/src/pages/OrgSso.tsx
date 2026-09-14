@@ -35,6 +35,7 @@ import {
 } from "@shell/components/ui/alert-dialog";
 import { useAuthContext } from "@shell/contexts/auth";
 import { formatLastUsed } from "@shell/lib/utils";
+import { trackAction } from "@shell/telemetry";
 import { runtimeConfig } from "@shell/utils/runtime-config";
 
 function copyText(value: string, label: string) {
@@ -189,6 +190,7 @@ export default function OrgSso() {
     const popup = window.open("about:blank", "_blank");
     if (popup) popup.opener = null;
     try {
+      trackAction("sso_test_login_started", { provider_id: testTarget.id });
       const result = await startTestLogin.mutateAsync({
         orgSlug,
         providerId: testTarget.id,

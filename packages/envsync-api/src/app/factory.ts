@@ -19,6 +19,7 @@ import { AppError } from "@/libs/errors";
 import log, { LogTypes, apiResponseLogger } from "@/libs/logger";
 import { getTracer } from "@/libs/telemetry";
 import { httpRequestDuration } from "@/libs/telemetry/metrics";
+import { analyticsContextMiddleware } from "@/middlewares/analytics.middleware";
 import { csrfMiddleware } from "@/middlewares/csrf.middleware";
 import { enterpriseLicenseLockMiddleware } from "@/middlewares/license-lock.middleware";
 import type { ApiSurface } from "@/modules/types";
@@ -28,6 +29,7 @@ import {
 	tryRegisterEnterpriseManageModules,
 } from "@/modules/load-modules";
 import { createApiRoutes } from "@/routes";
+import { obsProxyRouter, posthogProxyRouter } from "@/routes/telemetry-proxy.route";
 import { config } from "@/utils/env";
 import { version } from "package.json";
 
@@ -215,7 +217,16 @@ export async function createApiApp(surface: ApiSurface) {
 				}
 				return "";
 			},
-			allowHeaders: ["Content-Type", "Authorization", "traceparent", "tracestate", "X-CSRF-Token", "X-EnvSync-Org-Id"],
+			allowHeaders: [
+				"Content-Type",
+				"Content-Encoding",
+				"Authorization",
+				"traceparent",
+				"tracestate",
+				"X-CSRF-Token",
+				"X-EnvSync-Org-Id",
+				"X-EnvSync-Client",
+			],
 			allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 			credentials: true,
 			maxAge: 3600,
@@ -230,6 +241,7 @@ export async function createApiApp(surface: ApiSurface) {
 		}
 	});
 
+	app.use("/api/*", analyticsContextMiddleware());
 	app.use("/api/*", csrfMiddleware());
 
 	const manageAllow = manageMounted
@@ -270,6 +282,12 @@ export async function createApiApp(surface: ApiSurface) {
 	});
 
 	app.get("/favicon.ico", async ctx => ctx.redirect("https://hono.dev/images/logo-small.png"));
+
+	// First-party ingest proxy: t.<domain>/ph/* → PostHog, t.<domain>/obs/* → OTLP.
+	if (!isManagement) {
+		app.route("/ph", posthogProxyRouter);
+		app.route("/obs", obsProxyRouter);
+	}
 
 	// Core product at /api/* (skipped on dedicated management process).
 	if (!isManagement) {

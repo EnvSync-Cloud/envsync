@@ -19,7 +19,8 @@ function hostedRuntimeConfigPlugin(): Plugin {
       const root = apiUrl.hostname.replace(/^api\./, "");
       const proto = apiUrl.protocol;
       const apiBase = api.replace(/\/$/, "");
-      const obs = process.env.VITE_HYPERDX_URL || process.env.VITE_OTEL_ENDPOINT || `${proto}//obs.${root}`;
+      const track = `${proto}//t.${root}`;
+      const obs = process.env.VITE_HYPERDX_URL || process.env.VITE_OTEL_ENDPOINT || `${track}/obs`;
       const config = {
         apiBaseUrl: apiBase,
         appBaseUrl: `${proto}//app.${root}`,
@@ -37,6 +38,9 @@ function hostedRuntimeConfigPlugin(): Plugin {
         hyperdxUrl: process.env.VITE_HYPERDX_URL || obs,
         hyperdxApiKey: process.env.VITE_HYPERDX_API_KEY || undefined,
         hyperdxDisabled: process.env.VITE_HYPERDX_DISABLED === "true",
+        posthogKey: process.env.VITE_POSTHOG_KEY || process.env.VITE_POSTHOG_PROJECT_TOKEN || undefined,
+        posthogHost: process.env.VITE_POSTHOG_HOST || `${track}/ph`,
+        posthogDisabled: process.env.VITE_POSTHOG_DISABLED === "true",
       };
       fs.writeFileSync(
         path.resolve(__dirname, "dist/runtime-config.js"),

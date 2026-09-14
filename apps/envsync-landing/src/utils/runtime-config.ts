@@ -12,6 +12,9 @@ const runtimeConfigSchema = z.object({
   hyperdxUrl: z.string().url().optional(),
   hyperdxDisabled: z.boolean().optional(),
   hyperdxAdvancedNetworkCapture: z.boolean().optional(),
+  posthogKey: z.string().min(1).optional(),
+  posthogHost: z.string().url().optional(),
+  posthogDisabled: z.boolean().optional(),
   releaseVersion: z.string().min(1).optional(),
 });
 
@@ -39,6 +42,9 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || undefined,
       hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
       hyperdxAdvancedNetworkCapture: false,
+      posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
+      posthogHost: import.meta.env.VITE_POSTHOG_HOST || undefined,
+      posthogDisabled: import.meta.env.VITE_POSTHOG_DISABLED === "true",
     };
   }
 
@@ -61,9 +67,12 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     apiDocsUrl: `${apiBaseUrl}/docs`,
     otelEndpoint: `${protocol}//obs.${rootHost}`,
     hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
-    hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || `${protocol}//obs.${rootHost}`,
+    hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || `${protocol}//t.${rootHost}/obs`,
     hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
     hyperdxAdvancedNetworkCapture: false,
+    posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
+    posthogHost: import.meta.env.VITE_POSTHOG_HOST || `${protocol}//t.${rootHost}/ph`,
+    posthogDisabled: import.meta.env.VITE_POSTHOG_DISABLED === "true",
   };
 }
 

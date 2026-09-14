@@ -37,6 +37,7 @@ import {
   type KmsFormState,
   type KmsSource,
 } from "../lib/kms-ui";
+import { trackAction } from "@shell/telemetry";
 import { runtimeConfig } from "@shell/utils/runtime-config";
 import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
@@ -212,6 +213,7 @@ export default function KeyManagement() {
     setConfirm(null);
     try {
       if (action === "attach") {
+        trackAction("kms_attach_started", { source: form.source });
         const next = await attach.mutateAsync();
         rememberJob(next.id);
         toast.success("Attach rewrap queued.");

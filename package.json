@@ -11,6 +11,7 @@
     "packages/envsync-api",
     "packages/envsync-enterprise",
     "packages/envsync-enterprise-web",
+    "packages/envsync-analytics",
     "packages/envsync-kernel",
     "packages/envsync-keycloak-theme",
     "packages/envsync-ui"

@@ -45,6 +45,11 @@ jobs:
           VITE_HYPERDX_URL: ${{ secrets.ENVSYNC_OBS_URL }}
           VITE_HYPERDX_API_KEY: ${{ secrets.ENVSYNC_HYPERDX_API_KEY }}
           VITE_HYPERDX_DISABLED: ${{ secrets.ENVSYNC_HYPERDX_DISABLED }}
+          VITE_POSTHOG_KEY: ${{ secrets.ENVSYNC_POSTHOG_KEY }}
+          VITE_POSTHOG_PROJECT_TOKEN: ${{ secrets.ENVSYNC_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.ENVSYNC_POSTHOG_HOST }}
+          VITE_POSTHOG_UI_HOST: ${{ secrets.ENVSYNC_POSTHOG_UI_HOST }}
+          VITE_POSTHOG_DISABLED: ${{ secrets.ENVSYNC_POSTHOG_DISABLED }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy
@@ -79,6 +84,11 @@ jobs:
           VITE_HYPERDX_URL: ${{ secrets.ENVSYNC_OBS_URL }}
           VITE_HYPERDX_API_KEY: ${{ secrets.ENVSYNC_HYPERDX_API_KEY }}
           VITE_HYPERDX_DISABLED: ${{ secrets.ENVSYNC_HYPERDX_DISABLED }}
+          VITE_POSTHOG_KEY: ${{ secrets.ENVSYNC_POSTHOG_KEY }}
+          VITE_POSTHOG_PROJECT_TOKEN: ${{ secrets.ENVSYNC_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.ENVSYNC_POSTHOG_HOST }}
+          VITE_POSTHOG_UI_HOST: ${{ secrets.ENVSYNC_POSTHOG_UI_HOST }}
+          VITE_POSTHOG_DISABLED: ${{ secrets.ENVSYNC_POSTHOG_DISABLED }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy

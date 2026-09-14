@@ -3,6 +3,7 @@ import { initTracing, getTracerProvider } from "./tracing";
 import { initMetrics, getMeterProvider } from "./metrics";
 import { initLogs, getLoggerProvider } from "./logs";
 import { initErrorTracking } from "./error-tracking";
+import { initPostHog } from "./posthog";
 import { initSessionReplay } from "./session-replay";
 
 let initialized = false;
@@ -14,6 +15,7 @@ export function initTelemetry(): void {
   initialized = true;
 
   initSessionReplay();
+  initPostHog();
   initTracing(config);
   initMetrics(config);
   initLogs(config);

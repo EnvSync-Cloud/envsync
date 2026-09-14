@@ -94,6 +94,11 @@ export interface DeployConfig {
 		nb_setup_key?: string;
 	};
 	release_channel?: string;
+	analytics?: {
+		posthog_key?: string;
+		posthog_host?: string;
+		disabled?: boolean;
+	};
 }
 
 export type ApiSlot = "blue" | "green";
@@ -157,6 +162,7 @@ function domainMap(rootDomain: string) {
 		api: `api.${rootDomain}`,
 		auth: `auth.${rootDomain}`,
 		obs: `obs.${rootDomain}`,
+		track: `t.${rootDomain}`,
 		mail: `mail.${rootDomain}`,
 		s3: `s3.${rootDomain}`,
 		s3Console: `console.s3.${rootDomain}`,
@@ -317,6 +323,9 @@ export function buildRuntimeEnv(
 		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
 		OTEL_SERVICE_NAME: "envsync-api",
 		OTEL_SDK_DISABLED: "false",
+		POSTHOG_KEY: config.analytics?.posthog_key || process.env.POSTHOG_KEY || "",
+		POSTHOG_HOST: config.analytics?.posthog_host || process.env.POSTHOG_HOST || "https://eu.i.posthog.com",
+		ENVSYNC_POSTHOG_DISABLED: config.analytics?.disabled ? "true" : (process.env.ENVSYNC_POSTHOG_DISABLED || "false"),
 		CLICKSTACK_URL: publicHttpsUrl(config, hosts.obs),
 		KEYCLOAK_IMAGE_TAG: keycloakImageTag(config.images.keycloak),
 		// Is this too hacky? We go Shawn way.
@@ -531,6 +540,12 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 		"      entryPoints: [websecure]",
 		"      tls:",
 		"        certResolver: letsencrypt",
+		"    track-router:",
+		`      rule: Host(\`${hosts.track}\`)`,
+		`      service: ${apiServiceName}`,
+		"      entryPoints: [websecure]",
+		"      tls:",
+		"        certResolver: letsencrypt",
 	].join("\n") + "\n";
 }
 
@@ -576,7 +591,8 @@ export function renderApiMaintenanceConf() {
 
 export function renderFrontendRuntimeConfig(config: DeployConfig, generated: DeployGeneratedState) {
 	const hosts = domainMap(config.domain.root_domain);
-	const otelEndpoint = publicHttpsUrl(config, hosts.obs);
+	const otelEndpoint = publicHttpsUrl(config, hosts.track, "/obs");
+	const posthogProxy = publicHttpsUrl(config, hosts.track, "/ph");
 	const managementApiEnabled = !isOssConfig(config);
 	const activeReleaseVersion = generated.deployment.slots[generated.deployment.active_slot].release_version || config.release.version;
 	const apiBaseUrl = publicHttpsUrl(config, hosts.api);
@@ -604,6 +620,9 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 		hyperdxUrl: otelEndpoint,
 		hyperdxDisabled: generated.clickstack.browser_api_key.length === 0,
 		hyperdxAdvancedNetworkCapture: false,
+		posthogKey: config.analytics?.posthog_key || process.env.POSTHOG_KEY || undefined,
+		posthogHost: config.analytics?.posthog_host || process.env.POSTHOG_HOST || posthogProxy,
+		posthogDisabled: Boolean(config.analytics?.disabled) || process.env.ENVSYNC_POSTHOG_DISABLED === "true",
 		releaseVersion: activeReleaseVersion,
 		activeApiSlot: generated.deployment.active_slot,
 	}, null, 2)};\n`;

@@ -34,6 +34,8 @@
     "@fontsource/inter": "^5.2.5",
     "@fontsource/jetbrains-mono": "^5.2.5",
     "@envsync-cloud/envsync-ts-sdk": "workspace:*",
+    "envsync-analytics": "workspace:*",
+    "posthog-js": "^1.268.9",
     "@hookform/resolvers": "^3.10.0",
     "@hyperdx/browser": "^0.22.0",
     "@icons-pack/react-simple-icons": "^13.6.0",
