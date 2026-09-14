@@ -34,12 +34,7 @@ import { useCopy } from "@/hooks/useClipboard";
 import { cn } from "@/lib/utils";
 import { Count } from "../ui/count";
 
-/** Detect keys that look like secrets even when API doesn't mark them sensitive */
-const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(?:secret|password|token|auth|credential|private|api[_-]?key)(?:[_-]|$)/i;
 
-function isSensitiveVariable(variable: EnvironmentVariable): boolean {
-  return variable.sensitive || SENSITIVE_KEY_PATTERN.test(variable.key);
-}
 
 interface InlineEditState {
   value: string;
@@ -99,11 +94,7 @@ export const EnvironmentVariablesTable = ({
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (variable) =>
-          variable.key.toLowerCase().includes(query) ||
-          (!isSensitiveVariable(variable) && variable.value.toLowerCase().includes(query))
-      );
+      filtered = filtered.filter((variable) => variable.key.toLowerCase().includes(query));
     }
 
     if (selectedEnvironment !== "all") {
@@ -548,7 +539,7 @@ export const EnvironmentVariablesTable = ({
                               value={editState?.value || ""}
                               onChange={(e) => updateEditValue(variable.id, e.target.value)}
                               onKeyDown={(e) => handleKeyDown(e, variable)}
-                              type={isSensitiveVariable(variable) ? "password" : "text"}
+                              type={showSensitive[variable.id] ? "text" : "password"}
                               className="font-mono text-sm"
                               disabled={isSaving}
                               autoFocus
@@ -582,54 +573,31 @@ export const EnvironmentVariablesTable = ({
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2 max-w-xs">
-                            {isSensitiveVariable(variable) ? (
-                              <div className="flex items-center space-x-2">
-                                <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
-                                  {showSensitive[variable.id]
-                                    ? variable.value
-                                    : "••••••••"}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() =>
-                                    toggleSensitiveVisibility(variable.id)
-                                  }
-                                  aria-label={showSensitive[variable.id] ? "Hide value" : "Show value"}
-                                >
-                                  {showSensitive[variable.id] ? (
-                                    <EyeOff className="h-3 w-3" />
-                                  ) : (
-                                    <Eye className="h-3 w-3" />
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => copy.mutate(variable.value)}
-                                  aria-label="Copy value"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
-                                <code className="hdx-mask select-all text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
-                                  {variable.value}
-                                </code>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                  onClick={() => copy.mutate(variable.value)}
-                                  aria-label="Copy value"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            )}
+                            <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
+                              {showSensitive[variable.id] ? variable.value : "••••••••"}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => toggleSensitiveVisibility(variable.id)}
+                              aria-label={showSensitive[variable.id] ? "Hide value" : "Show value"}
+                            >
+                              {showSensitive[variable.id] ? (
+                                <EyeOff className="h-3 w-3" />
+                              ) : (
+                                <Eye className="h-3 w-3" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => copy.mutate(variable.value)}
+                              aria-label="Copy value"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
                           </div>
                         )}
                       </td>
