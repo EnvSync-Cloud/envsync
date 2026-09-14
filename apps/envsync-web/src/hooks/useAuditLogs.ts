@@ -1,11 +1,71 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { sdk } from "@/api";
+import { apiRequest, sdk } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 import { toast } from "sonner";
 import { AuditActions } from "@/lib/audit.type";
 import { AuditLog } from "@/components/audit/row";
 import z from "zod";
+
+type AuditLogApiRow = {
+  id: string;
+  action: string;
+  details: string;
+  message?: string;
+  user_id: string;
+  created_at: string;
+};
+
+type AuditLogsApiResponse = {
+  auditLogs: AuditLogApiRow[];
+  totalPages: number;
+};
+
+const EXPORT_PAGE_CAP = 10_000;
+
+export function csvEscape(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replaceAll('"', '""')}"`;
+  }
+  return value;
+}
+
+export function buildAuditExportCsv(
+  rows: Array<{
+    created_at: string;
+    action: string;
+    user_name: string;
+    details: string;
+  }>,
+): string {
+  const header = ["timestamp", "action", "user", "details"];
+  const lines = [
+    header.join(","),
+    ...rows.map((row) =>
+      [row.created_at, row.action, row.user_name, row.details].map(csvEscape).join(","),
+    ),
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
+export async function fetchAuditLogPage(params: {
+  page: number;
+  pageSize: number;
+  filterByUser?: string;
+  filterByCategory?: string;
+  filterByPastTime?: string;
+  q?: string;
+}): Promise<AuditLogsApiResponse> {
+  const search = new URLSearchParams({
+    page: String(params.page),
+    per_page: String(params.pageSize),
+  });
+  if (params.filterByUser) search.set("filter_by_user", params.filterByUser);
+  if (params.filterByCategory) search.set("filter_by_category", params.filterByCategory);
+  if (params.filterByPastTime) search.set("filter_by_past_time", params.filterByPastTime);
+  if (params.q) search.set("q", params.q);
+  return apiRequest<AuditLogsApiResponse>(`/api/audit_log?${search.toString()}`);
+}
 
 export const ActionCategories = z.enum([
   "app*",
@@ -341,13 +401,14 @@ export function useAuditLogs() {
     ],
     queryFn: async () => {
       const [auditLogsResponse, usersResponse] = await Promise.all([
-        sdk.auditLogs.getAuditLogs(
-          pagination.page.toString(),
-          pagination.pageSize.toString(),
-          customFilters.filterByUser || undefined,
-          customFilters.filterByCategory || undefined,
-          customFilters.filterByPastTime || undefined
-        ),
+        fetchAuditLogPage({
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          filterByUser: customFilters.filterByUser || undefined,
+          filterByCategory: customFilters.filterByCategory || undefined,
+          filterByPastTime: customFilters.filterByPastTime || undefined,
+          q: debouncedSearchQuery.trim() || undefined,
+        }),
         sdk.users.getUsers(),
       ]);
 
@@ -372,16 +433,15 @@ export function useAuditLogs() {
         user_agent: "",
       }));
 
-      const totalCount = auditLogsResponse.totalPages;
-      const totalPages = Math.ceil(totalCount / pagination.pageSize);
+      const totalPages = Math.max(0, auditLogsResponse.totalPages || 0);
 
       setPagination((prev) => ({
         ...prev,
-        total: totalCount,
+        total: totalPages,
         totalPages,
       }));
 
-      return { logs, users: usersResponse, pagination: { totalCount, totalPages } };
+      return { logs, users: usersResponse, pagination: { totalPages } };
     },
     enabled: authEnabled,
     staleTime: 30 * 1000,
@@ -425,7 +485,6 @@ export function useAuditLogs() {
       ...prev,
       pageSize,
       page: 1,
-      totalPages: Math.ceil(prev.total / pageSize),
     }));
   }, []);
 
@@ -441,17 +500,62 @@ export function useAuditLogs() {
 
   const handleExportLogs = useCallback(async () => {
     toast.info("Preparing audit logs export...");
-    toast.success("Audit logs exported successfully");
-  }, []);
+    try {
+      const users = await sdk.users.getUsers();
+      const usersMap = new Map(users.map((user) => [user.id, user]));
+      const rows: Array<{
+        created_at: string;
+        action: string;
+        user_name: string;
+        details: string;
+      }> = [];
+
+      let page = 1;
+      let totalPages = 1;
+      while (page <= totalPages && rows.length < EXPORT_PAGE_CAP) {
+        const response = await fetchAuditLogPage({
+          page,
+          pageSize: 100,
+          filterByUser: customFilters.filterByUser || undefined,
+          filterByCategory: customFilters.filterByCategory || undefined,
+          filterByPastTime: customFilters.filterByPastTime || undefined,
+          q: debouncedSearchQuery.trim() || undefined,
+        });
+        totalPages = Math.max(1, response.totalPages || 1);
+        for (const log of response.auditLogs) {
+          rows.push({
+            created_at: log.created_at,
+            action: log.action,
+            user_name: usersMap.get(log.user_id)?.full_name || "Unknown User",
+            details: log.details || getActionDescription(log.action as AuditActions),
+          });
+          if (rows.length >= EXPORT_PAGE_CAP) break;
+        }
+        page += 1;
+      }
+
+      const csv = buildAuditExportCsv(rows);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "audit-logs.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Audit logs exported successfully");
+    } catch (error) {
+      console.error("Failed to export audit logs:", error);
+      toast.error("Failed to export audit logs");
+    }
+  }, [customFilters, debouncedSearchQuery]);
 
   const displayData = useMemo(() => auditLogsData?.logs || [], [auditLogsData]);
 
   const paginationInfo = useMemo(() => {
     const startItem = (pagination.page - 1) * pagination.pageSize + 1;
-    const endItem = Math.min(
-      pagination.page * pagination.pageSize,
-      pagination.total
-    );
+    const endItem = pagination.page * pagination.pageSize;
     return {
       startItem,
       endItem,

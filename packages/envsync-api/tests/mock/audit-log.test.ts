@@ -50,4 +50,32 @@ describe("GET /api/audit_log", () => {
 		});
 		expect(res.status).toBe(403);
 	});
+
+	test("q filters action, details, and message", async () => {
+		const needle = `audit-search-${crypto.randomUUID()}`;
+		await testRequest("/api/app", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: needle, description: "searchable audit app" },
+		});
+
+		const hit = await testRequest(`/api/audit_log?q=${encodeURIComponent(needle)}`, {
+			token: seed.masterUser.token,
+		});
+		expect(hit.status).toBe(200);
+		const hitBody = await hit.json<{ auditLogs: Array<{ details: string; message: string }>; totalPages: number }>();
+		expect(hitBody.auditLogs.length).toBeGreaterThan(0);
+		expect(
+			hitBody.auditLogs.every((log) =>
+				`${log.details} ${log.message}`.toLowerCase().includes(needle.toLowerCase()),
+			),
+		).toBe(true);
+
+		const miss = await testRequest("/api/audit_log?q=definitely-not-in-any-audit-row", {
+			token: seed.masterUser.token,
+		});
+		expect(miss.status).toBe(200);
+		const missBody = await miss.json<{ auditLogs: unknown[] }>();
+		expect(missBody.auditLogs).toHaveLength(0);
+	});
 });

@@ -125,10 +125,9 @@ export function AuditTable({
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
           <span>Activity Log</span>
-          {pagination.total > 0 && (
+          {pagination.totalPages > 0 && (
             <span className="text-xs text-tertiary font-normal">
-              {paginationInfo.startItem}-{paginationInfo.endItem} of{" "}
-              {pagination.total}
+              Page {pagination.page} of {pagination.totalPages}
             </span>
           )}
         </CardTitle>
