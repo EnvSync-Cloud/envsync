@@ -13,3 +13,10 @@ export {
 	mapAuditActionToAnalyticsEvent,
 	sanitizeAnalyticsProperties,
 } from "./map-audit";
+
+export {
+	POSTHOG_PUBLIC_TO_UPSTREAM,
+	mapPublicPosthogPathToUpstream,
+	rewritePosthogPublicPathname,
+	rewritePosthogRequestUrl,
+} from "./posthog-paths";

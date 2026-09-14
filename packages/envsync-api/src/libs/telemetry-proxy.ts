@@ -1,3 +1,5 @@
+import { mapPublicPosthogPathToUpstream } from "envsync-analytics";
+
 import { config } from "@/utils/env";
 
 const HOP_BY_HOP = new Set([
@@ -63,10 +65,11 @@ export function resolvePosthogUpstream(path: string): { origin: string; urlPath:
 	if (normalized === "/" || normalized === "/ready") {
 		return null;
 	}
-	if (normalized.startsWith("/static/")) {
-		return { origin: posthogAssetsOrigin(), urlPath: normalized };
+	const upstream = mapPublicPosthogPathToUpstream(normalized);
+	if (upstream.startsWith("/static/")) {
+		return { origin: posthogAssetsOrigin(), urlPath: upstream };
 	}
-	return { origin: posthogIngestOrigin(), urlPath: normalized };
+	return { origin: posthogIngestOrigin(), urlPath: upstream };
 }
 
 export function resolveObsUpstream(path: string): { origin: string; urlPath: string } | null {
