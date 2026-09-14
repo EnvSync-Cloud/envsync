@@ -6,7 +6,7 @@ test.describe("feature: webhooks", () => {
 		const webhookName = makeName("UI_WEBHOOK");
 		const webhookUrl = "https://example.com/envsync-webhook";
 
-		await page.goto("/webhooks", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/webhooks", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Webhooks" }).first()).toBeVisible();
 
 		await page.getByRole("button", { name: /Create Webhook/i }).first().click();

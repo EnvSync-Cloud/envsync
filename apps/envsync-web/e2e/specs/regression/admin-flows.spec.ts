@@ -22,7 +22,7 @@ test.describe("admin surfaces", () => {
 	});
 
 	test("opens certificate issue and revoke surfaces", async ({ page }) => {
-		await page.goto("/certificates", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/certificates", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Certificates" }).first()).toBeVisible();
 
 		await page.getByRole("button", { name: /Issue Certificate/i }).click();
@@ -38,14 +38,14 @@ test.describe("admin surfaces", () => {
 	});
 
 	test("covers teams and users management surfaces", async ({ page }) => {
-		await page.goto("/teams", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
 		await switchTeamsTab(page, "directory");
 		await page.getByTestId("teams-create").click();
 		await expect(page.getByRole("heading", { name: /Create Team|Edit Team/i }).first()).toBeVisible();
 		await page.keyboard.press("Escape");
 
-		await page.goto("/users", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
 		await switchUsersTab(page, "members");
 		await expect(page.getByTestId("users-invite-member")).toBeVisible();
 		await page.getByTestId("users-invite-member").click();

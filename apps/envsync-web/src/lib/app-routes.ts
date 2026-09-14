@@ -20,9 +20,9 @@ export const appIntegrationProviderPath = (appId: string, provider: string) =>
 export const orgPath = () => "/org";
 export const orgAccessPath = (tab?: OrgAccessTab) =>
   tab ? `/org/access/${tab}` : "/org/access";
-export const orgUsersPath = () => "/org/users";
-export const orgTeamsPath = () => "/org/teams";
-export const orgRolesPath = () => "/org/roles";
+export const orgUsersPath = () => orgAccessPath("users");
+export const orgTeamsPath = () => orgAccessPath("teams");
+export const orgRolesPath = () => orgAccessPath("roles");
 export const orgCertificatesPath = () => "/org/certificates";
 export const orgWebhooksPath = () => "/org/webhooks";
 export const orgChangeRequestsPath = () => "/org/change-requests";

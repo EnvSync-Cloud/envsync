@@ -11,7 +11,16 @@ import {
   Users,
 } from "lucide-react";
 
-import { LEGACY_REDIRECTS } from "@/lib/app-routes";
+import {
+  apiKeysPath,
+  LEGACY_REDIRECTS,
+  orgAccessPath,
+  orgCertificatesPath,
+  orgChangeRequestsPath,
+  orgSettingsPath,
+  orgWebhooksPath,
+  projectsPath,
+} from "@/lib/app-routes";
 
 import type { WebModule, WebRouteDefinition } from "./types";
 
@@ -220,23 +229,23 @@ export const coreWebModules: WebModule[] = [
       {
         label: "Projects",
         items: [
-          { id: "applications", name: "Projects", href: "/projects", icon: Database },
+          { id: "applications", name: "Projects", href: projectsPath(), icon: Database },
         ],
       },
       {
         label: "Security",
         items: [
-          { id: "apikeys", name: "API Keys", href: "/apikeys", icon: Key },
+          { id: "apikeys", name: "API Keys", href: apiKeysPath(), icon: Key },
           { id: "gpgkeys", name: "GPG Keys", href: "/gpgkeys", icon: KeyRound },
-          { id: "certificates", name: "Certificates", href: "/org/certificates", icon: ShieldCheck },
+          { id: "certificates", name: "Certificates", href: orgCertificatesPath(), icon: ShieldCheck },
         ],
       },
       {
         label: "Collaboration",
         items: [
-          { id: "access", name: "Access", href: "/org/access", icon: Users },
-          { id: "change-requests", name: "Change Requests", href: "/org/change-requests", icon: ShieldCheck },
-          { id: "webhooks", name: "Webhooks", href: "/org/webhooks", icon: Anchor },
+          { id: "access", name: "Access", href: orgAccessPath(), icon: Users },
+          { id: "change-requests", name: "Change Requests", href: orgChangeRequestsPath(), icon: ShieldCheck },
+          { id: "webhooks", name: "Webhooks", href: orgWebhooksPath(), icon: Anchor },
         ],
       },
       {
@@ -244,7 +253,7 @@ export const coreWebModules: WebModule[] = [
         items: [
           { id: "audit", name: "Activity", href: "/audit", icon: Activity },
           { id: "settings", name: "Account", href: "/settings", icon: Settings },
-          { id: "organisation", name: "Organization", href: "/organisation", icon: Globe },
+          { id: "organisation", name: "Organization", href: orgSettingsPath(), icon: Globe },
         ],
       },
     ],

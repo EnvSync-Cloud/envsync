@@ -16,6 +16,7 @@ import {
   useVerifyOrgKms,
 } from "../api/hooks";
 import { isEnterpriseUiEnabled } from "../api/client";
+import { appDetailPath, projectsPath } from "@shell/lib/app-routes";
 import { CreateKmsCredentialModal } from "../components/CreateKmsCredentialModal";
 import {
   applyKmsConfigToForm,
@@ -256,7 +257,7 @@ export default function KeyManagement() {
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
               Choose who wraps this organization&apos;s tenant key. Project BYOK stays in
               {" "}
-              <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/applications">
+              <Link className="text-emerald-600 underline-offset-2 hover:underline" to={projectsPath()}>
                 project settings
               </Link>
               {" "}
@@ -564,7 +565,7 @@ export default function KeyManagement() {
                         <td className="py-2 pr-4">
                           <Link
                             className="underline-offset-2 hover:underline"
-                            to={`/applications/${app.app_id}`}
+                            to={appDetailPath(app.app_id)}
                           >
                             {app.name}
                           </Link>

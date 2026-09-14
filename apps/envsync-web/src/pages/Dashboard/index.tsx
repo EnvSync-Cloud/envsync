@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard, type DashboardStats } from "@/hooks/useDashboard";
 import { formatLastUsed, truncateUUIDs } from "@/lib/utils";
-import { appDetailPath } from "@/lib/app-routes";
+import { apiKeysPath, appDetailPath, orgAccessPath, projectCreatePath, projectsPath } from "@/lib/app-routes";
 
 function StatValue({ value }: { value: number | null }) {
   if (value === null) {
@@ -68,19 +68,19 @@ export default function Dashboard() {
       {/* Quick actions bar */}
       <div className="flex flex-wrap items-center gap-2">
         <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          <Link to="/projects/create">
+          <Link to={projectCreatePath()}>
             <Plus className="size-4 mr-1.5" />
             Create Project
           </Link>
         </Button>
         <Button asChild size="sm" variant="outline">
-          <Link to="/org/access/users">
+          <Link to={orgAccessPath("users")}>
             <UserPlus className="size-4 mr-1.5" />
             Invite Member
           </Link>
         </Button>
         <Button asChild size="sm" variant="outline">
-          <Link to="/apikeys">
+          <Link to={apiKeysPath()}>
             <Key className="size-4 mr-1.5" />
             API Keys
           </Link>
@@ -101,7 +101,7 @@ export default function Dashboard() {
                 </Badge>
               )}
             </div>
-            <Link to="/projects" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+            <Link to={projectsPath()} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
               View all
             </Link>
           </div>
@@ -110,7 +110,7 @@ export default function Dashboard() {
               <div className="px-4 py-8 text-center">
                 <p className="text-xs text-muted-foreground">No projects yet</p>
                 {!hasProjects && (
-                  <Link to="/projects/create" className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
+                  <Link to={projectCreatePath()} className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
                     Create your first project →
                   </Link>
                 )}

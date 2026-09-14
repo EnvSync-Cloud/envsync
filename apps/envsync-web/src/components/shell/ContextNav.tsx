@@ -25,6 +25,7 @@ import {
   appPointInTimePath,
   appSecretsPath,
   appSettingsPath,
+  projectsPath,
 } from "@/lib/app-routes";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
@@ -234,7 +235,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         label: "Overview",
         items: [
           { id: "dashboard", name: "Dashboard", href: "/", icon: LayoutDashboard },
-          { id: "applications", name: "Projects", href: "/projects", icon: Database },
+          { id: "applications", name: "Projects", href: projectsPath(), icon: Database },
         ].filter((item) => allowedScopes.includes(item.id) || item.id === "dashboard"),
       },
     ];

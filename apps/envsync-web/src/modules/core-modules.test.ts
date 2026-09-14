@@ -49,6 +49,8 @@ describe("core web routes", () => {
     expect(items.some((item) => item.id === "users")).toBe(false);
     expect(items.some((item) => item.id === "teams")).toBe(false);
     expect(items.some((item) => item.id === "roles")).toBe(false);
+    expect(items.every((item) => !item.href.startsWith("/applications"))).toBe(true);
+    expect(items.every((item) => item.href !== "/org/users" && item.href !== "/users")).toBe(true);
   });
 });
 

@@ -10,7 +10,7 @@ test.describe("feature: projects", () => {
 		await editProject(page, projectName, nextName);
 		await deleteProject(page, nextName);
 
-		await page.goto("/applications", { waitUntil: "domcontentloaded" });
+		await page.goto("/projects", { waitUntil: "domcontentloaded" });
 		await expect(page.getByText(nextName)).toHaveCount(0);
 	});
 });

@@ -6,7 +6,7 @@ test.describe("feature: teams", () => {
 		const teamName = makeName("UI_TEAM");
 		const updatedName = makeName("UI_TEAM_EDITED");
 
-		await page.goto("/teams", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
 		await switchTeamsTab(page, "directory");
 

@@ -71,13 +71,13 @@ test.describe("onboarding journey from landing", () => {
 			const variableKey = uniqueName("ONBOARD_VAR");
 			const secretKey = uniqueName("ONBOARD_SECRET");
 
-			await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+			await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 			await createVariable(page, project.appId, "Development", variableKey, `${state.variableValue}`);
-			await page.goto(`/applications/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
+			await page.goto(`/projects/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
 			await createSecret(page, project.appId, "Development", secretKey, `${state.secretValue}`);
 			await setEnvironmentProtected(page, project.appId, state.environments.production, true);
 
-			await page.goto("/certificates", { waitUntil: "domcontentloaded" });
+			await page.goto("/org/certificates", { waitUntil: "domcontentloaded" });
 			await expect(page.getByRole("heading", { name: "Certificates" }).first()).toBeVisible();
 
 			await page.goto("/settings", { waitUntil: "domcontentloaded" });

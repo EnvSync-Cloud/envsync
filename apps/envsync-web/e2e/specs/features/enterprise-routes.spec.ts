@@ -84,7 +84,7 @@ test.describe("enterprise dashboard routes", () => {
 
 		const seededApp = await getAppByName(page, "Core Platform");
 		if (seededApp) {
-			await page.goto(`/applications/${seededApp.id}`, { waitUntil: "domcontentloaded" });
+			await page.goto(`/projects/${seededApp.id}`, { waitUntil: "domcontentloaded" });
 			await expect(page.getByTestId("shell-nav-applications-integrations")).toHaveCount(0);
 		}
 

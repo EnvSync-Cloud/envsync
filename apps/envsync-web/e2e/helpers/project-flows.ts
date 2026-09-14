@@ -3,6 +3,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { getUiHarnessConfig } from "./config";
 import type { JsonValue } from "./network";
 import { waitForTrackedResponse } from "./network";
+import { uiPaths } from "./paths";
 
 function expectObjectBody(body: JsonValue | null, label: string): asserts body is Record<string, JsonValue> {
 	expect(body, `${label} request body should be a JSON object`).toBeTruthy();
@@ -60,11 +61,11 @@ interface AppDetailResponse {
 }
 
 function getVariablesPath(appId: string, envTypeId: string) {
-	return `/applications/${appId}?selected=${encodeURIComponent(envTypeId)}`;
+	return uiPaths.projectVariables(appId, envTypeId);
 }
 
 function getSecretsPath(appId: string, envTypeId: string) {
-	return `/applications/${appId}/secrets?selected=${encodeURIComponent(envTypeId)}`;
+	return uiPaths.projectSecretsSelected(appId, envTypeId);
 }
 
 async function getAppDetail(page: Page, appId: string): Promise<AppDetailResponse> {
@@ -105,7 +106,7 @@ async function ensureEnvironmentTypeExists(page: Page, appId: string, envName: s
 	}
 
 	if (matchingEnvTypes.length === 1) {
-		await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+		await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 		await expect(
 			page.getByRole("heading", { name: "Manage Environment Types" })
 				.or(page.getByRole("heading", { name: "Manage Environments" }))
@@ -115,7 +116,7 @@ async function ensureEnvironmentTypeExists(page: Page, appId: string, envName: s
 		return;
 	}
 
-	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 	await expect(
 		page.getByRole("heading", { name: "Manage Environment Types" })
 			.or(page.getByRole("heading", { name: "Manage Environments" }))
@@ -155,7 +156,7 @@ export async function grantTeamProjectAccess(
 		relation: "viewer" | "editor" | "admin";
 	},
 ) {
-	await page.goto(`/applications/${appId}/access`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectAccess(appId), { waitUntil: "domcontentloaded" });
 	await switchProjectAccessTab(page, "control");
 
 	const controlPanel = page.getByTestId("project-access-panel-control");
@@ -217,7 +218,7 @@ export async function switchChangeRequestsTab(page: Page, section: "list" | "cre
 }
 
 export async function createProject(page: Page, projectName: string) {
-	await page.goto("/applications", { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projects(), { waitUntil: "domcontentloaded" });
 	await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
 	await page.getByRole("button", { name: "Create Project" }).click();
 	await expect(page.getByRole("heading", { name: "Create New Project" })).toBeVisible();
@@ -239,12 +240,12 @@ export async function createProject(page: Page, projectName: string) {
 	expectObjectBody(trackedResponse.responseBody, "Create project response");
 	expect(typeof trackedResponse.responseBody.id).toBe("string");
 	const appId = trackedResponse.responseBody.id as string;
-	await page.goto(`/applications/${appId}`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.project(appId), { waitUntil: "domcontentloaded" });
 	await expect(page).toHaveURL(new RegExp(`/projects/${escapeRegExp(appId)}(?:\\?|$)`));
 	await ensureEnvironmentTypeExists(page, appId, "Development");
 	await ensureEnvironmentTypeExists(page, appId, "Staging");
 	await ensureEnvironmentTypeExists(page, appId, "Production");
-	await page.goto(`/applications/${appId}`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.project(appId), { waitUntil: "domcontentloaded" });
 
 	return {
 		appId,
@@ -261,7 +262,7 @@ export async function openProjectCardActions(page: Page, projectName: string) {
 }
 
 export async function editProject(page: Page, projectName: string, nextName: string) {
-	await page.goto("/applications", { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projects(), { waitUntil: "domcontentloaded" });
 	await openProjectCardActions(page, projectName);
 	await page.getByRole("menuitem", { name: "Edit Project" }).click();
 	const dialog = page.getByRole("dialog");
@@ -272,7 +273,7 @@ export async function editProject(page: Page, projectName: string, nextName: str
 }
 
 export async function deleteProject(page: Page, projectName: string) {
-	await page.goto("/applications", { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projects(), { waitUntil: "domcontentloaded" });
 	await openProjectCardActions(page, projectName);
 	await page.getByRole("menuitem", { name: "Delete Project" }).click();
 	const dialog = page.getByRole("dialog");
@@ -284,7 +285,7 @@ export async function deleteProject(page: Page, projectName: string) {
 
 export async function setEnvironmentProtected(page: Page, appId: string, envName: string, isProtected = true) {
 	await ensureEnvironmentTypeExists(page, appId, envName);
-	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 	const appDetail = await getAppDetail(page, appId);
 	const envType = appDetail.env_types?.find((entry) => normalizeSection(entry.name) === normalizeSection(envName));
 	expect(envType).toBeTruthy();
@@ -321,7 +322,7 @@ export async function setEnvironmentProtected(page: Page, appId: string, envName
 			message: `Expected ${envName} protection state to persist`,
 		})
 		.toBe(isProtected);
-	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 	if (isProtected) {
 		await expect(page.getByTestId(`env-type-protected-badge-${envType!.id}`)).toBeVisible();
 	} else {
@@ -330,7 +331,7 @@ export async function setEnvironmentProtected(page: Page, appId: string, envName
 }
 
 export async function createEnvironmentType(page: Page, appId: string, envName: string) {
-	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 	await page.getByRole("button", { name: /Add Environment|Add Environment Type/ }).click();
 	const dialog = page.getByRole("dialog").last();
 	await expect(dialog.getByRole("heading", { name: /Create Environment|Add Environment|Create Environment Type/ })).toBeVisible();
@@ -341,7 +342,7 @@ export async function createEnvironmentType(page: Page, appId: string, envName: 
 }
 
 export async function deleteEnvironmentType(page: Page, appId: string, envName: string) {
-	await page.goto(`/applications/${appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(uiPaths.projectEnvironments(appId), { waitUntil: "domcontentloaded" });
 	const appDetail = await getAppDetail(page, appId);
 	const envType = appDetail.env_types?.find((entry) => normalizeSection(entry.name) === normalizeSection(envName));
 	expect(envType).toBeTruthy();

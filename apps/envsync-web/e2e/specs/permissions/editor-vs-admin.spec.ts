@@ -8,10 +8,10 @@ test.describe("permissions: editor vs admin", () => {
 		const adminPage = await adminContext.newPage();
 
 		try {
-			await editorPage.goto("/teams", { waitUntil: "domcontentloaded" });
+			await editorPage.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 			await expect(editorPage.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
 
-			await adminPage.goto("/teams", { waitUntil: "domcontentloaded" });
+			await adminPage.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 			await expect(adminPage.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
 			await expect(adminPage.getByTestId("teams-create")).toBeVisible();
 

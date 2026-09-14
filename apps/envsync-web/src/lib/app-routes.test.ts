@@ -15,6 +15,8 @@ import {
   orgAccessPath,
   orgCertificatesPath,
   orgIntegrationsPath,
+  orgRolesPath,
+  orgTeamsPath,
   orgUsersPath,
 } from "./app-routes";
 
@@ -26,7 +28,7 @@ describe("app routes", () => {
     expect(appEnvironmentsPath("app-1")).toBe("/projects/app-1/environments");
     expect(appSettingsPath("app-1")).toBe("/projects/app-1/settings");
     expect(appServiceTokensPath("app-1")).toBe("/projects/app-1/settings/service-tokens");
-    expect(orgUsersPath()).toBe("/org/users");
+    expect(orgUsersPath()).toBe("/org/access/users");
     expect(orgAccessPath()).toBe("/org/access");
     expect(orgAccessPath("users")).toBe("/org/access/users");
     expect(orgAccessPath("teams")).toBe("/org/access/teams");
@@ -61,6 +63,9 @@ describe("app routes", () => {
     expect(LEGACY_REDIRECTS.some((item) => item.path.startsWith("organisation"))).toBe(false);
     expect(appIntegrationsPath("x")).toBe("/projects/x/integrations");
     expect(orgIntegrationsPath()).toBe("/organisation/integrations");
+    expect(orgUsersPath()).toBe(orgAccessPath("users"));
+    expect(orgTeamsPath()).toBe(orgAccessPath("teams"));
+    expect(orgRolesPath()).toBe(orgAccessPath("roles"));
   });
 
   test("substitutes redirect params", () => {

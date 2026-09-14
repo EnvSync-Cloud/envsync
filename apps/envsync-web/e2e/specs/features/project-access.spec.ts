@@ -6,7 +6,7 @@ test.describe("feature: project access", () => {
 		const project = await createProject(page, makeName("UI_ACCESS_APP"));
 		const teamName = makeName("UI_ACCESS_TEAM");
 
-		await page.goto("/teams", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 		await switchTeamsTab(page, "directory");
 		await page.getByTestId("teams-create").click();
 		const teamDialog = page.getByRole("dialog").last();

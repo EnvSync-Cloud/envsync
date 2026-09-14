@@ -1,5 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
+import { uiPaths } from "./paths";
+
 export async function gotoPit(
 	page: Page,
 	appId: string,
@@ -7,8 +9,8 @@ export async function gotoPit(
 	kind: "variables" | "secrets" = "variables"
 ) {
 	const basePath = kind === "secrets"
-		? `/applications/pit/${appId}/secrets`
-		: `/applications/pit/${appId}`;
+		? uiPaths.projectPitSecrets(appId)
+		: uiPaths.projectPit(appId);
 	await page.goto(`${basePath}?env=${encodeURIComponent(envName.toLowerCase())}`, {
 		waitUntil: "domcontentloaded",
 	});

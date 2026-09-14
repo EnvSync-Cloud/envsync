@@ -26,7 +26,7 @@ test.describe("UI smoke", () => {
 		await updateVariable(page, appId, variableEnvTypeId, variableKey, `${variableValue}_UPDATED`);
 		await deleteVariable(page, appId, variableEnvTypeId, variableKey);
 
-		await page.goto(`/applications/${appId}/secrets`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${appId}/secrets`, { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("link", { name: projectName })).toBeVisible();
 		const secretKey = makeName("UI_SMOKE_SECRET");
 		const secretValue = makeName("SECRET");
@@ -34,7 +34,7 @@ test.describe("UI smoke", () => {
 		await updateSecret(page, appId, secretEnvTypeId, secretKey, `${secretValue}_UPDATED`);
 		await deleteSecret(page, appId, secretEnvTypeId, secretKey);
 
-		await page.goto("/certificates", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/certificates", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Certificates" }).first()).toBeVisible();
 
 		await page.goto("/settings", { waitUntil: "domcontentloaded" });
@@ -52,7 +52,7 @@ test.describe("UI smoke", () => {
 	test("reuses saved session and can reach a seeded project", async ({ page }) => {
 		const seededApp = await getAppByName(page, "Core Platform");
 		expect(seededApp).toBeTruthy();
-		await page.goto(`/applications/${seededApp!.id}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${seededApp!.id}`, { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("link", { name: "Core Platform" })).toBeVisible();
 	});
 });

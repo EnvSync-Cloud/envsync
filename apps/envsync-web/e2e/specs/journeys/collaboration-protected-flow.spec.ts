@@ -17,7 +17,7 @@ test.describe("collaboration protected environment journey", () => {
 		const project = await createProject(page, state.project.name);
 		await setEnvironmentProtected(page, project.appId, "Production", true);
 
-		await page.goto("/users", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
 		await switchUsersTab(page, "members");
 		await page.getByTestId("users-invite-member").click();
 		const inviteDialog = page.getByRole("dialog");
@@ -67,7 +67,7 @@ test.describe("collaboration protected environment journey", () => {
 
 		await ensureAuthenticatedPage(page, "master");
 		const resolvedTeamName = state.project.teamName;
-		await page.goto("/teams", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 		await switchTeamsTab(page, "directory");
 		await page.getByTestId("teams-create").click();
 		const teamDialog = page.getByRole("dialog");
@@ -120,14 +120,14 @@ test.describe("collaboration protected environment journey", () => {
 		});
 		const memberPage = await memberContext.newPage();
 		try {
-			await memberPage.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+			await memberPage.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 			await expect(memberPage.getByRole("link", { name: state.project.name })).toBeVisible();
 
 			const appDetail = await getAppDetail(memberPage, project.appId);
 			const productionEnv = appDetail.env_types?.find((env) => env.name.toLowerCase() === "production");
 			expect(productionEnv).toBeTruthy();
 
-			await memberPage.goto(`/applications/${project.appId}?selected=${productionEnv!.id}`, { waitUntil: "domcontentloaded" });
+			await memberPage.goto(`/projects/${project.appId}?selected=${productionEnv!.id}`, { waitUntil: "domcontentloaded" });
 			await memberPage.getByTestId("project-variables-primary-action").click();
 			const blockedDialog = memberPage.getByRole("dialog");
 			await blockedDialog.getByRole("combobox").click();
@@ -144,14 +144,14 @@ test.describe("collaboration protected environment journey", () => {
 			const directMutation = await blockedResponse;
 			expect(directMutation.status()).toBeGreaterThanOrEqual(400);
 
-			await memberPage.goto("/change-requests", { waitUntil: "domcontentloaded" });
+			await memberPage.goto("/org/change-requests", { waitUntil: "domcontentloaded" });
 			await expect(memberPage.getByRole("heading", { name: "Change Requests" })).toBeVisible();
 		} finally {
 			await memberContext.close();
 		}
 
 		// Keep PiT and rollback deterministic by using editable development mutations.
-		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 		const devEnvTypeId = await createVariable(page, project.appId, "Development", state.variableKey, state.variableValue);
 		await updateVariable(page, project.appId, devEnvTypeId, state.variableKey, state.updatedVariableValue);
 

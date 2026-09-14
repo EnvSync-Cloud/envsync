@@ -6,11 +6,11 @@ test.describe("permissions: viewer restrictions", () => {
 		const context = await roleFactory("viewer");
 		const page = await context.newPage();
 	try {
-			await page.goto("/teams", { waitUntil: "domcontentloaded" });
+			await page.goto("/org/access/teams", { waitUntil: "domcontentloaded" });
 			await expect(page.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
 			await expectLocatorMissing(page.getByTestId("teams-create"));
 
-			await page.goto("/users", { waitUntil: "domcontentloaded" });
+			await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
 			await expect(page.getByRole("heading", { name: "Users" }).first()).toBeVisible();
 			await expectLocatorMissing(page.getByTestId("users-invite-member"));
 

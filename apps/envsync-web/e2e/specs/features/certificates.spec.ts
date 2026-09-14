@@ -39,7 +39,7 @@ test.describe("feature: certificates", () => {
 	test("opens issue/revoke certificate flows", async ({ page }) => {
 		const targetEmail = "editor-ui@envsync.local";
 
-		await page.goto("/certificates", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/certificates", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Certificates" }).first()).toBeVisible();
 
 		const issueButton = page.getByRole("button", { name: /Issue Certificate/i }).first();
