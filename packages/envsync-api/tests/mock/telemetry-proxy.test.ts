@@ -26,6 +26,14 @@ describe("telemetry proxy path rules", () => {
 			origin: posthogAssetsOrigin(),
 			urlPath: "/static/array.js",
 		});
+		expect(resolvePosthogUpstream("/cfg/")).toEqual({
+			origin: posthogIngestOrigin(),
+			urlPath: "/flags/",
+		});
+		expect(resolvePosthogUpstream("/a/array.js")).toEqual({
+			origin: posthogAssetsOrigin(),
+			urlPath: "/static/array.js",
+		});
 		expect(resolvePosthogUpstream("/")).toBeNull();
 	});
 

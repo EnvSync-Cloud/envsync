@@ -8,6 +8,7 @@ import {
 	renderKeycloakRealm,
 	renderNginxConf,
 	renderNginxVpnConf,
+	renderEnvFile,
 	renderOtelAgentConfig,
 	renderStack,
 	renderTraefikDynamicConfig,
@@ -261,6 +262,12 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(frontendRuntime).toContain("\"publicSignupEnabled\": false");
 		expect(frontendRuntime).toContain("https://t.enterprise.example.com/ph");
 		expect(frontendRuntime).toContain("https://t.enterprise.example.com/obs");
+	});
+
+	test("emits public API_URL so SAML SP metadata is not localhost", () => {
+		const envFile = renderEnvFile(buildRuntimeEnv(config, generated));
+		expect(envFile).toContain("API_URL=https://api.enterprise.example.com");
+		expect(envFile).not.toContain("API_URL=http://localhost");
 	});
 });
 

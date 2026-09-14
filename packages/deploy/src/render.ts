@@ -311,6 +311,7 @@ export function buildRuntimeEnv(
 		OPENFGA_STORE_ID: generated.openfga.store_id,
 		OPENFGA_MODEL_ID: generated.openfga.model_id,
 		OPENFGA_DB_PASSWORD: generated.secrets.openfga_db_password,
+		API_URL: publicHttpsUrl(config, hosts.api),
 		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.api, "/api/v1/manage"),
 		CLICKSTACK_OPERATOR_EMAIL: generated.clickstack.operator_email,
 		CLICKSTACK_OPERATOR_PASSWORD: generated.clickstack.operator_password,

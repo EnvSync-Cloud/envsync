@@ -1,4 +1,5 @@
 import posthog from "posthog-js";
+import { rewritePosthogRequestUrl } from "envsync-analytics";
 
 import { runtimeConfig } from "@/utils/runtime-config";
 
@@ -16,6 +17,7 @@ export function initPostHog(): void {
   posthog.init(key, {
     api_host: host,
     ui_host: import.meta.env.VITE_POSTHOG_UI_HOST || "https://eu.posthog.com",
+    rewriteRequestPath: rewritePosthogRequestUrl,
     autocapture: false,
     capture_pageview: false,
     capture_pageleave: true,

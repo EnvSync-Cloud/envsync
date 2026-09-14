@@ -1777,9 +1777,11 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
 		logInfo(`Setup token fingerprint: ${orgSetup.setupTokenFingerprint(setupToken)} (${SETUP_TOKEN_FILE})`);
 	}
-	if (generated.secrets.minikms_session_signing_key) {
-		writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o600);
+	if (!generated.secrets.minikms_session_signing_key) {
+		generated.secrets.minikms_session_signing_key = generateMinikmsSessionSigningKey();
 	}
+	// 0644: Swarm bind-mounts keep host uid; miniKMS does not run as root.
+	writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o644);
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
 	writeFileMaybe(
 		INTERNAL_CONFIG_JSON,
@@ -3658,6 +3660,7 @@ async function cmdDeploy() {
 		activateFrontendReleaseForState(config, currentState, config.release.version);
 		deployRenderedStack(config, "steady");
 	}
+	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "keycloak", getHealth: services => serviceHealth(services, `${config.services.stack_name}_keycloak`) },

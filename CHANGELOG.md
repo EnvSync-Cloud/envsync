@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.11
+
+### Fixed
+
+- SAML SP URLs use public `API_URL` (`https://api.<root>`) instead of `http://localhost:4000`.
+- PostHog browser calls use first-party paths (`/ph/cfg` not `/ph/flags`) so ad blockers do not drop flags.
+- Deploy always writes the miniKMS session signing key (mode 0644) and runs miniKMS migration 003 on upgrade.
+
+---
+
 ## 0.20.10
 
 ### Fixed
