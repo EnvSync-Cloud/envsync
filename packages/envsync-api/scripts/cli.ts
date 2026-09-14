@@ -795,14 +795,17 @@ async function ensureSeededSecrets(
 		});
 
 		if (!existing) {
-			await SecretService.createSecret({
-				key: definition.key,
-				value: definition.value,
-				env_type_id: envType.id,
-				app_id: app.id,
-				org_id: orgId,
-				user_id: userId,
-			});
+			await SecretService.createSecret(
+				{
+					key: definition.key,
+					value: definition.value,
+					env_type_id: envType.id,
+					app_id: app.id,
+					org_id: orgId,
+					user_id: userId,
+				},
+				{ allowProtected: true },
+			);
 			await SecretStorePiTService.createSecretStorePiT({
 				org_id: orgId,
 				app_id: app.id,
@@ -947,14 +950,17 @@ async function verifySeededVaultRoundTrip(
 	const key = `__seed_vault_probe_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 	const value = `seed-probe-${Date.now()}`;
 
-	await EnvService.createEnv({
-		key,
-		value,
-		env_type_id: envTypeId,
-		app_id: appId,
-		org_id: orgId,
-		user_id: userId,
-	});
+	await EnvService.createEnv(
+		{
+			key,
+			value,
+			env_type_id: envTypeId,
+			app_id: appId,
+			org_id: orgId,
+			user_id: userId,
+		},
+		{ allowProtected: true },
+	);
 
 	try {
 		const roundTrip = await EnvService.getEnv({
@@ -971,13 +977,16 @@ async function verifySeededVaultRoundTrip(
 			);
 		}
 	} finally {
-		await EnvService.deleteEnv({
-			key,
-			app_id: appId,
-			env_type_id: envTypeId,
-			org_id: orgId,
-			user_id: userId,
-		}).catch(() => {});
+		await EnvService.deleteEnv(
+			{
+				key,
+				app_id: appId,
+				env_type_id: envTypeId,
+				org_id: orgId,
+				user_id: userId,
+			},
+			{ allowProtected: true },
+		).catch(() => {});
 	}
 }
 

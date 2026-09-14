@@ -9,6 +9,8 @@ import { orNotFound } from "@/libs/errors";
 import { SecretKeyGenerator } from "sk-keygen";
 
 function hashApiKey(key: string) {
+	// Cache/lookup fingerprint for an API key, not a password KDF.
+	// codeql[js/insufficient-password-hash]
 	return createHash("sha256").update(key).digest("hex");
 }
 

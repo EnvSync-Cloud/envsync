@@ -48,7 +48,7 @@ Prefer **Organization** in product UI; org create is `POST /auth/create-organiza
 ## Runtimes
 
 - Bun 1.3+ (TS packages, package manager)
-- Go 1.24+ (CLI)
+- Go 1.25+ (CLI)
 - Node 18+ (compatibility)
 
 ## Package manager

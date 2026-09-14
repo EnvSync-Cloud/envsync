@@ -32,7 +32,7 @@ jobs:
       - name: Setup Go toolchain
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache-dependency-path: packages/envsync-cli/go.sum
       - name: Build CLI binary
         run: go build -ldflags="-s -w -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=https://api.envsync.cloud -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.telemetryURL=https://t.envsync.cloud/obs -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry.version=ci" -o /dev/null ./cmd/cli/main.go
@@ -93,6 +93,7 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     env:
+      ENVSYNC_EDITION: enterprise
       ENVSYNC_LICENSE_SERVER_URL: "https://license.envsync.cloud"
       ENVSYNC_E2E_LICENSE_KEY: ${{ secrets.ENVSYNC_E2E_LICENSE_KEY }}
     steps:
@@ -102,7 +103,7 @@ jobs:
       - name: Setup Go toolchain
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache-dependency-path: packages/envsync-cli/go.sum
       - run: bun i
 
@@ -123,6 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
+      ENVSYNC_EDITION: enterprise
       DB_AUTO_MIGRATE: "true"
       VITE_HYPERDX_DISABLED: "true"
       VITE_OTEL_SDK_DISABLED: "true"
@@ -156,6 +158,7 @@ jobs:
           cat packages/envsync-api/.env.e2e.test >> .env.ui-e2e
           printf '\nDATABASE_NAME=envsync_e2e_test\n' >> .env.ui-e2e
           printf 'DB_AUTO_MIGRATE=true\n' >> .env.ui-e2e
+          printf 'ENVSYNC_EDITION=enterprise\n' >> .env.ui-e2e
 
       - name: Start API and frontend apps
         run: |

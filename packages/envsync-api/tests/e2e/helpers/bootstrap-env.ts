@@ -60,6 +60,8 @@ export function ensureE2EEnv(): void {
 		MINIKMS_TLS_ENABLED: "false",
 		LANDING_PAGE_URL: process.env.LANDING_PAGE_URL ?? "http://localhost:8002",
 		DASHBOARD_URL: process.env.DASHBOARD_URL ?? "http://app.lvh.me:8001",
+		ENVSYNC_EDITION: process.env.ENVSYNC_EDITION ?? "enterprise",
+		API_URL: process.env.API_URL ?? "http://api.lvh.me:4000",
 	});
 }
 
