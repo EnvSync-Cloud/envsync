@@ -20,7 +20,7 @@ function hostedRuntimeConfigPlugin(): Plugin {
       const proto = apiUrl.protocol;
       const apiBase = api.replace(/\/$/, "");
       const track = `${proto}//t.${root}`;
-      const obs = process.env.VITE_HYPERDX_URL || process.env.VITE_OTEL_ENDPOINT || `${track}/obs`;
+      const otel = `${track}/obs`;
       const config = {
         apiBaseUrl: apiBase,
         appBaseUrl: `${proto}//app.${root}`,
@@ -34,8 +34,8 @@ function hostedRuntimeConfigPlugin(): Plugin {
         managementEnabled: true,
         deploymentMode: "hosted",
         canCreateOrganization: true,
-        otelEndpoint: process.env.VITE_OTEL_ENDPOINT || obs,
-        hyperdxUrl: process.env.VITE_HYPERDX_URL || obs,
+        otelEndpoint: otel,
+        hyperdxUrl: otel,
         hyperdxApiKey: process.env.VITE_HYPERDX_API_KEY || undefined,
         hyperdxDisabled: process.env.VITE_HYPERDX_DISABLED === "true",
         posthogKey: process.env.VITE_POSTHOG_KEY || process.env.VITE_POSTHOG_PROJECT_TOKEN || undefined,
