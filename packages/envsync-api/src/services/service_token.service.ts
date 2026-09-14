@@ -67,7 +67,20 @@ export function parseServiceTokenScopes(
 	}
 
 	return scopes.map(entry => {
-		const scope = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+			throw new ValidationError("Service token scopes are missing or invalid");
+		}
+		const scope = entry as Record<string, unknown>;
+		if (scope.path !== undefined && typeof scope.path !== "string") {
+			throw new ValidationError("Service token scopes are missing or invalid");
+		}
+		if (
+			scope.env_type_id !== undefined &&
+			scope.env_type_id !== null &&
+			typeof scope.env_type_id !== "string"
+		) {
+			throw new ValidationError("Service token scopes are missing or invalid");
+		}
 		return {
 			env_type_id: typeof scope.env_type_id === "string" ? scope.env_type_id : null,
 			path: normalizeServiceTokenPath(typeof scope.path === "string" ? scope.path : "/"),
@@ -118,10 +131,9 @@ export class ServiceTokenService {
 		const token = this.generateToken();
 		const token_hash = hashToken(token);
 		const expires_at = new Date(Date.now() + (expires_in_days ?? 90) * 24 * 60 * 60 * 1000);
-		const normalizedScopes = parseServiceTokenScopes(
-			scopes ?? [{ env_type_id: env_type_id ?? null, path: "/" }],
-			env_type_id ?? null,
-		);
+		const normalizedScopes = parseServiceTokenScopes(scopes, env_type_id ?? null, {
+			defaultRoot: scopes === undefined,
+		});
 		const uniqueEnvTypeIds = [
 			...new Set(normalizedScopes.map(scope => scope.env_type_id).filter((id): id is string => Boolean(id))),
 		];
@@ -345,10 +357,14 @@ export class ServiceTokenService {
 
 			if (!row) return null;
 
-			return {
-				...row,
-				scopes: parseServiceTokenScopes(row.scopes, row.env_type_id),
-			};
+			try {
+				return {
+					...row,
+					scopes: parseServiceTokenScopes(row.scopes, row.env_type_id),
+				};
+			} catch {
+				return null;
+			}
 		});
 
 		if (!record || !this.isCurrentlyValid(record)) return null;
@@ -378,7 +394,12 @@ export class ServiceTokenService {
 		envTypeId: string,
 		path: string,
 	): boolean => {
-		const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
+		let scopes: ServiceTokenScope[];
+		try {
+			scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
+		} catch {
+			return false;
+		}
 		const requested = normalizeServiceTokenPath(path);
 
 		return scopes.some(scope => {
@@ -392,19 +413,27 @@ export class ServiceTokenService {
 		token: { scopes?: unknown; env_type_id?: string | null },
 		envTypeId: string,
 	): boolean => {
-		const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
-		return scopes.some(scope => !scope.env_type_id || scope.env_type_id === envTypeId);
+		try {
+			const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
+			return scopes.some(scope => !scope.env_type_id || scope.env_type_id === envTypeId);
+		} catch {
+			return false;
+		}
 	};
 
 	public static hasRootPathScope = (
 		token: { scopes?: unknown; env_type_id?: string | null },
 		envTypeId: string,
 	): boolean => {
-		const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
-		return scopes.some(scope => {
-			if (scope.env_type_id && scope.env_type_id !== envTypeId) return false;
-			return scope.path === "/";
-		});
+		try {
+			const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
+			return scopes.some(scope => {
+				if (scope.env_type_id && scope.env_type_id !== envTypeId) return false;
+				return scope.path === "/";
+			});
+		} catch {
+			return false;
+		}
 	};
 
 	public static filterKeysByScope = <T extends { key: string }>(

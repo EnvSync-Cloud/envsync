@@ -196,7 +196,7 @@ export class ApiKeyService {
 				db
 					.selectFrom("api_keys")
 					.where("key", "=", api_key)
-					.select(["id", "user_id", "org_id", "is_active", "description", "last_used_at", "created_at", "updated_at"])
+					.select(["id", "user_id", "org_id", "is_active"])
 					.executeTakeFirstOrThrow(),
 				"API Key",
 			);

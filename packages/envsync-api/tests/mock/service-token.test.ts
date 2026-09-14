@@ -397,9 +397,15 @@ describe("service token path scopes", () => {
 		expect(() => parseServiceTokenScopes([], null)).toThrow("missing or invalid");
 		expect(() => parseServiceTokenScopes("not-json", null)).toThrow("not valid JSON");
 		expect(() => parseServiceTokenScopes({}, null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes([null], null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes(["/"], null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes([{ path: 1 }], null)).toThrow("missing or invalid");
 		expect(parseServiceTokenScopes(undefined, "env-1", { defaultRoot: true })).toEqual([
 			{ env_type_id: "env-1", path: "/" },
 		]);
+		expect(ServiceTokenService.isPathAllowed({ scopes: "not-json" }, "env-1", "/foo")).toBe(false);
+		expect(ServiceTokenService.hasEnvTypeScope({ scopes: [] }, "env-1")).toBe(false);
+		expect(ServiceTokenService.hasRootPathScope({ scopes: [null] }, "env-1")).toBe(false);
 	});
 
 	test("classifies env/secret route tails, not key names that contain those words", () => {

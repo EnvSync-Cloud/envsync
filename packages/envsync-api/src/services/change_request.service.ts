@@ -502,6 +502,12 @@ export class ChangeRequestService {
 			.where("id", "=", request.id)
 			.where("org_id", "=", org_id)
 			.where("status", "=", "pending")
+			.where(eb =>
+				eb.or([
+					eb("reviewed_by_user_id", "is", null),
+					eb("reviewed_by_user_id", "=", reviewer_user_id),
+				]),
+			)
 			.returning("id")
 			.executeTakeFirst();
 		if (!rejected) {
@@ -547,6 +553,7 @@ export class ChangeRequestService {
 			.where("id", "=", id)
 			.where("org_id", "=", org_id)
 			.where("status", "=", "pending")
+			.where("reviewed_by_user_id", "is", null)
 			.returning("id")
 			.executeTakeFirst();
 		if (!cancelled) {
