@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.10
+
+### Fixed
+
+- Enterprise/OSS API images include `envsync-analytics` so migrate and boot can resolve the workspace package.
+
+---
+
 ## 0.20.9
 
 ### Fixed
