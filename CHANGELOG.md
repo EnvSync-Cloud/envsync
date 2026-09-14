@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.9
+
+### Fixed
+
+- miniKMS `sha-9ffbf53` gets a session signing key so it can bind `:50051` (CI `waitForMiniKMS` and Swarm boot).
+
+---
+
 ## 0.20.8
 
 ### Added

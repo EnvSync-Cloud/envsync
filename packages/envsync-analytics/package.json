@@ -1,6 +1,6 @@
 {
   "name": "envsync-analytics",
-  "version": "0.20.8",
+  "version": "0.20.9",
   "description": "Shared MIT product-analytics event catalog (PostHog names + audit mapping)",
   "type": "module",
   "license": "MIT",
