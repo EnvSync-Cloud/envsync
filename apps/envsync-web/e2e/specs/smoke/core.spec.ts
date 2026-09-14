@@ -42,7 +42,11 @@ test.describe("UI smoke", () => {
 		await expect(page.getByTestId("my-certs-status-row")).toBeVisible();
 
 		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
-		await expect(page.getByText("Organization Settings").or(page.getByText("Organisation Settings"))).toBeVisible();
+		await expect(
+			page.getByRole("heading", { name: "Organization Settings", exact: true }).or(
+				page.getByRole("heading", { name: "Organisation Settings", exact: true }),
+			),
+		).toBeVisible();
 	});
 
 	test("reuses saved session and can reach a seeded project", async ({ page }) => {

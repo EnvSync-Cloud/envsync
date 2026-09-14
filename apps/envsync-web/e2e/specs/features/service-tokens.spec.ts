@@ -49,8 +49,9 @@ test.describe("feature: service tokens", () => {
 		await page.getByTestId("reveal-service-token-close").click();
 
 		const tokenRow = page.locator("tr").filter({ hasText: tokenName });
+		const tokenTable = page.getByRole("table");
 		await expect(tokenRow).toHaveCount(1);
-		await expect(tokenRow).not.toContainText(createdToken);
+		await expect(tokenTable).not.toContainText(createdToken);
 		await expect(page.getByTestId("reveal-service-token-dialog")).toBeHidden();
 
 		page.once("dialog", (dialog) => dialog.accept());
@@ -72,8 +73,8 @@ test.describe("feature: service tokens", () => {
 		expect(rotatedToken).not.toBe(createdToken);
 		await page.getByTestId("reveal-service-token-close").click();
 		await expect(tokenRow).toHaveCount(2);
-		await expect(tokenRow).not.toContainText(createdToken);
-		await expect(tokenRow).not.toContainText(rotatedToken);
+		await expect(tokenTable).not.toContainText(createdToken);
+		await expect(tokenTable).not.toContainText(rotatedToken);
 
 		page.once("dialog", (dialog) => dialog.accept());
 		const firstDelete = waitForTrackedResponse(page, {
