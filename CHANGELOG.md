@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.20.8
+
+### Added
+
+- PostHog product analytics (browser + API audit outcomes). HyperDX stays for traces/replay.
+- First-party ingest proxy on the API: `t.<domain>/ph/*` → PostHog, `t.<domain>/obs/v1/{traces,logs,metrics}` → OTEL.
+
+### Changed
+
+- Dashboard and landing send analytics to `https://t.<domain>/ph` (not `eu.i.posthog.com`).
+- Default PostHog ingest region is EU.
+
+---
+
 ## 0.20.7
 
 ### Fixed

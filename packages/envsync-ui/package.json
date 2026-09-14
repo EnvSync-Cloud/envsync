@@ -1,6 +1,6 @@
 {
   "name": "envsync-ui",
-  "version": "0.20.7",
+  "version": "0.20.8",
   "description": "EnvSync design tokens, Tailwind preset, and shared UI primitives (MIT)",
   "type": "module",
   "license": "MIT",
