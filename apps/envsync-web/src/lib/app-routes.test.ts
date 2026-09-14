@@ -8,6 +8,8 @@ import {
   appEnvironmentsPath,
   appIntegrationsPath,
   appPointInTimePath,
+  appDynamicSecretsPath,
+  appRotationPath,
   appServiceTokensPath,
   appSettingsPath,
   applyRouteParams,
@@ -16,6 +18,8 @@ import {
   orgCertificatesPath,
   orgIntegrationsPath,
   orgRolesPath,
+  orgLogForwardingPath,
+  orgOidcPath,
   orgSettingsPath,
   orgTeamsPath,
   orgUsersPath,
@@ -29,6 +33,10 @@ describe("app routes", () => {
     expect(appEnvironmentsPath("app-1")).toBe("/projects/app-1/environments");
     expect(appSettingsPath("app-1")).toBe("/projects/app-1/settings");
     expect(appServiceTokensPath("app-1")).toBe("/projects/app-1/settings/service-tokens");
+    expect(appRotationPath("app-1")).toBe("/projects/app-1/settings/rotation");
+    expect(appDynamicSecretsPath("app-1")).toBe("/projects/app-1/settings/dynamic-secrets");
+    expect(orgOidcPath()).toBe("/organisation/oidc");
+    expect(orgLogForwardingPath()).toBe("/organisation/log-forwarding");
     expect(orgUsersPath()).toBe("/org/access/users");
     expect(orgAccessPath()).toBe("/org/access");
     expect(orgAccessPath("users")).toBe("/org/access/users");

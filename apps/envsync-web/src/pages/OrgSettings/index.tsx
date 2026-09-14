@@ -51,10 +51,12 @@ export const OrgSettings = () => {
   const showSync = allowedScopes.includes("organisation-sync");
   const showLicense = allowedScopes.includes("organisation-license");
   const showSso = allowedScopes.includes("organisation-sso");
+  const showOidc = allowedScopes.includes("organisation-oidc");
+  const showLogForwarding = allowedScopes.includes("organisation-log-forwarding");
   const showKeys = allowedScopes.includes("organisation-keys");
   const showEnterpriseCard =
     runtimeConfig.edition === "enterprise"
-    && (showIntegrations || showSync || showLicense || showSso || showKeys);
+    && (showIntegrations || showSync || showLicense || showSso || showOidc || showLogForwarding || showKeys);
 
   if (isLoading) {
     return <OrgSettingsLoadingPage />;
@@ -76,20 +78,22 @@ export const OrgSettings = () => {
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-200/80">Enterprise</p>
                   <h2 className="mt-2 text-xl font-semibold text-foreground">
-                    {showIntegrations || showSync || showSso || showKeys
+                    {showIntegrations || showSync || showSso || showOidc || showKeys || showLogForwarding
                       ? "Enterprise organization settings"
                       : "License"}
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                    {showSso || showIntegrations || showSync || showKeys
+                    {showSso || showOidc || showIntegrations || showSync || showKeys || showLogForwarding
                       ? [
                           "Manage",
                           [
                             showSso && "SSO",
+                            showOidc && "workload OIDC",
                             (showIntegrations || showSync) && "provider connections",
                             showKeys && "organization keys",
                             (showIntegrations || showSync) && "org secrets",
                             showSync && "sync diagnostics",
+                            showLogForwarding && "log forwarding",
                             showLicense && "license activation",
                           ].filter(Boolean).join(", "),
                           "in the dashboard (no separate /manage SPA).",
@@ -120,6 +124,22 @@ export const OrgSettings = () => {
                       className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
                     >
                       SSO
+                    </Link>
+                  )}
+                  {showOidc && (
+                    <Link
+                      to="/organisation/oidc"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      Workload OIDC
+                    </Link>
+                  )}
+                  {showLogForwarding && (
+                    <Link
+                      to="/organisation/log-forwarding"
+                      className="inline-flex items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                    >
+                      Log forwarding
                     </Link>
                   )}
                   {showKeys && (

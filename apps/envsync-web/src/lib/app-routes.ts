@@ -13,6 +13,10 @@ export const appApprovalsPath = (appId: string) => `/projects/${appId}/approvals
 export const appSettingsPath = (appId: string) => `/projects/${appId}/settings`;
 export const appServiceTokensPath = (appId: string) =>
   `/projects/${appId}/settings/service-tokens`;
+export const appRotationPath = (appId: string) =>
+  `/projects/${appId}/settings/rotation`;
+export const appDynamicSecretsPath = (appId: string) =>
+  `/projects/${appId}/settings/dynamic-secrets`;
 export const appPointInTimePath = (appId: string) => `/projects/${appId}/pit`;
 export const appIntegrationsPath = (appId: string) => `/projects/${appId}/integrations`;
 export const appIntegrationProviderPath = (appId: string, provider: string) =>
@@ -28,6 +32,8 @@ export const orgWebhooksPath = () => "/org/webhooks";
 export const orgChangeRequestsPath = () => "/org/change-requests";
 export const orgSettingsPath = () => "/org";
 export const orgIntegrationsPath = () => "/organisation/integrations";
+export const orgOidcPath = () => "/organisation/oidc";
+export const orgLogForwardingPath = () => "/organisation/log-forwarding";
 export const apiKeysPath = () => "/apikeys";
 
 export const PALETTE_ORG_LINKS = [

@@ -1,4 +1,4 @@
-import { Fingerprint, KeyRound, Link2, LockKeyhole, Workflow } from "lucide-react";
+import { Fingerprint, KeyRound, Link2, LockKeyhole, ScrollText, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
 
@@ -156,6 +156,110 @@ export const enterpriseWebModules: WebModule[] = [
     settingsSections: [
       { id: "sso", label: "SSO" },
     ],
+  },
+  {
+    name: "enterprise-oidc",
+    requiredFeature: "oidc",
+    routes: [
+      {
+        id: "organisation-oidc",
+        layout: "root",
+        path: "organisation/oidc",
+        loadComponent: () => import("./pages/OrgOidc"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-oidc",
+            name: "Workload OIDC",
+            href: "/organisation/oidc",
+            icon: Fingerprint,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-oidc": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("oidc")),
+    },
+    settingsSections: [
+      { id: "oidc", label: "Workload OIDC" },
+    ],
+  },
+  {
+    name: "enterprise-log-forwarding",
+    requiredFeature: "log_forwarding",
+    routes: [
+      {
+        id: "organisation-log-forwarding",
+        layout: "root",
+        path: "organisation/log-forwarding",
+        loadComponent: () => import("./pages/OrgLogForwarding"),
+      },
+    ],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-log-forwarding",
+            name: "Log forwarding",
+            href: "/organisation/log-forwarding",
+            icon: ScrollText,
+          },
+        ],
+      },
+    ],
+    scopeRules: {
+      "organisation-log-forwarding": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("log_forwarding")),
+    },
+    settingsSections: [
+      { id: "log-forwarding", label: "Log forwarding" },
+    ],
+  },
+  {
+    name: "enterprise-rotation",
+    requiredFeature: "rotation",
+    routes: [
+      {
+        id: "applications-rotation",
+        layout: "root",
+        path: "projects/:appId/settings/rotation",
+        loadComponent: () => import("./pages/ProjectRotation"),
+      },
+    ],
+    navGroups: [],
+    scopeRules: {
+      "applications-rotation": user =>
+        Boolean(
+          (user.role.can_edit || user.role.is_admin || user.role.is_master)
+          && user.features?.includes("rotation"),
+        ),
+    },
+  },
+  {
+    name: "enterprise-dynamic-secrets",
+    requiredFeature: "dynamic_secrets",
+    routes: [
+      {
+        id: "applications-dynamic-secrets",
+        layout: "root",
+        path: "projects/:appId/settings/dynamic-secrets",
+        loadComponent: () => import("./pages/ProjectDynamicSecrets"),
+      },
+    ],
+    navGroups: [],
+    scopeRules: {
+      "applications-dynamic-secrets": user =>
+        Boolean(
+          (user.role.can_edit || user.role.is_admin || user.role.is_master)
+          && user.features?.includes("dynamic_secrets"),
+        ),
+    },
   },
   {
     name: "enterprise-kms",

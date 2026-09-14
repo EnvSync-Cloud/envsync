@@ -25,6 +25,14 @@ test.describe("enterprise dashboard routes", () => {
 				heading: /^SSO$/,
 			},
 			{
+				path: "/organisation/oidc",
+				heading: /^Workload OIDC$/,
+			},
+			{
+				path: "/organisation/log-forwarding",
+				heading: /^Log forwarding$/,
+			},
+			{
 				path: "/organisation/keys",
 				heading: /^Key management$/,
 			},
@@ -51,6 +59,25 @@ test.describe("enterprise dashboard routes", () => {
 			page.getByRole("heading", { name: /Integrations|Integration/i }).first(),
 		).toBeVisible({ timeout: 30_000 });
 		await expect(page.getByText(/not found|page you are looking for/i)).toHaveCount(0);
+	});
+
+	test("project rotation and dynamic secrets pages load when a seeded app exists", async ({ page }) => {
+		const seededApp = await getAppByName(page, "Core Platform");
+		test.skip(!seededApp, "Core Platform app not seeded in this harness");
+
+		await page.goto(`/projects/${seededApp!.id}/settings/rotation`, {
+			waitUntil: "domcontentloaded",
+		});
+		await expect(page.getByRole("heading", { name: /^Rotation$/ }).first()).toBeVisible({
+			timeout: 30_000,
+		});
+
+		await page.goto(`/projects/${seededApp!.id}/settings/dynamic-secrets`, {
+			waitUntil: "domcontentloaded",
+		});
+		await expect(page.getByRole("heading", { name: /^Dynamic secrets$/ }).first()).toBeVisible({
+			timeout: 30_000,
+		});
 	});
 
 	// Hosted-only grant-org-features would hide Integrations on a second harness org.

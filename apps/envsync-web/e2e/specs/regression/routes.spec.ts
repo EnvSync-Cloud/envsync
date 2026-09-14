@@ -37,6 +37,8 @@ test.describe("route surface", () => {
 			{ path: "/organisation/license", heading: /License/i, url: /\/organisation\/license\/?$/ },
 			{ path: "/organisation/sync", heading: /Sync operations|Sync/i, url: /\/organisation\/sync\/?$/ },
 			{ path: "/organisation/sso", heading: /^SSO$/, url: /\/organisation\/sso\/?$/ },
+			{ path: "/organisation/oidc", heading: /^Workload OIDC$/, url: /\/organisation\/oidc\/?$/ },
+			{ path: "/organisation/log-forwarding", heading: /^Log forwarding$/, url: /\/organisation\/log-forwarding\/?$/ },
 			{ path: "/organisation/keys", heading: /^Key management$/, url: /\/organisation\/keys\/?$/ },
 			{ path: "/audit", heading: "Activity" },
 			{ path: "/apikeys", heading: "API Keys" },
