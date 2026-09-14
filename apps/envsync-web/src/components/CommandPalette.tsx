@@ -14,6 +14,7 @@ import { navItems, API_KEYS } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { sdk } from "@/api/base";
 import {
+  PALETTE_ORG_LINKS,
   appDetailPath,
   orgRolesPath,
   orgUsersPath,
@@ -259,23 +260,25 @@ export function CommandPalette() {
   };
 
   const navigateToTeam = (team: { id: string; name: string }) => {
+    const href = PALETTE_ORG_LINKS.find((link) => link.id === "teams")?.href ?? orgUsersPath();
     addRecentItem({
       id: team.id,
       type: "team",
       name: team.name,
-      href: "/org/teams",
+      href,
     });
-    runAction(() => navigate("/org/teams"));
+    runAction(() => navigate(href));
   };
 
   const navigateToApiKey = (key: { id: string; description: string }) => {
+    const href = PALETTE_ORG_LINKS.find((link) => link.id === "apikeys")?.href ?? "/apikeys";
     addRecentItem({
       id: key.id,
       type: "apikey",
       name: key.description || "API Key",
-      href: `/apikeys`,
+      href,
     });
-    runAction(() => navigate(`/apikeys`));
+    runAction(() => navigate(href));
   };
 
   return (

@@ -1,29 +1,48 @@
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "react-router-dom";
 import { ChevronLeft, Keyboard, Menu } from "lucide-react";
 
+import { sdk } from "@/api/base";
 import { ContextNav } from "@/components/shell/ContextNav";
 import { OrgSwitcher } from "@/components/shell/OrgSwitcher";
 import { ProductSwitcher } from "@/components/shell/ProductSwitcher";
 import { ProjectSwitcher } from "@/components/shell/ProjectSwitcher";
+import { API_KEYS } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
-import type { ProductId } from "@/lib/shell-context";
+import { getShellContext, writeLastProjectId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   expanded: boolean;
   onToggle: () => void;
-  product: ProductId;
-  appId: string | null;
-  projects: Array<{ id: string; name: string }>;
 }
 
 export const Sidebar = ({
   expanded,
   onToggle,
-  product,
-  appId,
-  projects,
 }: SidebarProps) => {
-  const { allowedScopes } = useAuthContext();
+  const { pathname } = useLocation();
+  const { allowedScopes, user } = useAuthContext();
+  const context = getShellContext(pathname);
+  const { product, appId } = context;
+  const orgId = user?.org?.id;
+  const { data: projects = [] } = useQuery({
+    queryKey: [API_KEYS.ALL_APPLICATIONS, "shell"],
+    queryFn: async () => {
+      const appsData = await sdk.applications.getApps();
+      return appsData.map((app) => ({
+        id: app.id,
+        name: app.name,
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (appId) writeLastProjectId(orgId, appId);
+  }, [appId, orgId]);
+
   const showProjectSwitcher = product === "secrets";
 
   return (

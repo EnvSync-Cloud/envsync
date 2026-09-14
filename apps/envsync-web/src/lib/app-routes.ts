@@ -18,6 +18,14 @@ export const orgWebhooksPath = () => "/org/webhooks";
 export const orgChangeRequestsPath = () => "/org/change-requests";
 export const orgSettingsPath = () => "/organisation";
 export const orgIntegrationsPath = () => "/organisation/integrations";
+export const apiKeysPath = () => "/apikeys";
+
+export const PALETTE_ORG_LINKS = [
+  { id: "users", href: orgUsersPath() },
+  { id: "teams", href: orgTeamsPath() },
+  { id: "roles", href: orgRolesPath() },
+  { id: "apikeys", href: apiKeysPath() },
+] as const;
 
 export const LEGACY_REDIRECTS: Array<{ id: string; path: string; to: string }> = [
   { id: "legacy-applications", path: "applications", to: "/projects" },
