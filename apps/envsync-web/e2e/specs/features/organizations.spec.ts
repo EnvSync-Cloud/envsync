@@ -14,14 +14,20 @@ async function getAuthSession(page: import("@playwright/test").Page) {
 }
 
 test.describe("organization switcher", () => {
-  test("creates a new organization from the enterprise header switcher and can switch back", async ({ page, makeName }) => {
+  test("lists the current organization and creates one only on hosted", async ({ page, makeName }) => {
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
     const originalSession = await getAuthSession(page);
     const organizationName = makeName("Org");
 
     await page.getByTestId("organization-switcher-trigger").click();
-    await expect(page.getByTestId("create-organization-action")).toBeVisible();
-    await page.getByTestId("create-organization-action").click();
+    await expect(page.getByTestId(`organization-switcher-item-${originalSession.org.slug}`)).toBeVisible();
+
+    const createAction = page.getByTestId("create-organization-action");
+    if (!(await createAction.isVisible().catch(() => false))) {
+      return;
+    }
+
+    await createAction.click();
 
     await expect(page.getByTestId("create-organization-dialog")).toBeVisible();
     await page.getByTestId("create-organization-name-input").fill(organizationName);

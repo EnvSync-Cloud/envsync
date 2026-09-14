@@ -136,6 +136,8 @@ export async function switchProjectAccessTab(page: Page, section: "control" | "e
 	const tab = section === "control"
 		? page.getByTestId("project-access-tab-control")
 		: page.getByTestId("project-access-tab-effective");
+	await expect(page.getByRole("heading", { name: "Project Access" })).toBeVisible();
+	await expect(tab).toBeVisible();
 	await tab.click();
 	await expect(
 		section === "control"
