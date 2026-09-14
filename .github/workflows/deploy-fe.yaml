@@ -9,6 +9,7 @@ on:
       - "apps/envsync-landing/**"
       - "packages/envsync-enterprise-web/**"
       - "sdks/**"
+      - ".github/workflows/deploy-fe.yaml"
   workflow_dispatch:
 
 permissions:
@@ -38,6 +39,12 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.ENVSYNC_API_URL }}
           VITE_SERVER_LICENSE: enterprise
+          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_OTEL_ENDPOINT: ${{ secrets.ENVSYNC_OTEL_ENDPOINT }}
+          VITE_OTEL_SERVICE_NAME: envsync-web
+          VITE_HYPERDX_URL: ${{ secrets.ENVSYNC_OBS_URL }}
+          VITE_HYPERDX_API_KEY: ${{ secrets.ENVSYNC_HYPERDX_API_KEY }}
+          VITE_HYPERDX_DISABLED: ${{ secrets.ENVSYNC_HYPERDX_DISABLED }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy
@@ -66,6 +73,12 @@ jobs:
         run: bun run --filter envsync-landing build
         env:
           VITE_API_BASE_URL: ${{ secrets.ENVSYNC_API_URL }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
+          VITE_OTEL_ENDPOINT: ${{ secrets.ENVSYNC_OTEL_ENDPOINT }}
+          VITE_OTEL_SERVICE_NAME: envsync-landing
+          VITE_HYPERDX_URL: ${{ secrets.ENVSYNC_OBS_URL }}
+          VITE_HYPERDX_API_KEY: ${{ secrets.ENVSYNC_HYPERDX_API_KEY }}
+          VITE_HYPERDX_DISABLED: ${{ secrets.ENVSYNC_HYPERDX_DISABLED }}
 
       - name: Deploy to Cloudflare
         run: bun wrangler deploy
