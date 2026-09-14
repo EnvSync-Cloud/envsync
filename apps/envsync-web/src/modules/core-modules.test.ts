@@ -15,6 +15,8 @@ describe("core web routes", () => {
     expect(paths).toContain("projects/:appId/environments");
     expect(paths).toContain("org/access");
     expect(paths).toContain("org/access/:tab");
+    expect(paths).toContain("projects/:appId/settings");
+    expect(paths).toContain("projects/:appId/settings/service-tokens");
     expect(paths).toContain("org/users");
     expect(paths).toContain("org/certificates");
     expect(paths).toContain("org");

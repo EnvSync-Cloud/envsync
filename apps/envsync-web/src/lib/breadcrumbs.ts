@@ -12,6 +12,7 @@ const ROUTE_LABELS: Record<string, string> = {
   environments: "Environments",
   access: "Access",
   approvals: "Approvals",
+  "service-tokens": "Service Tokens",
   integrations: "Integrations",
   pit: "Recovery",
   roles: "Roles",
@@ -59,7 +60,12 @@ export function buildBreadcrumbs(
     const segment = segments[i];
     currentPath += `/${segment}`;
 
-    if (ROUTE_LABELS[segment]) {
+    const isProjectSettings =
+      segment === "settings" && (segments[0] === "projects" || segments[0] === "applications");
+
+    if (isProjectSettings) {
+      crumbs.push({ label: "Settings", href: currentPath });
+    } else if (ROUTE_LABELS[segment]) {
       crumbs.push({ label: ROUTE_LABELS[segment], href: currentPath });
     } else if (UUID_REGEX.test(segment) && apps) {
       const match = apps.find((a) => a.id === segment);
@@ -87,6 +93,7 @@ export function buildBreadcrumbs(
         "access",
         "approvals",
         "change-requests",
+        "settings",
         "integrations",
         "pit",
       ];

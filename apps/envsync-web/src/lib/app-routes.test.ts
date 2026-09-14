@@ -8,6 +8,8 @@ import {
   appEnvironmentsPath,
   appIntegrationsPath,
   appPointInTimePath,
+  appServiceTokensPath,
+  appSettingsPath,
   applyRouteParams,
   isOrgAccessTab,
   orgAccessPath,
@@ -22,6 +24,8 @@ describe("app routes", () => {
     expect(appPointInTimePath("app-1")).toBe("/projects/app-1/pit");
     expect(appApprovalsPath("app-1")).toBe("/projects/app-1/approvals");
     expect(appEnvironmentsPath("app-1")).toBe("/projects/app-1/environments");
+    expect(appSettingsPath("app-1")).toBe("/projects/app-1/settings");
+    expect(appServiceTokensPath("app-1")).toBe("/projects/app-1/settings/service-tokens");
     expect(orgUsersPath()).toBe("/org/users");
     expect(orgAccessPath()).toBe("/org/access");
     expect(orgAccessPath("users")).toBe("/org/access/users");

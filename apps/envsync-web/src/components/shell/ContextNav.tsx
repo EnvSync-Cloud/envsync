@@ -7,6 +7,7 @@ import {
   LockKeyhole,
   PlugZap,
   Settings,
+  Settings2,
   Shield,
 } from "lucide-react";
 import { useMemo } from "react";
@@ -20,6 +21,7 @@ import {
   appIntegrationsPath,
   appPointInTimePath,
   appSecretsPath,
+  appSettingsPath,
 } from "@/lib/app-routes";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
@@ -164,6 +166,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
         { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
         { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
+        { id: "project-settings", name: "Settings", href: appSettingsPath(appId), icon: Settings2 },
       ];
 
       if (allowedScopes.includes("change-requests")) {

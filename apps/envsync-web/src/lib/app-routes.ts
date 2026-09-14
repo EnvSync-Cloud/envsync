@@ -10,6 +10,9 @@ export const appManageEnvironmentsPath = (appId: string) =>
 export const appEnvironmentsPath = (appId: string) => `/projects/${appId}/environments`;
 export const appAccessPath = (appId: string) => `/projects/${appId}/access`;
 export const appApprovalsPath = (appId: string) => `/projects/${appId}/approvals`;
+export const appSettingsPath = (appId: string) => `/projects/${appId}/settings`;
+export const appServiceTokensPath = (appId: string) =>
+  `/projects/${appId}/settings/service-tokens`;
 export const appPointInTimePath = (appId: string) => `/projects/${appId}/pit`;
 export const appIntegrationsPath = (appId: string) => `/applications/${appId}/integrations`;
 export const appIntegrationProviderPath = (appId: string, provider: string) =>

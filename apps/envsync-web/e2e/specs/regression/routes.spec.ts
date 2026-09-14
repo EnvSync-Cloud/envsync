@@ -18,6 +18,8 @@ test.describe("route surface", () => {
 			{ path: `/projects/${seededId}/access`, heading: "Project Access" },
 			{ path: `/projects/${seededId}/approvals`, heading: "Approvals" },
 			{ path: `/projects/${seededId}/change-requests`, heading: "Approvals", url: new RegExp(`/projects/${seededId}/approvals`) },
+			{ path: `/projects/${seededId}/settings`, heading: "Service Tokens", url: new RegExp(`/projects/${seededId}/settings/service-tokens`) },
+			{ path: `/projects/${seededId}/settings/service-tokens`, heading: "Service Tokens" },
 			{ path: `/projects/${seededId}/pit`, heading: "Core Platform" },
 			{ path: "/org/access", heading: "Users", url: /\/org\/access\/users\/?$/ },
 			{ path: "/org/access/users", heading: "Users" },

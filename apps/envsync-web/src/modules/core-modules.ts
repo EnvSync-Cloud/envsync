@@ -112,6 +112,18 @@ export const coreWebModules: WebModule[] = [
         redirectTo: "/projects/:appId/approvals",
       },
       {
+        id: "projects-settings",
+        layout: "root",
+        path: "projects/:appId/settings",
+        redirectTo: "/projects/:appId/settings/service-tokens",
+      },
+      {
+        id: "projects-service-tokens",
+        layout: "root",
+        path: "projects/:appId/settings/service-tokens",
+        loadComponent: () => import("@/pages/ServiceTokens"),
+      },
+      {
         id: "projects-pit",
         layout: "root",
         path: "projects/:appId/pit",
