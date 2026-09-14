@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 
 import { testRequest } from "../helpers/request";
-import { getDB, seedApp, seedEnvType, seedOrg, seedUser, type SeedOrgResult } from "../helpers/db";
+import { seedApp, seedEnvType, seedOrg, seedUser, type SeedOrgResult } from "../helpers/db";
 import { MockFGAClient, setupUserOrgTuples } from "../helpers/fga";
 import { resetVaultStore } from "../helpers/kms";
 import { ServiceTokenService } from "@/services/service_token.service";
@@ -150,6 +150,29 @@ describe("POST /api/service_token/:id/rotate", () => {
 		expect(fetchedBody.token_hash).toBeUndefined();
 	});
 
+	test("concurrent rotate allows only one successor", async () => {
+		const created = await createServiceToken({
+			name: "race-rotate",
+			scopes: [{ env_type_id: envTypeId, path: "/" }],
+		});
+
+		const [first, second] = await Promise.all([
+			testRequest(`/api/service_token/${created.id}/rotate`, {
+				method: "POST",
+				token: seed.masterUser.token,
+				body: { grace_hours: 24 },
+			}),
+			testRequest(`/api/service_token/${created.id}/rotate`, {
+				method: "POST",
+				token: seed.masterUser.token,
+				body: { grace_hours: 24 },
+			}),
+		]);
+
+		const statuses = [first.status, second.status].sort();
+		expect(statuses).toEqual([201, 400]);
+	});
+
 	test("zero grace immediately invalidates the previous hash", async () => {
 		const created = await createServiceToken({
 			name: "zero-grace",
@@ -168,7 +191,7 @@ describe("POST /api/service_token/:id/rotate", () => {
 		expect(await ServiceTokenService.validateTokenByHash(rotated.token)).not.toBeNull();
 	});
 
-	test("rejects the previous hash after grace_until expires", async () => {
+	test("rejects the previous hash after grace_until expires without busting the cache", async () => {
 		const created = await createServiceToken({
 			name: "expired-grace",
 			scopes: [{ env_type_id: envTypeId, path: "/" }],
@@ -180,26 +203,50 @@ describe("POST /api/service_token/:id/rotate", () => {
 			body: { grace_hours: 24 },
 		});
 		expect(rotateRes.status).toBe(201);
+
+		const warm = await testRequest("/api/env", {
+			method: "POST",
+			token: created.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		expect(warm.status).toBe(200);
 		expect(await ServiceTokenService.validateTokenByHash(created.token)).not.toBeNull();
 
-		const db = await getDB();
-		await db
-			.updateTable("service_tokens")
-			.set({ grace_until: new Date(Date.now() - 1000), updated_at: new Date() })
-			.where("id", "=", created.id)
-			.execute();
-
-		const { invalidateCache } = await import("@/helpers/cache");
-		const { CacheKeys } = await import("@/helpers/cache-keys");
+		const { cacheSetJson } = await import("@/helpers/cache");
+		const { CacheKeys, CacheTTL } = await import("@/helpers/cache-keys");
+		const { CacheClient } = await import("@/libs/cache");
 		const { createHash } = await import("node:crypto");
 		const oldHash = createHash("sha256").update(created.token).digest("hex");
-		await invalidateCache(CacheKeys.serviceTokenByHash(oldHash));
+		const cacheKey = CacheKeys.serviceTokenByHash(oldHash);
+		const cached = await CacheClient.get(cacheKey);
+		expect(cached).not.toBeNull();
+		const parsed = JSON.parse(cached as string);
+		parsed.grace_until = new Date(Date.now() - 1000).toISOString();
+		await cacheSetJson(cacheKey, parsed, CacheTTL.SHORT);
 
 		expect(await ServiceTokenService.validateTokenByHash(created.token)).toBeNull();
+
+		const expired = await testRequest("/api/env", {
+			method: "POST",
+			token: created.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		expect(expired.status).toBe(401);
 	});
 });
 
 describe("service token path scopes", () => {
+	test("treats /db as a path boundary, not a string prefix of /dbx", () => {
+		const token = {
+			env_type_id: envTypeId,
+			scopes: [{ env_type_id: envTypeId, path: "/db" }],
+		};
+		expect(ServiceTokenService.isPathAllowed(token, envTypeId, "/db")).toBe(true);
+		expect(ServiceTokenService.isPathAllowed(token, envTypeId, "/db/host")).toBe(true);
+		expect(ServiceTokenService.isPathAllowed(token, envTypeId, "/dbx")).toBe(false);
+		expect(ServiceTokenService.isPathAllowed(token, envTypeId, "/dbx/password")).toBe(false);
+	});
+
 	test("denies env access outside the scoped path", async () => {
 		await testRequest("/api/env/single", {
 			method: "PUT",
@@ -254,5 +301,70 @@ describe("service token path scopes", () => {
 		expect(denied.status).toBe(403);
 		const deniedBody = await denied.json<{ code?: string }>();
 		expect(deniedBody.code).toBe("SERVICE_TOKEN_SCOPE_DENIED");
+	});
+
+	test("denies reveal and batch delete when body.keys is outside the scoped path", async () => {
+		const created = await createServiceToken({
+			name: "keys-body",
+			app_id: appId,
+			scopes: [{ env_type_id: envTypeId, path: "/db" }],
+			permissions: { read: true, write: true },
+		});
+
+		const reveal = await testRequest("/api/secret/reveal", {
+			method: "POST",
+			token: created.token,
+			body: { app_id: appId, env_type_id: envTypeId, keys: ["API_KEY"] },
+		});
+		expect(reveal.status).toBe(403);
+		expect((await reveal.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_SCOPE_DENIED");
+
+		const batchDelete = await testRequest("/api/env/batch", {
+			method: "DELETE",
+			token: created.token,
+			body: { app_id: appId, env_type_id: envTypeId, keys: ["API_KEY"] },
+		});
+		expect(batchDelete.status).toBe(403);
+		expect((await batchDelete.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_SCOPE_DENIED");
+	});
+
+	test("denies keyless full rollback for a non-root path scope", async () => {
+		const created = await createServiceToken({
+			name: "no-rollback",
+			app_id: appId,
+			scopes: [{ env_type_id: envTypeId, path: "/db" }],
+			permissions: { read: true, write: true },
+		});
+
+		const rollback = await testRequest("/api/env/rollback/pit", {
+			method: "POST",
+			token: created.token,
+			body: {
+				app_id: appId,
+				env_type_id: envTypeId,
+				pit_id: "00000000-0000-0000-0000-000000000001",
+			},
+		});
+		expect(rollback.status).toBe(403);
+		expect((await rollback.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_SCOPE_DENIED");
+	});
+
+	test("rejects service tokens on non env/secret routes", async () => {
+		const created = await createServiceToken({
+			name: "route-bound",
+			scopes: [{ env_type_id: envTypeId, path: "/" }],
+		});
+
+		const apps = await testRequest("/api/app", {
+			token: created.token,
+		});
+		expect(apps.status).toBe(403);
+		expect((await apps.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_ROUTE_DENIED");
+
+		const manage = await testRequest("/api/service_token", {
+			token: created.token,
+		});
+		expect(manage.status).toBe(403);
+		expect((await manage.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_ROUTE_DENIED");
 	});
 });

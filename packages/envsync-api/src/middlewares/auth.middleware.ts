@@ -21,6 +21,10 @@ function isQueryCredentialAttempt(ctx: Context) {
 	return Boolean(ctx.req.query("access_token") || ctx.req.query("api_key"));
 }
 
+function isServiceTokenAllowedPath(path: string): boolean {
+	return path === "/api/env" || path.startsWith("/api/env/") || path === "/api/secret" || path.startsWith("/api/secret/");
+}
+
 export const authMiddleware = (): MiddlewareHandler => {
 	return async (ctx: Context, next: Next) => {
 		if (isQueryCredentialAttempt(ctx)) {
@@ -164,6 +168,16 @@ export const authMiddleware = (): MiddlewareHandler => {
 			);
 			if (access_info.service_token) {
 				ctx.set("service_token", access_info.service_token);
+			}
+
+			if (access_info.auth_type === "SERVICE_TOKEN" && !isServiceTokenAllowedPath(ctx.req.path)) {
+				return ctx.json(
+					{
+						error: "Service tokens can only access environment and secret APIs",
+						code: "SERVICE_TOKEN_ROUTE_DENIED",
+					},
+					403,
+				);
 			}
 
 			await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(

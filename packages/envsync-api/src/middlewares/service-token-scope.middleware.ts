@@ -7,6 +7,12 @@ function collectKeys(body: Record<string, unknown>, paramKey?: string): string[]
 	if (paramKey) keys.push(paramKey);
 	if (typeof body.key === "string") keys.push(body.key);
 
+	if (Array.isArray(body.keys)) {
+		for (const key of body.keys) {
+			if (typeof key === "string") keys.push(key);
+		}
+	}
+
 	for (const field of ["envs", "secrets"] as const) {
 		const items = body[field];
 		if (!Array.isArray(items)) continue;
@@ -30,6 +36,15 @@ function isWriteRequest(ctx: Context): boolean {
 		path.includes("/rollback") ||
 		path.includes("/batch") ||
 		path.includes("/single")
+	);
+}
+
+function isKeylessAggregatePath(path: string): boolean {
+	return (
+		path.includes("/history") ||
+		path.includes("/pit") ||
+		path.includes("/timestamp") ||
+		path.includes("/diff")
 	);
 }
 
@@ -65,12 +80,15 @@ export const serviceTokenScopeMiddleware = (): MiddlewareHandler => {
 		const pathKeyMatch = ctx.req.path.match(/\/i\/(.+)$/);
 		const pathKey = pathKeyMatch ? decodeURIComponent(pathKeyMatch[1]) : undefined;
 		const keys = collectKeys(body, ctx.req.param("key") ?? pathKey);
+		const write = isWriteRequest(ctx);
+		const allowKeyless = !write && !isKeylessAggregatePath(ctx.req.path);
 
 		const denied = ServiceTokenService.getScopeDenial(token, {
 			appId,
 			envTypeId,
 			paths: keys,
-			permission: isWriteRequest(ctx) ? "write" : "read",
+			permission: write ? "write" : "read",
+			allowKeyless,
 		});
 
 		if (denied) {

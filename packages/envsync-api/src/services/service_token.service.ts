@@ -195,11 +195,20 @@ export class ServiceTokenService {
 		const scopes = parseServiceTokenScopes(existing.scopes, existing.env_type_id);
 
 		const record = await db.transaction().execute(async trx => {
-			await trx
+			const updated = await trx
 				.updateTable("service_tokens")
 				.set({ grace_until, updated_at: now })
 				.where("id", "=", id)
-				.execute();
+				.where("grace_until", "is", null)
+				.executeTakeFirst();
+
+			if (!updated.numUpdatedRows || updated.numUpdatedRows === 0n) {
+				throw new BusinessRuleError(
+					"Service token has already been rotated",
+					400,
+					"SERVICE_TOKEN_ALREADY_ROTATED",
+				);
+			}
 
 			return trx
 				.insertInto("service_tokens")
@@ -300,29 +309,38 @@ export class ServiceTokenService {
 		);
 	};
 
+	public static isCurrentlyValid = (record: {
+		expires_at: Date | string;
+		grace_until?: Date | string | null;
+	}): boolean => {
+		const now = new Date();
+		if (new Date(record.expires_at) < now) return false;
+		if (record.grace_until && new Date(record.grace_until) <= now) return false;
+		return true;
+	};
+
 	public static validateTokenByHash = async (token: string) => {
 		const token_hash = hashToken(token);
 
-		return cacheAside(CacheKeys.serviceTokenByHash(token_hash), CacheTTL.SHORT, async () => {
+		const record = await cacheAside(CacheKeys.serviceTokenByHash(token_hash), CacheTTL.SHORT, async () => {
 			const db = await DB.getInstance();
 
-			const record = await db
+			const row = await db
 				.selectFrom("service_tokens")
 				.selectAll()
 				.where("token_hash", "=", token_hash)
 				.executeTakeFirst();
 
-			if (!record) return null;
-
-			const now = new Date();
-			if (new Date(record.expires_at) < now) return null;
-			if (record.grace_until && new Date(record.grace_until) <= now) return null;
+			if (!row) return null;
 
 			return {
-				...record,
-				scopes: parseServiceTokenScopes(record.scopes, record.env_type_id),
+				...row,
+				scopes: parseServiceTokenScopes(row.scopes, row.env_type_id),
 			};
 		});
+
+		if (!record || !this.isCurrentlyValid(record)) return null;
+		return record;
 	};
 
 	public static registerUsage = async (id: string) => {
@@ -366,6 +384,17 @@ export class ServiceTokenService {
 		return scopes.some(scope => !scope.env_type_id || scope.env_type_id === envTypeId);
 	};
 
+	public static hasRootPathScope = (
+		token: { scopes?: unknown; env_type_id?: string | null },
+		envTypeId: string,
+	): boolean => {
+		const scopes = parseServiceTokenScopes(token.scopes, token.env_type_id);
+		return scopes.some(scope => {
+			if (scope.env_type_id && scope.env_type_id !== envTypeId) return false;
+			return scope.path === "/";
+		});
+	};
+
 	public static filterKeysByScope = <T extends { key: string }>(
 		token: { scopes?: unknown; env_type_id?: string | null },
 		envTypeId: string,
@@ -393,6 +422,7 @@ export class ServiceTokenService {
 			envTypeId?: string;
 			paths?: string[];
 			permission?: "read" | "write";
+			allowKeyless?: boolean;
 		},
 	): string | null => {
 		if (input.appId && !this.isScopedToApp(token, input.appId)) {
@@ -403,11 +433,16 @@ export class ServiceTokenService {
 			return "Service token is not scoped to this environment type";
 		}
 
-		if (input.envTypeId && input.paths) {
-			for (const path of input.paths) {
+		const paths = input.paths ?? [];
+		if (input.envTypeId && paths.length > 0) {
+			for (const path of paths) {
 				if (!this.isPathAllowed(token, input.envTypeId, path)) {
 					return "Service token is not scoped to this path";
 				}
+			}
+		} else if (input.envTypeId && paths.length === 0 && !input.allowKeyless) {
+			if (!this.hasRootPathScope(token, input.envTypeId)) {
+				return "Service token is not scoped to perform this keyless operation";
 			}
 		}
 
