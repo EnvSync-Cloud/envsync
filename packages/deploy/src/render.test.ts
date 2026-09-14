@@ -216,6 +216,8 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/keycloak-realm.envsync.json");
+		expect(stackFull).toContain("kc.sh import --dir /opt/keycloak/data/import --override false");
+		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
 		expect(stackFull).toContain("  netutils:");
 		expect(stackFull).toContain("image: alpine/socat");

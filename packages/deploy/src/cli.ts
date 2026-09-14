@@ -3702,10 +3702,7 @@ async function cmdPromote(target?: string) {
 		},
 	});
 	writeDeployArtifacts(config, promotedState);
-	if (
-		exists(releaseAssetDir("web", promotedState.deployment.slots[targetSlot].release_version)) &&
-		exists(releaseAssetDir("landing", promotedState.deployment.slots[targetSlot].release_version))
-	) {
+	if (exists(releaseAssetDir("web", promotedState.deployment.slots[targetSlot].release_version))) {
 		activateFrontendReleaseForState(config, promotedState);
 	} else {
 		logWarn(`Missing staged frontend assets for release ${promotedState.deployment.slots[targetSlot].release_version}; leaving current frontend assets unchanged.`);
@@ -3737,10 +3734,7 @@ async function cmdRollback() {
 		},
 	});
 	writeDeployArtifacts(config, rollbackState);
-	if (
-		exists(releaseAssetDir("web", rollbackState.deployment.slots[rollbackState.deployment.active_slot].release_version)) &&
-		exists(releaseAssetDir("landing", rollbackState.deployment.slots[rollbackState.deployment.active_slot].release_version))
-	) {
+	if (exists(releaseAssetDir("web", rollbackState.deployment.slots[rollbackState.deployment.active_slot].release_version))) {
 		activateFrontendReleaseForState(config, rollbackState);
 	} else {
 		logWarn(`Missing staged frontend assets for release ${rollbackState.deployment.slots[rollbackState.deployment.active_slot].release_version}; leaving current frontend assets unchanged.`);

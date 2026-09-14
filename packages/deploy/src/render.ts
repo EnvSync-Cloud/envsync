@@ -965,7 +965,7 @@ ${includeRuntimeInfra ? `
     image: ${config.images.keycloak}
     entrypoint: ["/bin/sh", "-lc"]
     command:
-      - /opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import --override true && exec /opt/keycloak/bin/kc.sh start --optimized
+      - /opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import --override false && exec /opt/keycloak/bin/kc.sh start --optimized
     environment:
 ${renderEnvList({
 		KC_DB: "postgres",

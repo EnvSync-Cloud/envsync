@@ -1,7 +1,7 @@
 MAIN_PACKAGE := ./cmd/cli/main.go
 BINARY_NAME := envsync
 BACKEND_URL ?= http://localhost:8600
-TELEMETRY_URL ?= https://obs.envsync.cloud
+TELEMETRY_URL ?= https://t.envsync.cloud/obs
 VERSION ?= dev
 
 # ==================================================================================== #

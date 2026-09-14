@@ -35,7 +35,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENVSYNC_API_URL: ${{ secrets.ENVSYNC_API_URL || 'https://api.envsync.cloud' }}
-          ENVSYNC_TELEMETRY_URL: ${{ secrets.ENVSYNC_TELEMETRY_URL || 'https://obs.envsync.cloud' }}
+          ENVSYNC_TELEMETRY_URL: ${{ secrets.ENVSYNC_TELEMETRY_URL || 'https://t.envsync.cloud/obs' }}
 
   build-api-image:
     name: Build & Push API Image
