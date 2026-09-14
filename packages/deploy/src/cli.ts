@@ -34,7 +34,6 @@ interface DeployConfig {
 	};
 	images: {
 		api: string;
-		management_api: string;
 		keycloak: string;
 		web: string;
 		landing: string;
@@ -45,7 +44,6 @@ interface DeployConfig {
 	services: {
 		stack_name: string;
 		api_port: number;
-		management_api_port: number;
 		public_http_port: number;
 		public_https_port: number;
 		clickstack_ui_port: number;
@@ -395,8 +393,6 @@ const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
 const MANAGED_VERSIONED_IMAGE_PREFIXES = {
 	api: "ghcr.io/envsync-cloud/envsync-api:",
 	api_enterprise: "ghcr.io/envsync-cloud/envsync-api-enterprise:",
-	// Retired second process — kept so old deploy.yaml image strings still parse as "managed".
-	management_api: "ghcr.io/envsync-cloud/envsync-management-api:",
 	keycloak: "envsync-keycloak:",
 	web: "ghcr.io/envsync-cloud/envsync-web-static:",
 	web_oss: "ghcr.io/envsync-cloud/envsync-web-oss-static:",
@@ -1229,8 +1225,6 @@ function versionedImages(version: string, edition: "oss" | "enterprise" = "enter
 			: `ghcr.io/envsync-cloud/envsync-api-enterprise:${version}`;
 	return {
 		api,
-		// Deprecated field: kept for older deploy.yaml keys; unused by stack render.
-		management_api: api,
 		keycloak: `envsync-keycloak:${version}`,
 		web,
 		landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
@@ -1256,7 +1250,7 @@ function isOssConfig(config: DeployConfig) {
 
 function isManagedVersionedImage(
 	image: string | undefined,
-	key: keyof Pick<DeployConfig["images"], "api" | "keycloak" | "web" | "landing" | "management_api">,
+	key: keyof Pick<DeployConfig["images"], "api" | "keycloak" | "web" | "landing">,
 ) {
 	if (typeof image !== "string") {
 		return false;
@@ -1331,9 +1325,6 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 		},
 		images: {
 			api: !raw.images?.api || isManagedVersionedImage(raw.images.api, "api") ? derivedImages.api : raw.images.api,
-			management_api: !raw.images?.management_api || isManagedVersionedImage(raw.images.management_api, "management_api")
-				? derivedImages.management_api
-				: raw.images.management_api,
 			keycloak: !raw.images?.keycloak || isManagedVersionedImage(raw.images.keycloak, "keycloak")
 				? derivedImages.keycloak
 				: raw.images.keycloak,
@@ -1348,7 +1339,6 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 		services: {
 			stack_name: stackName,
 			api_port: requireDefined(raw.services?.api_port, "services.api_port"),
-			management_api_port: raw.services?.management_api_port ?? 4001,
 			public_http_port: raw.services?.public_http_port ?? 80,
 			public_https_port: raw.services?.public_https_port ?? 443,
 			clickstack_ui_port: requireDefined(raw.services?.clickstack_ui_port, "services.clickstack_ui_port"),
@@ -3240,7 +3230,6 @@ async function cmdSetup() {
 		domain: { root_domain: rootDomain, acme_email: acmeEmail },
 		images: {
 			api: releaseImages.api,
-			management_api: releaseImages.management_api,
 			keycloak: releaseImages.keycloak,
 			web: releaseImages.web,
 			landing: releaseImages.landing,
@@ -3251,7 +3240,6 @@ async function cmdSetup() {
 		services: {
 			stack_name: "envsync",
 			api_port: 4000,
-			management_api_port: 4001,
 			public_http_port: 80,
 			public_https_port: 443,
 			clickstack_ui_port: 8080,

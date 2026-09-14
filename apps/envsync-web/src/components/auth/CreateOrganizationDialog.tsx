@@ -126,5 +126,3 @@ export const CreateOrganizationDialog = ({
   );
 };
 
-/** @deprecated H2: use CreateOrganizationDialog */
-export const CreateWorkspaceDialog = CreateOrganizationDialog;

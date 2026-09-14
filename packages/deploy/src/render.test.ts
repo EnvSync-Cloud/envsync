@@ -30,7 +30,6 @@ const config: DeployConfig = {
 	},
 	images: {
 		api: "ghcr.io/envsync-cloud/envsync-api:0.8.7",
-		management_api: "ghcr.io/envsync-cloud/envsync-management-api:0.8.7",
 		keycloak: "envsync-keycloak:0.8.7",
 		web: "ghcr.io/envsync-cloud/envsync-web-static:0.8.7",
 		landing: "ghcr.io/envsync-cloud/envsync-landing-static:0.8.7",
@@ -41,7 +40,6 @@ const config: DeployConfig = {
 	services: {
 		stack_name: "envsync",
 		api_port: 4000,
-		management_api_port: 4001,
 		public_http_port: 80,
 		public_https_port: 443,
 		clickstack_ui_port: 8080,

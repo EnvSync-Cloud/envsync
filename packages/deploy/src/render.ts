@@ -13,7 +13,6 @@ export interface DeployConfig {
 	};
 	images: {
 		api: string;
-		management_api: string;
 		keycloak: string;
 		web: string;
 		landing: string;
@@ -24,7 +23,6 @@ export interface DeployConfig {
 	services: {
 		stack_name: string;
 		api_port: number;
-		management_api_port: number;
 		public_http_port: number;
 		public_https_port: number;
 		clickstack_ui_port: number;
@@ -268,7 +266,6 @@ export function buildRuntimeEnv(
 		ENVSYNC_STACK_NAME: config.services.stack_name,
 		DB_AUTO_MIGRATE: "false",
 		PORT: `${config.services.api_port}`,
-		MANAGEMENT_API_PORT: `${config.services.management_api_port}`,
 		DATABASE_HOST: "postgres",
 		DATABASE_PORT: "5432",
 		DATABASE_USER: "postgres",

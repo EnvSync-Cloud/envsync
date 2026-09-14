@@ -67,14 +67,14 @@ export async function createApiApp(surface: ApiSurface) {
 	}
 	const manageMounted = loadApiModules("management").length > 0;
 	const apiTitle = isManagement ? "EnvSync Management API" : "EnvSync API";
+	const productOrigin = config.API_URL || `http://localhost:${config.PORT}`;
 	const serverUrl = isManagement
-		? config.MANAGEMENT_API_URL
-		: `http://localhost:${config.PORT}`;
+		? config.MANAGEMENT_API_URL || `${productOrigin.replace(/\/$/, "")}/api/v1/manage`
+		: productOrigin;
 	const docsUrl = "/openapi";
 	const allowedOrigins = [
 		config.DASHBOARD_URL,
 		config.LANDING_PAGE_URL,
-		config.MANAGEMENT_DASHBOARD_URL,
 	].filter(Boolean);
 
 	const openApiDescription = [

@@ -468,6 +468,32 @@ if (hostedCmkSdks.every(pkg => eePkgJson.dependencies?.[pkg])) {
 	ok("envsync-enterprise owns Hosted AWS/GCP/Azure CMK wrap SDKs");
 }
 
+// C: leftover second-process manage host and workspace shims stay gone
+const retiredManageProcess = [
+	"packages/envsync-api/src/app/management.ts",
+	"packages/envsync-api/src/services/workspace-provisioning.service.ts",
+	"packages/envsync-api/src/controllers/settings.controller.ts",
+	"packages/envsync-api/src/services/settings.service.ts",
+	"apps/envsync-web/src/components/auth/CreateWorkspaceDialog.tsx",
+	"apps/envsync-web/src/components/ProjectEnvironments.tsx",
+];
+for (const rel of retiredManageProcess) {
+	if (fs.existsSync(path.join(root, rel))) {
+		fail(`C: leftover file must stay deleted: ${rel}`);
+	}
+}
+const envTs = fs.readFileSync(path.join(root, "packages/envsync-api/src/utils/env.ts"), "utf8");
+for (const key of ["MANAGEMENT_API_PORT", "MANAGEMENT_DASHBOARD_URL", "ENVSYNC_MANAGEMENT_WEB_ENABLED"]) {
+	if (envTs.includes(key)) {
+		fail(`C: env.ts must not define retired manage-process key ${key}`);
+	}
+}
+const deployCoreSrc = fs.readFileSync(path.join(root, "packages/deploy-core/src/index.ts"), "utf8");
+if (deployCoreSrc.includes("envsync-management-api")) {
+	fail("C: deploy-core must not default a retired envsync-management-api image");
+}
+ok("C: unused manage-process leftovers and workspace shims stay deleted");
+
 if (failed) {
 	process.exit(1);
 }

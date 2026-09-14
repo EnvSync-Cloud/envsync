@@ -60,10 +60,8 @@ export const BaseEnvSchema = z.object({
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string().default("http://localhost:8080"),
 	API_URL: z.string().optional(),
-	// OpenAPI server URL for legacy management process; product clients use /api/v1/manage on core.
+	// Alias of the product API origin + /api/v1/manage (same process; not a second host).
 	MANAGEMENT_API_URL: z.string().default("http://localhost:4000/api/v1/manage"),
-	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
-	MANAGEMENT_API_PORT: z.string().default("4001"),
 	// Default enterprise favors Hosted/local EE dev. Self-host OSS must set oss explicitly.
 	ENVSYNC_EDITION: z.enum(["oss", "enterprise"]).default("enterprise"),
 	// Optional: when unset, EditionPolicyService maps OSS→selfhosted, enterprise→hosted.
@@ -81,7 +79,6 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),
 	ENVSYNC_LANDING_ENABLED: z.string().optional(),
-	ENVSYNC_MANAGEMENT_WEB_ENABLED: z.string().optional(),
 	ENVSYNC_LICENSE_ENFORCEMENT: z.string().default("false"),
 	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate", "entitlement"]).default("certificate"),
 	ENVSYNC_LICENSE_BUNDLE_PATH: z.string().optional(),

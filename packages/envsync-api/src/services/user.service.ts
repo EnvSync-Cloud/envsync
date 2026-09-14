@@ -506,13 +506,4 @@ export class UserService {
 			.where("email", "=", email)
 			.executeTakeFirst();
 	};
-
-	public static getUserByEmail = async (email: string) => {
-		const db = await DB.getInstance();
-		return db
-			.selectFrom("users")
-			.selectAll()
-			.where("email", "=", email)
-			.executeTakeFirst();
-	};
 }
