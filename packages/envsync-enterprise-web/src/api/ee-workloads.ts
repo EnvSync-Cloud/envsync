@@ -8,316 +8,149 @@ import type {
   UpdateOidcProviderRequest,
   UpdateRotationPolicyRequest,
 } from "@envsync-cloud/envsync-ts-sdk";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { enterpriseErrorMessage, getEnterpriseSDK, isEnterpriseUiEnabled } from "./client";
+import { getEnterpriseSDK } from "./client";
+import { useEnterpriseMutation, useEnterpriseQuery } from "./query";
+
+const oidcKey = ["enterprise", "oidc-providers"] as const;
+const logForwardingKey = ["enterprise", "log-forwarding"] as const;
+const dynamicEnginesKey = ["enterprise", "dynamic-secret-engines"] as const;
+const rotationKey = (appId?: string) => ["enterprise", "rotation-policies", appId] as const;
+const leaseKey = (engineId?: string) => ["enterprise", "dynamic-secret-leases", engineId] as const;
 
 export function useOidcProviders() {
-  return useQuery({
-    queryKey: ["enterprise", "oidc-providers"],
-    queryFn: async () => {
-      try {
-        return await getEnterpriseSDK().oidcProviders.getAllOidcProviders();
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    enabled: isEnterpriseUiEnabled(),
-  });
+  return useEnterpriseQuery(oidcKey, () => getEnterpriseSDK().oidcProviders.getAllOidcProviders());
 }
 
 export function useCreateOidcProvider() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: CreateOidcProviderRequest) => {
-      try {
-        return await getEnterpriseSDK().oidcProviders.createOidcProvider(payload);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "oidc-providers"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: CreateOidcProviderRequest) => getEnterpriseSDK().oidcProviders.createOidcProvider(payload),
+    oidcKey,
+  );
 }
 
 export function useUpdateOidcProvider() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { id: string } & UpdateOidcProviderRequest) => {
-      try {
-        const { id, ...body } = payload;
-        return await getEnterpriseSDK().oidcProviders.updateOidcProvider(id, body);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "oidc-providers"] });
-    },
-  });
+  return useEnterpriseMutation(
+    ({ id, ...body }: { id: string } & UpdateOidcProviderRequest) =>
+      getEnterpriseSDK().oidcProviders.updateOidcProvider(id, body),
+    oidcKey,
+  );
 }
 
 export function useDeleteOidcProvider() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        return await getEnterpriseSDK().oidcProviders.deleteOidcProvider(id);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "oidc-providers"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (id: string) => getEnterpriseSDK().oidcProviders.deleteOidcProvider(id),
+    oidcKey,
+  );
 }
 
 export function useRotationPolicies(appId?: string) {
-  return useQuery({
-    queryKey: ["enterprise", "rotation-policies", appId],
-    queryFn: async () => {
-      try {
-        return await getEnterpriseSDK().rotation.getRotationPolicies(appId);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    enabled: isEnterpriseUiEnabled() && Boolean(appId),
-  });
+  return useEnterpriseQuery(
+    rotationKey(appId),
+    () => getEnterpriseSDK().rotation.getRotationPolicies(appId),
+    Boolean(appId),
+  );
 }
 
 export function useCreateRotationPolicy() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: CreateRotationPolicyRequest) => {
-      try {
-        return await getEnterpriseSDK().rotation.createRotationPolicy(payload);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "rotation-policies", variables.app_id],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: CreateRotationPolicyRequest) => getEnterpriseSDK().rotation.createRotationPolicy(payload),
+    (variables) => rotationKey(variables.app_id),
+  );
 }
 
 export function useUpdateRotationPolicy() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { id: string; appId: string } & UpdateRotationPolicyRequest) => {
-      try {
-        const { id, appId: _appId, ...body } = payload;
-        return await getEnterpriseSDK().rotation.updateRotationPolicy(id, body);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "rotation-policies", variables.appId],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    ({ id, appId: _appId, ...body }: { id: string; appId: string } & UpdateRotationPolicyRequest) =>
+      getEnterpriseSDK().rotation.updateRotationPolicy(id, body),
+    (variables) => rotationKey(variables.appId),
+  );
 }
 
 export function useDeleteRotationPolicy() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { id: string; appId: string }) => {
-      try {
-        return await getEnterpriseSDK().rotation.deleteRotationPolicy(payload.id);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "rotation-policies", variables.appId],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: { id: string; appId: string }) => getEnterpriseSDK().rotation.deleteRotationPolicy(payload.id),
+    (variables) => rotationKey(variables.appId),
+  );
 }
 
 export function useTriggerRotation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { id: string; appId: string }) => {
-      try {
-        return await getEnterpriseSDK().rotation.triggerRotation(payload.id);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "rotation-policies", variables.appId],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: { id: string; appId: string }) => getEnterpriseSDK().rotation.triggerRotation(payload.id),
+    (variables) => rotationKey(variables.appId),
+  );
 }
 
 export function useDynamicSecretEngines() {
-  return useQuery({
-    queryKey: ["enterprise", "dynamic-secret-engines"],
-    queryFn: async () => {
-      try {
-        return await getEnterpriseSDK().dynamicSecrets.getAllDynamicSecretEngines();
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    enabled: isEnterpriseUiEnabled(),
-  });
+  return useEnterpriseQuery(dynamicEnginesKey, () =>
+    getEnterpriseSDK().dynamicSecrets.getAllDynamicSecretEngines(),
+  );
 }
 
 export function useCreateDynamicSecretEngine() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: CreateDynamicSecretEngineRequest) => {
-      try {
-        return await getEnterpriseSDK().dynamicSecrets.createDynamicSecretEngine(payload);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "dynamic-secret-engines"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: CreateDynamicSecretEngineRequest) =>
+      getEnterpriseSDK().dynamicSecrets.createDynamicSecretEngine(payload),
+    dynamicEnginesKey,
+  );
 }
 
 export function useUpdateDynamicSecretEngine() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { id: string } & UpdateDynamicSecretEngineRequest) => {
-      try {
-        const { id, ...body } = payload;
-        return await getEnterpriseSDK().dynamicSecrets.updateDynamicSecretEngine(id, body);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "dynamic-secret-engines"] });
-    },
-  });
+  return useEnterpriseMutation(
+    ({ id, ...body }: { id: string } & UpdateDynamicSecretEngineRequest) =>
+      getEnterpriseSDK().dynamicSecrets.updateDynamicSecretEngine(id, body),
+    dynamicEnginesKey,
+  );
 }
 
 export function useDeleteDynamicSecretEngine() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        return await getEnterpriseSDK().dynamicSecrets.deleteDynamicSecretEngine(id);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "dynamic-secret-engines"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (id: string) => getEnterpriseSDK().dynamicSecrets.deleteDynamicSecretEngine(id),
+    dynamicEnginesKey,
+  );
 }
 
 export function useDynamicSecretLeases(engineId?: string) {
-  return useQuery({
-    queryKey: ["enterprise", "dynamic-secret-leases", engineId],
-    queryFn: async () => {
-      try {
-        return await getEnterpriseSDK().dynamicSecrets.getDynamicSecretLeases(engineId!);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    enabled: isEnterpriseUiEnabled() && Boolean(engineId),
-  });
+  return useEnterpriseQuery(
+    leaseKey(engineId),
+    () => getEnterpriseSDK().dynamicSecrets.getDynamicSecretLeases(engineId!),
+    Boolean(engineId),
+  );
 }
 
 export function useCreateDynamicSecretLease() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { engineId: string } & CreateDynamicSecretLeaseRequest) => {
-      try {
-        const { engineId, ...body } = payload;
-        return await getEnterpriseSDK().dynamicSecrets.createDynamicSecretLease(engineId, body);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "dynamic-secret-leases", variables.engineId],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    ({ engineId, ...body }: { engineId: string } & CreateDynamicSecretLeaseRequest) =>
+      getEnterpriseSDK().dynamicSecrets.createDynamicSecretLease(engineId, body),
+    (variables) => leaseKey(variables.engineId),
+  );
 }
 
 export function useRevokeDynamicSecretLease() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: { engineId: string; leaseId: string }) => {
-      try {
-        return await getEnterpriseSDK().dynamicSecrets.revokeDynamicSecretLease(payload.leaseId);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: ["enterprise", "dynamic-secret-leases", variables.engineId],
-      });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: { engineId: string; leaseId: string }) =>
+      getEnterpriseSDK().dynamicSecrets.revokeDynamicSecretLease(payload.leaseId),
+    (variables) => leaseKey(variables.engineId),
+  );
 }
 
 export function useLogForwardingConfigs() {
-  return useQuery({
-    queryKey: ["enterprise", "log-forwarding"],
-    queryFn: async () => {
-      try {
-        return await getEnterpriseSDK().logForwarding.getLogForwardingConfigs();
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    enabled: isEnterpriseUiEnabled(),
-  });
+  return useEnterpriseQuery(logForwardingKey, () =>
+    getEnterpriseSDK().logForwarding.getLogForwardingConfigs(),
+  );
 }
 
 export function useCreateLogForwardingConfig() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: CreateLogForwardingRequest) => {
-      try {
-        return await getEnterpriseSDK().logForwarding.createLogForwardingConfig(payload);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "log-forwarding"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (payload: CreateLogForwardingRequest) =>
+      getEnterpriseSDK().logForwarding.createLogForwardingConfig(payload),
+    logForwardingKey,
+  );
 }
 
 export function useDeleteLogForwardingConfig() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      try {
-        return await getEnterpriseSDK().logForwarding.deleteLogForwardingConfig(id);
-      } catch (error) {
-        throw new Error(enterpriseErrorMessage(error));
-      }
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["enterprise", "log-forwarding"] });
-    },
-  });
+  return useEnterpriseMutation(
+    (id: string) => getEnterpriseSDK().logForwarding.deleteLogForwardingConfig(id),
+    logForwardingKey,
+  );
 }

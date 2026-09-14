@@ -18,6 +18,15 @@ export interface WebNavGroup {
 export interface SettingsSection {
   id: string;
   label: string;
+  href: string;
+  scopeId: string;
+}
+
+export interface ProjectSettingsTab {
+  id: string;
+  label: string;
+  href: (appId: string) => string;
+  scopeId: string;
 }
 
 export interface WebRouteDefinition {
@@ -38,4 +47,5 @@ export interface WebModule {
   navGroups: WebNavGroup[];
   scopeRules?: Record<string, ScopeRule>;
   settingsSections?: SettingsSection[];
+  projectSettingsTabs?: ProjectSettingsTab[];
 }

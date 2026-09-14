@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { WhoAmIResponse } from "@envsync-cloud/envsync-ts-sdk";
 
-import { getWebFeatureMap, getWebNavGroups, getWebRoutes, isScopeAllowed } from "./load-modules";
+import { getProjectSettingsTabs, getSettingsSections, getWebFeatureMap, getWebNavGroups, getWebRoutes, isScopeAllowed } from "./load-modules";
 import type { WebModule } from "./types";
 
 const modules: WebModule[] = [
@@ -100,6 +100,17 @@ const modules: WebModule[] = [
       "organisation-keys": user =>
         (user.role.is_admin || user.role.is_master) && Boolean(user.features?.includes("kms")),
     },
+    settingsSections: [
+      { id: "keys", label: "Key management", href: "/organisation/keys", scopeId: "organisation-keys" },
+    ],
+    projectSettingsTabs: [
+      {
+        id: "rotation",
+        label: "Rotation",
+        scopeId: "applications-rotation",
+        href: (appId) => `/projects/${appId}/settings/rotation`,
+      },
+    ],
   },
 ];
 
@@ -195,5 +206,15 @@ describe("entitlement-aware module shell", () => {
     expect(isScopeAllowed(user(["saml"], { is_admin: false }), "organisation-sso", { scopeRules, featureMap })).toBe(false);
     expect(isScopeAllowed(user(["kms"]), "organisation-keys", { scopeRules, featureMap })).toBe(true);
     expect(isScopeAllowed(user(["kms"], { is_admin: false }), "organisation-keys", { scopeRules, featureMap })).toBe(false);
+  });
+
+  test("settings sections and project tabs come from modules", () => {
+    expect(getSettingsSections(modules)).toEqual([
+      { id: "keys", label: "Key management", href: "/organisation/keys", scopeId: "organisation-keys" },
+    ]);
+    expect(getProjectSettingsTabs("app-1", ["applications-rotation"], modules)).toEqual([
+      { id: "rotation", label: "Rotation", href: "/projects/app-1/settings/rotation" },
+    ]);
+    expect(getProjectSettingsTabs("app-1", [], modules)).toEqual([]);
   });
 });

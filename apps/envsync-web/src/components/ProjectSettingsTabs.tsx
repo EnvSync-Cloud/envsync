@@ -1,31 +1,20 @@
 import { Link } from "react-router-dom";
 
 import { useAuthContext } from "@/contexts/auth";
-import {
-  appDynamicSecretsPath,
-  appRotationPath,
-  appServiceTokensPath,
-} from "@/lib/app-routes";
+import { appServiceTokensPath } from "@/lib/app-routes";
+import { getProjectSettingsTabs } from "@/modules/load-modules";
 
 export function ProjectSettingsTabs({
   appId,
   active,
 }: {
   appId: string;
-  active: "tokens" | "rotation" | "dynamic-secrets";
+  active: string;
 }) {
   const { allowedScopes } = useAuthContext();
-  const showRotation = allowedScopes.includes("applications-rotation");
-  const showDynamic = allowedScopes.includes("applications-dynamic-secrets");
-
   const tabs = [
-    { id: "tokens" as const, href: appServiceTokensPath(appId), label: "Service tokens" },
-    ...(showRotation
-      ? [{ id: "rotation" as const, href: appRotationPath(appId), label: "Rotation" }]
-      : []),
-    ...(showDynamic
-      ? [{ id: "dynamic-secrets" as const, href: appDynamicSecretsPath(appId), label: "Dynamic secrets" }]
-      : []),
+    { id: "tokens", href: appServiceTokensPath(appId), label: "Service tokens" },
+    ...getProjectSettingsTabs(appId, allowedScopes),
   ];
 
   if (tabs.length <= 1) return null;

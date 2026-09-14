@@ -11,21 +11,13 @@ import {
   useOidcProviders,
   useUpdateOidcProvider,
 } from "../api/ee-workloads";
+import { EnterpriseDeleteDialog } from "../components/EnterpriseDeleteDialog";
+import { EnterprisePageFrame } from "../components/EnterprisePageFrame";
 import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
 import { Input } from "@shell/components/ui/input";
 import { Label } from "@shell/components/ui/label";
 import { Switch } from "@shell/components/ui/switch";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@shell/components/ui/alert-dialog";
 import {
   Sheet,
   SheetContent,
@@ -103,33 +95,15 @@ export default function OrgOidc() {
     }
   };
 
-  if (!enabled) {
-    return (
-      <div className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-        <h1 className="text-2xl font-semibold">Workload OIDC</h1>
-        <p className="text-sm text-muted-foreground">
-          Enterprise modules are not enabled on this dashboard build.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-            Enterprise
-          </p>
-          <h1 className="flex items-center gap-2 text-3xl font-semibold text-foreground">
-            <Fingerprint className="size-7" />
-            Workload OIDC
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Trust CI and cluster identities (GitHub Actions, GitLab, Kubernetes) without long-lived
-            service tokens. Human SAML login stays on SSO.
-          </p>
-        </div>
+    <EnterprisePageFrame
+      title="Workload OIDC"
+      description="Trust CI and cluster identities (GitHub Actions, GitLab, Kubernetes) without long-lived service tokens. Human SAML login stays on SSO."
+      icon={<Fingerprint className="size-7" />}
+      enabled={enabled}
+      isError={isError}
+      error={error}
+      actions={
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -140,13 +114,8 @@ export default function OrgOidc() {
             Add provider
           </Button>
         </div>
-      </div>
-
-      {isError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {error instanceof Error ? error.message : "Failed to load OIDC providers"}
-        </div>
-      )}
+      }
+    >
 
       <div className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-xl border border-border bg-card/50 px-4 py-3">
@@ -247,34 +216,22 @@ export default function OrgOidc() {
         </SheetContent>
       </Sheet>
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this OIDC provider?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Machines using {deleteTarget ? providerLabel(deleteTarget.provider_type) : "this provider"} will
-              no longer authenticate.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (!deleteTarget) return;
-                deleteProvider.mutate(deleteTarget.id, {
-                  onSuccess: () => {
-                    toast.success("Provider deleted.");
-                    setDeleteTarget(null);
-                  },
-                  onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed."),
-                });
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <EnterpriseDeleteDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this OIDC provider?"
+        description={`Machines using ${deleteTarget ? providerLabel(deleteTarget.provider_type) : "this provider"} will no longer authenticate.`}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          deleteProvider.mutate(deleteTarget.id, {
+            onSuccess: () => {
+              toast.success("Provider deleted.");
+              setDeleteTarget(null);
+            },
+            onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed."),
+          });
+        }}
+      />
+    </EnterprisePageFrame>
   );
 }

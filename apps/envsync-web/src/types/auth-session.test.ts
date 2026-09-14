@@ -60,6 +60,39 @@ describe("normalizeAuthSession", () => {
     expect(session.install_features).toEqual(["saml", "integrations"]);
     expect(session.auth_type).toBe("jwt");
     expect(session.memberships).toHaveLength(1);
+    expect(session.memberships[0]?.is_current).toBe(true);
+  });
+
+  test("maps is_current from whoami memberships", () => {
+    const session = normalizeAuthSession(baseSession({
+      memberships: [
+        {
+          user_id: "user_1",
+          org_id: "org_1",
+          org_name: "Acme",
+          org_slug: "acme",
+          role_id: "role_1",
+          role_name: "Org Admin",
+          is_admin: true,
+          is_master: true,
+          is_active: true,
+          is_current: true,
+        } as WhoAmIResponse["memberships"][number] & { is_current: true },
+        {
+          user_id: "user_2",
+          org_id: "org_2",
+          org_name: "Other",
+          org_slug: "other",
+          role_id: "role_2",
+          role_name: "Viewer",
+          is_admin: false,
+          is_master: false,
+          is_active: true,
+          is_current: false,
+        } as WhoAmIResponse["memberships"][number] & { is_current: false },
+      ],
+    }));
+    expect(session.memberships.map((membership) => membership.is_current)).toEqual([true, false]);
   });
 
   test("defaults missing entitlement fields", () => {

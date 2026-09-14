@@ -1,4 +1,4 @@
-import { Fingerprint, KeyRound, Link2, LockKeyhole, ScrollText, Workflow } from "lucide-react";
+import { Database, Fingerprint, KeyRound, Link2, LockKeyhole, ScrollText, Workflow } from "lucide-react";
 
 import type { WebModule } from "./types";
 
@@ -92,7 +92,8 @@ export const enterpriseWebModules: WebModule[] = [
         isOrgAdmin(user) && Boolean(user.features?.includes("integrations")),
     },
     settingsSections: [
-      { id: "integrations", label: "Integrations" },
+      { id: "integrations", label: "Integrations", href: "/organisation/integrations", scopeId: "organisation-integrations" },
+      { id: "sync", label: "Sync ops", href: "/organisation/sync", scopeId: "organisation-sync" },
     ],
   },
   {
@@ -122,7 +123,7 @@ export const enterpriseWebModules: WebModule[] = [
       "organisation-license": isOrgAdmin,
     },
     settingsSections: [
-      { id: "license", label: "License" },
+      { id: "license", label: "License", href: "/organisation/license", scopeId: "organisation-license" },
     ],
   },
   {
@@ -154,7 +155,7 @@ export const enterpriseWebModules: WebModule[] = [
         isOrgAdmin(user) && Boolean(user.features?.includes("saml")),
     },
     settingsSections: [
-      { id: "sso", label: "SSO" },
+      { id: "sso", label: "SSO", href: "/organisation/sso", scopeId: "organisation-sso" },
     ],
   },
   {
@@ -186,7 +187,7 @@ export const enterpriseWebModules: WebModule[] = [
         isOrgAdmin(user) && Boolean(user.features?.includes("oidc")),
     },
     settingsSections: [
-      { id: "oidc", label: "Workload OIDC" },
+      { id: "oidc", label: "Workload OIDC", href: "/organisation/oidc", scopeId: "organisation-oidc" },
     ],
   },
   {
@@ -218,7 +219,7 @@ export const enterpriseWebModules: WebModule[] = [
         isOrgAdmin(user) && Boolean(user.features?.includes("log_forwarding")),
     },
     settingsSections: [
-      { id: "log-forwarding", label: "Log forwarding" },
+      { id: "log-forwarding", label: "Log forwarding", href: "/organisation/log-forwarding", scopeId: "organisation-log-forwarding" },
     ],
   },
   {
@@ -235,16 +236,27 @@ export const enterpriseWebModules: WebModule[] = [
     navGroups: [],
     scopeRules: {
       "applications-rotation": user =>
-        Boolean(
-          (user.role.can_edit || user.role.is_admin || user.role.is_master)
-          && user.features?.includes("rotation"),
-        ),
+        isOrgAdmin(user) && Boolean(user.features?.includes("rotation")),
     },
+    projectSettingsTabs: [
+      {
+        id: "rotation",
+        label: "Rotation",
+        scopeId: "applications-rotation",
+        href: (appId) => `/projects/${appId}/settings/rotation`,
+      },
+    ],
   },
   {
     name: "enterprise-dynamic-secrets",
     requiredFeature: "dynamic_secrets",
     routes: [
+      {
+        id: "organisation-dynamic-secrets",
+        layout: "root",
+        path: "organisation/dynamic-secrets",
+        loadComponent: () => import("./pages/OrgDynamicSecrets"),
+      },
       {
         id: "applications-dynamic-secrets",
         layout: "root",
@@ -252,14 +264,41 @@ export const enterpriseWebModules: WebModule[] = [
         loadComponent: () => import("./pages/ProjectDynamicSecrets"),
       },
     ],
-    navGroups: [],
+    navGroups: [
+      {
+        label: "Enterprise",
+        items: [
+          {
+            id: "organisation-dynamic-secrets",
+            name: "Dynamic secrets",
+            href: "/organisation/dynamic-secrets",
+            icon: Database,
+          },
+        ],
+      },
+    ],
     scopeRules: {
+      "organisation-dynamic-secrets": user =>
+        isOrgAdmin(user) && Boolean(user.features?.includes("dynamic_secrets")),
       "applications-dynamic-secrets": user =>
-        Boolean(
-          (user.role.can_edit || user.role.is_admin || user.role.is_master)
-          && user.features?.includes("dynamic_secrets"),
-        ),
+        isOrgAdmin(user) && Boolean(user.features?.includes("dynamic_secrets")),
     },
+    settingsSections: [
+      {
+        id: "dynamic-secrets",
+        label: "Dynamic secrets",
+        href: "/organisation/dynamic-secrets",
+        scopeId: "organisation-dynamic-secrets",
+      },
+    ],
+    projectSettingsTabs: [
+      {
+        id: "dynamic-secrets",
+        label: "Dynamic secrets",
+        scopeId: "applications-dynamic-secrets",
+        href: (appId) => `/projects/${appId}/settings/dynamic-secrets`,
+      },
+    ],
   },
   {
     name: "enterprise-kms",
@@ -290,7 +329,7 @@ export const enterpriseWebModules: WebModule[] = [
         isOrgAdmin(user) && Boolean(user.features?.includes("kms")),
     },
     settingsSections: [
-      { id: "keys", label: "Key management" },
+      { id: "keys", label: "Key management", href: "/organisation/keys", scopeId: "organisation-keys" },
     ],
   },
 ];

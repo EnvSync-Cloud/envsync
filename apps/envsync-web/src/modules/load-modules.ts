@@ -1,7 +1,7 @@
 import { coreWebModules } from "./core-modules";
 import { enterpriseWebModules } from "@enterprise-modules";
 import { externalWebModules } from "./external-modules";
-import type { ScopeRule, SettingsSection, WebModule, WebNavGroup, WebNavItem, WebRouteDefinition } from "./types";
+import type { ProjectSettingsTab, ScopeRule, SettingsSection, WebModule, WebNavGroup, WebNavItem, WebRouteDefinition } from "./types";
 import { isEnterpriseDashboard } from "@/utils/runtime-config";
 import { hasEntitledFeature } from "@/lib/entitlements";
 
@@ -83,6 +83,20 @@ export function getSettingsSections(modules: WebModule[] = loadWebModules()): Se
   return dedupeByKey(
     modules.flatMap((module) => module.settingsSections ?? []),
     (section) => section.id
+  );
+}
+
+export function getProjectSettingsTabs(
+  appId: string,
+  allowedScopes: readonly string[],
+  modules: WebModule[] = loadWebModules(),
+): Array<{ id: string; label: string; href: string }> {
+  return dedupeByKey(
+    modules
+      .flatMap((module) => module.projectSettingsTabs ?? [])
+      .filter((tab: ProjectSettingsTab) => allowedScopes.includes(tab.scopeId))
+      .map((tab) => ({ id: tab.id, label: tab.label, href: tab.href(appId) })),
+    (tab) => tab.id,
   );
 }
 

@@ -168,7 +168,7 @@ describe("change request compare-and-swap", () => {
 		).rejects.toThrow("Only pending requests can be cancelled");
 	});
 
-	test("failed apply can be retried by the same reviewer", async () => {
+	test("failed apply can be retried by any authorized reviewer", async () => {
 		const created = await createDirect("retry-failed");
 		const db = await (await import("@/libs/db")).DB.getInstance();
 		await db
@@ -182,20 +182,73 @@ describe("change request compare-and-swap", () => {
 			.where("id", "=", created.id)
 			.execute();
 
+		const retried = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: reviewer.id,
+		});
+		expect(retried.status).toBe("approved");
+		expect(retried.reviewed_by_user_id).toBe(reviewer.id);
+	});
+
+	test("applying cannot be reclaimed", async () => {
+		const created = await createDirect("applying-lock");
+		const db = await (await import("@/libs/db")).DB.getInstance();
+		await db
+			.updateTable("change_request")
+			.set({
+				status: "applying",
+				reviewed_by_user_id: seed.masterUser.id,
+				reviewed_at: new Date(),
+				updated_at: new Date(),
+			})
+			.where("id", "=", created.id)
+			.execute();
+
 		await expect(
 			ChangeRequestService.approveChangeRequest({
 				id: created.id,
 				org_id: seed.org.id,
-				reviewer_user_id: reviewer.id,
+				reviewer_user_id: seed.masterUser.id,
 			}),
-		).rejects.toThrow("no longer pending");
+		).rejects.toThrow("Only pending or failed requests can be approved");
+	});
 
-		const retried = await ChangeRequestService.approveChangeRequest({
-			id: created.id,
+	test("CREATE env that collides with an existing secret stays failed", async () => {
+		const { SecretService } = await import("@/services/secret.service");
+		const key = `COLLIDE_${crypto.randomUUID().slice(0, 8)}`;
+		await SecretService.createSecret(
+			{
+				key,
+				value: "already-a-secret",
+				app_id: appId,
+				org_id: seed.org.id,
+				env_type_id: productionEnvTypeId,
+				user_id: seed.masterUser.id,
+			},
+			{ allowProtected: true },
+		);
+
+		const created = await ChangeRequestService.createDirect({
 			org_id: seed.org.id,
-			reviewer_user_id: seed.masterUser.id,
+			app_id: appId,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: requester.id,
+			title: "cross-type-create",
+			message: "cross-type-create",
+			envs: [{ key, operation: "CREATE", proposed_value: "https://example.test" }],
 		});
-		expect(retried.status).toBe("approved");
+
+		await expect(
+			ChangeRequestService.approveChangeRequest({
+				id: created.id,
+				org_id: seed.org.id,
+				reviewer_user_id: seed.masterUser.id,
+			}),
+		).rejects.toThrow(/already exists as a secret/i);
+
+		const failed = await ChangeRequestService.getChangeRequest(created.id, seed.org.id);
+		expect(failed.status).toBe("failed");
 	});
 
 	test("apply throw marks the request failed", async () => {

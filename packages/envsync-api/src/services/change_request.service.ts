@@ -2,14 +2,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { smartEncrypt } from "@/helpers/key-store";
 import { DB } from "@/libs/db";
-import { BusinessRuleError, ConflictError, NotFoundError, ValidationError, orNotFound } from "@/libs/errors";
+import { BusinessRuleError, ValidationError, orNotFound } from "@/libs/errors";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
+import { applyChangeRequestItems } from "@/services/change_request_apply";
 import { EnvService } from "@/services/env.service";
-import { EnvStorePiTService } from "@/services/env_store_pit.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { SecretService } from "@/services/secret.service";
-import { SecretStorePiTService } from "@/services/secret_store_pit.service";
 
 type ChangeOperation = "CREATE" | "UPDATE" | "DELETE";
 
@@ -361,7 +360,7 @@ export class ChangeRequestService {
 			id,
 		);
 
-		if (!["pending", "applying", "failed"].includes(request.status)) {
+		if (!["pending", "failed"].includes(request.status)) {
 			throw new BusinessRuleError("Only pending or failed requests can be approved.");
 		}
 		if (request.requested_by_user_id === reviewer_user_id) {
@@ -398,10 +397,7 @@ export class ChangeRequestService {
 							eb("reviewed_by_user_id", "=", reviewer_user_id),
 						]),
 					]),
-					eb.and([
-						eb("status", "in", ["applying", "failed"]),
-						eb("reviewed_by_user_id", "=", reviewer_user_id),
-					]),
+					eb("status", "=", "failed"),
 				]),
 			)
 			.returning("id")
@@ -426,43 +422,14 @@ export class ChangeRequestService {
 		]);
 
 		try {
-			for (const item of envItems) {
-				await this.applyEnvItem(request, item, reviewer_user_id);
-			}
-			for (const item of secretItems) {
-				await this.applySecretItem(request, item, reviewer_user_id);
-			}
+			await applyChangeRequestItems({
+				request,
+				envItems,
+				secretItems,
+				reviewer_user_id,
+			});
 
 			const now = new Date();
-			if (envItems.length > 0) {
-				await EnvStorePiTService.createEnvStorePiT({
-					org_id,
-					app_id: request.app_id,
-					env_type_id: request.target_env_type_id,
-					change_request_message: request.message,
-					user_id: reviewer_user_id,
-					envs: envItems.map((item) => ({
-						key: item.key,
-						value: item.operation === "DELETE" ? (item.previous_value ?? "") : (item.proposed_value ?? ""),
-						operation: item.operation,
-					})),
-				});
-			}
-			if (secretItems.length > 0) {
-				await SecretStorePiTService.createSecretStorePiT({
-					org_id,
-					app_id: request.app_id,
-					env_type_id: request.target_env_type_id,
-					change_request_message: request.message,
-					user_id: reviewer_user_id,
-					envs: secretItems.map((item) => ({
-						key: item.key,
-						value: item.operation === "DELETE" ? (item.previous_value ?? "") : (item.proposed_value ?? ""),
-						operation: item.operation,
-					})),
-				});
-			}
-
 			const approved = await db
 				.updateTable("change_request")
 				.set({
@@ -615,173 +582,5 @@ export class ChangeRequestService {
 			throw new BusinessRuleError("You do not have permission to review this change request.", 403);
 		}
 		return request;
-	}
-
-	private static async applyEnvItem(
-		request: {
-			app_id: string;
-			org_id: string;
-			target_env_type_id: string;
-		},
-		item: {
-			key: string;
-			operation: string;
-			proposed_value: string | null | undefined;
-		},
-		user_id: string,
-	) {
-		if (item.operation === "CREATE") {
-			try {
-				await EnvService.createEnv(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof ConflictError)) {
-					throw err;
-				}
-			}
-			return;
-		}
-		if (item.operation === "UPDATE") {
-			try {
-				await EnvService.updateEnv(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-				await EnvService.createEnv(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			}
-			return;
-		}
-		if (item.operation === "DELETE") {
-			try {
-				await EnvService.deleteEnv(
-					{
-						key: item.key,
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-			}
-		}
-	}
-
-	private static async applySecretItem(
-		request: {
-			app_id: string;
-			org_id: string;
-			target_env_type_id: string;
-		},
-		item: {
-			key: string;
-			operation: string;
-			proposed_value: string | null | undefined;
-		},
-		user_id: string,
-	) {
-		if (item.operation === "CREATE") {
-			try {
-				await SecretService.createSecret(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof ConflictError)) {
-					throw err;
-				}
-			}
-			return;
-		}
-		if (item.operation === "UPDATE") {
-			try {
-				await SecretService.updateSecret(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-				await SecretService.createSecret(
-					{
-						key: item.key,
-						value: item.proposed_value ?? "",
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			}
-			return;
-		}
-		if (item.operation === "DELETE") {
-			try {
-				await SecretService.deleteSecret(
-					{
-						key: item.key,
-						app_id: request.app_id,
-						org_id: request.org_id,
-						env_type_id: request.target_env_type_id,
-						user_id,
-					},
-					{ allowProtected: true },
-				);
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-			}
-		}
 	}
 }

@@ -34,6 +34,7 @@ export const orgSettingsPath = () => "/org";
 export const orgIntegrationsPath = () => "/organisation/integrations";
 export const orgOidcPath = () => "/organisation/oidc";
 export const orgLogForwardingPath = () => "/organisation/log-forwarding";
+export const orgDynamicSecretsPath = () => "/organisation/dynamic-secrets";
 export const apiKeysPath = () => "/apikeys";
 
 export const PALETTE_ORG_LINKS = [

@@ -33,6 +33,10 @@ test.describe("enterprise dashboard routes", () => {
 				heading: /^Log forwarding$/,
 			},
 			{
+				path: "/organisation/dynamic-secrets",
+				heading: /^Dynamic secrets$/,
+			},
+			{
 				path: "/organisation/keys",
 				heading: /^Key management$/,
 			},

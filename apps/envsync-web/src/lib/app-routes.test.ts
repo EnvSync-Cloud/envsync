@@ -19,6 +19,7 @@ import {
   orgIntegrationsPath,
   orgRolesPath,
   orgLogForwardingPath,
+  orgDynamicSecretsPath,
   orgOidcPath,
   orgSettingsPath,
   orgTeamsPath,
@@ -37,6 +38,7 @@ describe("app routes", () => {
     expect(appDynamicSecretsPath("app-1")).toBe("/projects/app-1/settings/dynamic-secrets");
     expect(orgOidcPath()).toBe("/organisation/oidc");
     expect(orgLogForwardingPath()).toBe("/organisation/log-forwarding");
+    expect(orgDynamicSecretsPath()).toBe("/organisation/dynamic-secrets");
     expect(orgUsersPath()).toBe("/org/access/users");
     expect(orgAccessPath()).toBe("/org/access");
     expect(orgAccessPath("users")).toBe("/org/access/users");

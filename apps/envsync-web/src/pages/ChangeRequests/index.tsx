@@ -522,6 +522,7 @@ const ChangeRequests = () => {
                                   variant="ghost"
                                   className="text-green-300 hover:bg-green-950 hover:text-green-200"
                                   data-testid="change-request-approve-button"
+                                  disabled={approve.isPending}
                                   onClick={() =>
                                     approve.mutate({
                                       id: request.id,
@@ -540,6 +541,7 @@ const ChangeRequests = () => {
                                   variant="ghost"
                                   className="text-amber-300 hover:bg-amber-950 hover:text-amber-200"
                                   data-testid="change-request-retry-button"
+                                  disabled={approve.isPending}
                                   onClick={() =>
                                     approve.mutate({
                                       id: request.id,
@@ -677,6 +679,7 @@ const ChangeRequests = () => {
                   <div className="flex justify-end">
                     <Button
                       data-testid="change-request-retry-button"
+                      disabled={approve.isPending}
                       onClick={() =>
                         approve.mutate({
                           id: selectedRequest.id,
@@ -708,6 +711,7 @@ const ChangeRequests = () => {
                       <Button
                         className="bg-green-600 hover:bg-green-700"
                         data-testid="change-request-dialog-approve-button"
+                        disabled={approve.isPending}
                         onClick={() =>
                           approve.mutate({
                             id: selectedRequest.id,

@@ -25,6 +25,7 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
       LockKeyhole: () => null,
       Workflow: () => null,
       ScrollText: () => null,
+      Database: () => null,
     }));
     const mod = await import("../src/index.ts");
     expect(Array.isArray(mod.enterpriseWebModules)).toBe(true);
@@ -56,6 +57,7 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(byName["enterprise-oidc"].routes.map(r => r.id)).toContain("organisation-oidc");
     expect(byName["enterprise-log-forwarding"].routes.map(r => r.id)).toContain("organisation-log-forwarding");
     expect(byName["enterprise-rotation"].routes.map(r => r.id)).toContain("applications-rotation");
+    expect(byName["enterprise-dynamic-secrets"].routes.map(r => r.id)).toContain("organisation-dynamic-secrets");
     expect(byName["enterprise-dynamic-secrets"].routes.map(r => r.id)).toContain("applications-dynamic-secrets");
     expect(byName["enterprise-kms"].routes.map(r => r.id)).toContain("organisation-keys");
   });
@@ -69,6 +71,7 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(fs.existsSync(path.join(srcRoot, "pages/OrgOidc.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/OrgLogForwarding.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/ProjectRotation.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/OrgDynamicSecrets.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/ProjectDynamicSecrets.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/KeyManagement.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "modules.ts"))).toBe(true);
@@ -85,6 +88,7 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(nav).toContain("organisation-sso");
     expect(nav).toContain("organisation-oidc");
     expect(nav).toContain("organisation-log-forwarding");
+    expect(nav).toContain("organisation-dynamic-secrets");
     expect(nav).toContain("organisation-keys");
   });
 
@@ -100,6 +104,24 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(rule(entitledAdmin as never)).toBe(true);
     expect(rule(entitledEditor as never)).toBe(false);
     expect(rule(unentitledAdmin as never)).toBe(false);
+  });
+
+  test("rotation and dynamic-secrets scopes require admin plus feature", async () => {
+    const mod = await import("../src/index.ts");
+    const rules = Object.fromEntries(
+      mod.enterpriseWebModules.flatMap(module => Object.entries(module.scopeRules ?? {})),
+    );
+    const rotation = rules["applications-rotation"];
+    const orgDyn = rules["organisation-dynamic-secrets"];
+    const projectDyn = rules["applications-dynamic-secrets"];
+    const admin = { role: { is_admin: true, is_master: false }, features: ["rotation", "dynamic_secrets"] };
+    const editor = { role: { is_admin: false, is_master: false, can_edit: true }, features: ["rotation", "dynamic_secrets"] };
+    expect(rotation(admin as never)).toBe(true);
+    expect(rotation(editor as never)).toBe(false);
+    expect(orgDyn(admin as never)).toBe(true);
+    expect(orgDyn(editor as never)).toBe(false);
+    expect(projectDyn(admin as never)).toBe(true);
+    expect(projectDyn(editor as never)).toBe(false);
   });
 
   test("OIDC and log-forwarding scopes require admin plus feature", async () => {

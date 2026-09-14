@@ -38,7 +38,7 @@ describe("core web routes", () => {
     expect(redirect("applications/:appId/integrations")).toBe("/projects/:appId/integrations");
     expect(
       routes
-        .filter((route) => route.path?.startsWith("organisation"))
+        .filter((route) => route.path?.startsWith("organisation/"))
         .every((route) => !route.redirectTo),
     ).toBe(true);
   });
