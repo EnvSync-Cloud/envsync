@@ -13,6 +13,7 @@ import {
 import { useMemo } from "react";
 
 import { api } from "@/api";
+import type { EffectivePermissions } from "@/api/permissions.api";
 import { navGroups } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import {
@@ -132,15 +133,26 @@ function NavGroup({
   );
 }
 
+function hasRequiredPermission(item: WebNavItem, permissions?: EffectivePermissions) {
+  if (!item.requiredPermission) return true;
+  return Boolean(permissions?.[item.requiredPermission]);
+}
+
 function filterGroups(
   groups: WebNavGroup[],
   allowedScopes: string[],
   predicate: (item: WebNavItem) => boolean,
+  permissions?: EffectivePermissions,
 ): WebNavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => allowedScopes.includes(item.id) && predicate(item)),
+      items: group.items.filter(
+        (item) =>
+          allowedScopes.includes(item.id) &&
+          predicate(item) &&
+          hasRequiredPermission(item, permissions),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 }
@@ -151,11 +163,9 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
   const { data: permissions } = api.permissions.getMyPermissions({
     enabled: !isAuthLoading && isAuthenticated,
   });
-  const canManageApiKeys = Boolean(permissions?.can_manage_api_keys);
-
   const groups = useMemo(() => {
     if (product === "certificates") {
-      return filterGroups(navGroups, allowedScopes, (item) => CERTIFICATE_NAV_IDS.has(item.id));
+      return filterGroups(navGroups, allowedScopes, (item) => CERTIFICATE_NAV_IDS.has(item.id), permissions);
     }
 
     if (product === "organization") {
@@ -163,6 +173,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         navGroups,
         allowedScopes,
         (item) => !SECRETS_ORG_NAV_IDS.has(item.id) && !CERTIFICATE_NAV_IDS.has(item.id),
+        permissions,
       );
     }
 
@@ -173,6 +184,13 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
         { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
         { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
+        {
+          id: "project-settings",
+          name: "Settings",
+          href: appSettingsPath(appId),
+          icon: Settings2,
+          requiredPermission: "can_manage_api_keys",
+        },
       ];
 
       if (allowedScopes.includes("change-requests")) {
@@ -181,15 +199,6 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
           name: "Approvals",
           href: appApprovalsPath(appId),
           icon: GitPullRequest,
-        });
-      }
-
-      if (canManageApiKeys) {
-        projectItems.push({
-          id: "project-settings",
-          name: "Settings",
-          href: appSettingsPath(appId),
-          icon: Settings2,
         });
       }
 
@@ -205,7 +214,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       return [
         {
           label: "Project",
-          items: projectItems,
+          items: projectItems.filter((item) => hasRequiredPermission(item, permissions)),
         },
       ];
     }
@@ -214,8 +223,9 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       navGroups,
       allowedScopes,
       (item) => item.id === "dashboard" || item.id === "applications",
+      permissions,
     );
-  }, [allowedScopes, appId, canManageApiKeys, product]);
+  }, [allowedScopes, appId, permissions, product]);
 
   const fallbackGroups = useMemo(() => {
     if (groups.length > 0) return groups;

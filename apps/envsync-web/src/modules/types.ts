@@ -2,11 +2,14 @@ import type { WhoAmIResponse } from "@envsync-cloud/envsync-ts-sdk";
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 
+import type { EffectivePermissions } from "@/api/permissions.api";
+
 export interface WebNavItem {
   id: string;
   name: string;
   href: string;
   icon: LucideIcon;
+  requiredPermission?: keyof EffectivePermissions;
 }
 
 export interface WebNavGroup {
