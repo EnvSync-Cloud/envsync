@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -10,8 +11,18 @@ import { config } from "@/utils/env";
 
 import { PostgresDB } from "./adapters/postgresql";
 
+function enterpriseMigrationDirectory(): string | null {
+	const candidate = path.resolve(import.meta.dir, "../../../../envsync-enterprise/src/migrations");
+	return existsSync(candidate) ? candidate : null;
+}
+
 function defaultMigrationDirectories() {
-	return [new URL(import.meta.resolve("./migrations")).pathname];
+	const directories = [new URL(import.meta.resolve("./migrations")).pathname];
+	const enterprise = enterpriseMigrationDirectory();
+	if (enterprise) {
+		directories.push(enterprise);
+	}
+	return directories;
 }
 
 export class CompositeMigrationProvider implements MigrationProvider {

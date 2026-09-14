@@ -12,7 +12,7 @@ import {
 	EnterpriseProviderSyncService,
 	type EnterpriseSyncContext,
 	type EnterpriseSyncResult,
-} from "@/services/enterprise-provider-sync.service";
+} from "envsync-enterprise";
 
 type RecordedSyncCall = {
 	connectionName: string;

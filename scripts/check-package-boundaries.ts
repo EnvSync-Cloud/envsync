@@ -193,23 +193,29 @@ for (const name of requiredEeServices) {
 	const apiShim = path.join(root, "packages/envsync-api/src/services", name);
 	if (!fs.existsSync(eePath)) {
 		fail(`H3: missing envsync-enterprise service ${name}`);
-	} else if (!fs.existsSync(apiShim)) {
-		fail(`H3: missing envsync-api re-export shim for ${name}`);
 	} else {
-		const shim = fs.readFileSync(apiShim, "utf8");
-		const bootSafe = name === "oidc.service.ts" || name === "enterprise-certificate-verifier.service.ts";
+		const bootSafe =
+			name === "oidc.service.ts" ||
+			name === "enterprise-certificate-verifier.service.ts" ||
+			name === "log-forwarding.service.ts";
 		if (bootSafe) {
-			if (shim.includes("export * from")) {
-				fail(`H3: ${name} is on the OSS boot path and must not statically re-export EE`);
-			} else if (!shim.includes("envsync-enterprise")) {
-				fail(`H3: ${name} should dynamically load envsync-enterprise`);
+			if (!fs.existsSync(apiShim)) {
+				fail(`H3: missing OSS-safe loader for ${name}`);
 			} else {
-				ok(`H3: ${name} loads EE dynamically (OSS-safe)`);
+				const shim = fs.readFileSync(apiShim, "utf8");
+				if (shim.includes("export * from")) {
+					fail(`H3: ${name} is on the OSS boot path and must not statically re-export EE`);
+				} else if (!shim.includes("envsync-enterprise")) {
+					fail(`H3: ${name} should dynamically load envsync-enterprise`);
+				} else {
+					ok(`H3: ${name} loads EE dynamically (OSS-safe)`);
+				}
 			}
-		} else if (!shim.includes("envsync-enterprise") || !shim.includes("export * from")) {
-			fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
-		} else if (shim.split("\n").filter(l => l.trim().length > 0).length > 12) {
-			fail(`H3: envsync-api ${name} shim looks too large (expected thin re-export)`);
+		} else if (fs.existsSync(apiShim)) {
+			const shim = fs.readFileSync(apiShim, "utf8");
+			if (shim.includes("export * from") && shim.includes("envsync-enterprise")) {
+				fail(`H3: ${name} must not statically re-export EE from OSS`);
+			}
 		}
 	}
 }
@@ -243,23 +249,38 @@ const requiredEeMigrations = [
 	"027_org_kms.ts",
 ];
 const apiMigrationsDir = path.join(root, "packages/envsync-api/src/libs/db/migrations");
+const dbIndex = fs.readFileSync(path.join(root, "packages/envsync-api/src/libs/db/index.ts"), "utf8");
+if (!dbIndex.includes("envsync-enterprise/src/migrations")) {
+	fail("H3.4: core migrator must probe envsync-enterprise/src/migrations when present");
+}
 for (const name of requiredEeMigrations) {
 	const eeMig = path.join(eeMigrationsDir, name);
 	const apiMig = path.join(apiMigrationsDir, name);
 	if (!fs.existsSync(eeMig)) {
 		fail(`H3.4: missing envsync-enterprise migration ${name}`);
-	} else if (!fs.existsSync(apiMig)) {
-		fail(`H3.4: missing envsync-api migration loader for ${name}`);
-	} else {
-		const shim = fs.readFileSync(apiMig, "utf8");
-		if (shim.includes("export { up, down }")) {
-			fail(`H3.4: ${name} must not statically re-export EE (OSS migrator must load)`);
-		} else if (!shim.includes("envsync-enterprise")) {
-			fail(`H3.4: ${name} should dynamically load envsync-enterprise`);
-		}
+	} else if (fs.existsSync(apiMig)) {
+		fail(`H3.4: ${name} must not live in the OSS migrator folder`);
 	}
 }
-ok("H3.4: EE migrations owned by envsync-enterprise with OSS-safe loaders");
+ok("H3.4: EE migrations live only under envsync-enterprise");
+
+const bootFiles = [
+	"packages/envsync-api/src/helpers/access.ts",
+	"packages/envsync-api/src/services/license-state.service.ts",
+	"packages/envsync-api/src/app/factory.ts",
+	"packages/envsync-api/src/entrypoint.ts",
+	"packages/envsync-api/src/middlewares/license-lock.middleware.ts",
+];
+for (const rel of bootFiles) {
+	const text = fs.readFileSync(path.join(root, rel), "utf8");
+	if (text.includes("export * from") && text.includes("envsync-enterprise")) {
+		fail(`A: ${rel} statically re-exports envsync-enterprise`);
+	}
+	if (text.includes("../../../envsync-enterprise") && !text.includes("await import")) {
+		fail(`A: ${rel} statically imports envsync-enterprise`);
+	}
+}
+ok("A: OSS boot files do not statically import envsync-enterprise");
 
 // 12) H6: envsync-web must not list proprietary EE web as a production dependency
 const webPkg = JSON.parse(

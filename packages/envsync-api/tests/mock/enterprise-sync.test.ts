@@ -5,8 +5,7 @@ import { cleanupDB, getDB, seedApp, seedEnvType, seedOrg, type SeedOrgResult } f
 import { MockFGAClient, resetFGA, setupUserOrgTuples } from "../helpers/fga";
 import { resetVaultStore } from "../helpers/kms";
 import { generateKeyPair } from "@/helpers/key-store";
-import { EnterpriseIntegrationService } from "@/services/enterprise-integration.service";
-import { EnterpriseProviderSyncService } from "@/services/enterprise-provider-sync.service";
+import { EnterpriseIntegrationService, EnterpriseProviderSyncService } from "envsync-enterprise";
 
 let seed: SeedOrgResult;
 let appId: string;
