@@ -30,23 +30,45 @@ const WRITE_METHODS = new Set(["PUT", "PATCH", "DELETE"]);
 const RESOURCE_PREFIX = /^\/api\/(?:env|secret)(?=\/|$)/;
 const WRITE_TAILS = [/^\/single(?:\/|$)/, /^\/batch(?:\/|$)/, /^\/rollback(?:\/|$)/, /^\/delete(?:\/|$)/];
 const KEYLESS_READ_TAILS = [/^\/history(?:\/|$)/, /^\/pit(?:\/|$)/, /^\/timestamp(?:\/|$)/, /^\/diff(?:\/|$)/];
+const ALLOWED_TAILS = [
+	/^\/?$/,
+	/^\/export(?:\/|$)/,
+	/^\/reveal(?:\/|$)/,
+	/^\/i(?:\/|$)/,
+	/^\/single(?:\/|$)/,
+	/^\/batch(?:\/|$)/,
+	/^\/history(?:\/|$)/,
+	/^\/pit(?:\/|$)/,
+	/^\/timestamp(?:\/|$)/,
+	/^\/diff(?:\/|$)/,
+	/^\/timeline(?:\/|$)/,
+	/^\/rollback(?:\/|$)/,
+];
 
 function resourceTail(path: string): string {
 	return path.replace(RESOURCE_PREFIX, "").split("?")[0] || "/";
 }
 
 export function classifyServiceTokenOp(method: string, path: string) {
+	const tail = resourceTail(path);
+	if (!RESOURCE_PREFIX.test(path) || !ALLOWED_TAILS.some(pattern => pattern.test(tail))) {
+		return { permission: "unknown" as const, allowKeyless: false };
+	}
+
 	if (WRITE_METHODS.has(method.toUpperCase())) {
 		return { permission: "write" as const, allowKeyless: false };
 	}
 
-	const tail = resourceTail(path);
 	const write = WRITE_TAILS.some(pattern => pattern.test(tail));
 	const keylessRead = KEYLESS_READ_TAILS.some(pattern => pattern.test(tail));
 	return {
 		permission: write ? ("write" as const) : ("read" as const),
 		allowKeyless: !write && !keylessRead,
 	};
+}
+
+export function isServiceTokenAllowedPath(path: string): boolean {
+	return classifyServiceTokenOp("GET", path).permission !== "unknown";
 }
 
 export const serviceTokenScopeMiddleware = (): MiddlewareHandler => {
@@ -82,6 +104,9 @@ export const serviceTokenScopeMiddleware = (): MiddlewareHandler => {
 		const pathKey = pathKeyMatch ? decodeURIComponent(pathKeyMatch[1]) : undefined;
 		const keys = collectKeys(body, ctx.req.param("key") ?? pathKey);
 		const op = classifyServiceTokenOp(ctx.req.method, ctx.req.path);
+		if (op.permission === "unknown") {
+			return ctx.json({ error: "Service tokens cannot access this route", code: "SERVICE_TOKEN_ROUTE_DENIED" }, 403);
+		}
 
 		const denied = ServiceTokenService.getScopeDenial(token, {
 			appId,

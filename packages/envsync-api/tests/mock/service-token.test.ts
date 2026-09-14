@@ -437,6 +437,14 @@ describe("service token path scopes", () => {
 			permission: "write",
 			allowKeyless: false,
 		});
+		expect(classifyServiceTokenOp("GET", "/api/env/not-a-real-route")).toEqual({
+			permission: "unknown",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/secret/export-all")).toEqual({
+			permission: "unknown",
+			allowKeyless: false,
+		});
 	});
 
 	test("rejects service tokens on non env/secret routes", async () => {

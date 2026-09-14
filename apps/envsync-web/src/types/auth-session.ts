@@ -10,6 +10,7 @@ export interface AuthMembershipSummary {
   is_admin: boolean;
   is_master: boolean;
   is_active: boolean;
+  is_current?: boolean;
 }
 
 export type AuthSessionAuthType = "jwt" | "saml" | "oidc" | "api_key";
@@ -52,6 +53,7 @@ export function normalizeAuthSession(session: WhoAmIResponse | AuthSession): Ent
         is_admin: authSession.role.is_admin,
         is_master: authSession.role.is_master,
         is_active: true,
+        is_current: true,
       }];
 
   return {

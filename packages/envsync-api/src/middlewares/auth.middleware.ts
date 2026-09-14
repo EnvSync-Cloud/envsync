@@ -16,13 +16,10 @@ import { SystemCertificateProvisioningService } from "@/services/system-certific
 import { UserService } from "@/services/user.service";
 import { validateAccess, detectAuthType } from "@/helpers/access";
 import { keycloakRefreshToken } from "@/helpers/keycloak";
+import { isServiceTokenAllowedPath } from "@/middlewares/service-token-scope.middleware";
 
 function isQueryCredentialAttempt(ctx: Context) {
 	return Boolean(ctx.req.query("access_token") || ctx.req.query("api_key"));
-}
-
-function isServiceTokenAllowedPath(path: string): boolean {
-	return path === "/api/env" || path.startsWith("/api/env/") || path === "/api/secret" || path.startsWith("/api/secret/");
 }
 
 export const authMiddleware = (): MiddlewareHandler => {

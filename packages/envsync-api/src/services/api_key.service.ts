@@ -180,7 +180,16 @@ export class ApiKeyService {
 
 			const keys = await db
 				.selectFrom("api_keys")
-				.selectAll()
+				.select([
+					"id",
+					"user_id",
+					"org_id",
+					"description",
+					"is_active",
+					"last_used_at",
+					"created_at",
+					"updated_at",
+				])
 				.where("user_id", "=", userId)
 				.execute();
 
