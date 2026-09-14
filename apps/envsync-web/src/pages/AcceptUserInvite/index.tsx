@@ -51,12 +51,19 @@ const AcceptUserInvitePage = () => {
     retry: false,
   });
 
+  const accountExists = Boolean(
+    (inviteQuery.data as { account_exists?: boolean } | undefined)?.account_exists,
+  );
+
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      return sdk.onboarding.acceptUserInvite(invite_code!, {
-        full_name: fullName,
-        password,
-      });
+      return sdk.onboarding.acceptUserInvite(
+        invite_code!,
+        (accountExists ? {} : { full_name: fullName, password }) as {
+          full_name: string;
+          password: string;
+        },
+      );
     },
   });
 
@@ -123,11 +130,17 @@ const AcceptUserInvitePage = () => {
               </div>
               <CardTitle className="text-2xl">Join the team</CardTitle>
               <CardDescription>
-                Complete your account setup to join{" "}
-                <span className="font-medium text-foreground">
-                  {inviteQuery.data.invite.email}
-                </span>
-                .
+                {accountExists
+                  ? `An EnvSync account already exists for ${inviteQuery.data.invite.email}. Join this organization, then sign in with your existing credentials.`
+                  : (
+                    <>
+                      Complete your account setup to join{" "}
+                      <span className="font-medium text-foreground">
+                        {inviteQuery.data.invite.email}
+                      </span>
+                      .
+                    </>
+                  )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -135,43 +148,48 @@ const AcceptUserInvitePage = () => {
                 className="space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!fullName || !password || acceptMutation.isPending) return;
+                  if (acceptMutation.isPending) return;
+                  if (!accountExists && (!fullName || !password)) return;
                   acceptMutation.mutate();
                 }}
               >
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full name *</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={acceptMutation.isPending}
-                    placeholder="Jane Doe"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={acceptMutation.isPending}
-                      placeholder="Create a strong password"
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      onClick={() => setShowPassword((v) => !v)}
-                    >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                </div>
+                {!accountExists ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Full name *</Label>
+                      <Input
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        disabled={acceptMutation.isPending}
+                        placeholder="Jane Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password *</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          disabled={acceptMutation.isPending}
+                          placeholder="Create a strong password"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          onClick={() => setShowPassword((v) => !v)}
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
 
                 {acceptMutation.isError && (
                   <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -183,7 +201,7 @@ const AcceptUserInvitePage = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={acceptMutation.isPending || !fullName || !password}
+                  disabled={acceptMutation.isPending || (!accountExists && (!fullName || !password))}
                 >
                   {acceptMutation.isPending ? (
                     <>

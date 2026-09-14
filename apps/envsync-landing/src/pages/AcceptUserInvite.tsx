@@ -58,17 +58,23 @@ const AcceptUserInvite = () => {
     retry: false,
   });
 
+  const accountExists = Boolean(
+    (inviteData as { account_exists?: boolean } | undefined)?.account_exists,
+  );
+
   const acceptUserInviteMutation = useMutation({
     mutationFn: async (data: {
       invite_code: string;
-      full_name: string;
-      password: string;
+      full_name?: string;
+      password?: string;
     }) => {
-      // Call the API with the invite_code as the main parameter and other data as body
-      return api.onboarding.acceptUserInvite(data.invite_code, {
-        full_name: data.full_name,
-        password: data.password
-      });
+      return api.onboarding.acceptUserInvite(
+        data.invite_code,
+        (accountExists ? {} : { full_name: data.full_name, password: data.password }) as {
+          full_name: string;
+          password: string;
+        },
+      );
     },
     onSuccess: (data) => {
       console.log("User invite accepted successfully:", data);
@@ -94,7 +100,7 @@ const AcceptUserInvite = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (invite_code && fullName && password && !acceptUserInviteMutation.isPending) {
+    if (invite_code && !acceptUserInviteMutation.isPending && (accountExists || (fullName && password))) {
       trackAction("user_invite_accept_started", {
         "envsync.event_name": "user_invite_accept_started",
         "envsync.event_category": "onboarding",
@@ -150,11 +156,15 @@ const AcceptUserInvite = () => {
                   </div>
                   <CardTitle className="text-white text-2xl">Join the Team</CardTitle>
                   <CardDescription className="text-slate-300">
-                    Complete your account setup to join your organization
+                    {accountExists
+                      ? "An EnvSync account already exists for this email. Join, then sign in with your existing credentials."
+                      : "Complete your account setup to join your organization"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {!accountExists ? (
+                      <>
                     <div>
                       <Label htmlFor="fullName" className="text-slate-300">Full Name *</Label>
                       <Input
@@ -195,6 +205,8 @@ const AcceptUserInvite = () => {
                         </button>
                       </div>
                     </div>
+                      </>
+                    ) : null}
                     
                     {acceptUserInviteMutation.isError && (
                       <div className="flex items-center gap-2 text-red-400 text-sm">
@@ -207,7 +219,7 @@ const AcceptUserInvite = () => {
                       type="submit" 
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                       size="lg"
-                      disabled={acceptUserInviteMutation.isPending || !fullName || !password}
+                      disabled={acceptUserInviteMutation.isPending || (!accountExists && (!fullName || !password))}
                     >
                       {acceptUserInviteMutation.isPending ? (
                         <>

@@ -49,14 +49,15 @@ export class InviteService {
 	public static createUserInvite = async (email: string, org_id: string, role_id: string) => {
 		const db = await DB.getInstance();
 
-		const existingUser = await db
+		const existingMember = await db
 			.selectFrom("users")
 			.select("id")
 			.where("email", "=", email)
+			.where("org_id", "=", org_id)
 			.executeTakeFirst();
 
-		if (existingUser) {
-			throw new ConflictError("An account already exists for this email.", "ACCOUNT_ALREADY_EXISTS");
+		if (existingMember) {
+			throw new ConflictError("This person is already a member of this organization.", "ALREADY_A_MEMBER");
 		}
 
 		const existingInvite = await db

@@ -138,24 +138,12 @@ export class OnboardingController {
 
 	public static readonly acceptUserInvite = async (c: Context) => {
 		const { invite_code } = c.req.param();
-
 		const { full_name, password } = await c.req.json();
 
-		if (!invite_code || !full_name || !password) {
-			return c.json({ error: "All fields are required." }, 400);
+		if (!invite_code) {
+			return c.json({ error: "Invite code is required." }, 400);
 		}
 
-		if (!isPasswordStrong(password)) {
-			return c.json(
-				{
-					error:
-						"Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
-				},
-				400,
-			);
-		}
-
-		// Check if the invite code is valid and not already accepted
 		const invite = await InviteService.getUserInviteByCode(invite_code);
 		if (!invite) {
 			return c.json({ error: "Invite not found." }, 404);
@@ -164,55 +152,106 @@ export class OnboardingController {
 			return c.json({ error: "Invite already accepted." }, 400);
 		}
 
-		// create user
-		const user = await UserService.createUser({
-			email: invite.email,
-			full_name,
-			password,
-			org_id: invite.org_id,
-			role_id: invite.role_id,
-		});
+		const existingIdentity = await UserService.getIdentityByEmail(invite.email);
+		const alreadyMember = await UserService.getMembershipByEmailAndOrg(invite.email, invite.org_id);
 
-		const [orgCA, role] = await Promise.all([
-			CertificateService.getOrgCA(invite.org_id),
-			RoleService.getRole(invite.role_id),
-		]);
-
-		if (!orgCA) {
-			throw new AppError(
-				"Organization CA not initialized. Ask an org admin to re-provision system certificates.",
-				409,
-				"ORG_CA_REQUIRED_FOR_SYSTEM_CERT",
-			);
+		let userId: string;
+		let issueCert = true;
+		if (alreadyMember) {
+			userId = alreadyMember.id;
+			issueCert = false;
+		} else if (existingIdentity) {
+			const membership = await UserService.createMembershipForExistingIdentity({
+				email: existingIdentity.email,
+				full_name: existingIdentity.full_name || existingIdentity.email,
+				profile_picture_url: existingIdentity.profile_picture_url,
+				auth_service_id: existingIdentity.auth_service_id,
+				org_id: invite.org_id,
+				role_id: invite.role_id,
+			});
+			userId = membership.id;
+		} else {
+			if (!full_name || !password) {
+				return c.json({ error: "All fields are required." }, 400);
+			}
+			if (!isPasswordStrong(password)) {
+				return c.json(
+					{
+						error:
+							"Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
+					},
+					400,
+				);
+			}
+			const user = await UserService.createUser({
+				email: invite.email,
+				full_name,
+				password,
+				org_id: invite.org_id,
+				role_id: invite.role_id,
+			});
+			userId = user.id;
 		}
 
-		const cert = await CertificateService.issueMemberCert({
-			org_id: invite.org_id,
-			target_user_id: user.id,
-			target_email: invite.email,
-			issued_by_user_id: user.id,
-			envsync_pki_role: CertificateRoleMapper.toPkiRole(role),
-			is_system_generated: true,
-			persist_private_key: true,
-			description: "System-generated member certificate",
-			metadata: {
-				role_id: role.id,
-				role_name: role.name,
-				issued_source: "user_invite_accept",
-			},
-		});
-		const rootCA = await CertificateService.getRootCA();
+		let generated_certificate_bundle:
+			| {
+					root_ca_pem: string;
+					member_cert_pem: string;
+					member_key_pem: string | null | undefined;
+					member_certificate_id: string;
+					member_serial_hex: string;
+					is_system_generated: boolean;
+			  }
+			| undefined;
 
-		// update invite
+		if (issueCert) {
+			const [orgCA, role] = await Promise.all([
+				CertificateService.getOrgCA(invite.org_id),
+				RoleService.getRole(invite.role_id),
+			]);
+
+			if (!orgCA) {
+				throw new AppError(
+					"Organization CA not initialized. Ask an org admin to re-provision system certificates.",
+					409,
+					"ORG_CA_REQUIRED_FOR_SYSTEM_CERT",
+				);
+			}
+
+			const cert = await CertificateService.issueMemberCert({
+				org_id: invite.org_id,
+				target_user_id: userId,
+				target_email: invite.email,
+				issued_by_user_id: userId,
+				envsync_pki_role: CertificateRoleMapper.toPkiRole(role),
+				is_system_generated: true,
+				persist_private_key: true,
+				description: "System-generated member certificate",
+				metadata: {
+					role_id: role.id,
+					role_name: role.name,
+					issued_source: "user_invite_accept",
+				},
+			});
+			const rootCA = await CertificateService.getRootCA();
+			generated_certificate_bundle = {
+				root_ca_pem: rootCA.cert_pem,
+				member_cert_pem: cert.cert_pem ?? "",
+				member_key_pem: cert.key_pem,
+				member_certificate_id: cert.id,
+				member_serial_hex: cert.serial_hex,
+				is_system_generated: true,
+			};
+		}
+
 		await InviteService.updateUserInvite(invite.id, {
 			is_accepted: true,
 		});
 
-		// Log the user invite acceptance
 		await AuditLogService.notifyAuditSystem({
 			action: "user_invite_accepted",
 			org_id: invite.org_id,
-			user_id: user.id,
+			user_id: userId,
 			message: `User invite accepted`,
 			details: {
 				invite_id: invite.id,
@@ -224,14 +263,7 @@ export class OnboardingController {
 		return c.json(
 			{
 				message: "User invite accepted successfully.",
-				generated_certificate_bundle: {
-					root_ca_pem: rootCA.cert_pem,
-					member_cert_pem: cert.cert_pem ?? "",
-					member_key_pem: cert.key_pem,
-					member_certificate_id: cert.id,
-					member_serial_hex: cert.serial_hex,
-					is_system_generated: true,
-				},
+				generated_certificate_bundle,
 			},
 			200,
 		);
@@ -245,8 +277,9 @@ export class OnboardingController {
 		}
 
 		const invite = await InviteService.getUserInviteByCode(invite_code);
+		const existingIdentity = await UserService.getIdentityByEmail(invite.email);
 
-		return c.json({ invite }, 200);
+		return c.json({ invite, account_exists: Boolean(existingIdentity) }, 200);
 	};
 
 	// update user invite
