@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   LEGACY_REDIRECTS,
+  PALETTE_ORG_LINKS,
   appApprovalsPath,
   appDetailPath,
   appEnvironmentsPath,
@@ -29,6 +30,12 @@ describe("app routes", () => {
     expect(isOrgAccessTab("users")).toBe(true);
     expect(isOrgAccessTab("billing")).toBe(false);
     expect(orgCertificatesPath()).toBe("/org/certificates");
+    expect(Object.fromEntries(PALETTE_ORG_LINKS.map((link) => [link.id, link.href]))).toEqual({
+      users: "/org/access/users",
+      teams: "/org/access/teams",
+      roles: "/org/access/roles",
+      apikeys: "/apikeys",
+    });
   });
 
   test("covers the required legacy redirects", () => {

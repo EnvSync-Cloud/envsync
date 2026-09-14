@@ -41,6 +41,10 @@ const PRODUCT_ICONS = {
   organization: Building2,
 } as const;
 
+function paletteOrgHref(id: (typeof PALETTE_ORG_LINKS)[number]["id"], fallback: string) {
+  return PALETTE_ORG_LINKS.find((link) => link.id === id)?.href ?? fallback;
+}
+
 interface RecentItem {
   id: string;
   type: "project" | "user" | "team" | "apikey";
@@ -250,17 +254,18 @@ export function CommandPalette() {
   };
 
   const navigateToUser = (user: { id: string; full_name: string | null; email: string }) => {
+    const href = paletteOrgHref("users", orgUsersPath());
     addRecentItem({
       id: user.id,
       type: "user",
       name: user.full_name || user.email,
-      href: orgUsersPath(),
+      href,
     });
-    runAction(() => navigate(orgUsersPath()));
+    runAction(() => navigate(href));
   };
 
   const navigateToTeam = (team: { id: string; name: string }) => {
-    const href = PALETTE_ORG_LINKS.find((link) => link.id === "teams")?.href ?? orgUsersPath();
+    const href = paletteOrgHref("teams", orgUsersPath());
     addRecentItem({
       id: team.id,
       type: "team",
@@ -271,7 +276,7 @@ export function CommandPalette() {
   };
 
   const navigateToApiKey = (key: { id: string; description: string }) => {
-    const href = PALETTE_ORG_LINKS.find((link) => link.id === "apikeys")?.href ?? "/apikeys";
+    const href = paletteOrgHref("apikeys", "/apikeys");
     addRecentItem({
       id: key.id,
       type: "apikey",
@@ -457,7 +462,11 @@ export function CommandPalette() {
                 <span>Create Project</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate(orgUsersPath()))}
+                onSelect={() =>
+                  runAction(() =>
+                    navigate(paletteOrgHref("users", orgUsersPath())),
+                  )
+                }
                 value="invite-member"
               >
                 <UserPlus className="mr-2 size-4" />
@@ -471,7 +480,11 @@ export function CommandPalette() {
                 <span>Manage API Keys</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate(orgRolesPath()))}
+                onSelect={() =>
+                  runAction(() =>
+                    navigate(paletteOrgHref("roles", orgRolesPath())),
+                  )
+                }
                 value="manage-roles"
               >
                 <Shield className="mr-2 size-4" />

@@ -69,7 +69,8 @@ export class ChangeRequestController {
 	public static readonly list = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const status = c.req.query("status");
-		const requests = await ChangeRequestService.listChangeRequests(org_id, status);
+		const app_id = c.req.query("app_id") || undefined;
+		const requests = await ChangeRequestService.listChangeRequests(org_id, status, app_id);
 		return c.json(requests, 200);
 	};
 

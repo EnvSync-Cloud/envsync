@@ -40,9 +40,12 @@ const ChangeRequests = () => {
   const authEnabled = !isAuthLoading && isAuthenticated;
   const canReview = Boolean(user?.role?.is_admin || user?.role?.is_master);
 
-  const { data: requests = [] } = api.changeRequests.getChangeRequests(undefined, {
-    enabled: authEnabled,
-  });
+  const { data: requests = [] } = api.changeRequests.getChangeRequests(
+    { appId: routeAppId },
+    {
+      enabled: authEnabled,
+    },
+  );
   const { data: apps = [] } = api.applications.allApplications({
     enabled: authEnabled,
   });
@@ -198,16 +201,14 @@ const ChangeRequests = () => {
 
   const requestRows = useMemo(
     () =>
-      requests
-        .filter((request) => !routeAppId || request.app_id === routeAppId)
-        .map((request) => {
-          const app = apps.find((entry) => entry.id === request.app_id);
-          return {
-            ...request,
-            appName: app?.name || request.app_id,
-          };
-        }),
-    [apps, requests, routeAppId]
+      requests.map((request) => {
+        const app = apps.find((entry) => entry.id === request.app_id);
+        return {
+          ...request,
+          appName: app?.name || request.app_id,
+        };
+      }),
+    [apps, requests],
   );
 
   const pendingRequests = requestRows.filter(

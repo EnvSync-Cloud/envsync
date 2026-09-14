@@ -280,7 +280,7 @@ export class ChangeRequestService {
 		return this.getChangeRequest(changeRequestId, org_id);
 	};
 
-	public static listChangeRequests = async (org_id: string, status?: string) => {
+	public static listChangeRequests = async (org_id: string, status?: string, appId?: string) => {
 		const db = await DB.getInstance();
 		let query = db
 			.selectFrom("change_request")
@@ -290,6 +290,9 @@ export class ChangeRequestService {
 
 		if (status) {
 			query = query.where("status", "=", status as never);
+		}
+		if (appId) {
+			query = query.where("app_id", "=", appId);
 		}
 
 		const requests = await query.execute();
