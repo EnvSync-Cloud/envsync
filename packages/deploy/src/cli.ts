@@ -2804,6 +2804,26 @@ function apiHealth(services: Map<string, ServiceHealth>, stackName: string): Ser
 	return "degraded";
 }
 
+function probeApiSlotHttp(config: DeployConfig, slot: ApiSlot): boolean {
+	const host = `envsync_api_${slot}`;
+	const output = tryRun(
+		"docker",
+		[
+			"run",
+			"--rm",
+			"--network",
+			stackNetworkName(config),
+			"--entrypoint",
+			"bun",
+			config.images.api,
+			"-e",
+			`const r=await fetch("http://${host}:4000/health"); if(!r.ok) process.exit(1); console.log(await r.text());`,
+		],
+		{ quiet: true },
+	);
+	return output.includes("ok");
+}
+
 function waitForApiSlotHealthy(config: DeployConfig, slot: ApiSlot, timeoutSeconds = 300) {
 	if (currentOptions.dryRun) {
 		logDryRun(`Would wait for API ${slot} slot readiness`);
@@ -2813,7 +2833,7 @@ function waitForApiSlotHealthy(config: DeployConfig, slot: ApiSlot, timeoutSecon
 	const serviceName = slotStackServiceName(config, slot);
 	while (Date.now() < deadline) {
 		const services = listStackServices(config);
-		if (serviceHealth(services, serviceName) === "healthy") {
+		if (serviceHealth(services, serviceName) === "healthy" && probeApiSlotHttp(config, slot)) {
 			logSuccess(`API ${slot} slot is healthy`);
 			return;
 		}

@@ -9,17 +9,21 @@ import {
 	registerApiBackgroundHandlers,
 } from "@/modules/load-modules";
 
+// Listen before DB/FGA/license so Swarm /health probes succeed immediately.
+// Background work must not block the HTTP server.
+const server = Bun.serve({
+	fetch: app.fetch.bind(app),
+	port: Number(config.PORT),
+	idleTimeout: 255,
+	hostname: "0.0.0.0",
+});
+
 CacheClient.init();
 await DB.healthCheck();
 await FGAClient.getInstance();
-// Core always; manage workers when modules were registered at createApiApp time.
 await registerApiBackgroundHandlers("core");
 if (loadApiModules("management").length > 0) {
 	await registerApiBackgroundHandlers("management");
 }
 
-export default {
-	fetch: app.fetch.bind(app),
-	port: Number(config.PORT),
-	idleTimeout: 255,
-};
+export default server;
