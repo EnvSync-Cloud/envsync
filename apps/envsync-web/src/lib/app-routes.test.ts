@@ -44,6 +44,12 @@ describe("app routes", () => {
     });
   });
 
+  test("command palette dests use /org/access", () => {
+    expect(PALETTE_ORG_LINKS.find((link) => link.id === "users")?.href).toBe("/org/access/users");
+    expect(PALETTE_ORG_LINKS.find((link) => link.id === "teams")?.href).toBe("/org/access/teams");
+    expect(PALETTE_ORG_LINKS.find((link) => link.id === "roles")?.href).toBe("/org/access/roles");
+  });
+
   test("covers the required legacy redirects", () => {
     const byPath = Object.fromEntries(LEGACY_REDIRECTS.map((item) => [item.path, item.to]));
     expect(byPath.applications).toBe("/projects");
