@@ -224,7 +224,7 @@ export interface ChangeRequest extends BaseTable {
 	request_kind: ColumnType<"direct" | "promotion">;
 	source_env_type_id?: ColumnType<string | null>;
 	target_env_type_id: ColumnType<string>;
-	status: ColumnType<"pending" | "approved" | "rejected" | "cancelled">;
+	status: ColumnType<"pending" | "applying" | "approved" | "rejected" | "cancelled" | "failed">;
 	title: ColumnType<string>;
 	message: ColumnType<string>;
 	requested_by_user_id: ColumnType<string>;

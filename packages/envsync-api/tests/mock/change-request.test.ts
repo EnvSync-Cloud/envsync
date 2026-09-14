@@ -129,6 +129,7 @@ describe("change request compare-and-swap", () => {
 		await db
 			.updateTable("change_request")
 			.set({
+				status: "applying",
 				reviewed_by_user_id: seed.masterUser.id,
 				reviewed_at: new Date(),
 				updated_at: new Date(),
@@ -143,7 +144,7 @@ describe("change request compare-and-swap", () => {
 				reviewer_user_id: reviewer.id,
 				rejection_reason: "too late",
 			}),
-		).rejects.toThrow("no longer pending");
+		).rejects.toThrow("Only pending requests can be reviewed");
 
 		await expect(
 			ChangeRequestService.cancelChangeRequest({
@@ -151,6 +152,73 @@ describe("change request compare-and-swap", () => {
 				org_id: seed.org.id,
 				requester_user_id: requester.id,
 			}),
+		).rejects.toThrow("Only pending requests can be cancelled");
+	});
+
+	test("failed apply can be retried by the same reviewer", async () => {
+		const created = await createDirect("retry-failed");
+		const db = await (await import("@/libs/db")).DB.getInstance();
+		await db
+			.updateTable("change_request")
+			.set({
+				status: "failed",
+				reviewed_by_user_id: seed.masterUser.id,
+				reviewed_at: new Date(),
+				updated_at: new Date(),
+			})
+			.where("id", "=", created.id)
+			.execute();
+
+		await expect(
+			ChangeRequestService.approveChangeRequest({
+				id: created.id,
+				org_id: seed.org.id,
+				reviewer_user_id: reviewer.id,
+			}),
 		).rejects.toThrow("no longer pending");
+
+		const retried = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: seed.masterUser.id,
+		});
+		expect(retried.status).toBe("approved");
+	});
+
+	test("apply throw marks the request failed", async () => {
+		const { EnvService } = await import("@/services/env.service");
+		const created = await createDirect("apply-throw");
+		const original = EnvService.createEnv;
+		let calls = 0;
+		EnvService.createEnv = (async (...args: Parameters<typeof original>) => {
+			calls += 1;
+			if (calls === 1) {
+				throw new Error("simulated apply crash");
+			}
+			return original(...args);
+		}) as typeof original;
+
+		try {
+			await expect(
+				ChangeRequestService.approveChangeRequest({
+					id: created.id,
+					org_id: seed.org.id,
+					reviewer_user_id: seed.masterUser.id,
+				}),
+			).rejects.toThrow("simulated apply crash");
+		} finally {
+			EnvService.createEnv = original;
+		}
+
+		const failed = await ChangeRequestService.getChangeRequest(created.id, seed.org.id);
+		expect(failed.status).toBe("failed");
+		expect(failed.reviewed_by_user_id).toBe(seed.masterUser.id);
+
+		const retried = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: seed.masterUser.id,
+		});
+		expect(retried.status).toBe("approved");
 	});
 });

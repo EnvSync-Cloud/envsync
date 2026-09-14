@@ -28,6 +28,8 @@ type ActiveView = "requests" | "create";
 
 const getStatusClass = (status: string) => {
   if (status === "approved") return "bg-emerald-500/10 text-emerald-200";
+  if (status === "applying") return "bg-amber-500/10 text-amber-200";
+  if (status === "failed") return "bg-orange-500/10 text-orange-200";
   if (status === "rejected") return "bg-red-500/10 text-red-200";
   if (status === "cancelled") return "bg-muted text-foreground";
   return "bg-amber-500/10 text-amber-200";
@@ -531,6 +533,24 @@ const ChangeRequests = () => {
                                   Approve
                                 </Button>
                               )}
+                            {request.status === "failed" &&
+                              canReview &&
+                              request.requested_by_user_id !== user?.user.id && (
+                                <Button
+                                  variant="ghost"
+                                  className="text-amber-300 hover:bg-amber-950 hover:text-amber-200"
+                                  data-testid="change-request-retry-button"
+                                  onClick={() =>
+                                    approve.mutate({
+                                      id: request.id,
+                                      app_id: request.app_id,
+                                    })
+                                  }
+                                >
+                                  <Check className="mr-1 size-4" />
+                                  Retry
+                                </Button>
+                              )}
                             {request.status === "pending" &&
                               request.requested_by_user_id === user?.user.id && (
                                 <Button
@@ -650,6 +670,24 @@ const ChangeRequests = () => {
                   </div>
                 </div>
               </div>
+
+              {selectedRequest.status === "failed" &&
+                canReview &&
+                selectedRequest.requested_by_user_id !== user?.user.id && (
+                  <div className="flex justify-end">
+                    <Button
+                      data-testid="change-request-retry-button"
+                      onClick={() =>
+                        approve.mutate({
+                          id: selectedRequest.id,
+                          app_id: selectedRequest.app_id,
+                        })
+                      }
+                    >
+                      Retry apply
+                    </Button>
+                  </div>
+                )}
 
               {selectedRequest.status === "pending" &&
                 canReview &&
