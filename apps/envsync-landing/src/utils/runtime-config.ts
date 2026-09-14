@@ -69,11 +69,31 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
 
 const fallbackRuntimeConfig: RuntimeConfig = inferFallbackRuntimeConfig();
 
+function isLocalDevHost(hostname: string): boolean {
+  return hostname === "localhost"
+    || hostname === "127.0.0.1"
+    || hostname.endsWith(".lvh.me")
+    || hostname.endsWith(".local");
+}
+
+function isLocalDevUrl(url: string): boolean {
+  try {
+    return isLocalDevHost(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function getRuntimeConfig(): RuntimeConfig {
   try {
-    return runtimeConfigSchema.parse(
-      typeof window !== "undefined" ? window.__ENVSYNC_RUNTIME_CONFIG__ : undefined
+    const parsed = runtimeConfigSchema.parse(
+      typeof window !== "undefined" ? window.__ENVSYNC_RUNTIME_CONFIG__ : undefined,
     );
+    const onLocalPage = typeof window !== "undefined" && isLocalDevHost(window.location.hostname);
+    if (!onLocalPage && isLocalDevUrl(parsed.apiBaseUrl)) {
+      return inferFallbackRuntimeConfig();
+    }
+    return parsed;
   } catch (error) {
     console.warn("Runtime config validation failed, using defaults:", error);
     return fallbackRuntimeConfig;
