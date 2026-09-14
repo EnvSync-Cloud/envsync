@@ -7,13 +7,8 @@ import {
   Upload,
   Download,
   Settings,
-  ChevronDown,
-  Shield,
   MoreVertical,
   History,
-  LockKeyhole,
-  DatabaseBackup,
-  PlugZap,
 } from "lucide-react";
 import {
   Select,
@@ -28,16 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuthContext } from "@/contexts/auth";
-import {
-  appAccessPath,
-  appApprovalsPath,
-  appDetailPath,
-  appEnvironmentsPath,
-  appIntegrationsPath,
-  appPointInTimePath,
-  appSecretsPath,
-} from "@/lib/app-routes";
+import { appPointInTimePath } from "@/lib/app-routes";
 import { EnvironmentType } from "@/constants";
 
 interface ProjectHeaderProps {
@@ -58,15 +44,11 @@ interface ProjectHeaderProps {
 }
 
 export const ProjectHeader = ({
-  projectName,
   environmentTypes,
   selectedEnvironment,
   onEnvironmentChange,
-  totalVariables,
-  totalSecrets,
   canEdit,
   isRefetching,
-  enableSecrets,
   onRefresh,
   onAddVariable,
   onBulkImport,
@@ -76,35 +58,10 @@ export const ProjectHeader = ({
   const navigate = useNavigate();
   const { appId } = useParams();
   const location = useLocation();
-  const { allowedScopes } = useAuthContext();
 
   const isPointInTimePage = /(?:^|\/)pit(?:\/|$)/.test(location.pathname);
   const isSecretsPage = location.pathname.includes("/secrets") && !isPointInTimePage;
-  const isManageEnvironmentPage = /\/(manage-environments|environments)(?:\/|$)/.test(location.pathname);
-  const isAccessPage = location.pathname.includes("/access");
-  const isApprovalsPage = /\/approvals(?:\/|$)/.test(location.pathname);
-  const isIntegrationsPage = location.pathname.includes("/integrations");
-
   const currentEnv = environmentTypes.find((e) => e.id === selectedEnvironment);
-
-  const handleSectionChange = (
-    section: "variables" | "secrets" | "environments" | "access" | "approvals" | "pit" | "integrations"
-  ) => {
-    if (!appId) return;
-
-    let targetPath = appDetailPath(appId);
-    if (section === "secrets") targetPath = appSecretsPath(appId);
-    if (section === "environments") targetPath = appEnvironmentsPath(appId);
-    if (section === "access") targetPath = appAccessPath(appId);
-    if (section === "approvals") targetPath = appApprovalsPath(appId);
-    if (section === "integrations") targetPath = appIntegrationsPath(appId);
-    if (section === "pit") {
-      targetPath = appPointInTimePath(appId);
-      const envParam = currentEnv?.name?.toLowerCase() || selectedEnvironment;
-      targetPath += `?env=${encodeURIComponent(envParam)}`;
-    }
-    navigate(targetPath);
-  };
 
   const onRollback = () => {
     if (!appId) return;
@@ -115,59 +72,10 @@ export const ProjectHeader = ({
     navigate(targetUrl);
   };
 
-  const tabs = [
-    {
-      key: "variables",
-      label: "Variables",
-      hidden: false,
-      active: !isSecretsPage && !isManageEnvironmentPage && !isAccessPage && !isApprovalsPage && !isPointInTimePage && !isIntegrationsPage,
-    },
-    {
-      key: "secrets",
-      label: "Secrets",
-      hidden: !enableSecrets,
-      active: isSecretsPage,
-    },
-    {
-      key: "environments",
-      label: "Environments",
-      hidden: false,
-      active: isManageEnvironmentPage,
-    },
-    {
-      key: "approvals",
-      label: "Approvals",
-      hidden: !allowedScopes.includes("change-requests"),
-      active: isApprovalsPage,
-    },
-    {
-      key: "access",
-      label: "Access",
-      hidden: false,
-      active: isAccessPage,
-    },
-    {
-      key: "integrations",
-      label: "Integrations",
-      hidden: !allowedScopes.includes("applications-integrations"),
-      active: isIntegrationsPage,
-    },
-    {
-      key: "pit",
-      label: "Recovery",
-      hidden: false,
-      active: isPointInTimePage,
-    },
-  ].filter((item) => !item.hidden);
-
   return (
     <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-[1600px] px-5 md:px-6">
-        {/* Top row: actions */}
-        <div className="flex items-center justify-between gap-4 py-3">
-          <div className="flex items-center gap-2 min-w-0">
-          </div>
-
+        <div className="flex items-center justify-end gap-4 py-3">
           <div className="flex items-center gap-2">
             {/* Environment switcher */}
             <Select value={selectedEnvironment} onValueChange={onEnvironmentChange}>
@@ -233,26 +141,6 @@ export const ProjectHeader = ({
               </>
             )}
           </div>
-        </div>
-
-        {/* Tab navigation */}
-        <div className="flex gap-1 -mb-px overflow-x-auto">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.key}
-              variant="ghost"
-              size="sm"
-              onClick={() => handleSectionChange(tab.key as "variables" | "secrets" | "environments" | "access" | "approvals" | "pit" | "integrations")}
-              className={cn(
-                "rounded-none border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                tab.active
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50"
-              )}
-            >
-              {tab.label}
-            </Button>
-          ))}
         </div>
       </div>
     </div>
