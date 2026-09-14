@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
+import { writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import {
 	buildRuntimeEnv,
 	renderApiMaintenanceConf,
@@ -11,6 +15,7 @@ import {
 	renderEnvFile,
 	renderOtelAgentConfig,
 	renderStack,
+	swarmConfigObjectName,
 	renderTraefikDynamicConfig,
 	type DeployConfig,
 	type DeployGeneratedState,
@@ -193,6 +198,29 @@ describe("buildRuntimeEnv", () => {
 	});
 });
 
+describe("swarmConfigObjectName", () => {
+	test("hashes file contents so Swarm can replace immutable configs", () => {
+		const file = join(tmpdir(), `envsync-realm-${Date.now()}.json`);
+		writeFileSync(file, '{"realm":"envsync"}');
+		try {
+			const first = swarmConfigObjectName("envsync", "keycloak_realm", file, "0.21.0");
+			writeFileSync(file, '{"realm":"envsync","updated":true}');
+			const second = swarmConfigObjectName("envsync", "keycloak_realm", file, "0.21.0");
+			expect(first).toMatch(/^envsync_keycloak_realm_[a-f0-9]{12}$/);
+			expect(second).toMatch(/^envsync_keycloak_realm_[a-f0-9]{12}$/);
+			expect(first).not.toBe(second);
+		} finally {
+			unlinkSync(file);
+		}
+	});
+
+	test("falls back to the release version when the file is missing", () => {
+		expect(swarmConfigObjectName("envsync", "keycloak_realm", "/no/such/file.json", "0.21.0")).toBe(
+			"envsync_keycloak_realm_0_21_0",
+		);
+	});
+});
+
 describe("renderStack", () => {
 	test("base mode omits landing and api services", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
@@ -216,6 +244,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/keycloak-realm.envsync.json");
+		expect(stackFull).toContain("name: envsync_keycloak_realm_0_8_7");
 		expect(stackFull).toContain("kc.sh import --dir /opt/keycloak/data/import --override false");
 		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
