@@ -161,21 +161,3 @@ export class OrganizationProvisioningService {
 		};
 	}
 }
-
-/** @deprecated Use OrganizationProvisioningService */
-export class WorkspaceProvisioningService {
-	/** @deprecated Use createOrganizationForExistingIdentity */
-	public static async createWorkspaceForExistingIdentity(input: {
-		workspaceName: string;
-		authServiceId: string;
-		currentUserId: string;
-		source?: string;
-	}) {
-		return OrganizationProvisioningService.createOrganizationForExistingIdentity({
-			organizationName: input.workspaceName,
-			authServiceId: input.authServiceId,
-			currentUserId: input.currentUserId,
-			source: input.source,
-		});
-	}
-}

@@ -5,7 +5,7 @@ import { seedApp, seedEnvType, seedOrg, seedUser, type SeedOrgResult } from "../
 import { MockFGAClient, setupUserOrgTuples } from "../helpers/fga";
 import { resetVaultStore } from "../helpers/kms";
 import { classifyServiceTokenOp } from "@/middlewares/service-token-scope.middleware";
-import { ServiceTokenService } from "@/services/service_token.service";
+import { parseServiceTokenScopes, ServiceTokenService } from "@/services/service_token.service";
 
 let seed: SeedOrgResult;
 let viewerToken: string;
@@ -393,6 +393,21 @@ describe("service token path scopes", () => {
 		expect(pageOneBody[0]?.id).not.toBe(pageTwoBody[0]?.id);
 	});
 
+	test("fails closed on empty or corrupt stored scopes", () => {
+		expect(() => parseServiceTokenScopes([], null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes("not-json", null)).toThrow("not valid JSON");
+		expect(() => parseServiceTokenScopes({}, null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes([null], null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes(["/"], null)).toThrow("missing or invalid");
+		expect(() => parseServiceTokenScopes([{ path: 1 }], null)).toThrow("missing or invalid");
+		expect(parseServiceTokenScopes(undefined, "env-1", { defaultRoot: true })).toEqual([
+			{ env_type_id: "env-1", path: "/" },
+		]);
+		expect(ServiceTokenService.isPathAllowed({ scopes: "not-json" }, "env-1", "/foo")).toBe(false);
+		expect(ServiceTokenService.hasEnvTypeScope({ scopes: [] }, "env-1")).toBe(false);
+		expect(ServiceTokenService.hasRootPathScope({ scopes: [null] }, "env-1")).toBe(false);
+	});
+
 	test("classifies env/secret route tails, not key names that contain those words", () => {
 		expect(classifyServiceTokenOp("PUT", "/api/env/single")).toEqual({
 			permission: "write",
@@ -420,6 +435,14 @@ describe("service token path scopes", () => {
 		});
 		expect(classifyServiceTokenOp("DELETE", "/api/env")).toEqual({
 			permission: "write",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("GET", "/api/env/not-a-real-route")).toEqual({
+			permission: "unknown",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/secret/export-all")).toEqual({
+			permission: "unknown",
 			allowKeyless: false,
 		});
 	});

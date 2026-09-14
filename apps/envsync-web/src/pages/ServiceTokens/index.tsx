@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Count } from "@/components/ui/count";
 import { PageError } from "@/components/ui/page-error";
+import { ProjectSettingsTabs } from "@/components/ProjectSettingsTabs";
 import { useAuthContext } from "@/contexts/auth";
 import { API_KEYS } from "@/constants";
 import { formatDate, formatLastUsed } from "@/lib/utils";
@@ -192,6 +193,7 @@ export const ServiceTokens = () => {
 
   return (
     <div className="animate-page-enter space-y-6">
+      {appId ? <ProjectSettingsTabs appId={appId} active="tokens" /> : null}
       <PageShell
         title="Service Tokens"
         description="Create project-scoped service tokens with environment and secrets-path access."

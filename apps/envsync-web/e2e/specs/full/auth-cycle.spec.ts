@@ -34,7 +34,7 @@ test.describe("full auth cycle", () => {
 		const page = await context.newPage();
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-		await page.goto("/applications", { waitUntil: "domcontentloaded" });
+		await page.goto("/projects", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
 		await context.close();
 	});

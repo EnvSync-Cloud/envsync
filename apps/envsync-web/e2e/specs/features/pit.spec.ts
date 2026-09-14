@@ -24,11 +24,11 @@ test.describe("feature: point in time", () => {
 		const secretKey = makeName("UI_FEATURE_PIT_SECRET");
 		const secretValue = makeName("PIT_SECRET_VALUE");
 
-		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 		const envTypeId = await createVariable(page, project.appId, "Development", variableKey, variableValue);
 		await updateVariable(page, project.appId, envTypeId, variableKey, `${variableValue}_V2`);
 		await updateVariable(page, project.appId, envTypeId, variableKey, `${variableValue}_V3`);
-		await page.goto(`/applications/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
 		await createSecret(page, project.appId, "Development", secretKey, secretValue);
 		await updateSecret(page, project.appId, envTypeId, secretKey, `${secretValue}_V2`);
 
@@ -46,7 +46,7 @@ test.describe("feature: point in time", () => {
 		await previewTimeRangeDiff(page);
 		await rollbackCurrentPit(page);
 
-		await page.goto(`/applications/${project.appId}?selected=${encodeURIComponent(envTypeId)}`, {
+		await page.goto(`/projects/${project.appId}?selected=${encodeURIComponent(envTypeId)}`, {
 			waitUntil: "domcontentloaded",
 		});
 		await expect(page.locator("tr").filter({ hasText: variableKey }).first()).toBeVisible();

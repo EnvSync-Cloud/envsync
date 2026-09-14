@@ -94,6 +94,14 @@ const ProjectAccess = () => {
     setActiveSection(value === "effective" ? "effective" : "access");
   };
 
+  if (isAuthLoading || appQuery.isPending) {
+    return (
+      <PageShell title="Project Access" icon={LockKeyhole} isLoading>
+        {null}
+      </PageShell>
+    );
+  }
+
   if (!appId || !project) {
     return (
       <div className="animate-page-enter rounded-lg border border-dashed border-border bg-card/60 p-8 text-center text-muted-foreground">

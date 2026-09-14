@@ -23,7 +23,7 @@ export interface ChangeRequest {
   request_kind: "direct" | "promotion";
   source_env_type_id: string | null;
   target_env_type_id: string;
-  status: "pending" | "approved" | "rejected" | "cancelled";
+  status: "pending" | "applying" | "approved" | "rejected" | "cancelled" | "failed";
   title: string;
   message: string;
   requested_by_user_id: string;

@@ -10,6 +10,7 @@ import {
   type EnterpriseProvider,
   type SyncRun,
 } from "../api/hooks";
+import { appIntegrationsPath } from "@shell/lib/app-routes";
 import { isEnterpriseUiEnabled } from "../api/client";
 import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
@@ -186,7 +187,7 @@ export default function SyncOperations() {
                 <p className="mt-1 text-xs text-muted-foreground">{formatLastUsed(run.started_at)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {run.app_id ? (
-                    <Link className="underline-offset-2 hover:underline" to={`/applications/${run.app_id}/integrations`}>
+                    <Link className="underline-offset-2 hover:underline" to={appIntegrationsPath(run.app_id)}>
                       app {run.app_id.slice(0, 8)}…
                     </Link>
                   ) : (

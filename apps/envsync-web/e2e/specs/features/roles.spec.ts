@@ -4,7 +4,7 @@ test.describe("feature: roles", () => {
 	test("creates and deletes a custom role", async ({ page, makeName }) => {
 		const roleName = makeName("UI_ROLE");
 
-		await page.goto("/roles", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/roles", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Roles", exact: true }).first()).toBeVisible();
 
 		await page.getByRole("button", { name: /Create Role|Create New Role/i }).first().click();

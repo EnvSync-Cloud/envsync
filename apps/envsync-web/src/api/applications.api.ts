@@ -9,7 +9,7 @@ const useApplications = ({
   enabled?: boolean;
   refetchInterval?: number;
 } = {}) => {
-  return useQuery({
+  const query = useQuery({
     queryKey: [API_KEYS.ALL_APPLICATIONS],
     queryFn: async () => {
       const appsData = await sdk.applications.getApps();
@@ -33,10 +33,14 @@ const useApplications = ({
       );
     },
     enabled,
-    refetchInterval, // Refetch every 5 minutes
+    refetchInterval,
     retry: 3,
-    initialData: [],
   });
+
+  return {
+    ...query,
+    data: query.data ?? [],
+  };
 };
 
 export const applications = {

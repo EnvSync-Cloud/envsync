@@ -10,14 +10,14 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
-import { navItems, API_KEYS } from "@/constants";
+import { navGroups, API_KEYS } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { sdk } from "@/api/base";
 import {
   PALETTE_ORG_LINKS,
+  apiKeysPath,
   appDetailPath,
-  orgRolesPath,
-  orgUsersPath,
+  orgAccessPath,
   projectCreatePath,
 } from "@/lib/app-routes";
 import { PRODUCTS, productHomeHref } from "@/lib/shell-context";
@@ -41,8 +41,8 @@ const PRODUCT_ICONS = {
   organization: Building2,
 } as const;
 
-function paletteOrgHref(id: (typeof PALETTE_ORG_LINKS)[number]["id"], fallback: string) {
-  return PALETTE_ORG_LINKS.find((link) => link.id === id)?.href ?? fallback;
+function paletteOrgHref(id: (typeof PALETTE_ORG_LINKS)[number]["id"]) {
+  return PALETTE_ORG_LINKS.find((link) => link.id === id)?.href ?? orgAccessPath("users");
 }
 
 interface RecentItem {
@@ -119,7 +119,7 @@ export function CommandPalette() {
   }, []);
 
   const authorizedNavItems = useMemo(
-    () => navItems.filter((item) => allowedScopes.includes(item.id)),
+    () => navGroups.flatMap((group) => group.items).filter((item) => allowedScopes.includes(item.id)),
     [allowedScopes]
   );
 
@@ -254,7 +254,7 @@ export function CommandPalette() {
   };
 
   const navigateToUser = (user: { id: string; full_name: string | null; email: string }) => {
-    const href = paletteOrgHref("users", orgUsersPath());
+    const href = paletteOrgHref("users");
     addRecentItem({
       id: user.id,
       type: "user",
@@ -265,7 +265,7 @@ export function CommandPalette() {
   };
 
   const navigateToTeam = (team: { id: string; name: string }) => {
-    const href = paletteOrgHref("teams", orgUsersPath());
+    const href = paletteOrgHref("teams");
     addRecentItem({
       id: team.id,
       type: "team",
@@ -276,7 +276,7 @@ export function CommandPalette() {
   };
 
   const navigateToApiKey = (key: { id: string; description: string }) => {
-    const href = paletteOrgHref("apikeys", "/apikeys");
+    const href = paletteOrgHref("apikeys");
     addRecentItem({
       id: key.id,
       type: "apikey",
@@ -464,7 +464,7 @@ export function CommandPalette() {
               <CommandItem
                 onSelect={() =>
                   runAction(() =>
-                    navigate(paletteOrgHref("users", orgUsersPath())),
+                    navigate(paletteOrgHref("users")),
                   )
                 }
                 value="invite-member"
@@ -473,7 +473,7 @@ export function CommandPalette() {
                 <span>Invite Team Member</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runAction(() => navigate("/apikeys"))}
+                onSelect={() => runAction(() => navigate(apiKeysPath()))}
                 value="manage-apikeys"
               >
                 <Key className="mr-2 size-4" />
@@ -482,7 +482,7 @@ export function CommandPalette() {
               <CommandItem
                 onSelect={() =>
                   runAction(() =>
-                    navigate(paletteOrgHref("roles", orgRolesPath())),
+                    navigate(paletteOrgHref("roles")),
                   )
                 }
                 value="manage-roles"

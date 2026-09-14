@@ -45,7 +45,7 @@ func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigReques
 func (uc *resetConfigUseCase) resetAllConfig() error {
 	emptyCfg := config.AppConfig{
 		BackendURL:   "https://api.envsync.cloud",
-		TelemetryURL: "https://obs.envsync.cloud",
+		TelemetryURL: "https://t.envsync.cloud/obs",
 	}
 
 	if err := emptyCfg.WriteConfigFile(); err != nil {
@@ -76,7 +76,7 @@ func (uc *resetConfigUseCase) resetConfigKey(cfg *config.AppConfig, key string) 
 	case "backend_url", "backendurl":
 		cfg.BackendURL = "https://api.envsync.cloud"
 	case "telemetry_url", "telemetryurl":
-		cfg.TelemetryURL = "https://obs.envsync.cloud"
+		cfg.TelemetryURL = "https://t.envsync.cloud/obs"
 	case "access_token", "accesstoken":
 		cfg.AccessToken = ""
 	case "telemetry_token", "telemetrytoken":

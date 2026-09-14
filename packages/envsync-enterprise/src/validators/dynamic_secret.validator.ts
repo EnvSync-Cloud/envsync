@@ -2,7 +2,7 @@ import z from "zod";
 import "zod-openapi/extend";
 
 // Engine type enum
-const engineTypeSchema = z.enum(["postgres", "mysql", "aws-iam", "azure-sp"]);
+const engineTypeSchema = z.enum(["postgres", "mysql"]);
 
 // Postgres engine config
 const postgresConfigSchema = z.object({
@@ -38,33 +38,9 @@ const mysqlConfigSchema = z.object({
 	max_ttl_seconds: z.number().int().min(60).max(604800).default(86400).openapi({ example: 86400 }),
 });
 
-// AWS IAM engine config
-const awsIamConfigSchema = z.object({
-	access_key_id: z.string().openapi({ example: "AKIAIOSFODNN7EXAMPLE" }),
-	secret_access_key: z.string().openapi({ example: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" }),
-	region: z.string().default("us-east-1").openapi({ example: "us-east-1" }),
-	iam_policy: z.string().openapi({ example: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}' }),
-	default_ttl_seconds: z.number().int().min(900).max(43200).default(3600).openapi({ example: 3600 }),
-	max_ttl_seconds: z.number().int().min(900).max(43200).default(43200).openapi({ example: 43200 }),
-});
-
-// Azure SP engine config
-const azureSpConfigSchema = z.object({
-	tenant_id: z.string().openapi({ example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }),
-	client_id: z.string().openapi({ example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }),
-	client_secret: z.string().openapi({ example: "supersecret" }),
-	subscription_id: z.string().openapi({ example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" }),
-	roles: z.array(z.string()).default(["Contributor"]).openapi({ example: ["Contributor"] }),
-	default_ttl_seconds: z.number().int().min(300).max(86400).default(3600).openapi({ example: 3600 }),
-	max_ttl_seconds: z.number().int().min(300).max(604800).default(86400).openapi({ example: 86400 }),
-});
-
-// Discriminated union for engine config based on engine_type
 const engineConfigSchema = z.union([
 	postgresConfigSchema,
 	mysqlConfigSchema,
-	awsIamConfigSchema,
-	azureSpConfigSchema,
 ]);
 
 // Request schemas

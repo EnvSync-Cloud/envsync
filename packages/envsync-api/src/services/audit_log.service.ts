@@ -48,6 +48,13 @@ function toSqlLikePattern(filter: string): string {
 		.replaceAll("*", "%");
 }
 
+function escapeIlikeContains(query: string): string {
+	return `%${query
+		.replaceAll("\\", "\\\\")
+		.replaceAll("%", "\\%")
+		.replaceAll("_", "\\_")}%`;
+}
+
 // Genesis hash for the first entry in the audit chain (Issue #11)
 const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -164,12 +171,14 @@ export class AuditLogService {
 			filter_by_user,
 			filter_by_category,
 			filter_by_past_time,
+			q,
 			}: {
 				page: number;
 				per_page: number;
 				filter_by_user?: string;
 				filter_by_category?: ActionCtgs;
 				filter_by_past_time?: ActionPastTimes;
+				q?: string;
 			},
 	) => {
 		const db = await DB.getInstance();
@@ -196,6 +205,24 @@ export class AuditLogService {
 			const likePattern = toSqlLikePattern(filter_by_category);
 			auditLogsQuery = auditLogsQuery.where("action", "like", likePattern);
 			totalCountQuery = totalCountQuery.where("action", "like", likePattern);
+		}
+
+		if (q) {
+			const searchPattern = escapeIlikeContains(q);
+			auditLogsQuery = auditLogsQuery.where((eb) =>
+				eb.or([
+					eb("action", "ilike", searchPattern),
+					eb("details", "ilike", searchPattern),
+					eb("message", "ilike", searchPattern),
+				]),
+			);
+			totalCountQuery = totalCountQuery.where((eb) =>
+				eb.or([
+					eb("action", "ilike", searchPattern),
+					eb("details", "ilike", searchPattern),
+					eb("message", "ilike", searchPattern),
+				]),
+			);
 		}
 
 		if (filter_by_past_time) {

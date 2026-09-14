@@ -2,14 +2,13 @@ import { v4 as uuidv4 } from "uuid";
 
 import { smartEncrypt } from "@/helpers/key-store";
 import { DB } from "@/libs/db";
-import { BusinessRuleError, NotFoundError, ValidationError, orNotFound } from "@/libs/errors";
+import { BusinessRuleError, ValidationError, orNotFound } from "@/libs/errors";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
+import { applyChangeRequestItems } from "@/services/change_request_apply";
 import { EnvService } from "@/services/env.service";
-import { EnvStorePiTService } from "@/services/env_store_pit.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { SecretService } from "@/services/secret.service";
-import { SecretStorePiTService } from "@/services/secret_store_pit.service";
 
 type ChangeOperation = "CREATE" | "UPDATE" | "DELETE";
 
@@ -361,8 +360,8 @@ export class ChangeRequestService {
 			id,
 		);
 
-		if (request.status !== "pending") {
-			throw new BusinessRuleError("Only pending requests can be approved.");
+		if (!["pending", "failed"].includes(request.status)) {
+			throw new BusinessRuleError("Only pending or failed requests can be approved.");
 		}
 		if (request.requested_by_user_id === reviewer_user_id) {
 			throw new BusinessRuleError("Requesters cannot approve their own change request.", 403);
@@ -376,6 +375,35 @@ export class ChangeRequestService {
 		);
 		if (!canApprove) {
 			throw new BusinessRuleError("You do not have permission to approve this change request.", 403);
+		}
+
+		const claimTime = new Date();
+		const claimed = await db
+			.updateTable("change_request")
+			.set({
+				status: "applying",
+				reviewed_by_user_id: reviewer_user_id,
+				reviewed_at: claimTime,
+				updated_at: claimTime,
+			})
+			.where("id", "=", id)
+			.where("org_id", "=", org_id)
+			.where((eb) =>
+				eb.or([
+					eb.and([
+						eb("status", "=", "pending"),
+						eb.or([
+							eb("reviewed_by_user_id", "is", null),
+							eb("reviewed_by_user_id", "=", reviewer_user_id),
+						]),
+					]),
+					eb("status", "=", "failed"),
+				]),
+			)
+			.returning("id")
+			.executeTakeFirst();
+		if (!claimed) {
+			throw new BusinessRuleError("This change request is no longer pending.");
 		}
 
 		const [envItems, secretItems] = await Promise.all([
@@ -393,54 +421,47 @@ export class ChangeRequestService {
 				.execute(),
 		]);
 
-		for (const item of envItems) {
-			await this.applyEnvItem(request, item, reviewer_user_id);
-		}
-		for (const item of secretItems) {
-			await this.applySecretItem(request, item, reviewer_user_id);
-		}
-
-		const now = new Date();
-		if (envItems.length > 0) {
-			await EnvStorePiTService.createEnvStorePiT({
-				org_id,
-				app_id: request.app_id,
-				env_type_id: request.target_env_type_id,
-				change_request_message: request.message,
-				user_id: reviewer_user_id,
-				envs: envItems.map((item) => ({
-					key: item.key,
-					value: item.operation === "DELETE" ? (item.previous_value ?? "") : (item.proposed_value ?? ""),
-					operation: item.operation,
-				})),
+		try {
+			await applyChangeRequestItems({
+				request,
+				envItems,
+				secretItems,
+				reviewer_user_id,
 			});
-		}
-		if (secretItems.length > 0) {
-			await SecretStorePiTService.createSecretStorePiT({
-				org_id,
-				app_id: request.app_id,
-				env_type_id: request.target_env_type_id,
-				change_request_message: request.message,
-				user_id: reviewer_user_id,
-				envs: secretItems.map((item) => ({
-					key: item.key,
-					value: item.operation === "DELETE" ? (item.previous_value ?? "") : (item.proposed_value ?? ""),
-					operation: item.operation,
-				})),
-			});
-		}
 
-		await db
-			.updateTable("change_request")
-			.set({
-				status: "approved",
-				reviewed_by_user_id: reviewer_user_id,
-				reviewed_at: now,
-				applied_at: now,
-				updated_at: now,
-			})
-			.where("id", "=", id)
-			.execute();
+			const now = new Date();
+			const approved = await db
+				.updateTable("change_request")
+				.set({
+					status: "approved",
+					reviewed_by_user_id: reviewer_user_id,
+					reviewed_at: now,
+					applied_at: now,
+					updated_at: now,
+				})
+				.where("id", "=", id)
+				.where("org_id", "=", org_id)
+				.where("status", "=", "applying")
+				.where("reviewed_by_user_id", "=", reviewer_user_id)
+				.returning("id")
+				.executeTakeFirst();
+			if (!approved) {
+				throw new BusinessRuleError("This change request is no longer pending.");
+			}
+		} catch (err) {
+			await db
+				.updateTable("change_request")
+				.set({
+					status: "failed",
+					updated_at: new Date(),
+				})
+				.where("id", "=", id)
+				.where("org_id", "=", org_id)
+				.where("status", "=", "applying")
+				.where("reviewed_by_user_id", "=", reviewer_user_id)
+				.execute();
+			throw err;
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
@@ -460,7 +481,7 @@ export class ChangeRequestService {
 		const request = await this.getPendingForReview(id, org_id, reviewer_user_id);
 		const now = new Date();
 
-		await db
+		const rejected = await db
 			.updateTable("change_request")
 			.set({
 				status: "rejected",
@@ -470,7 +491,19 @@ export class ChangeRequestService {
 				updated_at: now,
 			})
 			.where("id", "=", request.id)
-			.execute();
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.where(eb =>
+				eb.or([
+					eb("reviewed_by_user_id", "is", null),
+					eb("reviewed_by_user_id", "=", reviewer_user_id),
+				]),
+			)
+			.returning("id")
+			.executeTakeFirst();
+		if (!rejected) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
@@ -502,14 +535,21 @@ export class ChangeRequestService {
 			throw new BusinessRuleError("Only the requester can cancel this change request.", 403);
 		}
 
-		await db
+		const cancelled = await db
 			.updateTable("change_request")
 			.set({
 				status: "cancelled",
 				updated_at: new Date(),
 			})
 			.where("id", "=", id)
-			.execute();
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.where("reviewed_by_user_id", "is", null)
+			.returning("id")
+			.executeTakeFirst();
+		if (!cancelled) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
@@ -542,125 +582,5 @@ export class ChangeRequestService {
 			throw new BusinessRuleError("You do not have permission to review this change request.", 403);
 		}
 		return request;
-	}
-
-	private static async applyEnvItem(
-		request: {
-			app_id: string;
-			org_id: string;
-			target_env_type_id: string;
-		},
-		item: {
-			key: string;
-			operation: string;
-			proposed_value: string | null | undefined;
-		},
-		user_id: string,
-	) {
-		if (item.operation === "CREATE") {
-			await EnvService.createEnv({
-				key: item.key,
-				value: item.proposed_value ?? "",
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
-			return;
-		}
-		if (item.operation === "UPDATE") {
-			try {
-				await EnvService.updateEnv({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-				await EnvService.createEnv({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
-			}
-			return;
-		}
-		if (item.operation === "DELETE") {
-			await EnvService.deleteEnv({
-				key: item.key,
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
-		}
-	}
-
-	private static async applySecretItem(
-		request: {
-			app_id: string;
-			org_id: string;
-			target_env_type_id: string;
-		},
-		item: {
-			key: string;
-			operation: string;
-			proposed_value: string | null | undefined;
-		},
-		user_id: string,
-	) {
-		if (item.operation === "CREATE") {
-			await SecretService.createSecret({
-				key: item.key,
-				value: item.proposed_value ?? "",
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
-			return;
-		}
-		if (item.operation === "UPDATE") {
-			try {
-				await SecretService.updateSecret({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
-			} catch (err) {
-				if (!(err instanceof NotFoundError)) {
-					throw err;
-				}
-				await SecretService.createSecret({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
-			}
-			return;
-		}
-		if (item.operation === "DELETE") {
-			await SecretService.deleteSecret({
-				key: item.key,
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
-		}
 	}
 }

@@ -6,7 +6,7 @@ test.describe("feature: users and invitations", () => {
 	test("invites a member and manages pending invitation", async ({ page, makeName }) => {
 		const email = `${makeName("ui-invite").toLowerCase()}@envsync.local`;
 
-		await page.goto("/users", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
 		await expect(page.getByTestId("users-invite-member")).toBeVisible();
 
 		await page.getByTestId("users-invite-member").click();

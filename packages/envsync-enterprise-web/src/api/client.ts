@@ -56,8 +56,3 @@ export function getEnterpriseSDK(): EnvSyncAPISDK {
   }
   return apiSdk;
 }
-
-/** @deprecated Prefer getEnterpriseSDK — same client after SDK merge. */
-export function getManagementSDK(): Promise<EnvSyncAPISDK> {
-  return Promise.resolve(getEnterpriseSDK());
-}

@@ -40,3 +40,7 @@ export interface CredentialResult {
 	/** Provider-specific metadata about the generated credential. */
 	readonly metadata?: Record<string, unknown>;
 }
+
+export function unimplementedRotationEngine(engineType: string): never {
+	throw new Error(`${engineType} rotation engine is not implemented`);
+}

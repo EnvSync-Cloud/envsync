@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 import type { CredentialResult, DynamicSecretEngineInterface } from "./base";
@@ -39,34 +37,10 @@ export class AwsIamEngine implements DynamicSecretEngineInterface {
 	}
 
 	async generateCredentials(
-		config: Record<string, unknown>,
-		ttlSeconds: number,
+		_config: Record<string, unknown>,
+		_ttlSeconds: number,
 	): Promise<CredentialResult> {
-		const c = config as unknown as AwsIamConfig;
-		this.validateConfig(config);
-
-		// Generate temporary credentials
-		// In production: call AWS STS AssumeRole or IAM CreateUser
-		const tempAccessKeyId = `AKIA${randomBytes(16).toString("hex").toUpperCase().slice(0, 16)}`;
-		const tempSecretAccessKey = randomBytes(32).toString("base64").slice(0, 40);
-		const sessionToken = randomBytes(64).toString("base64");
-		const expiration = new Date(Date.now() + ttlSeconds * 1000);
-
-		infoLogs(
-			`AwsIamEngine: would create temporary credentials with policy in ${c.region}, expires ${expiration.toISOString()}`,
-			LogTypes.LOGS,
-			"DynamicSecretEngine:AwsIam",
-		);
-
-		return {
-			username: tempAccessKeyId,
-			password: tempSecretAccessKey,
-			access_key_id: tempAccessKeyId,
-			secret_access_key: tempSecretAccessKey,
-			session_token: sessionToken,
-			region: c.region,
-			expiration: expiration.toISOString(),
-		};
+		throw new Error("aws-iam dynamic secret engine is not implemented");
 	}
 
 	async revokeCredentials(

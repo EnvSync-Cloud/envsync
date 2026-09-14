@@ -15,7 +15,7 @@ test.describe("feature: environment types", () => {
 	await setEnvironmentProtected(page, project.appId, "Production", true);
 	await deleteEnvironmentType(page, project.appId, envName);
 
-	await page.goto(`/applications/${project.appId}/manage-environments`, { waitUntil: "domcontentloaded" });
+	await page.goto(`/projects/${project.appId}/manage-environments`, { waitUntil: "domcontentloaded" });
 	await expect(page.getByTestId("manage-env-stat-types")).toBeVisible();
 	await expect(page.getByTestId("manage-env-stat-protected")).toHaveText("1");
 	await expect(page.getByText("Production").first()).toBeVisible();

@@ -13,21 +13,28 @@ export const appApprovalsPath = (appId: string) => `/projects/${appId}/approvals
 export const appSettingsPath = (appId: string) => `/projects/${appId}/settings`;
 export const appServiceTokensPath = (appId: string) =>
   `/projects/${appId}/settings/service-tokens`;
+export const appRotationPath = (appId: string) =>
+  `/projects/${appId}/settings/rotation`;
+export const appDynamicSecretsPath = (appId: string) =>
+  `/projects/${appId}/settings/dynamic-secrets`;
 export const appPointInTimePath = (appId: string) => `/projects/${appId}/pit`;
-export const appIntegrationsPath = (appId: string) => `/applications/${appId}/integrations`;
+export const appIntegrationsPath = (appId: string) => `/projects/${appId}/integrations`;
 export const appIntegrationProviderPath = (appId: string, provider: string) =>
   `${appIntegrationsPath(appId)}/${provider}`;
 export const orgPath = () => "/org";
 export const orgAccessPath = (tab?: OrgAccessTab) =>
   tab ? `/org/access/${tab}` : "/org/access";
-export const orgUsersPath = () => "/org/users";
-export const orgTeamsPath = () => "/org/teams";
-export const orgRolesPath = () => "/org/roles";
+export const orgUsersPath = () => orgAccessPath("users");
+export const orgTeamsPath = () => orgAccessPath("teams");
+export const orgRolesPath = () => orgAccessPath("roles");
 export const orgCertificatesPath = () => "/org/certificates";
 export const orgWebhooksPath = () => "/org/webhooks";
 export const orgChangeRequestsPath = () => "/org/change-requests";
-export const orgSettingsPath = () => "/organisation";
+export const orgSettingsPath = () => "/org";
 export const orgIntegrationsPath = () => "/organisation/integrations";
+export const orgOidcPath = () => "/organisation/oidc";
+export const orgLogForwardingPath = () => "/organisation/log-forwarding";
+export const orgDynamicSecretsPath = () => "/organisation/dynamic-secrets";
 export const apiKeysPath = () => "/apikeys";
 
 export const PALETTE_ORG_LINKS = [
@@ -49,13 +56,19 @@ export const LEGACY_REDIRECTS: Array<{ id: string; path: string; to: string }> =
   { id: "legacy-applications-secrets", path: "applications/:appId/secrets", to: "/projects/:appId/secrets" },
   { id: "legacy-applications-manage-environments", path: "applications/:appId/manage-environments", to: "/projects/:appId/manage-environments" },
   { id: "legacy-applications-access", path: "applications/:appId/access", to: "/projects/:appId/access" },
+  { id: "legacy-applications-integrations-provider", path: "applications/:appId/integrations/:provider", to: "/projects/:appId/integrations/:provider" },
+  { id: "legacy-applications-integrations", path: "applications/:appId/integrations", to: "/projects/:appId/integrations" },
   { id: "legacy-applications-detail", path: "applications/:appId", to: "/projects/:appId" },
-  { id: "legacy-users", path: "users", to: "/org/users" },
-  { id: "legacy-teams", path: "teams", to: "/org/teams" },
-  { id: "legacy-roles", path: "roles", to: "/org/roles" },
+  { id: "legacy-users", path: "users", to: "/org/access/users" },
+  { id: "legacy-teams", path: "teams", to: "/org/access/teams" },
+  { id: "legacy-roles", path: "roles", to: "/org/access/roles" },
+  { id: "legacy-org-users", path: "org/users", to: "/org/access/users" },
+  { id: "legacy-org-teams", path: "org/teams", to: "/org/access/teams" },
+  { id: "legacy-org-roles", path: "org/roles", to: "/org/access/roles" },
   { id: "legacy-certificates", path: "certificates", to: "/org/certificates" },
   { id: "legacy-webhooks", path: "webhooks", to: "/org/webhooks" },
   { id: "legacy-change-requests", path: "change-requests", to: "/org/change-requests" },
+  { id: "legacy-organisation", path: "organisation", to: "/org" },
 ];
 
 export function applyRouteParams(pattern: string, params: Record<string, string | undefined>) {

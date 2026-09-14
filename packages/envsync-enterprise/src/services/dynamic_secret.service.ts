@@ -56,7 +56,7 @@ export class DynamicSecretService {
 			.values({
 				id: uuidv4(),
 				org_id,
-				engine_type: engine_type as "postgres" | "mysql" | "aws-iam" | "azure-sp",
+				engine_type: engine_type as "postgres" | "mysql",
 				name,
 				config,
 				enabled,

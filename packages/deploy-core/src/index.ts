@@ -30,13 +30,11 @@ const deployConfigSchema = z.object({
 	services: z.object({
 		stack_name: z.string().default("envsync"),
 		api_port: z.number().int().positive().default(4000),
-		management_api_port: z.number().int().positive().default(4001),
 		public_http_port: z.number().int().positive().default(80),
 		public_https_port: z.number().int().positive().default(443),
 	}).default({}),
 	images: z.object({
 		api: z.string().default("ghcr.io/envsync-cloud/envsync-api:stable"),
-		management_api: z.string().default("ghcr.io/envsync-cloud/envsync-management-api:stable"),
 		web: z.string().default("ghcr.io/envsync-cloud/envsync-web-oss-static:stable"),
 		enterprise_web: z.string().default("ghcr.io/envsync-cloud/envsync-web-static:stable"),
 		landing: z.string().default("ghcr.io/envsync-cloud/envsync-landing-static:stable"),

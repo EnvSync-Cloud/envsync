@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { App } from "@/constants";
 import { useCopy } from "@/hooks/useClipboard";
+import { appDetailPath } from "@/lib/app-routes";
 import { useNavigate } from "react-router-dom";
 
 interface ViewAppModalProps {
@@ -206,7 +207,7 @@ export const ViewAppModal = ({
               className="text-foreground border-border hover:bg-muted"
               onClick={() => {
                 // Navigate to project environments
-                navigate(`/applications/${app.id}`);
+                navigate(appDetailPath(app.id));
               }}
             >
               <ExternalLink className="w-4 h-4 mr-2" />

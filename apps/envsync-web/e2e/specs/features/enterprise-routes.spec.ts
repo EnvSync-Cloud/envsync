@@ -3,6 +3,7 @@
  * Shell-only OSS stubs would 404 these routes.
  */
 import { getAppByName } from "../../helpers/app-data";
+import { mockWhoamiWithoutFeature } from "../../helpers/whoami";
 import { test, expect } from "../../fixtures/test";
 
 test.describe("enterprise dashboard routes", () => {
@@ -25,6 +26,18 @@ test.describe("enterprise dashboard routes", () => {
 				heading: /^SSO$/,
 			},
 			{
+				path: "/organisation/oidc",
+				heading: /^Workload OIDC$/,
+			},
+			{
+				path: "/organisation/log-forwarding",
+				heading: /^Log forwarding$/,
+			},
+			{
+				path: "/organisation/dynamic-secrets",
+				heading: /^Dynamic secrets$/,
+			},
+			{
 				path: "/organisation/keys",
 				heading: /^Key management$/,
 			},
@@ -44,7 +57,7 @@ test.describe("enterprise dashboard routes", () => {
 		const seededApp = await getAppByName(page, "Core Platform");
 		test.skip(!seededApp, "Core Platform app not seeded in this harness");
 
-		await page.goto(`/applications/${seededApp!.id}/integrations`, {
+		await page.goto(`/projects/${seededApp!.id}/integrations`, {
 			waitUntil: "domcontentloaded",
 		});
 		await expect(
@@ -53,18 +66,29 @@ test.describe("enterprise dashboard routes", () => {
 		await expect(page.getByText(/not found|page you are looking for/i)).toHaveCount(0);
 	});
 
+	test("project rotation and dynamic secrets pages load when a seeded app exists", async ({ page }) => {
+		const seededApp = await getAppByName(page, "Core Platform");
+		test.skip(!seededApp, "Core Platform app not seeded in this harness");
+
+		await page.goto(`/projects/${seededApp!.id}/settings/rotation`, {
+			waitUntil: "domcontentloaded",
+		});
+		await expect(page.getByRole("heading", { name: /^Rotation$/ }).first()).toBeVisible({
+			timeout: 30_000,
+		});
+
+		await page.goto(`/projects/${seededApp!.id}/settings/dynamic-secrets`, {
+			waitUntil: "domcontentloaded",
+		});
+		await expect(page.getByRole("heading", { name: /^Dynamic secrets$/ }).first()).toBeVisible({
+			timeout: 30_000,
+		});
+	});
+
 	// Hosted-only grant-org-features would hide Integrations on a second harness org.
 	// UI e2e is not Hosted-gated, so intercept whoami.features instead.
 	test("restricted whoami features hide Integrations nav and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "integrations");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "integrations");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
@@ -75,7 +99,7 @@ test.describe("enterprise dashboard routes", () => {
 		await expect(page.getByTestId("shell-nav-organisation-sso")).toBeVisible();
 		await expect(page.getByTestId("shell-nav-organisation-keys")).toBeVisible();
 
-		await page.goto("/organisation", { waitUntil: "domcontentloaded" });
+		await page.goto("/org", { waitUntil: "domcontentloaded" });
 		await expect(page.getByTestId("shell-nav-organisation-integrations")).toHaveCount(0);
 		await expect(page.getByTestId("shell-nav-organisation-sync")).toHaveCount(0);
 		await expect(page.getByTestId("shell-nav-organisation-license")).toBeVisible();
@@ -84,7 +108,7 @@ test.describe("enterprise dashboard routes", () => {
 
 		const seededApp = await getAppByName(page, "Core Platform");
 		if (seededApp) {
-			await page.goto(`/applications/${seededApp.id}`, { waitUntil: "domcontentloaded" });
+			await page.goto(`/projects/${seededApp.id}`, { waitUntil: "domcontentloaded" });
 			await expect(page.getByTestId("shell-nav-applications-integrations")).toHaveCount(0);
 		}
 
@@ -95,15 +119,7 @@ test.describe("enterprise dashboard routes", () => {
 	});
 
 	test("restricted whoami features hide SSO nav and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "saml");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "saml");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();
@@ -118,15 +134,7 @@ test.describe("enterprise dashboard routes", () => {
 	});
 
 	test("restricted whoami features hide Key management and deep-link to upgrade", async ({ page }) => {
-		await page.route("**/api/auth/me", async route => {
-			const response = await route.fetch();
-			const body = await response.json() as { features?: string[] };
-			const features = (body.features ?? []).filter(feature => feature !== "kms");
-			await route.fulfill({
-				response,
-				json: { ...body, features },
-			});
-		});
+		await mockWhoamiWithoutFeature(page, "kms");
 
 		await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 		await page.getByTestId("product-switcher-trigger").click();

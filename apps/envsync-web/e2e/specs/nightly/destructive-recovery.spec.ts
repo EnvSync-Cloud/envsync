@@ -15,13 +15,13 @@ test.describe("nightly: destructive recovery", () => {
 		const variableKey = makeName("UI_NIGHTLY_VAR");
 		const secretKey = makeName("UI_NIGHTLY_SECRET");
 
-		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 		const envTypeId = await createVariable(page, project.appId, "Development", variableKey, "VALUE_V1");
 		await updateVariable(page, project.appId, envTypeId, variableKey, "VALUE_V2");
 		await updateVariable(page, project.appId, envTypeId, variableKey, "VALUE_V3");
 		await deleteVariable(page, project.appId, envTypeId, variableKey);
 
-		await page.goto(`/applications/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
 		const secretEnvTypeId = await createSecret(page, project.appId, "Development", secretKey, "SECRET_V1");
 		await deleteSecret(page, project.appId, secretEnvTypeId, secretKey);
 
@@ -30,7 +30,7 @@ test.describe("nightly: destructive recovery", () => {
 		await compareFirstTwoPits(page);
 		await rollbackCurrentPit(page);
 
-		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("link", { name: /UI_NIGHTLY_APP/i }).first()).toBeVisible();
 	});
 });

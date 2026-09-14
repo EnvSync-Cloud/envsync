@@ -59,12 +59,19 @@ function defaultManagementApiUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}${MANAGE_API_PATH}`;
 }
 
+function inferredDeploymentMode(): RuntimeConfig["deploymentMode"] {
+  const raw = import.meta.env.VITE_ENVSYNC_DEPLOYMENT_MODE;
+  if (raw === "hosted" || raw === "selfhosted") return raw;
+  return "selfhosted";
+}
+
 function inferFallbackRuntimeConfig(): RuntimeConfig {
+  const deploymentMode = inferredDeploymentMode();
   if (typeof window === "undefined") {
     return {
       apiBaseUrl: defaultApiBaseUrl,
-      appBaseUrl: "http://app.lvh.me:8001",
-      authBaseUrl: "http://auth.lvh.me:8080",
+      appBaseUrl: "http://localhost:8001",
+      authBaseUrl: "http://localhost:8080",
       managementApiUrl: defaultManagementApiUrl(defaultApiBaseUrl),
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
@@ -72,11 +79,13 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       edition: buildEdition,
       dashboardVariant: buildEdition,
       managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
+      deploymentMode,
+      canCreateOrganization: deploymentMode === "hosted",
       licenseStatus: undefined,
       licenseLocked: false,
-      otelEndpoint: "http://localhost:4318",
+      otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || undefined,
       hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
-      hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || undefined,
+      hyperdxUrl: firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) || undefined,
       hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
       hyperdxAdvancedNetworkCapture: false,
       posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
@@ -85,19 +94,41 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     };
   }
 
-  const { protocol, hostname, port, origin } = window.location;
-  const host = port ? `${hostname}:${port}` : hostname;
-  const rootHost =
-    host.startsWith("app.") ? host.slice(4) :
-    host.startsWith("api.") ? host.slice(4) :
-    host.startsWith("auth.") ? host.slice(5) :
-    host.startsWith("obs.") ? host.slice(4) :
-    host;
+  const { protocol, hostname, origin } = window.location;
+  const rootHost = productRootHost(hostname);
+
+  if (isLocalDevHost(hostname)) {
+    const apiBaseUrl = inferPageApiBaseUrl(hostname, protocol);
+    return {
+      apiBaseUrl,
+      appBaseUrl: hostname.startsWith("app.") ? origin : "http://app.lvh.me:8001",
+      authBaseUrl: import.meta.env.VITE_AUTH_BASE_URL || "http://auth.lvh.me:8080",
+      managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
+      keycloakRealm: "envsync",
+      webClientId: "envsync-web",
+      apiDocsUrl: `${apiBaseUrl.replace(/\/$/, "")}/docs`,
+      edition: buildEdition,
+      dashboardVariant: buildEdition,
+      managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
+      deploymentMode,
+      canCreateOrganization: deploymentMode === "hosted",
+      licenseStatus: undefined,
+      licenseLocked: false,
+      otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || undefined,
+      hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
+      hyperdxUrl: firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) || undefined,
+      hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
+      hyperdxAdvancedNetworkCapture: false,
+      posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
+      posthogHost: import.meta.env.VITE_POSTHOG_HOST || undefined,
+      posthogDisabled: import.meta.env.VITE_POSTHOG_DISABLED === "true",
+    };
+  }
 
   const apiBaseUrl = `${protocol}//api.${rootHost}`;
   return {
     apiBaseUrl,
-    appBaseUrl: host.startsWith("app.") ? origin : `${protocol}//app.${rootHost}`,
+    appBaseUrl: hostname.startsWith("app.") ? origin : `${protocol}//app.${rootHost}`,
     authBaseUrl: `${protocol}//auth.${rootHost}`,
     managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
     keycloakRealm: "envsync",
@@ -106,6 +137,8 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     edition: buildEdition,
     dashboardVariant: buildEdition,
     managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
+    deploymentMode,
+    canCreateOrganization: deploymentMode === "hosted",
     licenseStatus: undefined,
     licenseLocked: false,
     otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || `${protocol}//t.${rootHost}/obs`,
@@ -120,6 +153,21 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
 }
 
 const fallbackRuntimeConfig: RuntimeConfig = inferFallbackRuntimeConfig();
+
+function productRootHost(hostname: string): string {
+  if (hostname.startsWith("app.")) return hostname.slice(4);
+  if (hostname.startsWith("api.")) return hostname.slice(4);
+  if (hostname.startsWith("auth.")) return hostname.slice(5);
+  if (hostname.startsWith("obs.")) return hostname.slice(4);
+  return hostname;
+}
+
+export function inferPageApiBaseUrl(hostname: string, protocol = "http:"): string {
+  if (isLocalDevHost(hostname)) {
+    return defaultApiBaseUrl;
+  }
+  return `${protocol}//api.${productRootHost(hostname)}`;
+}
 
 function isLocalDevHost(hostname: string): boolean {
   return hostname === "localhost"
@@ -171,6 +219,5 @@ export function canCreateOrganizationInUi(config: RuntimeConfig = runtimeConfig)
   if (config.deploymentMode === "hosted") {
     return true;
   }
-  // Legacy: enterprise build without deploymentMode — assume hosted-like (local).
-  return config.edition === "enterprise";
+  return false;
 }

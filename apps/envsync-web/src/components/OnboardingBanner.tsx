@@ -3,6 +3,8 @@ import { X, Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 
+import { apiKeysPath, orgAccessPath, projectCreatePath, projectsPath } from "@/lib/app-routes";
+
 interface OnboardingBannerProps {
   hasProjects: boolean;
   hasTeamMembers: boolean;
@@ -23,10 +25,10 @@ export function OnboardingBanner({
   if (dismissed) return null;
 
   const steps = [
-    { label: "Create a project", done: hasProjects, href: "/applications/create" },
-    { label: "Add variables", done: hasProjects, href: "/applications" },
-    { label: "Invite your team", done: hasTeamMembers, href: "/users" },
-    { label: "Generate API key", done: hasApiKeys, href: "/apikeys" },
+    { label: "Create a project", done: hasProjects, href: projectCreatePath() },
+    { label: "Add variables", done: hasProjects, href: projectsPath() },
+    { label: "Invite your team", done: hasTeamMembers, href: orgAccessPath("users") },
+    { label: "Generate API key", done: hasApiKeys, href: apiKeysPath() },
   ];
 
   const completedCount = steps.filter((s) => s.done).length;

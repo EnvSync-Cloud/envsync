@@ -11,7 +11,7 @@ test.describe("feature: change requests", () => {
 		const title = makeName("UI_FEATURE_CR");
 		const value = makeName("UI_FEATURE_CR_VALUE");
 
-		await page.goto("/change-requests", { waitUntil: "domcontentloaded" });
+		await page.goto("/org/change-requests", { waitUntil: "domcontentloaded" });
 		await expect(page.getByRole("heading", { name: "Change Requests" })).toBeVisible();
 		await switchChangeRequestsTab(page, "create");
 

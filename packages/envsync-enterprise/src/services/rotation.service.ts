@@ -72,7 +72,7 @@ export class RotationService {
 				app_id: input.app_id,
 				env_type_id: input.env_type_id,
 				variable_key: input.variable_key,
-				engine_type: input.engine_type as "postgres" | "mysql" | "aws-iam" | "azure-sp" | "gcp-service-account" | "cloudflare-pages" | "sendgrid" | "twilio",
+				engine_type: input.engine_type as "postgres" | "mysql" | "mongodb" | "aws-iam",
 				schedule_cron: input.schedule_cron,
 				dual_window_minutes: input.dual_window_minutes,
 				enabled: input.enabled,

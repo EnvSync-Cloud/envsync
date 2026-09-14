@@ -13,15 +13,17 @@ export class AuditLogController {
 			filter_by_user,
 			filter_by_category,
 			filter_by_past_time,
+			q,
 		} = c.req.query();
 
-		// filter_by_user, filter_by_category, and filter_by_past_time are optional
+		// filter_by_user, filter_by_category, filter_by_past_time, and q are optional
 		const auditLogs = await AuditLogService.getAuditLogs(org_id, {
 			page: Number(page) || 1,
 			per_page: Number(per_page) || 25,
 			filter_by_user: filter_by_user || undefined,
 			filter_by_category: filter_by_category as ActionCtgs || undefined,
 			filter_by_past_time: filter_by_past_time as ActionPastTimes || undefined,
+			q: q || undefined,
 		});
 
 		// Log the retrieval of audit logs

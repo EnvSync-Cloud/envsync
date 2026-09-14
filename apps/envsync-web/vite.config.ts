@@ -21,6 +21,10 @@ function hostedRuntimeConfigPlugin(): Plugin {
       const apiBase = api.replace(/\/$/, "");
       const track = `${proto}//t.${root}`;
       const otel = `${track}/obs`;
+      const edition = process.env.VITE_SERVER_LICENSE === "oss" ? "oss" : "enterprise";
+      const deploymentMode = process.env.VITE_ENVSYNC_DEPLOYMENT_MODE === "hosted"
+        ? "hosted"
+        : "selfhosted";
       const config = {
         apiBaseUrl: apiBase,
         appBaseUrl: `${proto}//app.${root}`,
@@ -29,11 +33,11 @@ function hostedRuntimeConfigPlugin(): Plugin {
         keycloakRealm: "envsync",
         webClientId: "envsync-web",
         apiDocsUrl: `${apiBase}/docs`,
-        edition: "enterprise",
-        dashboardVariant: "enterprise",
-        managementEnabled: true,
-        deploymentMode: "hosted",
-        canCreateOrganization: true,
+        edition,
+        dashboardVariant: edition,
+        managementEnabled: edition === "enterprise",
+        deploymentMode,
+        canCreateOrganization: deploymentMode === "hosted",
         otelEndpoint: otel,
         hyperdxUrl: otel,
         hyperdxApiKey: process.env.VITE_HYPERDX_API_KEY || undefined,
@@ -65,7 +69,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
     port: 8001,
-    allowedHosts: ["app.lvh.me", "localhost", "127.0.0.1"],
+    allowedHosts: ["app.lvh.me", "api.lvh.me", "localhost", "127.0.0.1"],
   },
   plugins: [
     react(),

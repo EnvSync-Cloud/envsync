@@ -117,7 +117,7 @@ export class EditionPolicyService {
 		if (this.#testOverrides?.management_web_enabled !== undefined) {
 			return this.#testOverrides.management_web_enabled;
 		}
-		return parseBoolean(config.ENVSYNC_MANAGEMENT_WEB_ENABLED, this.isEnterprise());
+		return this.isManagementEnabled();
 	}
 
 	public static isObservabilityEnabled() {
@@ -387,6 +387,3 @@ export class EditionPolicyService {
 		return 1;
 	}
 }
-
-/** @deprecated Use ORG_LIMIT_REACHED; kept for response compatibility. */
-export const ORG_LIMIT_REACHED_LEGACY_CODE = "OSS_SINGLE_ORG_LIMIT_REACHED";

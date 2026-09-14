@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * Cloudflare Pages rotation engine.
@@ -29,36 +29,8 @@ export class CloudflarePagesEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-
-		// In production, this would use the Cloudflare API:
-		// 1. Authenticate with api_token
-		// 2. POST https://api.cloudflare.com/client/v4/user/tokens
-		//    with { name, policies: [{ effect: "allow", resources, permissions }] }
-		//    scoped to the Pages project deployment permission
-		//
-		// For now, return a structured token
-		const tokenId = crypto.randomUUID();
-		const tokenValue = `cf_pages_${crypto.randomBytes(32).toString("base64url")}`;
-
-		const credential = JSON.stringify({
-			token_id: tokenId,
-			token_value: tokenValue,
-			account_id: connectionConfig.account_id,
-			project_name: connectionConfig.project_name,
-		});
-
-		return {
-			credential,
-			metadata: {
-				token_id: tokenId,
-				account_id: connectionConfig.account_id,
-				project_name: connectionConfig.project_name,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache-dependency-path: packages/envsync-cli/go.sum
 
       - name: Run GoReleaser
@@ -35,7 +35,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENVSYNC_API_URL: ${{ secrets.ENVSYNC_API_URL || 'https://api.envsync.cloud' }}
-          ENVSYNC_TELEMETRY_URL: ${{ secrets.ENVSYNC_TELEMETRY_URL || 'https://obs.envsync.cloud' }}
+          ENVSYNC_TELEMETRY_URL: ${{ secrets.ENVSYNC_TELEMETRY_URL || 'https://t.envsync.cloud/obs' }}
 
   build-api-image:
     name: Build & Push API Image

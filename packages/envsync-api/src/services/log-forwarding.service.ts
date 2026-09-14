@@ -1,6 +1,30 @@
 /**
- * H7/H3: implementation lives in proprietary package `envsync-enterprise`.
- * Re-export keeps existing `@/services/...` imports working without a production
- * package.json dependency on envsync-enterprise (monorepo path only).
+ * OSS-safe loader. Forwarding lives in envsync-enterprise.
+ * Audit logging must not statically import the proprietary package.
  */
-export * from "../../../envsync-enterprise/src/services/log-forwarding.service.ts";
+type AuditLogPayload = {
+	action: string;
+	org_id: string;
+	user_id: string;
+	details: Record<string, unknown>;
+	message: string;
+};
+
+type EnterpriseLogForwarding = {
+	LogForwardingService: {
+		forwardAuditLog: (payload: AuditLogPayload) => Promise<void>;
+	};
+};
+
+export class LogForwardingService {
+	public static forwardAuditLog = async (payload: AuditLogPayload): Promise<void> => {
+		try {
+			const { LogForwardingService: EnterpriseForwarding } = (await import(
+				"../../../envsync-enterprise/src/services/log-forwarding.service.ts"
+			)) as EnterpriseLogForwarding;
+			return EnterpriseForwarding.forwardAuditLog(payload);
+		} catch {
+			// OSS / EE package absent — audit is already persisted.
+		}
+	};
+}

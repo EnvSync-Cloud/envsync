@@ -34,7 +34,7 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
   const activeMembership = useMemo(
     () =>
       memberships.find((membership) => membership.user_id === activeMembershipUserId)
-      ?? memberships.find((membership) => membership.is_active)
+      ?? memberships.find((membership) => membership.is_current)
       ?? null,
     [activeMembershipUserId, memberships],
   );
@@ -98,7 +98,7 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
               <CommandEmpty className="text-tertiary">No organizations found.</CommandEmpty>
               <CommandGroup heading="Your organizations">
                 {memberships.map((membership) => {
-                  const isActive = membership.user_id === activeMembershipUserId || membership.is_active;
+                  const isActive = membership.user_id === activeMembershipUserId || membership.is_current === true;
                   return (
                     <CommandItem
                       key={membership.user_id}

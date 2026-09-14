@@ -39,6 +39,7 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.ENVSYNC_API_URL }}
           VITE_SERVER_LICENSE: enterprise
+          VITE_ENVSYNC_DEPLOYMENT_MODE: hosted
           VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_OTEL_ENDPOINT: https://t.envsync.cloud/obs
           VITE_OTEL_SERVICE_NAME: envsync-web

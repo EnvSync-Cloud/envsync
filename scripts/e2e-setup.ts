@@ -387,6 +387,8 @@ async function init(): Promise<void> {
 		KEYCLOAK_E2E_CLIENT_SECRET: keycloakClient.clientSecret,
 		LANDING_PAGE_URL: process.env.LANDING_PAGE_URL ?? "http://localhost:8002",
 		DASHBOARD_URL: process.env.DASHBOARD_URL ?? "http://app.lvh.me:8001",
+		ENVSYNC_EDITION: process.env.ENVSYNC_EDITION ?? "enterprise",
+		API_URL: process.env.API_URL ?? "http://api.lvh.me:4000",
 		OTEL_EXPORTER_OTLP_ENDPOINT:
 			process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? `http://localhost:${process.env.OTEL_AGENT_OTLP_HTTP_PORT ?? "14318"}`,
 		OTEL_SERVICE_NAME: "envsync-api",

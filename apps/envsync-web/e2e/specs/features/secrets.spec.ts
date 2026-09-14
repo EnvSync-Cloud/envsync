@@ -8,7 +8,7 @@ test.describe("feature: secrets", () => {
 		const value = makeName("SECRET");
 		const nextValue = `${value}_UPDATED`;
 
-		await page.goto(`/applications/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}/secrets`, { waitUntil: "domcontentloaded" });
 		const envTypeId = await createSecret(page, project.appId, "Development", key, value);
 		await updateSecret(page, project.appId, envTypeId, key, nextValue);
 		await deleteSecret(page, project.appId, envTypeId, key);

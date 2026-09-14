@@ -28,6 +28,7 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 					is_admin: false,
 					is_master: false,
 					is_active: true,
+					is_current: true,
 				},
 			]),
 	]);
@@ -42,6 +43,7 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 		is_admin: role.is_admin,
 		is_master: role.is_master,
 		is_active: true,
+		is_current: true,
 	};
 
 	const normalizedMemberships = options?.authType === "saml"

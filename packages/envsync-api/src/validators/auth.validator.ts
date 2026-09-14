@@ -12,6 +12,7 @@ export const membershipSummarySchema = z.object({
 	is_admin: z.boolean().openapi({ example: true }),
 	is_master: z.boolean().openapi({ example: true }),
 	is_active: z.boolean().openapi({ example: true }),
+	is_current: z.boolean().openapi({ example: true }),
 });
 
 export const switchOrgRequestSchema = z.object({

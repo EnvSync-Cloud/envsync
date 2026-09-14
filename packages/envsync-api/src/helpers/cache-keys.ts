@@ -12,8 +12,8 @@ export const CacheKeys = {
 	userByIdp: (authServiceId: string) => `es:user:idp:${authServiceId}`,
 	usersByOrg: (orgId: string) => `es:org:${orgId}:users`,
 
-	// API Key
-	apiKeyByCreds: (key: string) => `es:apikey:creds:${key}`,
+	// API Key (hash of the secret — never the raw credential)
+	apiKeyByHash: (hash: string) => `es:apikey:hash:${hash}`,
 	apiKeysByOrg: (orgId: string) => `es:org:${orgId}:apikeys`,
 	apiKeysByUser: (userId: string) => `es:user:${userId}:apikeys`,
 

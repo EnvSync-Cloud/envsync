@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 
+import { CacheClient } from "@/libs/cache";
+import { CacheKeys } from "@/helpers/cache-keys";
+import { ApiKeyService } from "@/services/api_key.service";
+
 import { testRequest } from "../helpers/request";
 import { seedOrg, seedUser, type SeedOrgResult } from "../helpers/db";
 import { setupUserOrgTuples } from "../helpers/fga";
@@ -76,6 +80,35 @@ describe("GET /api/api_key/:id", () => {
 
 		const body = await res.json<{ id: string }>();
 		expect(body.id).toBe(id);
+	});
+});
+
+describe("API key cache", () => {
+	test("looks up credentials without caching the secret", async () => {
+		const res = await testRequest("/api/api_key", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "Cache key", description: "Cache key" },
+		});
+		const created = await res.json<{ id: string; key: string }>();
+
+		const lookedUp = await ApiKeyService.getKeyByCreds(created.key);
+		expect(lookedUp.id).toBe(created.id);
+		expect(lookedUp.is_active).toBe(true);
+
+		expect(await CacheClient.get(CacheKeys.apiKeyByHash(created.key))).toBeNull();
+	});
+
+	test("getKeyByUserId does not return or cache the raw secret", async () => {
+		const res = await testRequest("/api/api_key", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "User list key", description: "User list key" },
+		});
+		const created = await res.json<{ id: string; key: string }>();
+		const listed = await ApiKeyService.getKeyByUserId(seed.masterUser.id);
+		expect(listed.some(key => key.id === created.id)).toBe(true);
+		expect(listed.every(key => !("key" in key))).toBe(true);
 	});
 });
 

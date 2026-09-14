@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * SendGrid rotation engine.
@@ -24,34 +24,8 @@ export class SendGridEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-
-		// In production, this would use the SendGrid API:
-		// 1. Authenticate with admin_api_key
-		// 2. POST https://api.sendgrid.com/v3/api_keys
-		//    with { name: "envsync-rotation-...", scopes }
-		//
-		// For now, return a structured API key
-		const keyId = crypto.randomUUID();
-		const apiKey = `SG.${crypto.randomBytes(32).toString("base64url")}`;
-
-		const credential = JSON.stringify({
-			api_key_id: keyId,
-			api_key: apiKey,
-			name: `envsync-rotation-${crypto.randomBytes(4).toString("hex")}`,
-			scopes: connectionConfig.scopes,
-		});
-
-		return {
-			credential,
-			metadata: {
-				api_key_id: keyId,
-				scopes: connectionConfig.scopes,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

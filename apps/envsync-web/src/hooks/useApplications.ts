@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api as Api, sdk } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
+import { projectCreatePath } from "@/lib/app-routes";
 import { toast } from "sonner";
 import { ApiError } from "@envsync-cloud/envsync-ts-sdk";
 import {
@@ -239,7 +240,7 @@ export const useApplications = () => {
   }, [refetch]);
 
   const handleCreateProject = useCallback(() => {
-    navigate("/applications/create");
+    navigate(projectCreatePath());
   }, [navigate]);
 
   // Modal handlers

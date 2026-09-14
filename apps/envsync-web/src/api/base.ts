@@ -77,6 +77,8 @@ export const getSDK = () => {
   const resolveHeaders = async (options: { method: string }) => {
     if (!isUnsafeMethod(options.method)) return {};
     const csrfToken = readCookie(CSRF_COOKIE);
+    // Double-submit: send the readable cookie value as a header. The API rejects
+    // cookie sessions when either side of the pair is missing.
     return csrfToken ? { "X-CSRF-Token": csrfToken } : {};
   };
 

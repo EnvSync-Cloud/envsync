@@ -1,5 +1,5 @@
 /**
- * Process bootstrap helpers exported for management-api (and other packages).
+ * Process bootstrap helpers exported for other packages.
  * Prefer these over relative `../../envsync-api/src/...` imports.
  */
 import { CacheClient } from "@/libs/cache";
@@ -19,10 +19,6 @@ export async function bootstrapRuntime(surface: ApiSurface = "core") {
 	await DB.healthCheck();
 	await FGAClient.getInstance();
 	await registerApiBackgroundHandlers(surface);
-}
-
-export function getManagementPort() {
-	return Number(config.MANAGEMENT_API_PORT);
 }
 
 export function getCorePort() {

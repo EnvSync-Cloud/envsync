@@ -21,6 +21,10 @@ export const getAuditLogsQuerySchema = z.object({
 			example: "last_30_days",
 			description: "Filter by past time, e.g., 'last_3_hours', 'last_24_hours', 'last_7_days', 'last_30_days', 'last_90_days', 'last_180_days', 'last_1_year', 'all_time'",
 		}),
+	q: z.string().trim().min(1).max(200).optional().openapi({
+		example: "app_created",
+		description: "Case-insensitive search across action, details, and message",
+	}),
 });
 
 export const getAuditLogsSchema = z

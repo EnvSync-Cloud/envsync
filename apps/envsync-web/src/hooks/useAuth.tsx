@@ -81,7 +81,7 @@ export const useAuth = () => {
       setUser(switchedSession);
       setIsAuthenticated(true);
       syncIdentity(switchedSession);
-      clearLastProjectId();
+      clearLastProjectId(user.org.id);
       queryClient.clear();
       window.location.assign("/");
     } catch (error) {

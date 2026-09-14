@@ -64,8 +64,8 @@ export function useDashboard() {
   });
 
   const stats: DashboardStats = {
-    projectsCount: appsError ? null : apps.length,
-    variablesCount: appsError
+    projectsCount: appsError || appsLoading ? null : apps.length,
+    variablesCount: appsError || appsLoading
       ? null
       : apps.reduce(
           (sum, app) => sum + (app.env_count ?? 0) + (app.secret_count ?? 0),

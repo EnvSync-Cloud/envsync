@@ -24,6 +24,8 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
       Link2: () => null,
       LockKeyhole: () => null,
       Workflow: () => null,
+      ScrollText: () => null,
+      Database: () => null,
     }));
     const mod = await import("../src/index.ts");
     expect(Array.isArray(mod.enterpriseWebModules)).toBe(true);
@@ -31,12 +33,20 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
       "enterprise-integrations",
       "enterprise-license",
       "enterprise-sso",
+      "enterprise-oidc",
+      "enterprise-log-forwarding",
+      "enterprise-rotation",
+      "enterprise-dynamic-secrets",
       "enterprise-kms",
     ]);
     const byName = Object.fromEntries(mod.enterpriseWebModules.map(module => [module.name, module]));
     expect(byName["enterprise-integrations"].requiredFeature).toBe("integrations");
     expect(byName["enterprise-license"].requiredFeature).toBeUndefined();
     expect(byName["enterprise-sso"].requiredFeature).toBe("saml");
+    expect(byName["enterprise-oidc"].requiredFeature).toBe("oidc");
+    expect(byName["enterprise-log-forwarding"].requiredFeature).toBe("log_forwarding");
+    expect(byName["enterprise-rotation"].requiredFeature).toBe("rotation");
+    expect(byName["enterprise-dynamic-secrets"].requiredFeature).toBe("dynamic_secrets");
     expect(byName["enterprise-kms"].requiredFeature).toBe("kms");
     const integrationIds = byName["enterprise-integrations"].routes.map(r => r.id);
     expect(integrationIds).toContain("organisation-integrations");
@@ -44,6 +54,11 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(integrationIds).not.toContain("organisation-license");
     expect(byName["enterprise-license"].routes.map(r => r.id)).toContain("organisation-license");
     expect(byName["enterprise-sso"].routes.map(r => r.id)).toContain("organisation-sso");
+    expect(byName["enterprise-oidc"].routes.map(r => r.id)).toContain("organisation-oidc");
+    expect(byName["enterprise-log-forwarding"].routes.map(r => r.id)).toContain("organisation-log-forwarding");
+    expect(byName["enterprise-rotation"].routes.map(r => r.id)).toContain("applications-rotation");
+    expect(byName["enterprise-dynamic-secrets"].routes.map(r => r.id)).toContain("organisation-dynamic-secrets");
+    expect(byName["enterprise-dynamic-secrets"].routes.map(r => r.id)).toContain("applications-dynamic-secrets");
     expect(byName["enterprise-kms"].routes.map(r => r.id)).toContain("organisation-keys");
   });
 
@@ -53,6 +68,11 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(fs.existsSync(path.join(srcRoot, "pages/LicenseSettings.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/SyncOperations.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/OrgSso.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/OrgOidc.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/OrgLogForwarding.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/ProjectRotation.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/OrgDynamicSecrets.tsx"))).toBe(true);
+    expect(fs.existsSync(path.join(srcRoot, "pages/ProjectDynamicSecrets.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "pages/KeyManagement.tsx"))).toBe(true);
     expect(fs.existsSync(path.join(srcRoot, "modules.ts"))).toBe(true);
   });
@@ -66,6 +86,9 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(nav).toContain("organisation-sync");
     expect(nav).toContain("organisation-integrations");
     expect(nav).toContain("organisation-sso");
+    expect(nav).toContain("organisation-oidc");
+    expect(nav).toContain("organisation-log-forwarding");
+    expect(nav).toContain("organisation-dynamic-secrets");
     expect(nav).toContain("organisation-keys");
   });
 
@@ -81,6 +104,37 @@ describe("envsync-enterprise-web package boundary (Phase 5b)", () => {
     expect(rule(entitledAdmin as never)).toBe(true);
     expect(rule(entitledEditor as never)).toBe(false);
     expect(rule(unentitledAdmin as never)).toBe(false);
+  });
+
+  test("rotation and dynamic-secrets scopes require admin plus feature", async () => {
+    const mod = await import("../src/index.ts");
+    const rules = Object.fromEntries(
+      mod.enterpriseWebModules.flatMap(module => Object.entries(module.scopeRules ?? {})),
+    );
+    const rotation = rules["applications-rotation"];
+    const orgDyn = rules["organisation-dynamic-secrets"];
+    const projectDyn = rules["applications-dynamic-secrets"];
+    const admin = { role: { is_admin: true, is_master: false }, features: ["rotation", "dynamic_secrets"] };
+    const editor = { role: { is_admin: false, is_master: false, can_edit: true }, features: ["rotation", "dynamic_secrets"] };
+    expect(rotation(admin as never)).toBe(true);
+    expect(rotation(editor as never)).toBe(false);
+    expect(orgDyn(admin as never)).toBe(true);
+    expect(orgDyn(editor as never)).toBe(false);
+    expect(projectDyn(admin as never)).toBe(true);
+    expect(projectDyn(editor as never)).toBe(false);
+  });
+
+  test("OIDC and log-forwarding scopes require admin plus feature", async () => {
+    const mod = await import("../src/index.ts");
+    const rules = Object.fromEntries(
+      mod.enterpriseWebModules.flatMap(module => Object.entries(module.scopeRules ?? {})),
+    );
+    const oidc = rules["organisation-oidc"];
+    const forwarding = rules["organisation-log-forwarding"];
+    expect(oidc({ role: { is_admin: true, is_master: false }, features: ["oidc"] } as never)).toBe(true);
+    expect(oidc({ role: { is_admin: false, is_master: false }, features: ["oidc"] } as never)).toBe(false);
+    expect(forwarding({ role: { is_admin: true, is_master: false }, features: ["log_forwarding"] } as never)).toBe(true);
+    expect(forwarding({ role: { is_admin: true, is_master: false }, features: ["oidc"] } as never)).toBe(false);
   });
 
   test("keys scope is admin/master and requires kms", async () => {

@@ -14,7 +14,7 @@ export async function startTestServer(surface: "core" | "management" = "core"): 
 	stop: () => void;
 }> {
 	const app = surface === "management"
-		? (await import("@/app/management")).managementApp
+		? await (await import("@/app/factory")).createApiApp("management")
 		: (await import("@/app")).app;
 	const server = Bun.serve({
 		port: 0,

@@ -5,6 +5,7 @@ import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { enterpriseGuard } from "envsync-api/ports/middlewares";
 import { orgFeatureGuard } from "envsync-api/ports/middlewares";
+import { requirePermission } from "envsync-api/ports/middlewares";
 import { RotationController } from "../controllers/rotation.controller";
 import {
 	createRotationPolicySchema,
@@ -58,6 +59,7 @@ app.post(
 		},
 	}),
 	zValidator("json", createRotationPolicySchema),
+	requirePermission("can_manage_apps", "org"),
 	RotationController.createPolicy,
 );
 
@@ -80,6 +82,7 @@ app.get(
 		},
 	}),
 	zValidator("query", getRotationPoliciesQuerySchema),
+	requirePermission("can_view", "org"),
 	RotationController.getPolicies,
 );
 
@@ -106,6 +109,7 @@ app.get(
 		},
 	}),
 	zValidator("param", rotationIdParamSchema),
+	requirePermission("can_view", "org"),
 	RotationController.getPolicy,
 );
 
@@ -137,6 +141,7 @@ app.patch(
 	}),
 	zValidator("param", rotationIdParamSchema),
 	zValidator("json", updateRotationPolicySchema),
+	requirePermission("can_manage_apps", "org"),
 	RotationController.updatePolicy,
 );
 
@@ -167,6 +172,7 @@ app.delete(
 		},
 	}),
 	zValidator("param", rotationIdParamSchema),
+	requirePermission("can_manage_apps", "org"),
 	RotationController.deletePolicy,
 );
 
@@ -203,6 +209,7 @@ app.post(
 		},
 	}),
 	zValidator("param", rotationIdParamSchema),
+	requirePermission("can_manage_apps", "org"),
 	RotationController.triggerRotation,
 );
 
@@ -231,6 +238,7 @@ app.get(
 		},
 	}),
 	zValidator("param", rotationIdParamSchema),
+	requirePermission("can_view", "org"),
 	RotationController.getRotationStates,
 );
 
@@ -254,6 +262,7 @@ app.post(
 			},
 		},
 	}),
+	requirePermission("can_manage_apps", "org"),
 	RotationController.revokeExpiredCredentials,
 );
 

@@ -173,7 +173,9 @@ export class ApiKeyController {
 		}
 
 		keys.forEach(key => {
-			key.key = encapsulate(key.key);
+			if ("key" in key && typeof key.key === "string") {
+				key.key = encapsulate(key.key);
+			}
 		});
 
 		await AuditLogService.notifyAuditSystem({

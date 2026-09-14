@@ -19,7 +19,7 @@ const app = new Hono();
 
 app.use(authMiddleware());
 app.use(enterpriseGuard("oidc"));
-app.use(requirePermission("can_manage_api_keys", "org"));
+app.use(requirePermission("can_manage_org_settings", "org"));
 app.use(orgFeatureGuard("oidc"));
 
 app.post(

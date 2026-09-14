@@ -24,11 +24,11 @@ CREATE TABLE IF NOT EXISTS vault_entries (
       UNIQUE (org_id, scope_id, entry_type, key, env_type_id, version)
 );
 
-CREATE INDEX idx_vault_entries_scope
+CREATE INDEX IF NOT EXISTS idx_vault_entries_scope
   ON vault_entries (org_id, scope_id, entry_type, env_type_id)
   WHERE destroyed = FALSE AND deleted_at IS NULL;
 
-CREATE INDEX idx_vault_entries_key
+CREATE INDEX IF NOT EXISTS idx_vault_entries_key
   ON vault_entries (org_id, scope_id, key)
   WHERE destroyed = FALSE AND deleted_at IS NULL;
 
@@ -46,11 +46,11 @@ CREATE TABLE IF NOT EXISTS org_ca_wraps (
 );
 
 -- Only one active wrap per member per org
-CREATE UNIQUE INDEX idx_org_ca_wraps_active
+CREATE UNIQUE INDEX IF NOT EXISTS idx_org_ca_wraps_active
   ON org_ca_wraps (org_id, member_id)
   WHERE revoked_at IS NULL;
 
-CREATE INDEX idx_org_ca_wraps_org
+CREATE INDEX IF NOT EXISTS idx_org_ca_wraps_org
   ON org_ca_wraps (org_id)
   WHERE revoked_at IS NULL;
 

@@ -30,7 +30,6 @@ const config: DeployConfig = {
 	},
 	images: {
 		api: "ghcr.io/envsync-cloud/envsync-api:0.8.7",
-		management_api: "ghcr.io/envsync-cloud/envsync-management-api:0.8.7",
 		keycloak: "envsync-keycloak:0.8.7",
 		web: "ghcr.io/envsync-cloud/envsync-web-static:0.8.7",
 		landing: "ghcr.io/envsync-cloud/envsync-landing-static:0.8.7",
@@ -41,7 +40,6 @@ const config: DeployConfig = {
 	services: {
 		stack_name: "envsync",
 		api_port: 4000,
-		management_api_port: 4001,
 		public_http_port: 80,
 		public_https_port: 443,
 		clickstack_ui_port: 8080,
@@ -156,6 +154,7 @@ const generated: DeployGeneratedState = {
 		minikms_root_key: "minikms-root-key",
 		minikms_session_signing_key: "-----BEGIN PRIVATE KEY-----\nDEV\n-----END PRIVATE KEY-----\n",
 		minikms_db_password: "minikms-db-pass",
+		saml_session_secret: "a".repeat(64),
 	},
 	bootstrap: {
 		completed_at: "2026-04-30T00:00:00.000Z",
@@ -217,6 +216,8 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/keycloak-realm.envsync.json");
+		expect(stackFull).toContain("kc.sh import --dir /opt/keycloak/data/import --override false");
+		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
 		expect(stackFull).toContain("  netutils:");
 		expect(stackFull).toContain("image: alpine/socat");
@@ -247,6 +248,9 @@ describe("renderKeycloakRealm", () => {
 		expect(keycloakRealm).toContain("\"clientId\": \"envsync-web\"");
 		expect(keycloakRealm).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(keycloakRealm).toContain("https://app.enterprise.example.com/auth/callback");
+		expect(keycloakRealm).toContain("\"accessTokenLifespan\": 3600");
+		expect(keycloakRealm).toContain("\"ssoSessionIdleTimeout\": 604800");
+		expect(keycloakRealm).toContain("\"ssoSessionMaxLifespan\": 604800");
 	});
 });
 
@@ -268,6 +272,16 @@ describe("renderFrontendRuntimeConfig", () => {
 		const envFile = renderEnvFile(buildRuntimeEnv(config, generated));
 		expect(envFile).toContain("API_URL=https://api.enterprise.example.com");
 		expect(envFile).not.toContain("API_URL=http://localhost");
+		expect(envFile).toContain("KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS=3600");
+		expect(envFile).toContain("KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS=604800");
+		expect(envFile).toContain(`SAML_SESSION_SECRET=${"a".repeat(64)}`);
+	});
+
+	test("keeps SAML_SESSION_SECRET stable across rerenders", () => {
+		const first = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;
+		const second = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;
+		expect(first).toBe("a".repeat(64));
+		expect(second).toBe(first);
 	});
 });
 

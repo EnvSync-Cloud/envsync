@@ -23,6 +23,7 @@ export interface MembershipSummary {
 	is_admin: boolean;
 	is_master: boolean;
 	is_active: boolean;
+	is_current: boolean;
 }
 
 export class UserService {
@@ -62,6 +63,7 @@ export class UserService {
 			.selectFrom("users")
 			.selectAll()
 			.where("auth_service_id", "=", auth_service_id)
+			.where("is_active", "=", true)
 			.execute();
 	};
 
@@ -420,7 +422,7 @@ export class UserService {
 
 	public static switchActiveMembership = async (auth_service_id: string, org_id: string) => {
 		const memberships = await UserService.listUsersByIdpId(auth_service_id);
-		const membership = memberships.find(user => user.org_id === org_id);
+		const membership = memberships.find(user => user.org_id === org_id && user.is_active);
 
 		if (!membership) {
 			throw new Error(`No membership found for org ${org_id}`);
@@ -451,8 +453,10 @@ export class UserService {
 				"org_role.name as role_name",
 				"org_role.is_admin as is_admin",
 				"org_role.is_master as is_master",
+				"users.is_active as is_active",
 			])
 			.where("users.auth_service_id", "=", auth_service_id)
+			.where("users.is_active", "=", true)
 			.execute();
 
 		return [...rows]
@@ -485,7 +489,8 @@ export class UserService {
 				role_name: row.role_name,
 				is_admin: Boolean(row.is_admin),
 				is_master: Boolean(row.is_master),
-				is_active: row.user_id === activeMembershipUserId,
+				is_active: Boolean(row.is_active),
+				is_current: row.user_id === activeMembershipUserId,
 			}));
 	};
 
@@ -503,15 +508,6 @@ export class UserService {
 			.selectFrom("users")
 			.selectAll()
 			.where("org_id", "=", org_id)
-			.where("email", "=", email)
-			.executeTakeFirst();
-	};
-
-	public static getUserByEmail = async (email: string) => {
-		const db = await DB.getInstance();
-		return db
-			.selectFrom("users")
-			.selectAll()
 			.where("email", "=", email)
 			.executeTakeFirst();
 	};

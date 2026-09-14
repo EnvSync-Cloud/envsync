@@ -8,7 +8,7 @@ test.describe("feature: variables", () => {
 		const value = makeName("VALUE");
 		const nextValue = `${value}_UPDATED`;
 
-		await page.goto(`/applications/${project.appId}`, { waitUntil: "domcontentloaded" });
+		await page.goto(`/projects/${project.appId}`, { waitUntil: "domcontentloaded" });
 		const envTypeId = await createVariable(page, project.appId, "Development", key, value);
 		await updateVariable(page, project.appId, envTypeId, key, nextValue);
 		await deleteVariable(page, project.appId, envTypeId, key);

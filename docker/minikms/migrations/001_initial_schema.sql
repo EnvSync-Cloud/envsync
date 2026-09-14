@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS key_versions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_key_versions_org_app ON key_versions(org_id, app_id);
-CREATE INDEX idx_key_versions_status ON key_versions(status);
-CREATE UNIQUE INDEX idx_key_versions_active ON key_versions(org_id, app_id) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_key_versions_org_app ON key_versions(org_id, app_id);
+CREATE INDEX IF NOT EXISTS idx_key_versions_status ON key_versions(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_key_versions_active ON key_versions(org_id, app_id) WHERE status = 'active';
 
 -- Token registry: stores ONLY jti + hash, never the full JWT (Issues #5, #12)
 CREATE TABLE IF NOT EXISTS token_registry (
@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS token_registry (
     revoked BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX idx_token_registry_expires ON token_registry(expires_at);
-CREATE INDEX idx_token_registry_subject ON token_registry(subject_hash);
+CREATE INDEX IF NOT EXISTS idx_token_registry_expires ON token_registry(expires_at);
+CREATE INDEX IF NOT EXISTS idx_token_registry_subject ON token_registry(subject_hash);
 
 -- Certificates: 3-level PKI hierarchy (Issue #3)
 -- cert_type: root_ca, org_intermediate_ca, member (renamed from sub_ca)
@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS certificates (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_certificates_org ON certificates(org_id);
-CREATE INDEX idx_certificates_type ON certificates(cert_type);
-CREATE INDEX idx_certificates_status ON certificates(status);
+CREATE INDEX IF NOT EXISTS idx_certificates_org ON certificates(org_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_type ON certificates(cert_type);
+CREATE INDEX IF NOT EXISTS idx_certificates_status ON certificates(status);
 
 -- CRL entries: supports both full and delta CRLs (Issue #9)
 CREATE TABLE IF NOT EXISTS crl_entries (
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS crl_entries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_crl_entries_issuer ON crl_entries(issuer_serial);
-CREATE INDEX idx_crl_entries_cert ON crl_entries(cert_serial);
+CREATE INDEX IF NOT EXISTS idx_crl_entries_issuer ON crl_entries(issuer_serial);
+CREATE INDEX IF NOT EXISTS idx_crl_entries_cert ON crl_entries(cert_serial);
 
 -- KMS audit log: hash-chained entries (Issue #11)
 -- entry_hash = SHA256(previous_hash || timestamp || action || actor_id || details)
@@ -85,9 +85,9 @@ CREATE TABLE IF NOT EXISTS kms_audit_log (
     request_jwt_hash TEXT -- SHA-256 of JWT used for this request (Issue #12)
 );
 
-CREATE INDEX idx_kms_audit_log_org ON kms_audit_log(org_id);
-CREATE INDEX idx_kms_audit_log_timestamp ON kms_audit_log(timestamp DESC);
-CREATE INDEX idx_kms_audit_log_action ON kms_audit_log(action);
+CREATE INDEX IF NOT EXISTS idx_kms_audit_log_org ON kms_audit_log(org_id);
+CREATE INDEX IF NOT EXISTS idx_kms_audit_log_timestamp ON kms_audit_log(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_kms_audit_log_action ON kms_audit_log(action);
 
 -- Key escrow shares: Shamir Secret Sharing for disaster recovery (Issue #7)
 CREATE TABLE IF NOT EXISTS key_escrow_shares (
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS key_escrow_shares (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_key_escrow_shares_org ON key_escrow_shares(org_id);
-CREATE UNIQUE INDEX idx_key_escrow_shares_org_index ON key_escrow_shares(org_id, share_index);
+CREATE INDEX IF NOT EXISTS idx_key_escrow_shares_org ON key_escrow_shares(org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_key_escrow_shares_org_index ON key_escrow_shares(org_id, share_index);
 
 COMMIT;

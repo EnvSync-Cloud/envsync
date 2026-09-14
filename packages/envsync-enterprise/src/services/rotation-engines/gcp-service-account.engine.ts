@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * GCP Service Account rotation engine.
@@ -28,43 +28,8 @@ export class GcpServiceAccountEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-
-		// In production, this would use the Google IAM API:
-		// 1. Authenticate with admin_credentials (service-account JSON key)
-		// 2. POST https://iam.googleapis.com/v1/projects/{project}/serviceAccounts/{sa}/keys
-		//    with { privateKeyType: "TYPE_GOOGLE_CREDENTIALS_FILE" }
-		//
-		// For now, return a structured credential representing the service-account key
-		const keyId = crypto.randomUUID();
-		const privateKey = crypto.generateKeyPairSync("rsa", {
-			modulusLength: 2048,
-			publicKeyEncoding: { type: "spki", format: "pem" },
-			privateKeyEncoding: { type: "pkcs8", format: "pem" },
-		});
-
-		const serviceAccountKey = JSON.stringify({
-			type: "service_account",
-			project_id: connectionConfig.project_id,
-			private_key_id: keyId,
-			private_key: privateKey.privateKey,
-			client_email: connectionConfig.service_account_email,
-			client_id: crypto.randomBytes(12).toString("hex"),
-			auth_uri: "https://accounts.google.com/o/oauth2/auth",
-			token_uri: "https://oauth2.googleapis.com/token",
-		});
-
-		return {
-			credential: serviceAccountKey,
-			metadata: {
-				project_id: connectionConfig.project_id,
-				service_account_email: connectionConfig.service_account_email,
-				key_id: keyId,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

@@ -58,14 +58,12 @@ export const BaseEnvSchema = z.object({
 	KEYCLOAK_API_REDIRECT_URI: z.string(),
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
-	DASHBOARD_URL: z.string().default("http://localhost:8080"),
+	DASHBOARD_URL: z.string(),
 	API_URL: z.string().optional(),
-	// OpenAPI server URL for legacy management process; product clients use /api/v1/manage on core.
+	// Alias of the product API origin + /api/v1/manage (same process; not a second host).
 	MANAGEMENT_API_URL: z.string().default("http://localhost:4000/api/v1/manage"),
-	MANAGEMENT_DASHBOARD_URL: z.string().default("http://localhost:8003"),
-	MANAGEMENT_API_PORT: z.string().default("4001"),
-	// Default enterprise favors Hosted/local EE dev. Self-host OSS must set oss explicitly.
-	ENVSYNC_EDITION: z.enum(["oss", "enterprise"]).default("enterprise"),
+	// Required. Docker/deploy/.env.example must set oss or enterprise — no silent default.
+	ENVSYNC_EDITION: z.enum(["oss", "enterprise"]),
 	// Optional: when unset, EditionPolicyService maps OSS→selfhosted, enterprise→hosted.
 	// Self-host enterprise installs MUST set selfhosted (see CONTRIBUTING footguns).
 	ENVSYNC_DEPLOYMENT_MODE: z.enum(["hosted", "selfhosted"]).optional(),
@@ -81,7 +79,6 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),
 	ENVSYNC_LANDING_ENABLED: z.string().optional(),
-	ENVSYNC_MANAGEMENT_WEB_ENABLED: z.string().optional(),
 	ENVSYNC_LICENSE_ENFORCEMENT: z.string().default("false"),
 	ENVSYNC_LICENSE_MODE: z.enum(["none", "lease", "certificate", "entitlement"]).default("certificate"),
 	ENVSYNC_LICENSE_BUNDLE_PATH: z.string().optional(),
@@ -136,7 +133,16 @@ export function composeEnvSchema(extensions: ZodRawShape[] = []): ZodObject<ZodR
 	return z.object(mergedShape);
 }
 
-export const env = composeEnvSchema(collectEnvSchemaExtensions());
+export const env = composeEnvSchema(collectEnvSchemaExtensions()).superRefine((data, ctx) => {
+	if (data.NODE_ENV !== "production") return;
+	if (!data.API_URL) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: ["API_URL"],
+			message: "API_URL is required in production",
+		});
+	}
+});
 
 export type Env = z.infer<typeof env>;
 

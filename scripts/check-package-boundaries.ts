@@ -148,6 +148,22 @@ if (/bun run --filter envsync-web build:oss/.test(deployFe)) {
 } else {
 	ok("deploy-fe Hosted web uses enterprise/hosted build + enterprise-web path filter");
 }
+const publicRuntimeConfig = fs.readFileSync(
+	path.join(root, "apps/envsync-web/public/runtime-config.js"),
+	"utf8",
+);
+if (publicRuntimeConfig.includes("lvh.me") || publicRuntimeConfig.includes("localhost:4318")) {
+	fail("public/runtime-config.js must not ship lvh.me or localhost:4318");
+} else if (!publicRuntimeConfig.includes("canCreateOrganization: false")) {
+	fail("public/runtime-config.js must default canCreateOrganization to false");
+} else {
+	ok("public runtime-config is selfhost-safe (no lvh.me, create-org false)");
+}
+if (!deployFe.includes("VITE_ENVSYNC_DEPLOYMENT_MODE: hosted")) {
+	fail("deploy-fe.yaml must set VITE_ENVSYNC_DEPLOYMENT_MODE=hosted for Hosted web");
+} else {
+	ok("deploy-fe Hosted web sets deploymentMode hosted");
+}
 
 // 10) H1: SDK clients must not call removed create-workspace URL
 const tsAuth = fs.readFileSync(
@@ -193,15 +209,29 @@ for (const name of requiredEeServices) {
 	const apiShim = path.join(root, "packages/envsync-api/src/services", name);
 	if (!fs.existsSync(eePath)) {
 		fail(`H3: missing envsync-enterprise service ${name}`);
-	} else if (!fs.existsSync(apiShim)) {
-		fail(`H3: missing envsync-api re-export shim for ${name}`);
 	} else {
-		const shim = fs.readFileSync(apiShim, "utf8");
-		// Shim should be a thin re-export, not a full copy of implementation
-		if (!shim.includes("envsync-enterprise") || !shim.includes("export * from")) {
-			fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
-		} else if (shim.split("\n").filter(l => l.trim().length > 0).length > 12) {
-			fail(`H3: envsync-api ${name} shim looks too large (expected thin re-export)`);
+		const bootSafe =
+			name === "oidc.service.ts" ||
+			name === "enterprise-certificate-verifier.service.ts" ||
+			name === "log-forwarding.service.ts";
+		if (bootSafe) {
+			if (!fs.existsSync(apiShim)) {
+				fail(`H3: missing OSS-safe loader for ${name}`);
+			} else {
+				const shim = fs.readFileSync(apiShim, "utf8");
+				if (shim.includes("export * from")) {
+					fail(`H3: ${name} is on the OSS boot path and must not statically re-export EE`);
+				} else if (!shim.includes("envsync-enterprise")) {
+					fail(`H3: ${name} should dynamically load envsync-enterprise`);
+				} else {
+					ok(`H3: ${name} loads EE dynamically (OSS-safe)`);
+				}
+			}
+		} else if (fs.existsSync(apiShim)) {
+			const shim = fs.readFileSync(apiShim, "utf8");
+			if (shim.includes("export * from") && shim.includes("envsync-enterprise")) {
+				fail(`H3: ${name} must not statically re-export EE from OSS`);
+			}
 		}
 	}
 }
@@ -222,6 +252,27 @@ if (!fs.existsSync(eeRotEngines) || !fs.existsSync(eeDynEngines)) {
 } else {
 	ok("H7: rotation + dynamic-secret engines owned by envsync-enterprise");
 }
+const rotIndexSrc = fs.readFileSync(eeRotEngines, "utf8");
+const dynIndexSrc = fs.readFileSync(eeDynEngines, "utf8");
+const hiddenRotation = [
+	"sendgrid",
+	"twilio",
+	"azure-sp",
+	"gcp-service-account",
+	"cloudflare-pages",
+	"aws-mysql",
+	"aws-postgres",
+];
+for (const stub of hiddenRotation) {
+	if (rotIndexSrc.includes(`["${stub}"`)) {
+		fail(`I: rotation catalog must not register stub engine ${stub}`);
+	}
+}
+if (dynIndexSrc.includes("aws-iam:") || dynIndexSrc.includes("azure-sp:")) {
+	fail("I: dynamic-secret catalog must not register aws-iam or azure-sp stubs");
+} else {
+	ok("I: stub rotation/dynamic engines are not in the catalog");
+}
 const eeMigrationsDir = path.join(root, "packages/envsync-enterprise/src/migrations");
 const requiredEeMigrations = [
 	"019_enterprise_integrations_foundation.ts",
@@ -232,22 +283,41 @@ const requiredEeMigrations = [
 	"024_saml_providers.ts",
 	"025_saml_sso_login_path.ts",
 	"026_org_feature_grant.ts",
+	"027_org_kms.ts",
 ];
+const apiMigrationsDir = path.join(root, "packages/envsync-api/src/libs/db/migrations");
+const dbIndex = fs.readFileSync(path.join(root, "packages/envsync-api/src/libs/db/index.ts"), "utf8");
+if (!dbIndex.includes("envsync-enterprise/src/migrations")) {
+	fail("H3.4: core migrator must probe envsync-enterprise/src/migrations when present");
+}
 for (const name of requiredEeMigrations) {
 	const eeMig = path.join(eeMigrationsDir, name);
-	const apiMig = path.join(root, "packages/envsync-api/src/libs/db/migrations", name);
+	const apiMig = path.join(apiMigrationsDir, name);
 	if (!fs.existsSync(eeMig)) {
 		fail(`H3.4: missing envsync-enterprise migration ${name}`);
-	} else if (!fs.existsSync(apiMig)) {
-		fail(`H3.4: missing envsync-api migration re-export for ${name}`);
-	} else {
-		const shim = fs.readFileSync(apiMig, "utf8");
-		if (!shim.includes("envsync-enterprise") || !shim.includes("export { up, down }")) {
-			fail(`H3.4: ${name} in envsync-api must re-export up/down from envsync-enterprise`);
-		}
+	} else if (fs.existsSync(apiMig)) {
+		fail(`H3.4: ${name} must not live in the OSS migrator folder`);
 	}
 }
-ok("H3.4: EE migrations owned by envsync-enterprise with core re-export shims");
+ok("H3.4: EE migrations live only under envsync-enterprise");
+
+const bootFiles = [
+	"packages/envsync-api/src/helpers/access.ts",
+	"packages/envsync-api/src/services/license-state.service.ts",
+	"packages/envsync-api/src/app/factory.ts",
+	"packages/envsync-api/src/entrypoint.ts",
+	"packages/envsync-api/src/middlewares/license-lock.middleware.ts",
+];
+for (const rel of bootFiles) {
+	const text = fs.readFileSync(path.join(root, rel), "utf8");
+	if (text.includes("export * from") && text.includes("envsync-enterprise")) {
+		fail(`A: ${rel} statically re-exports envsync-enterprise`);
+	}
+	if (text.includes("../../../envsync-enterprise") && !text.includes("await import")) {
+		fail(`A: ${rel} statically imports envsync-enterprise`);
+	}
+}
+ok("A: OSS boot files do not statically import envsync-enterprise");
 
 // 12) H6: envsync-web must not list proprietary EE web as a production dependency
 const webPkg = JSON.parse(
@@ -434,6 +504,32 @@ for (const pkg of hostedCmkSdks) {
 if (hostedCmkSdks.every(pkg => eePkgJson.dependencies?.[pkg])) {
 	ok("envsync-enterprise owns Hosted AWS/GCP/Azure CMK wrap SDKs");
 }
+
+// C: leftover second-process manage host and workspace shims stay gone
+const retiredManageProcess = [
+	"packages/envsync-api/src/app/management.ts",
+	"packages/envsync-api/src/services/workspace-provisioning.service.ts",
+	"packages/envsync-api/src/controllers/settings.controller.ts",
+	"packages/envsync-api/src/services/settings.service.ts",
+	"apps/envsync-web/src/components/auth/CreateWorkspaceDialog.tsx",
+	"apps/envsync-web/src/components/ProjectEnvironments.tsx",
+];
+for (const rel of retiredManageProcess) {
+	if (fs.existsSync(path.join(root, rel))) {
+		fail(`C: leftover file must stay deleted: ${rel}`);
+	}
+}
+const envTs = fs.readFileSync(path.join(root, "packages/envsync-api/src/utils/env.ts"), "utf8");
+for (const key of ["MANAGEMENT_API_PORT", "MANAGEMENT_DASHBOARD_URL", "ENVSYNC_MANAGEMENT_WEB_ENABLED"]) {
+	if (envTs.includes(key)) {
+		fail(`C: env.ts must not define retired manage-process key ${key}`);
+	}
+}
+const deployCoreSrc = fs.readFileSync(path.join(root, "packages/deploy-core/src/index.ts"), "utf8");
+if (deployCoreSrc.includes("envsync-management-api")) {
+	fail("C: deploy-core must not default a retired envsync-management-api image");
+}
+ok("C: unused manage-process leftovers and workspace shims stay deleted");
 
 if (failed) {
 	process.exit(1);

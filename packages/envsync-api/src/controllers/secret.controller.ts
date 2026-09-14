@@ -10,28 +10,7 @@ import { ServiceTokenService } from "@/services/service_token.service";
 import { smartEncrypt, kmsDecrypt, rsaLayerDecrypt } from "@/helpers/key-store";
 import { secretOperations } from "@/libs/telemetry/metrics";
 
-async function ensureSecretMutationAllowed(c: Context, env_type_id: string) {
-	const env_type = await EnvTypeService.getEnvType(env_type_id);
-	const canEdit = await AuthorizationService.check(
-		c.get("user_id"),
-		env_type.is_protected ? "can_manage_protected" : "can_edit",
-		"env_type",
-		env_type_id,
-	);
-	if (!canEdit) {
-		return c.json({ error: "You do not have permission to perform this action." }, 403);
-	}
-	if (env_type.is_protected) {
-		return c.json(
-			{
-				error: "Protected environments require a change request.",
-				code: "PROTECTED_ENV_REQUIRES_CHANGE_REQUEST",
-			},
-			409,
-		);
-	}
-	return null;
-}
+
 
 export class SecretController {
 	public static readonly createSecret = async (c: Context) => {
@@ -44,8 +23,6 @@ export class SecretController {
 			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		// Check if the secret already exists
 		const existingSecret = await SecretService.getSecret({
@@ -134,8 +111,6 @@ export class SecretController {
 			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		const existingSecret = await SecretService.getSecret({
 			app_id,
@@ -219,8 +194,6 @@ export class SecretController {
 			return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		// Get the existing secret before deletion for PiT record
 		const existingSecret = await SecretService.getSecret({
@@ -289,8 +262,6 @@ export class SecretController {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		const app = await AppService.getApp({
 			id: app_id,
@@ -384,8 +355,6 @@ export class SecretController {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		const app = await AppService.getApp({
 			id: app_id,
@@ -483,8 +452,6 @@ export class SecretController {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		// Get existing secrets before deletion for PiT record
 		const existingSecrets = await Promise.all(
@@ -908,8 +875,6 @@ export class SecretController {
 			return c.json({ error: "org_id, app_id, env_type_id, and pit_id are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		const app = await AppService.getApp({
 			id: app_id,
@@ -1052,8 +1017,6 @@ export class SecretController {
 			return c.json({ error: "org_id, app_id, env_type_id, and timestamp are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		// Validate timestamp
 		const targetTimestamp = new Date(timestamp);
@@ -1204,8 +1167,6 @@ export class SecretController {
 			return c.json({ error: "org_id, app_id, env_type_id, pit_id, and key are required." }, 400);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		const app = await AppService.getApp({
 			id: app_id,
@@ -1351,8 +1312,6 @@ export class SecretController {
 			);
 		}
 
-		const protectedEnvResponse = await ensureSecretMutationAllowed(c, env_type_id);
-		if (protectedEnvResponse) return protectedEnvResponse;
 
 		// Validate timestamp
 		const targetTimestamp = new Date(timestamp);

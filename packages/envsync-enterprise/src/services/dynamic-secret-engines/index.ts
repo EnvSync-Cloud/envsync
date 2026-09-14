@@ -1,17 +1,14 @@
 import type { DynamicSecretEngineInterface } from "./base";
 import { PostgresEngine } from "./postgres";
 import { MySQLEngine } from "./mysql";
-import { AwsIamEngine } from "./aws-iam";
-import { AzureSpEngine } from "./azure-sp";
 
 export type { DynamicSecretEngineInterface, CredentialResult } from "./base";
 export { generatePassword, generateUsername, applyTemplate } from "./base";
 
+// aws-iam / azure-sp mint random creds and are not registered.
 const engines: Record<string, DynamicSecretEngineInterface> = {
 	postgres: new PostgresEngine(),
 	mysql: new MySQLEngine(),
-	"aws-iam": new AwsIamEngine(),
-	"azure-sp": new AzureSpEngine(),
 };
 
 /**

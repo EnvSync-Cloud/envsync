@@ -104,7 +104,6 @@ export class ApiKeyService {
 			.execute();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByCreds(existing.key),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 			CacheKeys.apiKeysByUser(existing.user_id),
 		);
@@ -127,7 +126,6 @@ export class ApiKeyService {
 		await db.deleteFrom("api_keys").where("id", "=", id).executeTakeFirstOrThrow();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByCreds(existing.key),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 			CacheKeys.apiKeysByUser(existing.user_id),
 		);
@@ -161,7 +159,6 @@ export class ApiKeyService {
 			.execute();
 
 		await invalidateCache(
-			CacheKeys.apiKeyByCreds(existing.key),
 			CacheKeys.apiKeysByOrg(existing.org_id),
 		);
 
@@ -174,7 +171,16 @@ export class ApiKeyService {
 
 			const keys = await db
 				.selectFrom("api_keys")
-				.selectAll()
+				.select([
+					"id",
+					"user_id",
+					"org_id",
+					"description",
+					"is_active",
+					"last_used_at",
+					"created_at",
+					"updated_at",
+				])
 				.where("user_id", "=", userId)
 				.execute();
 
@@ -183,20 +189,18 @@ export class ApiKeyService {
 	};
 
 	public static getKeyByCreds = async (api_key: string) => {
-		return cacheAside(CacheKeys.apiKeyByCreds(api_key), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+		const db = await DB.getInstance();
 
-			const key = await orNotFound(
-				db
-					.selectFrom("api_keys")
-					.where("key", "=", api_key)
-					.selectAll()
-					.executeTakeFirstOrThrow(),
-				"API Key",
-			);
+		const key = await orNotFound(
+			db
+				.selectFrom("api_keys")
+				.where("key", "=", api_key)
+				.select(["id", "user_id", "org_id", "is_active"])
+				.executeTakeFirstOrThrow(),
+			"API Key",
+		);
 
-			return key;
-		});
+		return key;
 	};
 
 	public static registerKeyUsage = async (id: string) => {

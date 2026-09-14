@@ -8,6 +8,7 @@ import { deflateAndEncode, signRelayState, verifyRelayState } from "@/helpers/sa
 import { CacheClient } from "@/libs/cache";
 import { AppError } from "@/libs/errors";
 import { config } from "@/utils/env";
+import { SamlService } from "envsync-enterprise";
 import { testRequest } from "../helpers/request";
 import { cleanupDB, seedOrg } from "../helpers/db";
 import { resetFGA } from "../helpers/fga";
@@ -128,7 +129,40 @@ describe("public SAML routes", () => {
 		expect(res.status).toBe(200);
 		const xml = await res.text();
 		expect(xml).toContain("EntityDescriptor");
-		expect(xml).toContain(`/api/saml/acs/${seed.org.id}`);
+		expect(xml).toContain(`http://api.lvh.me:4000/api/saml/acs/${seed.org.id}`);
+		expect(xml).toContain(`http://api.lvh.me:4000/api/saml/metadata/${seed.org.id}`);
+	});
+
+	test("SAML SP URLs require API_URL and reject production loopback", () => {
+		const originalUrl = config.API_URL;
+		const originalEnv = config.NODE_ENV;
+		try {
+			(config as { API_URL?: string }).API_URL = undefined;
+			expect(() => SamlService.apiBaseUrl()).toThrow(AppError);
+			try {
+				SamlService.apiBaseUrl();
+			} catch (err) {
+				expect(err).toMatchObject({ code: "SAML_API_URL_MISSING" });
+			}
+
+			(config as { API_URL?: string }).API_URL = "not-a-url";
+			try {
+				SamlService.apiBaseUrl();
+			} catch (err) {
+				expect(err).toMatchObject({ code: "SAML_API_URL_INVALID" });
+			}
+
+			(config as { NODE_ENV: string }).NODE_ENV = "production";
+			(config as { API_URL?: string }).API_URL = "http://localhost:4000";
+			try {
+				SamlService.apiBaseUrl();
+			} catch (err) {
+				expect(err).toMatchObject({ code: "SAML_API_URL_LOOPBACK" });
+			}
+		} finally {
+			(config as { API_URL?: string }).API_URL = originalUrl;
+			(config as { NODE_ENV: string }).NODE_ENV = originalEnv;
+		}
 	});
 
 	test("manage ACS is not an unauthenticated IdP endpoint", async () => {
@@ -219,7 +253,7 @@ describe("SAML session cookies", () => {
 		const res = await testRequest("/api/auth/switch-org", {
 			method: "POST",
 			headers: {
-				Cookie: `access_token=${token}`,
+				Cookie: `access_token=${token}; envsync_csrf=test`,
 				"X-CSRF-Token": "test",
 			},
 			body: { org_id: randomUUID() },

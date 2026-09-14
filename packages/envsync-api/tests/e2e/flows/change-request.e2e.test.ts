@@ -122,6 +122,60 @@ describe("Change Request E2E", () => {
 		expect(apiHost?.value).toBe("https://prod.envsync.local");
 	});
 
+	test("concurrent approve allows only one winner", async () => {
+		const reviewer = await seedE2EUser(seed.org.id, seed.roles.admin.id);
+		await setupE2EUserPermissions(reviewer.id, seed.org.id, {
+			is_admin: true,
+			can_view: true,
+			can_edit: true,
+		});
+
+		const createRes = await testRequest("/api/change_request/direct", {
+			method: "POST",
+			token: requesterUser.token,
+			body: {
+				app_id: appId,
+				target_env_type_id: productionEnvTypeId,
+				title: "Concurrent approve",
+				message: "Only one reviewer should win",
+				envs: [
+					{
+						key: "CONCURRENT_HOST",
+						operation: "CREATE",
+						proposed_value: "https://once.envsync.local",
+					},
+				],
+			},
+		});
+		expect(createRes.status).toBe(201);
+		const created = await createRes.json<{ id: string }>();
+
+		const results = await Promise.allSettled([
+			testRequest(`/api/change_request/${created.id}/approve`, {
+				method: "POST",
+				token: seed.masterUser.token,
+			}),
+			testRequest(`/api/change_request/${created.id}/approve`, {
+				method: "POST",
+				token: reviewer.token,
+			}),
+		]);
+		const statuses = await Promise.all(
+			results.map(async result => {
+				if (result.status !== "fulfilled") return 500;
+				return result.value.status;
+			}),
+		);
+		expect(statuses.filter(status => status === 200)).toHaveLength(1);
+		expect(statuses.filter(status => status >= 400)).toHaveLength(1);
+
+		const fetched = await testRequest(`/api/change_request/${created.id}`, {
+			token: seed.masterUser.token,
+		});
+		expect(fetched.status).toBe(200);
+		expect((await fetched.json<{ status: string }>()).status).toBe("approved");
+	});
+
 	test("promotion request snapshots source values before approval", async () => {
 		await testRequest("/api/env/single", {
 			method: "PUT",

@@ -1,34 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  Database,
-  DatabaseBackup,
-  GitPullRequest,
-  LayoutDashboard,
-  LockKeyhole,
-  PlugZap,
-  Settings,
-  Settings2,
-  Shield,
-} from "lucide-react";
+import { Database, LayoutDashboard } from "lucide-react";
 import { useMemo } from "react";
 
 import { api } from "@/api";
 import type { EffectivePermissions } from "@/api/permissions.api";
 import { navGroups } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
-import {
-  appAccessPath,
-  appApprovalsPath,
-  appDetailPath,
-  appEnvironmentsPath,
-  appIntegrationsPath,
-  appPointInTimePath,
-  appSecretsPath,
-  appSettingsPath,
-} from "@/lib/app-routes";
+import { projectsPath } from "@/lib/app-routes";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 import type { WebNavGroup, WebNavItem } from "@/modules/types";
+
+import { buildProjectNavItems, hasRequiredPermission } from "./context-nav";
 
 const CERTIFICATE_NAV_IDS = new Set(["certificates"]);
 const SECRETS_ORG_NAV_IDS = new Set(["dashboard", "applications"]);
@@ -133,11 +116,6 @@ function NavGroup({
   );
 }
 
-function hasRequiredPermission(item: WebNavItem, permissions?: EffectivePermissions) {
-  if (!item.requiredPermission) return true;
-  return Boolean(permissions?.[item.requiredPermission]);
-}
-
 function filterGroups(
   groups: WebNavGroup[],
   allowedScopes: string[],
@@ -178,43 +156,10 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
     }
 
     if (appId) {
-      const projectItems: WebNavItem[] = [
-        { id: "project-variables", name: "Variables", href: appDetailPath(appId), icon: Database },
-        { id: "project-secrets", name: "Secrets", href: appSecretsPath(appId), icon: Shield },
-        { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
-        { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
-        { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
-        {
-          id: "project-settings",
-          name: "Settings",
-          href: appSettingsPath(appId),
-          icon: Settings2,
-          requiredPermission: "can_manage_api_keys",
-        },
-      ];
-
-      if (allowedScopes.includes("change-requests")) {
-        projectItems.splice(4, 0, {
-          id: "project-approvals",
-          name: "Approvals",
-          href: appApprovalsPath(appId),
-          icon: GitPullRequest,
-        });
-      }
-
-      if (allowedScopes.includes("applications-integrations")) {
-        projectItems.push({
-          id: "applications-integrations",
-          name: "Integrations",
-          href: appIntegrationsPath(appId),
-          icon: PlugZap,
-        });
-      }
-
       return [
         {
           label: "Project",
-          items: projectItems.filter((item) => hasRequiredPermission(item, permissions)),
+          items: buildProjectNavItems(appId, allowedScopes, permissions),
         },
       ];
     }
@@ -234,7 +179,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
         label: "Overview",
         items: [
           { id: "dashboard", name: "Dashboard", href: "/", icon: LayoutDashboard },
-          { id: "applications", name: "Projects", href: "/projects", icon: Database },
+          { id: "applications", name: "Projects", href: projectsPath(), icon: Database },
         ].filter((item) => allowedScopes.includes(item.id) || item.id === "dashboard"),
       },
     ];

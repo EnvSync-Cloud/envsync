@@ -2,7 +2,7 @@ import z from "zod";
 import "zod-openapi/extend";
 
 const operationSchema = z.enum(["CREATE", "UPDATE", "DELETE"]);
-const statusSchema = z.enum(["pending", "approved", "rejected", "cancelled"]);
+const statusSchema = z.enum(["pending", "applying", "approved", "rejected", "cancelled", "failed"]);
 
 export const directChangeRequestBodySchema = z
 	.object({

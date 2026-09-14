@@ -14,14 +14,14 @@ export type WebhookType = "DISCORD" | "SLACK" | "CUSTOM"
     | "GCP_CLOUD_BUILD" | "CIRCLECI" | "TRAVIS_CI" | "JENKINS";
 
 const urlSetMap = {
-    apps: config.DASHBOARD_URL + "/applications",
-    org: config.DASHBOARD_URL + "/organisation",
-    users: config.DASHBOARD_URL + "/users",
-    roles: config.DASHBOARD_URL + "/roles",
+    apps: config.DASHBOARD_URL + "/projects",
+    org: config.DASHBOARD_URL + "/org",
+    users: config.DASHBOARD_URL + "/org/access/users",
+    roles: config.DASHBOARD_URL + "/org/access/roles",
     audit: config.DASHBOARD_URL + "/audit",
-    env: (appId: string) => `${config.DASHBOARD_URL}/applications/${appId}`,
-    secret: (appId: string) => `${config.DASHBOARD_URL}/applications/${appId}/secrets`,
-    env_manage: (appId: string) => `${config.DASHBOARD_URL}/applications/${appId}/manage-environments`,
+    env: (appId: string) => `${config.DASHBOARD_URL}/projects/${appId}`,
+    secret: (appId: string) => `${config.DASHBOARD_URL}/projects/${appId}/secrets`,
+    env_manage: (appId: string) => `${config.DASHBOARD_URL}/projects/${appId}/manage-environments`,
     api_keys: config.DASHBOARD_URL + "/apikeys",
     base: config.DASHBOARD_URL,
 };
