@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+
 export interface DeployConfig {
 	edition?: "oss" | "enterprise";
 	source: {
@@ -154,6 +157,21 @@ export interface DeployRenderPaths {
 }
 
 export type DeployRenderMode = "base" | "bootstrap" | "full";
+
+export function swarmConfigObjectName(
+	stackName: string,
+	logical: string,
+	filePath: string,
+	fallbackVersion: string,
+): string {
+	let token = fallbackVersion.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "") || "v";
+	try {
+		token = createHash("sha256").update(fs.readFileSync(filePath)).digest("hex").slice(0, 12);
+	} catch {
+		// Tests and first-write use paths that are not on disk yet.
+	}
+	return `${stackName}_${logical}_${token}`;
+}
 
 function domainMap(rootDomain: string) {
 	return {
@@ -855,6 +873,8 @@ export function renderStack(
 	const apiLicenseVolume = managementEnabled ? "\n    volumes:\n      - /etc/envsync/license:/etc/envsync/license:ro" : "";
 	const deployment = createSteadyApiDeploymentState(config, generated);
 	const stackName = config.services.stack_name;
+	const configName = (logical: string, filePath: string) =>
+		swarmConfigObjectName(stackName, logical, filePath, config.release.version);
 	const s3RouterName = `${stackName}-s3-router`;
 	const s3ServiceName = `${stackName}-s3-service`;
 	const s3ConsoleRouterName = `${stackName}-s3-console-router`;
@@ -1147,17 +1167,23 @@ volumes:
 
 configs:
   keycloak_realm:
+    name: ${configName("keycloak_realm", paths.keycloakRealmFile)}
     file: ${paths.keycloakRealmFile}
   clickstack_clickhouse_conf:
+    name: ${configName("clickstack_clickhouse_conf", paths.clickstackClickhouseConf)}
     file: ${paths.clickstackClickhouseConf}
   otel_agent_conf:
+    name: ${configName("otel_agent_conf", paths.otelAgentConf)}
     file: ${paths.otelAgentConf}
 ${landingEnabled ? `  nginx_landing_conf:
+    name: ${configName("nginx_landing_conf", paths.nginxLandingConf)}
     file: ${paths.nginxLandingConf}
 ` : ""}
   nginx_web_conf:
+    name: ${configName("nginx_web_conf", paths.nginxWebConf)}
     file: ${paths.nginxWebConf}
   nginx_api_maintenance_conf:
+    name: ${configName("nginx_api_maintenance_conf", paths.nginxApiMaintenanceConf)}
     file: ${paths.nginxApiMaintenanceConf}
 `.trimStart();
 }
