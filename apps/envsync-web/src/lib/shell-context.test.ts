@@ -1,11 +1,42 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 import {
+  clearLastProjectId,
   getAppIdFromPath,
   getShellContext,
   isProjectPitPath,
+  lastProjectStorageKey,
   productHomeHref,
+  secretsHomeHref,
+  writeLastProjectId,
 } from "./shell-context";
+
+const memory = new Map<string, string>();
+const memoryStorage = {
+  getItem: (key: string) => memory.get(key) ?? null,
+  setItem: (key: string, value: string) => {
+    memory.set(key, value);
+  },
+  removeItem: (key: string) => {
+    memory.delete(key);
+  },
+  clear: () => {
+    memory.clear();
+  },
+  key: (index: number) => [...memory.keys()][index] ?? null,
+  get length() {
+    return memory.size;
+  },
+};
+
+Object.defineProperty(globalThis, "localStorage", {
+  value: memoryStorage,
+  configurable: true,
+});
+
+beforeEach(() => {
+  memory.clear();
+});
 
 describe("shell context", () => {
   test("reads project ids from canonical and legacy paths", () => {
@@ -41,4 +72,20 @@ describe("shell context", () => {
     expect(productHomeHref("organization")).toBe("/org/users");
     expect(productHomeHref("certificates")).toBe("/org/certificates");
   });
+
+  test("only reuses a last project when it belongs to the current org allowlist", () => {
+    writeLastProjectId("org-a", "app-a");
+    writeLastProjectId("org-b", "app-b");
+
+    expect(secretsHomeHref([], "org-a")).toBe("/projects");
+    expect(secretsHomeHref(["app-a"], "org-a")).toBe("/projects/app-a");
+    expect(secretsHomeHref(["app-other"], "org-a")).toBe("/projects");
+    expect(secretsHomeHref(["app-b"], "org-b")).toBe("/projects/app-b");
+    expect(productHomeHref("secrets", ["app-a"], "org-b")).toBe("/projects");
+    expect(lastProjectStorageKey("org-a")).toBe("envsync-last-project-id:org-a");
+
+    clearLastProjectId();
+    expect(secretsHomeHref(["app-a"], "org-a")).toBe("/projects");
+  });
 });
+

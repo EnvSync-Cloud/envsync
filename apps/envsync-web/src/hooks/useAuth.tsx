@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest, isPublicAuthPath, isReloginError, redirectToLogin, sdk } from "@/api";
+import { clearLastProjectId } from "@/lib/shell-context";
 import { identifyUser } from "@/telemetry";
 import { normalizeAuthSession, type EntitledAuthSession } from "@/types/auth-session";
 
@@ -80,6 +81,7 @@ export const useAuth = () => {
       setUser(switchedSession);
       setIsAuthenticated(true);
       syncIdentity(switchedSession);
+      clearLastProjectId();
       queryClient.clear();
       window.location.assign("/");
     } catch (error) {
@@ -115,6 +117,7 @@ export const useAuth = () => {
       setUser(createdSession);
       setIsAuthenticated(true);
       syncIdentity(createdSession);
+      clearLastProjectId();
       queryClient.clear();
       window.location.assign("/");
     } catch (error) {

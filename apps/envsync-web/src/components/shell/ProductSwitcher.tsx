@@ -10,6 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuthContext } from "@/contexts/auth";
 import { PRODUCTS, type ProductId, productHomeHref } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,8 @@ interface ProductSwitcherProps {
 export function ProductSwitcher({ expanded, product, projectIds }: ProductSwitcherProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const orgId = user?.org?.id;
   const active = useMemo(
     () => PRODUCTS.find((item) => item.id === product) ?? PRODUCTS[0],
     [product],
@@ -70,7 +73,7 @@ export function ProductSwitcher({ expanded, product, projectIds }: ProductSwitch
                     value={item.name}
                     onSelect={() => {
                       setOpen(false);
-                      navigate(productHomeHref(item.id, projectIds));
+                      navigate(productHomeHref(item.id, projectIds, orgId));
                     }}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 data-[selected=true]:bg-muted"
                   >

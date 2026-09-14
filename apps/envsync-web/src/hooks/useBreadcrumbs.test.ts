@@ -1,32 +1,38 @@
 import { describe, expect, test } from "bun:test";
 
-const ROUTE_LABELS: Record<string, string> = {
-  applications: "Projects",
-  projects: "Projects",
-  org: "Organization",
-  organisation: "Organization",
-  users: "Users",
-  certificates: "Certificates",
-  pit: "Recovery",
-};
+import { buildBreadcrumbs, isProjectIdSegment, labelForSegment } from "../lib/breadcrumbs";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function labelFor(segment: string) {
-  return ROUTE_LABELS[segment] ?? segment;
-}
+const APP_ID = "11111111-1111-4111-8111-111111111111";
+const apps = [{ id: APP_ID, name: "Core Platform" }];
 
 describe("breadcrumb labels", () => {
   test("prefers Organization copy and the new route prefixes", () => {
-    expect(labelFor("org")).toBe("Organization");
-    expect(labelFor("organisation")).toBe("Organization");
-    expect(labelFor("projects")).toBe("Projects");
-    expect(labelFor("certificates")).toBe("Certificates");
-    expect(labelFor("pit")).toBe("Recovery");
+    expect(labelForSegment("org")).toBe("Organization");
+    expect(labelForSegment("organisation")).toBe("Organization");
+    expect(labelForSegment("projects")).toBe("Projects");
+    expect(labelForSegment("certificates")).toBe("Certificates");
+    expect(labelForSegment("pit")).toBe("Recovery");
   });
 
   test("treats project ids as detail segments", () => {
-    expect(UUID_REGEX.test("11111111-1111-4111-8111-111111111111")).toBe(true);
-    expect(UUID_REGEX.test("create")).toBe(false);
+    expect(isProjectIdSegment(APP_ID)).toBe(true);
+    expect(isProjectIdSegment("create")).toBe(false);
+  });
+
+  test("adds a Variables crumb on project detail routes", () => {
+    expect(buildBreadcrumbs(`/projects/${APP_ID}`, apps).map((crumb) => crumb.label)).toEqual([
+      "Projects",
+      "Core Platform",
+      "Variables",
+    ]);
+    expect(buildBreadcrumbs(`/projects/${APP_ID}/secrets`, apps).map((crumb) => crumb.label)).toEqual([
+      "Projects",
+      "Core Platform",
+      "Secrets",
+    ]);
+    expect(buildBreadcrumbs("/org/users").map((crumb) => crumb.label)).toEqual([
+      "Organization",
+      "Users",
+    ]);
   });
 });

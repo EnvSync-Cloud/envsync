@@ -12,6 +12,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAuthContext } from "@/contexts/auth";
 import { appDetailPath, projectCreatePath, projectsPath } from "@/lib/app-routes";
 import { writeLastProjectId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,8 @@ interface ProjectSwitcherProps {
 export function ProjectSwitcher({ expanded, appId, projects }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const orgId = user?.org?.id;
   const active = useMemo(
     () => projects.find((project) => project.id === appId) ?? null,
     [appId, projects],
@@ -83,7 +86,7 @@ export function ProjectSwitcher({ expanded, appId, projects }: ProjectSwitcherPr
                   data-testid={`project-switcher-item-${project.id}`}
                   value={`${project.name} ${project.id}`}
                   onSelect={() => {
-                    writeLastProjectId(project.id);
+                    writeLastProjectId(orgId, project.id);
                     setOpen(false);
                     navigate(appDetailPath(project.id));
                   }}

@@ -28,5 +28,12 @@ describe("core web routes", () => {
     expect(redirect("certificates")).toBe("/org/certificates");
     expect(redirect("webhooks")).toBe("/org/webhooks");
     expect(redirect("change-requests")).toBe("/org/change-requests");
+    expect(redirect("applications/:appId/integrations")).toBeUndefined();
+    expect(
+      routes
+        .filter((route) => route.path?.startsWith("organisation"))
+        .every((route) => !route.redirectTo),
+    ).toBe(true);
   });
 });
+

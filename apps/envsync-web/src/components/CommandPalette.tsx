@@ -77,7 +77,8 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
-  const { allowedScopes } = useAuthContext();
+  const { allowedScopes, user } = useAuthContext();
+  const orgId = user?.org?.id;
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
   useEffect(() => {
@@ -478,7 +479,11 @@ export function CommandPalette() {
                 return (
                   <CommandItem
                     key={product.id}
-                    onSelect={() => runAction(() => navigate(productHomeHref(product.id)))}
+                    onSelect={() =>
+                      runAction(() =>
+                        navigate(productHomeHref(product.id, projects.map((project) => project.id), orgId)),
+                      )
+                    }
                     value={`switch-product-${product.id}`}
                   >
                     <Icon className="mr-2 size-4" />

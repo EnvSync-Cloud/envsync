@@ -18,7 +18,11 @@ export const PRODUCTS: ProductDefinition[] = [
   { id: "organization", name: "Organization", homeHref: "/org/users" },
 ];
 
-export const LAST_PROJECT_STORAGE_KEY = "envsync-last-project-id";
+export const LAST_PROJECT_STORAGE_PREFIX = "envsync-last-project-id";
+
+export function lastProjectStorageKey(orgId: string) {
+  return `${LAST_PROJECT_STORAGE_PREFIX}:${orgId}`;
+}
 
 const RESERVED_PROJECT_SEGMENTS = new Set(["create", "pit"]);
 
@@ -91,32 +95,61 @@ export function getShellContext(pathname: string): ShellContext {
   return { product: "secrets", appId, isProjectRoute: appId !== null };
 }
 
-export function readLastProjectId(): string | null {
+export function readLastProjectId(orgId?: string | null): string | null {
+  if (!orgId) return null;
   try {
-    return localStorage.getItem(LAST_PROJECT_STORAGE_KEY);
+    return localStorage.getItem(lastProjectStorageKey(orgId));
   } catch {
     return null;
   }
 }
 
-export function writeLastProjectId(appId: string) {
+export function writeLastProjectId(orgId: string | null | undefined, appId: string) {
+  if (!orgId) return;
   try {
-    localStorage.setItem(LAST_PROJECT_STORAGE_KEY, appId);
+    localStorage.setItem(lastProjectStorageKey(orgId), appId);
   } catch {
     // ignore quota / private-mode failures
   }
 }
 
-export function secretsHomeHref(projectIds: string[] = []) {
-  const lastProjectId = readLastProjectId();
-  if (lastProjectId && (projectIds.length === 0 || projectIds.includes(lastProjectId))) {
+export function clearLastProjectId(orgId?: string | null) {
+  try {
+    if (orgId) {
+      localStorage.removeItem(lastProjectStorageKey(orgId));
+      return;
+    }
+
+    localStorage.removeItem(LAST_PROJECT_STORAGE_PREFIX);
+    const stale: string[] = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(`${LAST_PROJECT_STORAGE_PREFIX}:`)) {
+        stale.push(key);
+      }
+    }
+    for (const key of stale) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore quota / private-mode failures
+  }
+}
+
+export function secretsHomeHref(projectIds: string[] = [], orgId?: string | null) {
+  const lastProjectId = readLastProjectId(orgId);
+  if (lastProjectId && projectIds.includes(lastProjectId)) {
     return `/projects/${lastProjectId}`;
   }
   return "/projects";
 }
 
-export function productHomeHref(product: ProductId, projectIds: string[] = []) {
-  if (product === "secrets") return secretsHomeHref(projectIds);
+export function productHomeHref(
+  product: ProductId,
+  projectIds: string[] = [],
+  orgId?: string | null,
+) {
+  if (product === "secrets") return secretsHomeHref(projectIds, orgId);
   const match = PRODUCTS.find((item) => item.id === product);
   return match?.homeHref ?? "/projects";
 }

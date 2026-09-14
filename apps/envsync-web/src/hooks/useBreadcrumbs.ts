@@ -2,43 +2,12 @@ import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { sdk } from "@/api/base";
 import { useMemo } from "react";
+import { buildBreadcrumbs } from "@/lib/breadcrumbs";
 
-interface Breadcrumb {
-  label: string;
-  href: string;
-}
+export type { Breadcrumb } from "@/lib/breadcrumbs";
+export { buildBreadcrumbs, isProjectIdSegment, labelForSegment } from "@/lib/breadcrumbs";
 
-const ROUTE_LABELS: Record<string, string> = {
-  applications: "Projects",
-  projects: "Projects",
-  create: "Create Project",
-  secrets: "Secrets",
-  "manage-environments": "Environments",
-  access: "Access",
-  integrations: "Integrations",
-  pit: "Recovery",
-  roles: "Roles",
-  users: "Users",
-  settings: "Account",
-  org: "Organization",
-  organisation: "Organization",
-  sso: "SSO",
-  license: "License",
-  keys: "Key management",
-  sync: "Sync ops",
-  audit: "Activity",
-  apikeys: "API Keys",
-  webhooks: "Webhooks",
-  gpgkeys: "GPG Keys",
-  certificates: "Certificates",
-  dashboard: "Dashboard",
-  teams: "Teams",
-  "change-requests": "Change Requests",
-};
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function useBreadcrumbs(): Breadcrumb[] {
+export function useBreadcrumbs() {
   const { pathname } = useLocation();
 
   const { data: apps } = useQuery({
@@ -54,48 +23,5 @@ export function useBreadcrumbs(): Breadcrumb[] {
     gcTime: 10 * 60 * 1000,
   });
 
-  return useMemo(() => {
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length === 0) {
-      return [{ label: "Dashboard", href: "/" }];
-    }
-
-    const crumbs: Breadcrumb[] = [];
-    let currentPath = "";
-
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      currentPath += `/${segment}`;
-
-      if (ROUTE_LABELS[segment]) {
-        crumbs.push({ label: ROUTE_LABELS[segment], href: currentPath });
-      } else if (UUID_REGEX.test(segment) && apps) {
-        const match = apps.find((a) => a.id === segment);
-        crumbs.push({ label: match?.name ?? segment, href: currentPath });
-      } else {
-        const match = apps?.find(
-          (a) => a.name === segment || `${a.name}-${a.id}` === segment
-        );
-        crumbs.push({ label: match?.name ?? segment, href: currentPath });
-      }
-    }
-
-    const projectRoot = segments[0] === "applications" || segments[0] === "projects";
-    if (segments.length >= 2 && projectRoot && segments[1] !== "create" && segments[1] !== "pit") {
-      const isAppDetailPage = UUID_REGEX.test(segments[1]) || apps?.some(
-        (a) => a.name === segments[1] || `${a.name}-${a.id}` === segments[1]
-      );
-
-      if (isAppDetailPage) {
-        const subSection = segments[2];
-        const knownSubSections = ["secrets", "manage-environments", "access", "integrations", "pit"];
-
-        if (!subSection || !knownSubSections.includes(subSection)) {
-          crumbs.push({ label: "Variables", href: currentPath });
-        }
-      }
-    }
-
-    return crumbs;
-  }, [pathname, apps]);
+  return useMemo(() => buildBreadcrumbs(pathname, apps), [pathname, apps]);
 }

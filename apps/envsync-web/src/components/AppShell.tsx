@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { sdk } from "@/api/base";
 import { API_KEYS } from "@/constants";
+import { useAuthContext } from "@/contexts/auth";
 import { getShellContext, writeLastProjectId } from "@/lib/shell-context";
 
 interface AppShellProps {
@@ -17,7 +18,9 @@ interface AppShellProps {
 
 export function AppShell({ sidebarExpanded, onToggleSidebar, children }: AppShellProps) {
   const { pathname } = useLocation();
+  const { user } = useAuthContext();
   const context = getShellContext(pathname);
+  const orgId = user?.org?.id;
 
   const { data: projects = [] } = useQuery({
     queryKey: [API_KEYS.ALL_APPLICATIONS, "shell"],
@@ -33,9 +36,9 @@ export function AppShell({ sidebarExpanded, onToggleSidebar, children }: AppShel
 
   useEffect(() => {
     if (context.appId) {
-      writeLastProjectId(context.appId);
+      writeLastProjectId(orgId, context.appId);
     }
-  }, [context.appId]);
+  }, [context.appId, orgId]);
 
   return (
     <div data-testid="app-shell" className="flex h-screen overflow-hidden bg-background text-foreground">
