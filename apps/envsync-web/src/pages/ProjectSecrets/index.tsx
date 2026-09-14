@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Settings } from "lucide-react";
-import { ProjectHeader } from "@/components/ProjectHeader";
+import { ArrowLeft } from "lucide-react";
 import { EnvironmentVariablesTable } from "@/components/env-vars/EnvironmentVariablesTable";
 import { VariableHistoryDrawer } from "@/components/env-vars/VariableHistoryDrawer";
 import { AddEnvVarModal } from "@/components/env-vars/AddEnvVarModal";
@@ -22,7 +21,7 @@ import { useAuthContext } from "@/contexts/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
 import { getDefaultEnvironmentType } from "@/lib/utils";
-import { appEnvironmentsPath } from "@/lib/app-routes";
+import { appEnvironmentsPath, appPointInTimePath } from "@/lib/app-routes";
 
 export const ProjectEnvironments = () => {
   const navigate = useNavigate();
@@ -35,7 +34,6 @@ export const ProjectEnvironments = () => {
     project,
     environmentTypes,
     secrets,
-    enableSecrets,
     isLoading,
     error,
     createSecret,
@@ -271,28 +269,6 @@ export const ProjectEnvironments = () => {
 
   return (
     <div>
-      <ProjectHeader
-        projectName={project.name}
-        environmentTypes={environmentTypes}
-        selectedEnvironment={selectedEnvironment}
-        onEnvironmentChange={setSelectedEnvironment}
-        totalVariables={secrets.length}
-        totalSecrets={secrets.length}
-        canEdit={user.role.can_edit}
-        isRefetching={
-          createSecret.isPending ||
-          updateSecret.isPending ||
-          deleteSecret.isPending ||
-          bulkImportSecrets.isPending
-        }
-        enableSecrets={enableSecrets}
-        onRefresh={handleRetry}
-        onAddVariable={() => setShowAddModal(true)}
-        onBulkImport={() => setShowBulkImportModal(true)}
-        onExport={handleExport}
-        onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
-      />
-
       <div className="mx-auto max-w-[1600px] px-5 md:px-6 py-6">
         <EnvironmentVariablesTable
           selectedEnvironment={selectedEnvironment}
@@ -307,6 +283,22 @@ export const ProjectEnvironments = () => {
           onBulkExport={handleBulkExport}
           canEdit={user.role.can_edit}
           isSecrets={true}
+          isRefetching={
+            createSecret.isPending ||
+            updateSecret.isPending ||
+            deleteSecret.isPending ||
+            bulkImportSecrets.isPending
+          }
+          onAdd={() => setShowAddModal(true)}
+          onRefresh={handleRetry}
+          onBulkImport={() => setShowBulkImportModal(true)}
+          onExport={handleExport}
+          onRollback={() => {
+            const env = environmentTypes.find((entry) => entry.id === selectedEnvironment);
+            const query = env?.name?.toLowerCase() || selectedEnvironment;
+            navigate(`${appPointInTimePath(appId ?? "")}/secrets?env=${encodeURIComponent(query)}`);
+          }}
+          onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
         />
       </div>
 

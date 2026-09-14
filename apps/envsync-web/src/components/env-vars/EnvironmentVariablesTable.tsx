@@ -28,7 +28,18 @@ import {
   XCircle,
   Save,
   History,
+  Plus,
+  RefreshCw,
+  Upload,
+  Settings,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EnvironmentVariable, EnvironmentType, SingleItemEnvVarUpdateData } from "@/constants";
 import { useCopy } from "@/hooks/useClipboard";
 import { cn } from "@/lib/utils";
@@ -54,6 +65,13 @@ interface EnvironmentVariablesTableProps {
   onBulkDelete?: (variables: EnvironmentVariable[]) => void;
   onBulkExport?: (variables: EnvironmentVariable[]) => void;
   isSecrets?: boolean;
+  isRefetching?: boolean;
+  onAdd?: () => void;
+  onRefresh?: () => void;
+  onBulkImport?: () => void;
+  onExport?: () => void;
+  onRollback?: () => void;
+  onManageEnvironments?: () => void;
 }
 
 export const EnvironmentVariablesTable = ({
@@ -69,6 +87,13 @@ export const EnvironmentVariablesTable = ({
   onBulkDelete,
   onBulkExport,
   isSecrets,
+  isRefetching,
+  onAdd,
+  onRefresh,
+  onBulkImport,
+  onExport,
+  onRollback,
+  onManageEnvironments,
 }: EnvironmentVariablesTableProps) => {
   const [lastCopiedValue, setLastCopiedValue] = useState<string | null>(null);
   const copy = useCopy({
@@ -278,7 +303,7 @@ export const EnvironmentVariablesTable = ({
   return (
     <Card>
       <CardHeader className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center">
             {isSecrets ? (
               <Shield className="size-6 mr-2 text-destructive" />
@@ -294,6 +319,78 @@ export const EnvironmentVariablesTable = ({
             />
           </CardTitle>
 
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
+              <SelectTrigger className="h-8 w-[180px] text-xs" aria-label="Environment">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {environmentTypes.map((envType) => (
+                  <SelectItem key={envType.id} value={envType.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="size-2 rounded-full"
+                        style={{ backgroundColor: envType.color }}
+                      />
+                      <span>{envType.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canEdit && onAdd ? (
+              <Button
+                onClick={onAdd}
+                size="sm"
+                className="h-8"
+                data-testid={isSecrets ? "project-secrets-primary-action" : "project-variables-primary-action"}
+              >
+                <Plus className="mr-1.5 size-3.5" />
+                {isSecrets ? "Add Secret" : "Add Variable"}
+              </Button>
+            ) : null}
+            {(onBulkImport || onExport || onRefresh || onRollback || onManageEnvironments) ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label="More actions">
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {onBulkImport ? (
+                    <DropdownMenuItem onClick={onBulkImport}>
+                      <Upload className="mr-2 size-4" />
+                      Bulk Import
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onExport ? (
+                    <DropdownMenuItem onClick={onExport}>
+                      <Download className="mr-2 size-4" />
+                      Export
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onRefresh ? (
+                    <DropdownMenuItem onClick={onRefresh} disabled={isRefetching}>
+                      <RefreshCw className={cn("mr-2 size-4", isRefetching && "animate-spin")} />
+                      Refresh
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onRollback ? (
+                    <DropdownMenuItem onClick={onRollback}>
+                      <History className="mr-2 size-4" />
+                      Recovery
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onManageEnvironments ? (
+                    <DropdownMenuItem onClick={onManageEnvironments}>
+                      <Settings className="mr-2 size-4" />
+                      Manage Environments
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
