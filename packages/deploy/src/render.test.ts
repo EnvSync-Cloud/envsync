@@ -245,6 +245,9 @@ describe("renderKeycloakRealm", () => {
 		expect(keycloakRealm).toContain("\"clientId\": \"envsync-web\"");
 		expect(keycloakRealm).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(keycloakRealm).toContain("https://app.enterprise.example.com/auth/callback");
+		expect(keycloakRealm).toContain("\"accessTokenLifespan\": 3600");
+		expect(keycloakRealm).toContain("\"ssoSessionIdleTimeout\": 604800");
+		expect(keycloakRealm).toContain("\"ssoSessionMaxLifespan\": 604800");
 	});
 });
 
@@ -266,6 +269,8 @@ describe("renderFrontendRuntimeConfig", () => {
 		const envFile = renderEnvFile(buildRuntimeEnv(config, generated));
 		expect(envFile).toContain("API_URL=https://api.enterprise.example.com");
 		expect(envFile).not.toContain("API_URL=http://localhost");
+		expect(envFile).toContain("KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS=3600");
+		expect(envFile).toContain("KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS=604800");
 	});
 });
 

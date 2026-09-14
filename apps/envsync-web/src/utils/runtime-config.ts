@@ -59,12 +59,19 @@ function defaultManagementApiUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}${MANAGE_API_PATH}`;
 }
 
+function inferredDeploymentMode(): RuntimeConfig["deploymentMode"] {
+  const raw = import.meta.env.VITE_ENVSYNC_DEPLOYMENT_MODE;
+  if (raw === "hosted" || raw === "selfhosted") return raw;
+  return "selfhosted";
+}
+
 function inferFallbackRuntimeConfig(): RuntimeConfig {
+  const deploymentMode = inferredDeploymentMode();
   if (typeof window === "undefined") {
     return {
       apiBaseUrl: defaultApiBaseUrl,
-      appBaseUrl: "http://app.lvh.me:8001",
-      authBaseUrl: "http://auth.lvh.me:8080",
+      appBaseUrl: "http://localhost:8001",
+      authBaseUrl: "http://localhost:8080",
       managementApiUrl: defaultManagementApiUrl(defaultApiBaseUrl),
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
@@ -72,11 +79,13 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       edition: buildEdition,
       dashboardVariant: buildEdition,
       managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
+      deploymentMode,
+      canCreateOrganization: deploymentMode === "hosted",
       licenseStatus: undefined,
       licenseLocked: false,
-      otelEndpoint: "http://localhost:4318",
+      otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || undefined,
       hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
-      hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || undefined,
+      hyperdxUrl: firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) || undefined,
       hyperdxDisabled: import.meta.env.VITE_HYPERDX_DISABLED === "true",
       hyperdxAdvancedNetworkCapture: false,
       posthogKey: import.meta.env.VITE_POSTHOG_KEY || undefined,
@@ -106,6 +115,8 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     edition: buildEdition,
     dashboardVariant: buildEdition,
     managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
+    deploymentMode,
+    canCreateOrganization: deploymentMode === "hosted",
     licenseStatus: undefined,
     licenseLocked: false,
     otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || `${protocol}//t.${rootHost}/obs`,

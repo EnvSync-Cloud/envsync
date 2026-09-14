@@ -1120,7 +1120,6 @@ function buildOperatorOverview(): OperatorOverview {
 	const bootstrapComplete = hasCompleteBootstrapState(generated) && generated.bootstrap.completed_at.length > 0;
 	const api = apiHealth(services, config.services.stack_name);
 	const web = serviceHealth(services, `${config.services.stack_name}_web_nginx`);
-	const landing = serviceHealth(services, `${config.services.stack_name}_landing_nginx`);
 
 	statusLines.push(`Configured: ${chalk.green("yes")}`);
 	statusLines.push(`Pinned release: ${chalk.cyan(config.release.version)}`);
@@ -1129,7 +1128,7 @@ function buildOperatorOverview(): OperatorOverview {
 	statusLines.push(`Active API slot: ${chalk.cyan(generated.deployment.active_slot)}`);
 	statusLines.push(`API: ${api === "healthy" ? chalk.green(api) : api === "missing" ? chalk.red(api) : chalk.yellow(api)}`);
 	statusLines.push(`Web: ${web === "healthy" ? chalk.green(web) : web === "missing" ? chalk.red(web) : chalk.yellow(web)}`);
-	statusLines.push(`Landing: ${landing === "healthy" ? chalk.green(landing) : landing === "missing" ? chalk.red(landing) : chalk.yellow(landing)}`);
+	statusLines.push(`Landing: ${chalk.dim("omitted")}`);
 
 	if (!bootstrapComplete) {
 		return {
@@ -1141,7 +1140,7 @@ function buildOperatorOverview(): OperatorOverview {
 		};
 	}
 
-	if (api !== "healthy" || web !== "healthy" || landing !== "healthy") {
+	if (api !== "healthy" || web !== "healthy") {
 		return {
 			statusLines,
 			nextSteps: [
@@ -3655,7 +3654,6 @@ async function cmdDeploy() {
 		{ label: "openfga", getHealth: services => serviceHealth(services, `${config.services.stack_name}_openfga`) },
 		{ label: "minikms", getHealth: services => serviceHealth(services, `${config.services.stack_name}_minikms`) },
 		{ label: "clickstack", getHealth: services => serviceHealth(services, `${config.services.stack_name}_clickstack`) },
-		...(isOssConfig(config) ? [] : [{ label: "landing", getHealth: services => serviceHealth(services, `${config.services.stack_name}_landing_nginx`) }]),
 		{ label: "web", getHealth: services => serviceHealth(services, `${config.services.stack_name}_web_nginx`) },
 		{ label: "api", getHealth: services => apiHealth(services, config.services.stack_name) },
 	]);
@@ -3835,7 +3833,7 @@ async function cmdHealth(asJson: boolean) {
 				},
 			},
 			web: serviceHealth(services, `${stackName}_web_nginx`),
-			landing: serviceHealth(services, `${stackName}_landing_nginx`),
+			landing: "omitted",
 		},
 		database: {
 			api: databaseHealth,

@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, test } from "bun:test";
 
 import { canCreateOrganizationInUi, type RuntimeConfig } from "./runtime-config";
@@ -34,5 +38,18 @@ describe("canCreateOrganizationInUi", () => {
   test("missing deployment mode fails closed", () => {
     expect(canCreateOrganizationInUi(config({ edition: "enterprise" }))).toBe(false);
     expect(canCreateOrganizationInUi(config({ edition: "oss" }))).toBe(false);
+  });
+});
+
+describe("checked-in public runtime-config", () => {
+  test("does not ship lvh.me or localhost OTLP", () => {
+    const publicConfig = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../public/runtime-config.js"),
+      "utf8",
+    );
+    expect(publicConfig).toContain("deploymentMode: \"selfhosted\"");
+    expect(publicConfig).toContain("canCreateOrganization: false");
+    expect(publicConfig).not.toContain("lvh.me");
+    expect(publicConfig).not.toContain("localhost:4318");
   });
 });

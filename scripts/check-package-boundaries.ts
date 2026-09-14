@@ -148,6 +148,22 @@ if (/bun run --filter envsync-web build:oss/.test(deployFe)) {
 } else {
 	ok("deploy-fe Hosted web uses enterprise/hosted build + enterprise-web path filter");
 }
+const publicRuntimeConfig = fs.readFileSync(
+	path.join(root, "apps/envsync-web/public/runtime-config.js"),
+	"utf8",
+);
+if (publicRuntimeConfig.includes("lvh.me") || publicRuntimeConfig.includes("localhost:4318")) {
+	fail("public/runtime-config.js must not ship lvh.me or localhost:4318");
+} else if (!publicRuntimeConfig.includes("canCreateOrganization: false")) {
+	fail("public/runtime-config.js must default canCreateOrganization to false");
+} else {
+	ok("public runtime-config is selfhost-safe (no lvh.me, create-org false)");
+}
+if (!deployFe.includes("VITE_ENVSYNC_DEPLOYMENT_MODE: hosted")) {
+	fail("deploy-fe.yaml must set VITE_ENVSYNC_DEPLOYMENT_MODE=hosted for Hosted web");
+} else {
+	ok("deploy-fe Hosted web sets deploymentMode hosted");
+}
 
 // 10) H1: SDK clients must not call removed create-workspace URL
 const tsAuth = fs.readFileSync(

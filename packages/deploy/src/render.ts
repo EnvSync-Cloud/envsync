@@ -310,6 +310,11 @@ export function buildRuntimeEnv(
 		OPENFGA_DB_PASSWORD: generated.secrets.openfga_db_password,
 		API_URL: publicHttpsUrl(config, hosts.api),
 		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.api, "/api/v1/manage"),
+		KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS: "3600",
+		KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS: "604800",
+		KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS: "604800",
+		KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS: "604800",
+		KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS: "604800",
 		CLICKSTACK_OPERATOR_EMAIL: generated.clickstack.operator_email,
 		CLICKSTACK_OPERATOR_PASSWORD: generated.clickstack.operator_password,
 		CLICKSTACK_ACCESS_KEY: generated.clickstack.access_key,
@@ -358,12 +363,22 @@ export function renderKeycloakRealm(config: DeployConfig, runtimeEnv: RuntimeEnv
 	const webOrigins = publicHttpsOriginVariants(config, hosts.app);
 	const apiRedirectUris = publicHttpsUrlVariants(config, hosts.api, "/api/access/api/callback");
 	const apiOrigins = publicHttpsOriginVariants(config, hosts.api);
+	const accessTokenLifespan = Number(runtimeEnv.KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS || "3600");
+	const ssoSessionIdleTimeout = Number(runtimeEnv.KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS || "604800");
+	const ssoSessionMaxLifespan = Number(runtimeEnv.KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS || "604800");
+	const clientSessionIdleTimeout = Number(runtimeEnv.KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS || "604800");
+	const clientSessionMaxLifespan = Number(runtimeEnv.KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS || "604800");
 	return JSON.stringify(
 		{
 			realm: config.auth.keycloak_realm,
 			enabled: true,
 			loginTheme: "envsync",
 			emailTheme: "envsync",
+			accessTokenLifespan,
+			ssoSessionIdleTimeout,
+			ssoSessionMaxLifespan,
+			clientSessionIdleTimeout,
+			clientSessionMaxLifespan,
 			clients: [
 				{
 					clientId: config.auth.web_client_id,
