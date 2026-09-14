@@ -7,6 +7,7 @@ import { EnvTypeService } from "@/services/env_type.service";
 import { EnvStorePiTService } from "@/services/env_store_pit.service";
 import { AppService } from "@/services/app.service";
 import { SecretService } from "@/services/secret.service";
+import { ServiceTokenService } from "@/services/service_token.service";
 import { rsaLayerDecrypt } from "@/helpers/key-store";
 
 function resolveAutoMode(value: unknown, fallback: boolean) {
@@ -114,8 +115,11 @@ export class EnvController {
 				env_type_id: resolvedEnvType.id,
 				user_id,
 			});
+			const scopedEnvs = c.get("service_token")
+				? ServiceTokenService.filterKeysByScope(c.get("service_token"), resolvedEnvType.id, envs)
+				: envs;
 
-			const environmentEntries = envs.map(env => [env.key, env.value] as const);
+			const environmentEntries = scopedEnvs.map(env => [env.key, env.value] as const);
 			const secretsEnabled = resolveAutoMode(enable_secrets, app.enable_secrets);
 			let managedSecrets = false;
 
@@ -127,6 +131,9 @@ export class EnvController {
 					env_type_id: resolvedEnvType.id,
 					user_id,
 				});
+				const scopedSecrets = c.get("service_token")
+					? ServiceTokenService.filterKeysByScope(c.get("service_token"), resolvedEnvType.id, secrets)
+					: secrets;
 
 				let privateKey = private_key;
 				if (resolvedManaged) {
@@ -138,7 +145,7 @@ export class EnvController {
 					);
 				}
 
-				for (const secret of secrets) {
+				for (const secret of scopedSecrets) {
 					environmentEntries.push([secret.key, rsaLayerDecrypt(secret.value, privateKey!)]);
 				}
 
@@ -430,6 +437,9 @@ export class EnvController {
 			org_id,
 			user_id,
 		});
+		const scopedEnvs = c.get("service_token")
+			? ServiceTokenService.filterKeysByScope(c.get("service_token"), env_type_id, envs)
+			: envs;
 
 		// Log the retrieval of the environment variables
 		await AuditLogService.notifyAuditSystem({
@@ -443,7 +453,7 @@ export class EnvController {
 			},
 		});
 
-		return c.json(envs);
+		return c.json(scopedEnvs);
 	};
 
 	public static readonly batchCreateEnvs = async (c: Context) => {

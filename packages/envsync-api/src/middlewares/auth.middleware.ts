@@ -154,8 +154,17 @@ export const authMiddleware = (): MiddlewareHandler => {
 			ctx.set("role_name", role.name);
 			ctx.set(
 				"auth_type",
-				({ JWT: "jwt", SAML: "saml", OIDC: "oidc", API_KEY: "api_key" } as const)[access_info.auth_type],
+				({
+					JWT: "jwt",
+					SAML: "saml",
+					OIDC: "oidc",
+					API_KEY: "api_key",
+					SERVICE_TOKEN: "service_token",
+				} as const)[access_info.auth_type],
 			);
+			if (access_info.service_token) {
+				ctx.set("service_token", access_info.service_token);
+			}
 
 			await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(
 				user.id,

@@ -150,6 +150,7 @@ type CliAuditActions = "cli_command_executed";
 
 type ServiceTokenAuditActions =
 	| "service_token_created"
+	| "service_token_rotated"
 	| "service_token_deleted"
 	| "service_tokens_viewed";
 

@@ -7,6 +7,8 @@ import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	createServiceTokenRequestSchema,
 	createServiceTokenResponseSchema,
+	rotateServiceTokenRequestSchema,
+	rotateServiceTokenResponseSchema,
 	serviceTokenResponseSchema,
 	serviceTokensResponseSchema,
 } from "@/validators/service_token.validator";
@@ -48,6 +50,37 @@ app.post(
 	}),
 	zValidator("json", createServiceTokenRequestSchema),
 	ServiceTokenController.createToken,
+);
+
+app.post(
+	"/:id/rotate",
+	describeRoute({
+		operationId: "rotateServiceToken",
+		summary: "Rotate Service Token",
+		description:
+			"Issue a new esv_ token for an existing service token. The previous hash stays valid until the grace window ends (default 24h, 0–7 days).",
+		tags: ["Service Tokens"],
+		responses: {
+			201: {
+				description: "Service token rotated successfully",
+				content: {
+					"application/json": {
+						schema: resolver(rotateServiceTokenResponseSchema),
+					},
+				},
+			},
+			500: {
+				description: "Internal server error",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+		},
+	}),
+	zValidator("json", rotateServiceTokenRequestSchema),
+	ServiceTokenController.rotateToken,
 );
 
 app.get(

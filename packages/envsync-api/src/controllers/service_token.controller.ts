@@ -8,7 +8,7 @@ export class ServiceTokenController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 
-		const { name, app_id, env_type_id, permissions, expires_in_days } = await c.req.json();
+		const { name, app_id, env_type_id, permissions, scopes, expires_in_days } = await c.req.json();
 
 		const result = await ServiceTokenService.createToken({
 			org_id,
@@ -17,6 +17,7 @@ export class ServiceTokenController {
 			app_id,
 			env_type_id,
 			permissions,
+			scopes,
 			expires_in_days,
 		});
 
@@ -30,6 +31,38 @@ export class ServiceTokenController {
 				name,
 				app_id,
 				env_type_id,
+				scopes: result.scopes,
+			},
+		});
+
+		return c.json(result, 201);
+	};
+
+	public static readonly rotateToken = async (c: Context) => {
+		const id = c.req.param("id");
+		const org_id = c.get("org_id");
+		const { grace_hours } = await c.req.json();
+
+		const existing = await ServiceTokenService.getToken(id);
+		if (existing.org_id !== org_id) {
+			return c.json({ error: "Service token not found" }, 404);
+		}
+
+		const result = await ServiceTokenService.rotateToken({
+			id,
+			org_id,
+			grace_hours,
+		});
+
+		await AuditLogService.notifyAuditSystem({
+			action: "service_token_rotated",
+			org_id,
+			user_id: c.get("user_id"),
+			message: `Service token rotated: ${id}`,
+			details: {
+				service_token_id: result.id,
+				rotated_from_id: id,
+				grace_hours,
 			},
 		});
 

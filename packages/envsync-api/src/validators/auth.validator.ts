@@ -71,6 +71,6 @@ export const whoAmIResponseSchema = z
 				"kms",
 			],
 		}),
-		auth_type: z.enum(["jwt", "saml", "oidc", "api_key"]).openapi({ example: "jwt" }),
+		auth_type: z.enum(["jwt", "saml", "oidc", "api_key", "service_token"]).openapi({ example: "jwt" }),
 	})
 	.openapi({ ref: "WhoAmIResponse" });
