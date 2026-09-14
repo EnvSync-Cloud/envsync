@@ -994,7 +994,7 @@ ${renderEnvList({
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-735dfe8
+    image: ghcr.io/envsync-cloud/minikms:sha-9ffbf53
     environment:
 ${renderEnvList({
 		MINIKMS_ROOT_KEY: runtimeEnv.MINIKMS_ROOT_KEY,

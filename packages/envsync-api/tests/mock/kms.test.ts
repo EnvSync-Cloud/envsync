@@ -477,4 +477,19 @@ describe("CMK grant gate", () => {
 			expect.objectContaining({ name: "api", status: "active", key_version_id: "mock-kv" }),
 		]);
 	});
+
+	test("listApps returns none when the KMS client cannot start", async () => {
+		await seedApp(seed.org.id, { name: "api" });
+		const original = KMSClient.getInstance.bind(KMSClient);
+		KMSClient.getInstance = async () => {
+			throw new Error("miniKMS proto files not found");
+		};
+		try {
+			await expect(CmkService.listApps(seed.org.id)).resolves.toEqual([
+				expect.objectContaining({ name: "api", status: "none", key_version_id: null }),
+			]);
+		} finally {
+			KMSClient.getInstance = original;
+		}
+	});
 });

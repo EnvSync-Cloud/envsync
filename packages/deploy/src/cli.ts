@@ -2153,6 +2153,12 @@ function runOpenFgaMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 	logSuccess("OpenFGA datastore migrations completed");
 }
 
+const MINIKMS_MIGRATE_SQL = [
+	"psql -h minikms_db -U postgres -d minikms -f /migrations/001_initial_schema.sql",
+	"psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql",
+	"psql -h minikms_db -U postgres -d minikms -f /migrations/003_escrow_recovery.sql",
+].join(" && ");
+
 function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 	logStep("Running miniKMS datastore migrations");
 	if (currentOptions.dryRun) {
@@ -2169,7 +2175,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 			"postgres:17",
 			"sh",
 			"-lc",
-			"psql -h minikms_db -U postgres -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql",
+			MINIKMS_MIGRATE_SQL,
 		]);
 		return;
 	}
@@ -2185,7 +2191,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 		"postgres:17",
 		"sh",
 		"-lc",
-		"psql -h minikms_db -U postgres -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql",
+		MINIKMS_MIGRATE_SQL,
 	]);
 	logSuccess("miniKMS datastore migrations completed");
 }

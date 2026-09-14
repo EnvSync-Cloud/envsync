@@ -4,6 +4,7 @@ import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
 import { AppError } from "@/libs/errors";
+import { resolveKmsProtoDir } from "@/libs/kms/proto-path";
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { withSpan } from "@/libs/telemetry";
@@ -184,13 +185,9 @@ export interface ValidateSessionResult {
 	expiresAt: string;
 }
 
-// Proto file paths (resolved relative to this file)
-const PROTO_DIR = path.resolve(import.meta.dir, "proto");
-const KMS_PROTO_PATH = path.join(PROTO_DIR, "kms.proto");
-const HEALTH_PROTO_PATH = path.join(PROTO_DIR, "health.proto");
-const PKI_PROTO_PATH = path.join(PROTO_DIR, "pki.proto");
-const VAULT_PROTO_PATH = path.join(PROTO_DIR, "vault.proto");
-const SESSION_PROTO_PATH = path.join(PROTO_DIR, "session.proto");
+function protoPath(fileName: string): string {
+	return path.join(resolveKmsProtoDir(import.meta.dir), fileName);
+}
 
 const PROTO_LOADER_OPTIONS: protoLoader.Options = {
 	keepCase: true,
@@ -346,31 +343,31 @@ export class KMSClient {
 			: grpc.credentials.createInsecure();
 
 		// Load KMS service proto
-		const kmsPackageDef = protoLoader.loadSync(KMS_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const kmsPackageDef = protoLoader.loadSync(protoPath("kms.proto"), PROTO_LOADER_OPTIONS);
 		const kmsProto = grpc.loadPackageDefinition(kmsPackageDef);
 		const KMSService = (kmsProto as unknown as NestedProto).minikms.v1.KMSService;
 		this.kmsStub = new KMSService(this.grpcAddr, credentials);
 
 		// Load gRPC health check proto
-		const healthPackageDef = protoLoader.loadSync(HEALTH_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const healthPackageDef = protoLoader.loadSync(protoPath("health.proto"), PROTO_LOADER_OPTIONS);
 		const healthProto = grpc.loadPackageDefinition(healthPackageDef);
 		const HealthService = (healthProto as unknown as NestedProto).grpc.health.v1.Health;
 		this.healthStub = new HealthService(this.grpcAddr, credentials);
 
 		// Load PKI service proto
-		const pkiPackageDef = protoLoader.loadSync(PKI_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const pkiPackageDef = protoLoader.loadSync(protoPath("pki.proto"), PROTO_LOADER_OPTIONS);
 		const pkiProto = grpc.loadPackageDefinition(pkiPackageDef);
 		const PKIService = (pkiProto as unknown as NestedProto).minikms.v1.PKIService;
 		this.pkiStub = new PKIService(this.grpcAddr, credentials);
 
 		// Load Vault service proto
-		const vaultPackageDef = protoLoader.loadSync(VAULT_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const vaultPackageDef = protoLoader.loadSync(protoPath("vault.proto"), PROTO_LOADER_OPTIONS);
 		const vaultProto = grpc.loadPackageDefinition(vaultPackageDef);
 		const VaultService = (vaultProto as unknown as NestedProto).minikms.v1.VaultService;
 		this.vaultStub = new VaultService(this.grpcAddr, credentials);
 
 		// Load Session service proto
-		const sessionPackageDef = protoLoader.loadSync(SESSION_PROTO_PATH, PROTO_LOADER_OPTIONS);
+		const sessionPackageDef = protoLoader.loadSync(protoPath("session.proto"), PROTO_LOADER_OPTIONS);
 		const sessionProto = grpc.loadPackageDefinition(sessionPackageDef);
 		const SessionService = (sessionProto as unknown as NestedProto).minikms.v1.SessionService;
 		this.sessionStub = new SessionService(this.grpcAddr, credentials);

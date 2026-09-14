@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.20.7
+
+### Fixed
+
+- Enterprise API bundle finds miniKMS `.proto` files (`/kms/apps` no longer 500s).
+- `/kms/apps` returns `status: "none"` per app if the KMS client cannot start.
+
+### Changed
+
+- Swarm/compose miniKMS image pin is `ghcr.io/envsync-cloud/minikms:sha-9ffbf53`.
+- Deploy and compose run miniKMS migration `003_escrow_recovery.sql`.
+
+---
+
 ## 0.20.6
 
 ### Fixed

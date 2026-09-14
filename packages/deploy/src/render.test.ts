@@ -208,6 +208,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
+		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-9ffbf53");
 		expect(stackFull).not.toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");

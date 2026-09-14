@@ -571,7 +571,23 @@ export class CmkService {
 	public static async listApps(orgId: string): Promise<OrgKmsAppKeyInfo[]> {
 		await this.ensureTenantKek(orgId);
 		const apps = await AppService.getAllApps(orgId);
-		const kms = await KMSClient.getInstance();
+		const emptyInfo = (app: { id: string; name: string }): OrgKmsAppKeyInfo => ({
+			app_id: app.id,
+			name: app.name,
+			key_version_id: null,
+			version: null,
+			encryption_count: null,
+			max_encryptions: null,
+			status: "none",
+		});
+		let kms: Awaited<ReturnType<typeof KMSClient.getInstance>>;
+		try {
+			kms = await KMSClient.getInstance();
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			infoLogs(`kms_list_apps getInstance failed: ${message}`, LogTypes.ERROR, "CmkService");
+			return apps.map(emptyInfo);
+		}
 		return Promise.all(
 			apps.map(async app => {
 				try {
@@ -586,15 +602,7 @@ export class CmkService {
 						status: info.status,
 					};
 				} catch {
-					return {
-						app_id: app.id,
-						name: app.name,
-						key_version_id: null,
-						version: null,
-						encryption_count: null,
-						max_encryptions: null,
-						status: "none",
-					};
+					return emptyInfo(app);
 				}
 			}),
 		);
