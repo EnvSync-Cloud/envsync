@@ -7,6 +7,7 @@ import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	createServiceTokenRequestSchema,
 	createServiceTokenResponseSchema,
+	listServiceTokensQuerySchema,
 	rotateServiceTokenRequestSchema,
 	rotateServiceTokenResponseSchema,
 	serviceTokenResponseSchema,
@@ -117,7 +118,7 @@ app.get(
 	describeRoute({
 		operationId: "getAllServiceTokens",
 		summary: "Get All Service Tokens",
-		description: "Retrieve all service tokens for the organization",
+		description: "Retrieve service tokens for the organization. Pass app_id to limit the list to one project.",
 		tags: ["Service Tokens"],
 		responses: {
 			200: {
@@ -138,6 +139,7 @@ app.get(
 			},
 		},
 	}),
+	zValidator("query", listServiceTokensQuerySchema),
 	ServiceTokenController.getAllTokens,
 );
 

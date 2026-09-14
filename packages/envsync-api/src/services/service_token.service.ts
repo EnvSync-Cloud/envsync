@@ -266,26 +266,31 @@ export class ServiceTokenService {
 		});
 	};
 
-	public static getAllTokens = async (orgId: string, page = 1, per_page = 50) => {
-		return cacheAside(CacheKeys.serviceTokensByOrg(orgId), CacheTTL.SHORT, async () => {
-			const db = await DB.getInstance();
+	public static getAllTokens = async (
+		orgId: string,
+		page = 1,
+		per_page = 50,
+		appId?: string,
+	) => {
+		const db = await DB.getInstance();
+		let query = db
+			.selectFrom("service_tokens")
+			.selectAll()
+			.where("org_id", "=", orgId)
+			.orderBy("created_at", "desc")
+			.limit(per_page)
+			.offset((page - 1) * per_page);
+		if (appId) {
+			query = query.where("app_id", "=", appId);
+		}
 
-			const records = await db
-				.selectFrom("service_tokens")
-				.selectAll()
-				.where("org_id", "=", orgId)
-				.orderBy("created_at", "desc")
-				.limit(per_page)
-				.offset((page - 1) * per_page)
-				.execute();
-
-			return records.map(record =>
-				toPublicServiceToken({
-					...record,
-					scopes: parseServiceTokenScopes(record.scopes, record.env_type_id),
-				}),
-			);
-		});
+		const records = await query.execute();
+		return records.map(record =>
+			toPublicServiceToken({
+				...record,
+				scopes: parseServiceTokenScopes(record.scopes, record.env_type_id),
+			}),
+		);
 	};
 
 	public static deleteToken = async (id: string) => {

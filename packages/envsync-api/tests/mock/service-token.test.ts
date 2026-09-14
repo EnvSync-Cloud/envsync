@@ -4,6 +4,7 @@ import { testRequest } from "../helpers/request";
 import { seedApp, seedEnvType, seedOrg, seedUser, type SeedOrgResult } from "../helpers/db";
 import { MockFGAClient, setupUserOrgTuples } from "../helpers/fga";
 import { resetVaultStore } from "../helpers/kms";
+import { classifyServiceTokenOp } from "@/middlewares/service-token-scope.middleware";
 import { ServiceTokenService } from "@/services/service_token.service";
 
 let seed: SeedOrgResult;
@@ -347,6 +348,80 @@ describe("service token path scopes", () => {
 		});
 		expect(rollback.status).toBe(403);
 		expect((await rollback.json<{ code?: string }>()).code).toBe("SERVICE_TOKEN_SCOPE_DENIED");
+	});
+
+	test("lists tokens for one project and does not reuse page 1 for page 2", async () => {
+		const otherApp = await seedApp(seed.org.id);
+		const first = await createServiceToken({
+			name: "this-app-a",
+			app_id: appId,
+			scopes: [{ env_type_id: envTypeId, path: "/" }],
+		});
+		const second = await createServiceToken({
+			name: "this-app-b",
+			app_id: appId,
+			scopes: [{ env_type_id: envTypeId, path: "/" }],
+		});
+		await createServiceToken({
+			name: "other-app",
+			app_id: otherApp.id,
+			scopes: [{ path: "/" }],
+		});
+
+		const filtered = await testRequest(`/api/service_token?app_id=${appId}`, {
+			token: seed.masterUser.token,
+		});
+		expect(filtered.status).toBe(200);
+		const filteredBody = await filtered.json<Array<{ id: string; app_id: string | null }>>();
+		const filteredIds = filteredBody.map(token => token.id);
+		expect(filteredBody.every(token => token.app_id === appId)).toBe(true);
+		expect(filteredIds).toContain(first.id);
+		expect(filteredIds).toContain(second.id);
+
+		const pageOne = await testRequest(`/api/service_token?app_id=${appId}&page=1&per_page=1`, {
+			token: seed.masterUser.token,
+		});
+		const pageTwo = await testRequest(`/api/service_token?app_id=${appId}&page=2&per_page=1`, {
+			token: seed.masterUser.token,
+		});
+		expect(pageOne.status).toBe(200);
+		expect(pageTwo.status).toBe(200);
+		const pageOneBody = await pageOne.json<Array<{ id: string }>>();
+		const pageTwoBody = await pageTwo.json<Array<{ id: string }>>();
+		expect(pageOneBody).toHaveLength(1);
+		expect(pageTwoBody).toHaveLength(1);
+		expect(pageOneBody[0]?.id).not.toBe(pageTwoBody[0]?.id);
+	});
+
+	test("classifies env/secret route tails, not key names that contain those words", () => {
+		expect(classifyServiceTokenOp("PUT", "/api/env/single")).toEqual({
+			permission: "write",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/env/batch")).toEqual({
+			permission: "write",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/env/i/batch")).toEqual({
+			permission: "read",
+			allowKeyless: true,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/env/rollback/pit")).toEqual({
+			permission: "write",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/env/history")).toEqual({
+			permission: "read",
+			allowKeyless: false,
+		});
+		expect(classifyServiceTokenOp("POST", "/api/env")).toEqual({
+			permission: "read",
+			allowKeyless: true,
+		});
+		expect(classifyServiceTokenOp("DELETE", "/api/env")).toEqual({
+			permission: "write",
+			allowKeyless: false,
+		});
 	});
 
 	test("rejects service tokens on non env/secret routes", async () => {

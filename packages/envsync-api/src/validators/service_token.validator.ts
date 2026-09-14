@@ -13,7 +13,11 @@ export const serviceTokenScopeSchema = z
 		env_type_id: z.string().uuid().nullable().optional().openapi({
 			example: "550e8400-e29b-41d4-a716-446655440001",
 		}),
-		path: z.string().min(1).default("/").openapi({ example: "/" }),
+		path: z
+			.string()
+			.min(1)
+			.default("/")
+			.openapi({ example: "/", description: "Key prefix (not a folder). `/db` matches `db` and `db/host`, not `dbx`." }),
 	})
 	.openapi({ ref: "ServiceTokenScope" });
 
@@ -72,3 +76,14 @@ export const rotateServiceTokenResponseSchema = createServiceTokenResponseSchema
 export const serviceTokensResponseSchema = z
 	.array(serviceTokenResponseSchema)
 	.openapi({ ref: "ServiceTokensResponse" });
+
+export const listServiceTokensQuerySchema = z
+	.object({
+		page: z.coerce.number().int().min(1).optional().openapi({ example: 1 }),
+		per_page: z.coerce.number().int().min(1).max(100).optional().openapi({ example: 50 }),
+		app_id: z.string().uuid().optional().openapi({
+			example: "550e8400-e29b-41d4-a716-446655440000",
+			description: "Return tokens for this project only",
+		}),
+	})
+	.openapi({ ref: "ListServiceTokensQuery" });

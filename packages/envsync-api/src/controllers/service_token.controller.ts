@@ -86,8 +86,9 @@ export class ServiceTokenController {
 		const org_id = c.get("org_id");
 		const page = Math.max(1, Number(c.req.query("page")) || 1);
 		const per_page = Math.min(100, Math.max(1, Number(c.req.query("per_page")) || 50));
+		const app_id = c.req.query("app_id") || undefined;
 
-		const tokens = await ServiceTokenService.getAllTokens(org_id, page, per_page);
+		const tokens = await ServiceTokenService.getAllTokens(org_id, page, per_page, app_id);
 
 		return c.json(tokens, 200);
 	};
