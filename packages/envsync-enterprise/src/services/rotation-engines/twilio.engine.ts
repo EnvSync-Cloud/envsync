@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * Twilio rotation engine.
@@ -25,35 +25,8 @@ export class TwilioEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-
-		// In production, this would use the Twilio API:
-		// 1. Authenticate with current auth_token
-		// 2. POST https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/AuthTokens.json
-		//    This promotes the secondary token to primary and generates a new secondary.
-		//
-		// Alternatively for rolling rotation:
-		// 1. GET the current tokens
-		// 2. Generate a new secondary token
-		// 3. After dual window, promote secondary to primary
-		//
-		// For now, return a structured credential
-		const newAuthToken = crypto.randomBytes(32).toString("hex");
-
-		const credential = JSON.stringify({
-			account_sid: connectionConfig.account_sid,
-			auth_token: newAuthToken,
-		});
-
-		return {
-			credential,
-			metadata: {
-				account_sid: connectionConfig.account_sid,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

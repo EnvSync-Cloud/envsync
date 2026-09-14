@@ -252,6 +252,27 @@ if (!fs.existsSync(eeRotEngines) || !fs.existsSync(eeDynEngines)) {
 } else {
 	ok("H7: rotation + dynamic-secret engines owned by envsync-enterprise");
 }
+const rotIndexSrc = fs.readFileSync(eeRotEngines, "utf8");
+const dynIndexSrc = fs.readFileSync(eeDynEngines, "utf8");
+const hiddenRotation = [
+	"sendgrid",
+	"twilio",
+	"azure-sp",
+	"gcp-service-account",
+	"cloudflare-pages",
+	"aws-mysql",
+	"aws-postgres",
+];
+for (const stub of hiddenRotation) {
+	if (rotIndexSrc.includes(`["${stub}"`)) {
+		fail(`I: rotation catalog must not register stub engine ${stub}`);
+	}
+}
+if (dynIndexSrc.includes("aws-iam:") || dynIndexSrc.includes("azure-sp:")) {
+	fail("I: dynamic-secret catalog must not register aws-iam or azure-sp stubs");
+} else {
+	ok("I: stub rotation/dynamic engines are not in the catalog");
+}
 const eeMigrationsDir = path.join(root, "packages/envsync-enterprise/src/migrations");
 const requiredEeMigrations = [
 	"019_enterprise_integrations_foundation.ts",

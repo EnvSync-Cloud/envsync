@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * AWS RDS PostgreSQL rotation engine.
@@ -43,56 +43,8 @@ export class AwsPostgresEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-		const port = (connectionConfig.port as number) || 5432;
-		const username = connectionConfig.db_user as string;
-
-		// In production, this would use the AWS SDK:
-		// import { Signer } from "@aws-sdk/rds-signer"
-		// const signer = new Signer({
-		//   hostname: connectionConfig.host,
-		//   port,
-		//   username,
-		//   region: connectionConfig.region,
-		//   credentials: {
-		//     accessKeyId: connectionConfig.access_key_id,
-		//     secretAccessKey: connectionConfig.secret_access_key,
-		//   },
-		// })
-		// const authToken = await signer.getAuthToken()
-		//
-		// The IAM auth token is valid for 15 minutes and replaces the password.
-		// The DB role must be created with:
-		//   CREATE USER ${username} WITH LOGIN
-		//   GRANT rds_iam TO ${username}
-		//   Execute role_template SQL (GRANT statements)
-
-		const mockAuthToken = crypto.randomBytes(32).toString("base64url");
-
-		// Credential is stored as a JSON string with auth token
-		const credential = JSON.stringify({
-			host: connectionConfig.host,
-			port,
-			database: connectionConfig.database,
-			username,
-			auth_token: mockAuthToken,
-			region: connectionConfig.region,
-		});
-
-		return {
-			credential,
-			metadata: {
-				host: connectionConfig.host,
-				port,
-				database: connectionConfig.database,
-				username,
-				region: connectionConfig.region,
-				auth_method: "iam",
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

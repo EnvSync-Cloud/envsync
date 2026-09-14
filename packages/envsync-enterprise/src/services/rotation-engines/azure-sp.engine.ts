@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * Azure Service Principal rotation engine.
@@ -28,35 +28,8 @@ export class AzureSpEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-
-		// In production, this would use the Microsoft Graph API:
-		// 1. Authenticate with client credentials flow
-		// 2. POST /applications/{app_object_id}/addPassword
-		//    with { passwordCredential: { displayName: "envsync-rotation", endDateTime } }
-		//
-		// For now, return a structured credential
-		const newSecret = crypto.randomBytes(32).toString("base64");
-		const secretId = crypto.randomUUID();
-
-		// Credential is stored as a JSON string with the secret details
-		const credential = JSON.stringify({
-			client_id: connectionConfig.client_id,
-			client_secret: newSecret,
-			secret_id: secretId,
-		});
-
-		return {
-			credential,
-			metadata: {
-				tenant_id: connectionConfig.tenant_id,
-				client_id: connectionConfig.client_id,
-				secret_id: secretId,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {

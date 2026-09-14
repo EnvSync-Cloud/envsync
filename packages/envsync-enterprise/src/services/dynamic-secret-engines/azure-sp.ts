@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
 import type { CredentialResult, DynamicSecretEngineInterface } from "./base";
@@ -35,31 +33,10 @@ export class AzureSpEngine implements DynamicSecretEngineInterface {
 	}
 
 	async generateCredentials(
-		config: Record<string, unknown>,
-		ttlSeconds: number,
+		_config: Record<string, unknown>,
+		_ttlSeconds: number,
 	): Promise<CredentialResult> {
-		const c = config as unknown as AzureSpConfig;
-		this.validateConfig(config);
-
-		// Generate a temporary client secret for the service principal
-		const tempSecret = randomBytes(48).toString("base64url");
-		const expiration = new Date(Date.now() + ttlSeconds * 1000);
-
-		infoLogs(
-			`AzureSpEngine: would create secret for SP ${c.client_id} in tenant ${c.tenant_id}, roles=[${c.roles.join(", ")}], expires ${expiration.toISOString()}`,
-			LogTypes.LOGS,
-			"DynamicSecretEngine:AzureSp",
-		);
-
-		return {
-			username: c.client_id,
-			password: tempSecret,
-			tenant_id: c.tenant_id,
-			client_id: c.client_id,
-			client_secret: tempSecret,
-			subscription_id: c.subscription_id,
-			expiration: expiration.toISOString(),
-		};
+		throw new Error("azure-sp dynamic secret engine is not implemented");
 	}
 
 	async revokeCredentials(

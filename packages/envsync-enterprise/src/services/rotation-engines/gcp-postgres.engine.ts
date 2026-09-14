@@ -1,5 +1,5 @@
 import type { RotationEngine, EngineConfig, CredentialResult } from "./types";
-import crypto from "node:crypto";
+import { unimplementedRotationEngine } from "./types";
 
 /**
  * GCP Cloud SQL PostgreSQL rotation engine.
@@ -42,42 +42,8 @@ export class GcpPostgresEngine implements RotationEngine {
 		}
 	}
 
-	async generateCredential(config: EngineConfig): Promise<CredentialResult> {
-		this.validateConfig(config);
-
-		const { connectionConfig } = config;
-		const username = `envsync_${crypto.randomBytes(8).toString("hex")}`;
-		const password = crypto.randomBytes(32).toString("base64url");
-
-		// In production, this would use the Google Cloud SQL Admin API:
-		// import { google } from "googleapis"
-		// const auth = new google.auth.GoogleAuth({
-		//   credentials: JSON.parse(connectionConfig.sa_key_json),
-		//   scopes: ["https://www.googleapis.com/auth/sqlservice.admin"],
-		// })
-		// const sqladmin = google.sqladmin({ version: "v1beta4", auth })
-		//
-		// 1. Connect to Cloud SQL instance via Auth Proxy or IP
-		// 2. CREATE ROLE ${username} WITH LOGIN PASSWORD '${password}'
-		// 3. Execute role_template SQL (GRANT statements)
-
-		// Credential is stored as a JSON string
-		const credential = JSON.stringify({
-			instance_connection_name: connectionConfig.instance_connection_name,
-			database: connectionConfig.database,
-			username,
-			password,
-		});
-
-		return {
-			credential,
-			metadata: {
-				instance_connection_name: connectionConfig.instance_connection_name,
-				database: connectionConfig.database,
-				project_id: connectionConfig.project_id,
-				username,
-			},
-		};
+	async generateCredential(_config: EngineConfig): Promise<CredentialResult> {
+		unimplementedRotationEngine(this.engineType);
 	}
 
 	async revokeCredential(config: EngineConfig, credential: string): Promise<void> {
