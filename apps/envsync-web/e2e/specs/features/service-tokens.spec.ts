@@ -18,7 +18,7 @@ test.describe("feature: service tokens", () => {
 		await expect(page.getByTestId("create-service-token-dialog")).toBeVisible();
 		await page.getByTestId("service-token-name").fill(tokenName);
 		await expect(page.getByTestId("service-token-scope-path-0")).toHaveValue("/");
-		await expect(page.getByRole("radio", { name: "Read" })).toBeChecked();
+		await expect(page.getByTestId("service-token-access-read")).toBeChecked();
 		await page.getByTestId("add-scope").click();
 		await expect(page.getByTestId("service-token-scope-1")).toBeVisible();
 		await page.getByTestId("service-token-scope-path-1").fill("/ci");
@@ -46,7 +46,7 @@ test.describe("feature: service tokens", () => {
 		await expect(page.getByRole("heading", { name: "Service Token Created" })).toBeVisible();
 		const createdToken = await page.getByTestId("revealed-service-token").inputValue();
 		expect(createdToken).toMatch(/^esv_/);
-		await page.getByRole("button", { name: "Close" }).click();
+		await page.getByTestId("reveal-service-token-close").click();
 
 		const tokenRow = page.locator("tr").filter({ hasText: tokenName });
 		await expect(tokenRow).toHaveCount(1);
@@ -70,7 +70,7 @@ test.describe("feature: service tokens", () => {
 		const rotatedToken = await page.getByTestId("revealed-service-token").inputValue();
 		expect(rotatedToken).toMatch(/^esv_/);
 		expect(rotatedToken).not.toBe(createdToken);
-		await page.getByRole("button", { name: "Close" }).click();
+		await page.getByTestId("reveal-service-token-close").click();
 		await expect(tokenRow).toHaveCount(2);
 		await expect(tokenRow).not.toContainText(createdToken);
 		await expect(tokenRow).not.toContainText(rotatedToken);
@@ -113,7 +113,7 @@ test.describe("feature: service tokens", () => {
 		await page.getByTestId("service-token-name").fill(tokenName);
 		await page.getByTestId("service-token-scope-env-0").click();
 		await page.getByRole("option", { name: environment!.name }).click();
-		await page.getByRole("radio", { name: "Read & Write" }).click();
+		await page.getByTestId("service-token-access-write").click();
 
 		const createResponse = waitForTrackedResponse(page, {
 			method: "POST",
@@ -133,7 +133,7 @@ test.describe("feature: service tokens", () => {
 		await expect(page.getByRole("heading", { name: "Service Token Created" })).toBeVisible();
 		const createdToken = await page.getByTestId("revealed-service-token").inputValue();
 		expect(createdToken).toMatch(/^esv_/);
-		await page.getByRole("button", { name: "Close" }).click();
+		await page.getByTestId("reveal-service-token-close").click();
 
 		const tokenRow = page.locator("tr").filter({ hasText: tokenName });
 		await expect(tokenRow).toHaveCount(1);
