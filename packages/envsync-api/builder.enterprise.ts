@@ -64,6 +64,8 @@ await build({
 copyDirSync(path.join(packageRoot, "src/libs/mail/templates/html"), path.join(packageRoot, "dist/templates/html"));
 copyDirSync(path.join(packageRoot, "src/libs/mail/templates/base"), path.join(packageRoot, "dist/templates/base"));
 copyDirSync(path.join(packageRoot, "src/libs/kms/proto"), path.join(packageRoot, "dist/libs/kms/proto"));
+// Single-file bundle resolves import.meta.dir to dist/; client also looks here.
+copyDirSync(path.join(packageRoot, "src/libs/kms/proto"), path.join(packageRoot, "dist/proto"));
 copyDirSync(path.join(packageRoot, "src/assets"), path.join(packageRoot, "dist/assets"));
 
 console.log("enterprise API bundle ready:", path.join(packageRoot, "dist/entrypoint.enterprise.js"));
