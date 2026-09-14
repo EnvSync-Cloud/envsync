@@ -1,7 +1,17 @@
 import z from "zod";
 import "zod-openapi/extend";
 
-const engineTypeEnum = z.enum(["postgres", "mysql", "aws-iam", "azure-sp", "gcp-service-account", "cloudflare-pages", "sendgrid", "twilio"]);
+const engineTypeEnum = z.enum([
+	"postgres",
+	"mysql",
+	"aws-iam",
+	"aws-mysql",
+	"aws-postgres",
+	"gcp-sqlserver",
+	"gcp-mysql",
+	"gcp-postgres",
+	"mongodb",
+]);
 
 export const createRotationPolicySchema = z
 	.object({

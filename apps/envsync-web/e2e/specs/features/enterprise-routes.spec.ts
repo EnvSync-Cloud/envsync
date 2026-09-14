@@ -44,7 +44,7 @@ test.describe("enterprise dashboard routes", () => {
 		const seededApp = await getAppByName(page, "Core Platform");
 		test.skip(!seededApp, "Core Platform app not seeded in this harness");
 
-		await page.goto(`/applications/${seededApp!.id}/integrations`, {
+		await page.goto(`/projects/${seededApp!.id}/integrations`, {
 			waitUntil: "domcontentloaded",
 		});
 		await expect(

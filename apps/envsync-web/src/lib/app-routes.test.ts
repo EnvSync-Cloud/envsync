@@ -47,23 +47,19 @@ describe("app routes", () => {
     expect(byPath.applications).toBe("/projects");
     expect(byPath["applications/:appId"]).toBe("/projects/:appId");
     expect(byPath["applications/pit/:appId"]).toBe("/projects/:appId/pit");
-    expect(byPath.users).toBe("/org/users");
-    expect(byPath.teams).toBe("/org/teams");
-    expect(byPath.roles).toBe("/org/roles");
+    expect(byPath.users).toBe("/org/access/users");
+    expect(byPath.teams).toBe("/org/access/teams");
+    expect(byPath.roles).toBe("/org/access/roles");
+    expect(byPath["org/users"]).toBe("/org/access/users");
+    expect(byPath["applications/:appId/integrations"]).toBe("/projects/:appId/integrations");
     expect(byPath.certificates).toBe("/org/certificates");
     expect(byPath.webhooks).toBe("/org/webhooks");
     expect(byPath["change-requests"]).toBe("/org/change-requests");
   });
 
-  test("does not redirect EE stay-put surfaces", () => {
+  test("does not redirect EE stay-put org surfaces", () => {
     expect(LEGACY_REDIRECTS.some((item) => item.path.startsWith("organisation"))).toBe(false);
-    expect(
-      LEGACY_REDIRECTS.some((item) =>
-        item.path === "applications/:appId/integrations"
-        || item.path.startsWith("applications/:appId/integrations/"),
-      ),
-    ).toBe(false);
-    expect(appIntegrationsPath("x")).toBe("/applications/x/integrations");
+    expect(appIntegrationsPath("x")).toBe("/projects/x/integrations");
     expect(orgIntegrationsPath()).toBe("/organisation/integrations");
   });
 

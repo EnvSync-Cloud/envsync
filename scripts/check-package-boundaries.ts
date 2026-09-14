@@ -197,8 +197,16 @@ for (const name of requiredEeServices) {
 		fail(`H3: missing envsync-api re-export shim for ${name}`);
 	} else {
 		const shim = fs.readFileSync(apiShim, "utf8");
-		// Shim should be a thin re-export, not a full copy of implementation
-		if (!shim.includes("envsync-enterprise") || !shim.includes("export * from")) {
+		const bootSafe = name === "oidc.service.ts" || name === "enterprise-certificate-verifier.service.ts";
+		if (bootSafe) {
+			if (shim.includes("export * from")) {
+				fail(`H3: ${name} is on the OSS boot path and must not statically re-export EE`);
+			} else if (!shim.includes("envsync-enterprise")) {
+				fail(`H3: ${name} should dynamically load envsync-enterprise`);
+			} else {
+				ok(`H3: ${name} loads EE dynamically (OSS-safe)`);
+			}
+		} else if (!shim.includes("envsync-enterprise") || !shim.includes("export * from")) {
 			fail(`H3: envsync-api ${name} should re-export from envsync-enterprise`);
 		} else if (shim.split("\n").filter(l => l.trim().length > 0).length > 12) {
 			fail(`H3: envsync-api ${name} shim looks too large (expected thin re-export)`);
@@ -232,22 +240,26 @@ const requiredEeMigrations = [
 	"024_saml_providers.ts",
 	"025_saml_sso_login_path.ts",
 	"026_org_feature_grant.ts",
+	"027_org_kms.ts",
 ];
+const apiMigrationsDir = path.join(root, "packages/envsync-api/src/libs/db/migrations");
 for (const name of requiredEeMigrations) {
 	const eeMig = path.join(eeMigrationsDir, name);
-	const apiMig = path.join(root, "packages/envsync-api/src/libs/db/migrations", name);
+	const apiMig = path.join(apiMigrationsDir, name);
 	if (!fs.existsSync(eeMig)) {
 		fail(`H3.4: missing envsync-enterprise migration ${name}`);
 	} else if (!fs.existsSync(apiMig)) {
-		fail(`H3.4: missing envsync-api migration re-export for ${name}`);
+		fail(`H3.4: missing envsync-api migration loader for ${name}`);
 	} else {
 		const shim = fs.readFileSync(apiMig, "utf8");
-		if (!shim.includes("envsync-enterprise") || !shim.includes("export { up, down }")) {
-			fail(`H3.4: ${name} in envsync-api must re-export up/down from envsync-enterprise`);
+		if (shim.includes("export { up, down }")) {
+			fail(`H3.4: ${name} must not statically re-export EE (OSS migrator must load)`);
+		} else if (!shim.includes("envsync-enterprise")) {
+			fail(`H3.4: ${name} should dynamically load envsync-enterprise`);
 		}
 	}
 }
-ok("H3.4: EE migrations owned by envsync-enterprise with core re-export shims");
+ok("H3.4: EE migrations owned by envsync-enterprise with OSS-safe loaders");
 
 // 12) H6: envsync-web must not list proprietary EE web as a production dependency
 const webPkg = JSON.parse(

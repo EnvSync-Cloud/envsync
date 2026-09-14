@@ -13,7 +13,7 @@ export function ProjectsOverview({ projects }: ProjectsOverviewProps) {
       <div className="flex flex-col items-center justify-center h-full py-8">
         <p className="text-muted-foreground text-sm">No projects yet</p>
         <Link
-          to="/applications/create"
+          to="/projects/create"
           className="text-sm text-emerald-400 hover:text-emerald-300 mt-2 inline-block transition-colors"
         >
           Create your first project →

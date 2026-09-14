@@ -31,17 +31,28 @@ describe("saml helper ReDoS-safe parsing", () => {
   </saml:Assertion>
 </samlp:Response>`;
 
-		const result = await validateSamlResponse(
-			b64(xml),
-			"",
-			"https://api.example/api/saml/acs/org_1",
-			"https://api.example/api/saml/metadata/org_1",
+		await expect(
+			validateSamlResponse(
+				b64(xml),
+				"",
+				"https://api.example/api/saml/acs/org_1",
+				"https://api.example/api/saml/metadata/org_1",
+			),
+		).rejects.toThrow("SAML IdP certificate is required");
+	});
+
+	test("validateSamlResponse rejects unsigned XML when a cert is configured", async () => {
+		const xml = `<?xml version="1.0"?>
+<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" InResponseTo="_req1">
+  <samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status>
+  <saml:Assertion ID="_a1">
+    <saml:Issuer>https://idp.example</saml:Issuer>
+    <saml:Subject><saml:NameID>ada@example.com</saml:NameID></saml:Subject>
+  </saml:Assertion>
+</samlp:Response>`;
+		await expect(validateSamlResponse(b64(xml), "QUJDREVG", "https://acs.example")).rejects.toThrow(
+			"SAML response is not signed",
 		);
-		expect(result.inResponseTo).toBe("_req1");
-		expect(result.destination).toBe("https://api.example/api/saml/acs/org_1");
-		expect(result.attributes.email).toBe("ada@example.com");
-		expect(result.attributes.firstName).toBe("Ada");
-		expect(result.attributes.groups).toEqual(["eng", "admins"]);
 	});
 
 	test("validateSamlResponse rejects oversized XML", async () => {

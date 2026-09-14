@@ -171,6 +171,5 @@ export function canCreateOrganizationInUi(config: RuntimeConfig = runtimeConfig)
   if (config.deploymentMode === "hosted") {
     return true;
   }
-  // Legacy: enterprise build without deploymentMode — assume hosted-like (local).
-  return config.edition === "enterprise";
+  return false;
 }

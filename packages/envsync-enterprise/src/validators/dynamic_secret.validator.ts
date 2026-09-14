@@ -2,7 +2,7 @@ import z from "zod";
 import "zod-openapi/extend";
 
 // Engine type enum
-const engineTypeSchema = z.enum(["postgres", "mysql", "aws-iam", "azure-sp"]);
+const engineTypeSchema = z.enum(["postgres", "mysql"]);
 
 // Postgres engine config
 const postgresConfigSchema = z.object({

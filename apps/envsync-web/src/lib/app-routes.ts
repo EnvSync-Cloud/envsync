@@ -14,7 +14,7 @@ export const appSettingsPath = (appId: string) => `/projects/${appId}/settings`;
 export const appServiceTokensPath = (appId: string) =>
   `/projects/${appId}/settings/service-tokens`;
 export const appPointInTimePath = (appId: string) => `/projects/${appId}/pit`;
-export const appIntegrationsPath = (appId: string) => `/applications/${appId}/integrations`;
+export const appIntegrationsPath = (appId: string) => `/projects/${appId}/integrations`;
 export const appIntegrationProviderPath = (appId: string, provider: string) =>
   `${appIntegrationsPath(appId)}/${provider}`;
 export const orgPath = () => "/org";
@@ -49,10 +49,15 @@ export const LEGACY_REDIRECTS: Array<{ id: string; path: string; to: string }> =
   { id: "legacy-applications-secrets", path: "applications/:appId/secrets", to: "/projects/:appId/secrets" },
   { id: "legacy-applications-manage-environments", path: "applications/:appId/manage-environments", to: "/projects/:appId/manage-environments" },
   { id: "legacy-applications-access", path: "applications/:appId/access", to: "/projects/:appId/access" },
+  { id: "legacy-applications-integrations-provider", path: "applications/:appId/integrations/:provider", to: "/projects/:appId/integrations/:provider" },
+  { id: "legacy-applications-integrations", path: "applications/:appId/integrations", to: "/projects/:appId/integrations" },
   { id: "legacy-applications-detail", path: "applications/:appId", to: "/projects/:appId" },
-  { id: "legacy-users", path: "users", to: "/org/users" },
-  { id: "legacy-teams", path: "teams", to: "/org/teams" },
-  { id: "legacy-roles", path: "roles", to: "/org/roles" },
+  { id: "legacy-users", path: "users", to: "/org/access/users" },
+  { id: "legacy-teams", path: "teams", to: "/org/access/teams" },
+  { id: "legacy-roles", path: "roles", to: "/org/access/roles" },
+  { id: "legacy-org-users", path: "org/users", to: "/org/access/users" },
+  { id: "legacy-org-teams", path: "org/teams", to: "/org/access/teams" },
+  { id: "legacy-org-roles", path: "org/roles", to: "/org/access/roles" },
   { id: "legacy-certificates", path: "certificates", to: "/org/certificates" },
   { id: "legacy-webhooks", path: "webhooks", to: "/org/webhooks" },
   { id: "legacy-change-requests", path: "change-requests", to: "/org/change-requests" },

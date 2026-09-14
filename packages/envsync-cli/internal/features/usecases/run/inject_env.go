@@ -21,12 +21,12 @@ func NewInjectEnv() InjectEnvUseCase {
 func (uc *injectEnv) Execute(ctx context.Context) (map[string]string, error) {
 	env, err := uc.readRemoteEnv(ctx)
 	if err != nil {
-		//TODO: handle error appropriately
+		return nil, err
 	}
 
 	for key, value := range env {
 		if err := os.Setenv(key, value); err != nil {
-			// TODO: handle error appropriately
+			return nil, err
 		}
 	}
 

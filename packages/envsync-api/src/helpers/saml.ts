@@ -859,11 +859,13 @@ export async function validateSamlResponse(
 
 	const certPem = extractCertPem(idpCertificate);
 	const hasSignature = indexOfStartTag(xml, "Signature") !== null;
-	if (certPem.length > 0 && hasSignature) {
-		await verifyXmlSignature(xml, idpCertificate);
-	} else if (certPem.length > 0) {
+	if (!certPem) {
+		throw new Error("SAML IdP certificate is required");
+	}
+	if (!hasSignature) {
 		throw new Error("SAML response is not signed but IdP certificate is configured");
 	}
+	await verifyXmlSignature(xml, idpCertificate);
 
 	// 7. Extract attributes
 	const email = extractAttribute(xml, "email")

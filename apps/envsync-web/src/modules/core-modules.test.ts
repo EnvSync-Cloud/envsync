@@ -17,7 +17,6 @@ describe("core web routes", () => {
     expect(paths).toContain("org/access/:tab");
     expect(paths).toContain("projects/:appId/settings");
     expect(paths).toContain("projects/:appId/settings/service-tokens");
-    expect(paths).toContain("org/users");
     expect(paths).toContain("org/certificates");
     expect(paths).toContain("org");
   });
@@ -28,14 +27,15 @@ describe("core web routes", () => {
 
     expect(redirect("applications")).toBe("/projects");
     expect(redirect("applications/:appId")).toBe("/projects/:appId");
-    expect(redirect("users")).toBe("/org/users");
-    expect(redirect("teams")).toBe("/org/teams");
-    expect(redirect("roles")).toBe("/org/roles");
+    expect(redirect("users")).toBe("/org/access/users");
+    expect(redirect("teams")).toBe("/org/access/teams");
+    expect(redirect("roles")).toBe("/org/access/roles");
+    expect(redirect("org/users")).toBe("/org/access/users");
     expect(redirect("certificates")).toBe("/org/certificates");
     expect(redirect("webhooks")).toBe("/org/webhooks");
     expect(redirect("change-requests")).toBe("/org/change-requests");
     expect(redirect("projects/:appId/change-requests")).toBe("/projects/:appId/approvals");
-    expect(redirect("applications/:appId/integrations")).toBeUndefined();
+    expect(redirect("applications/:appId/integrations")).toBe("/projects/:appId/integrations");
     expect(
       routes
         .filter((route) => route.path?.startsWith("organisation"))

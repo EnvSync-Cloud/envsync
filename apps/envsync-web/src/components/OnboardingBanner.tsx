@@ -23,9 +23,9 @@ export function OnboardingBanner({
   if (dismissed) return null;
 
   const steps = [
-    { label: "Create a project", done: hasProjects, href: "/applications/create" },
-    { label: "Add variables", done: hasProjects, href: "/applications" },
-    { label: "Invite your team", done: hasTeamMembers, href: "/users" },
+    { label: "Create a project", done: hasProjects, href: "/projects/create" },
+    { label: "Add variables", done: hasProjects, href: "/projects" },
+    { label: "Invite your team", done: hasTeamMembers, href: "/org/access/users" },
     { label: "Generate API key", done: hasApiKeys, href: "/apikeys" },
   ];
 

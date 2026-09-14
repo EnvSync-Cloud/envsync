@@ -147,24 +147,7 @@ export const coreWebModules: WebModule[] = [
         path: "org/access/:tab",
         loadComponent: () => import("@/pages/OrgAccess"),
       },
-      {
-        id: "org-users",
-        layout: "root",
-        path: "org/users",
-        loadComponent: () => import("@/pages/Users"),
-      },
-      {
-        id: "org-teams",
-        layout: "root",
-        path: "org/teams",
-        loadComponent: () => import("@/pages/Teams"),
-      },
-      {
-        id: "org-roles",
-        layout: "root",
-        path: "org/roles",
-        loadComponent: () => import("@/pages/Roles"),
-      },
+
       {
         id: "org-certificates",
         layout: "root",

@@ -17,37 +17,37 @@ export const enterpriseWebModules: WebModule[] = [
       {
         id: "applications-integrations",
         layout: "root",
-        path: "applications/:appId/integrations",
+        path: "projects/:appId/integrations",
         loadComponent: () => import("./pages/ProjectIntegrations"),
       },
       {
         id: "applications-integrations-github",
         layout: "root",
-        path: "applications/:appId/integrations/github",
+        path: "projects/:appId/integrations/github",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {
         id: "applications-integrations-gitlab",
         layout: "root",
-        path: "applications/:appId/integrations/gitlab",
+        path: "projects/:appId/integrations/gitlab",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {
         id: "applications-integrations-vercel",
         layout: "root",
-        path: "applications/:appId/integrations/vercel",
+        path: "projects/:appId/integrations/vercel",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {
         id: "applications-integrations-aws-ssm",
         layout: "root",
-        path: "applications/:appId/integrations/aws-ssm",
+        path: "projects/:appId/integrations/aws-ssm",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {
         id: "applications-integrations-google-secret-manager",
         layout: "root",
-        path: "applications/:appId/integrations/google-secret-manager",
+        path: "projects/:appId/integrations/google-secret-manager",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {

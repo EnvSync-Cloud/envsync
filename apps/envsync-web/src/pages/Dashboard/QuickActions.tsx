@@ -8,14 +8,14 @@ export function QuickActions() {
   return (
     <div className="grid grid-cols-2 gap-3 h-full">
       <Button
-        onClick={() => navigate("/applications/create")}
+        onClick={() => navigate("/projects/create")}
         className="bg-emerald-500 hover:bg-emerald-600 text-white w-full justify-start shadow-glow-sm hover:shadow-glow-md transition-all duration-200"
       >
         <Plus className="size-4 mr-2" />
         Create Project
       </Button>
       <Button
-        onClick={() => navigate("/users")}
+        onClick={() => navigate("/org/access/users")}
         variant="outline"
         className="border-border text-muted-foreground hover:bg-emerald-500/5 hover:border-emerald-500/30 hover:text-foreground w-full justify-start"
       >

@@ -48,18 +48,22 @@ export function normalizeServiceTokenPath(path?: string | null): string {
 export function parseServiceTokenScopes(
 	raw: unknown,
 	fallbackEnvTypeId?: string | null,
+	options?: { defaultRoot?: boolean },
 ): ServiceTokenScope[] {
 	let scopes: unknown = raw;
 	if (typeof raw === "string") {
 		try {
 			scopes = JSON.parse(raw);
 		} catch {
-			scopes = [];
+			throw new ValidationError("Service token scopes are not valid JSON");
 		}
 	}
 
 	if (!Array.isArray(scopes) || scopes.length === 0) {
-		return [{ env_type_id: fallbackEnvTypeId ?? null, path: "/" }];
+		if (options?.defaultRoot) {
+			return [{ env_type_id: fallbackEnvTypeId ?? null, path: "/" }];
+		}
+		throw new ValidationError("Service token scopes are missing or invalid");
 	}
 
 	return scopes.map(entry => {
@@ -114,7 +118,10 @@ export class ServiceTokenService {
 		const token = this.generateToken();
 		const token_hash = hashToken(token);
 		const expires_at = new Date(Date.now() + (expires_in_days ?? 90) * 24 * 60 * 60 * 1000);
-		const normalizedScopes = parseServiceTokenScopes(scopes, env_type_id ?? null);
+		const normalizedScopes = parseServiceTokenScopes(
+			scopes ?? [{ env_type_id: env_type_id ?? null, path: "/" }],
+			env_type_id ?? null,
+		);
 		const uniqueEnvTypeIds = [
 			...new Set(normalizedScopes.map(scope => scope.env_type_id).filter((id): id is string => Boolean(id))),
 		];

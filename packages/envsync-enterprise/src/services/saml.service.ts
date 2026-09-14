@@ -341,7 +341,25 @@ export class SamlService {
 	};
 
 	public static apiBaseUrl = (): string => {
-		return (config.API_URL || `http://localhost:${config.PORT || 4000}`).replace(/\/$/, "");
+		const raw = config.API_URL?.trim();
+		if (!raw) {
+			throw new AppError("API_URL is required for SAML SP URLs.", 500, "SAML_API_URL_MISSING");
+		}
+		const origin = raw.replace(/\/$/, "");
+		let host = "";
+		try {
+			host = new URL(origin).hostname;
+		} catch {
+			throw new AppError("API_URL must be an absolute URL for SAML SP URLs.", 500, "SAML_API_URL_INVALID");
+		}
+		if (config.NODE_ENV === "production" && (host === "localhost" || host === "127.0.0.1")) {
+			throw new AppError(
+				"API_URL must be a public origin in production so IdPs can POST to ACS.",
+				500,
+				"SAML_API_URL_LOOPBACK",
+			);
+		}
+		return origin;
 	};
 
 	private static warnIfLocalhostSpUrl = (spEntityId: string): void => {

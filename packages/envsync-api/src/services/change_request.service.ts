@@ -378,6 +378,29 @@ export class ChangeRequestService {
 			throw new BusinessRuleError("You do not have permission to approve this change request.", 403);
 		}
 
+		const claimTime = new Date();
+		const claimed = await db
+			.updateTable("change_request")
+			.set({
+				reviewed_by_user_id: reviewer_user_id,
+				reviewed_at: claimTime,
+				updated_at: claimTime,
+			})
+			.where("id", "=", id)
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.where(eb =>
+				eb.or([
+					eb("reviewed_by_user_id", "is", null),
+					eb("reviewed_by_user_id", "=", reviewer_user_id),
+				]),
+			)
+			.returning("id")
+			.executeTakeFirst();
+		if (!claimed) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
+
 		const [envItems, secretItems] = await Promise.all([
 			db
 				.selectFrom("change_request_env_item")
@@ -430,7 +453,7 @@ export class ChangeRequestService {
 			});
 		}
 
-		await db
+		const approved = await db
 			.updateTable("change_request")
 			.set({
 				status: "approved",
@@ -440,7 +463,14 @@ export class ChangeRequestService {
 				updated_at: now,
 			})
 			.where("id", "=", id)
-			.execute();
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.where("reviewed_by_user_id", "=", reviewer_user_id)
+			.returning("id")
+			.executeTakeFirst();
+		if (!approved) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
@@ -460,7 +490,7 @@ export class ChangeRequestService {
 		const request = await this.getPendingForReview(id, org_id, reviewer_user_id);
 		const now = new Date();
 
-		await db
+		const rejected = await db
 			.updateTable("change_request")
 			.set({
 				status: "rejected",
@@ -470,7 +500,13 @@ export class ChangeRequestService {
 				updated_at: now,
 			})
 			.where("id", "=", request.id)
-			.execute();
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.returning("id")
+			.executeTakeFirst();
+		if (!rejected) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
@@ -502,14 +538,20 @@ export class ChangeRequestService {
 			throw new BusinessRuleError("Only the requester can cancel this change request.", 403);
 		}
 
-		await db
+		const cancelled = await db
 			.updateTable("change_request")
 			.set({
 				status: "cancelled",
 				updated_at: new Date(),
 			})
 			.where("id", "=", id)
-			.execute();
+			.where("org_id", "=", org_id)
+			.where("status", "=", "pending")
+			.returning("id")
+			.executeTakeFirst();
+		if (!cancelled) {
+			throw new BusinessRuleError("This change request is no longer pending.");
+		}
 
 		return this.getChangeRequest(id, org_id);
 	};
