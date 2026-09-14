@@ -112,6 +112,18 @@ describe("API key cache", () => {
 		expect(parsed.is_active).toBe(true);
 		expect(Object.keys(parsed).sort()).toEqual(["id", "is_active", "org_id", "user_id"]);
 	});
+
+	test("getKeyByUserId does not return or cache the raw secret", async () => {
+		const res = await testRequest("/api/api_key", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { name: "User list key", description: "User list key" },
+		});
+		const created = await res.json<{ id: string; key: string }>();
+		const listed = await ApiKeyService.getKeyByUserId(seed.masterUser.id);
+		expect(listed.some(key => key.id === created.id)).toBe(true);
+		expect(listed.every(key => !("key" in key))).toBe(true);
+	});
 });
 
 describe("GET /api/api_key/:id/regenerate", () => {

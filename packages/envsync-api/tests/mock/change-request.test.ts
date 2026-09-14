@@ -88,6 +88,19 @@ describe("change request list filter", () => {
 });
 
 describe("change request compare-and-swap", () => {
+	test("viewer cannot approve a pending request", async () => {
+		const created = await createDirect("viewer-approve");
+		const viewer = await seedUser(seed.org.id, seed.roles.viewer.id);
+		setupUserOrgTuples(viewer.id, seed.org.id, { can_view: true });
+		await expect(
+			ChangeRequestService.approveChangeRequest({
+				id: created.id,
+				org_id: seed.org.id,
+				reviewer_user_id: viewer.id,
+			}),
+		).rejects.toThrow("permission to approve");
+	});
+
 	test("requester cannot approve their own request", async () => {
 		const created = await createDirect("self-approve");
 		await expect(
