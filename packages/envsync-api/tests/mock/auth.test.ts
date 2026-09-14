@@ -18,7 +18,7 @@ mock.module("@/helpers/jwt", () => ({
 }));
 
 function sessionCookie(token: string, activeMembershipUserId?: string) {
-	const parts = [`access_token=${token}`];
+	const parts = [`access_token=${token}`, "envsync_csrf=test-csrf-token"];
 	if (activeMembershipUserId) {
 		parts.push(`envsync_active_membership=${activeMembershipUserId}`);
 	}

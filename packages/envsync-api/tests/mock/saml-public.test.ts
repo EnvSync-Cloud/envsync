@@ -219,7 +219,7 @@ describe("SAML session cookies", () => {
 		const res = await testRequest("/api/auth/switch-org", {
 			method: "POST",
 			headers: {
-				Cookie: `access_token=${token}`,
+				Cookie: `access_token=${token}; envsync_csrf=test`,
 				"X-CSRF-Token": "test",
 			},
 			body: { org_id: randomUUID() },

@@ -41,7 +41,7 @@ describe("csrfMiddleware", () => {
 		expect(await res.json()).toEqual({ ok: true });
 	});
 
-	test("allows cookie-auth request when csrf token is sent only as a header", async () => {
+	test("rejects cookie-auth request when csrf cookie is missing", async () => {
 		const app = makeApp();
 
 		const res = await app.request("http://localhost/api/test", {
@@ -49,6 +49,40 @@ describe("csrfMiddleware", () => {
 			headers: {
 				Cookie: "access_token=session-token",
 				"X-CSRF-Token": "token-123",
+			},
+		});
+
+		expect(res.status).toBe(403);
+		expect(await res.json()).toEqual({
+			error: "CSRF token is missing or invalid",
+			code: "AUTH_CSRF_INVALID",
+		});
+	});
+
+	test("rejects cookie-auth request when csrf header is missing", async () => {
+		const app = makeApp();
+
+		const res = await app.request("http://localhost/api/test", {
+			method: "POST",
+			headers: {
+				Cookie: "access_token=session-token; envsync_csrf=token-123",
+			},
+		});
+
+		expect(res.status).toBe(403);
+		expect(await res.json()).toEqual({
+			error: "CSRF token is missing or invalid",
+			code: "AUTH_CSRF_INVALID",
+		});
+	});
+
+	test("allows bearer-auth request without a csrf pair", async () => {
+		const app = makeApp();
+
+		const res = await app.request("http://localhost/api/test", {
+			method: "POST",
+			headers: {
+				Authorization: "Bearer token-123",
 			},
 		});
 
