@@ -808,6 +808,31 @@ function escapeXml(value: string): string {
 		.replace(/'/g, "&apos;");
 }
 
+function firstRawElement(xml: string, localName: string) {
+	for (const el of eachRawElement(xml, localName)) return el;
+	return null;
+}
+
+async function verifySignedAssertion(
+	xml: string,
+	assertion: { raw: string; open: string },
+	idpCertificate: string,
+) {
+	const assertionId = attrFromOpenTag(assertion.open, "ID");
+	const assertionSigned = indexOfStartTag(assertion.raw, "Signature") !== null;
+	if (assertionSigned) {
+		await verifyXmlSignature(assertion.raw, idpCertificate);
+		return;
+	}
+
+	const referenceUri = attrFromOpenTag(rawOpenTag(xml, "Reference") ?? "", "URI");
+	const referencedId = referenceUri?.startsWith("#") ? referenceUri.slice(1) : referenceUri;
+	if (!assertionId || referencedId !== assertionId || indexOfStartTag(xml, "Signature") === null) {
+		throw new Error("SAML response is not signed");
+	}
+	await verifyXmlSignature(xml, idpCertificate);
+}
+
 export async function validateSamlResponse(
 	samlResponseBase64: string,
 	idpCertificate: string,
@@ -832,19 +857,30 @@ export async function validateSamlResponse(
 		throw new Error("SAML response missing InResponseTo attribute");
 	}
 
+	const assertion = firstRawElement(xml, "Assertion");
+	if (!assertion) {
+		throw new Error("SAML response missing Assertion");
+	}
+
+	const certPem = extractCertPem(idpCertificate);
+	if (!certPem) {
+		throw new Error("SAML IdP certificate is required");
+	}
+	await verifySignedAssertion(xml, assertion, idpCertificate);
+
 	if (expectedAudience) {
-		const audiences = [...eachRawElement(xml, "Audience")].map(el => el.inner.trim());
+		const audiences = [...eachRawElement(assertion.raw, "Audience")].map(el => el.inner.trim());
 		if (!audiences.includes(expectedAudience)) {
 			throw new Error("SAML response audience mismatch");
 		}
 	}
 
-	const nameId = rawElementInner(xml, "NameID")?.trim() ?? "";
+	const nameId = rawElementInner(assertion.raw, "NameID")?.trim() ?? "";
 	if (!nameId) {
 		throw new Error("SAML response missing NameID");
 	}
 
-	const conditionsOpen = rawOpenTag(xml, "Conditions") ?? "";
+	const conditionsOpen = rawOpenTag(assertion.raw, "Conditions") ?? "";
 	const notBefore = attrFromOpenTag(conditionsOpen, "NotBefore");
 	const notOnOrAfter = attrFromOpenTag(conditionsOpen, "NotOnOrAfter");
 	if (notBefore && notOnOrAfter) {
@@ -857,30 +893,19 @@ export async function validateSamlResponse(
 		}
 	}
 
-	const certPem = extractCertPem(idpCertificate);
-	const hasSignature = indexOfStartTag(xml, "Signature") !== null;
-	if (!certPem) {
-		throw new Error("SAML IdP certificate is required");
-	}
-	if (!hasSignature) {
-		throw new Error("SAML response is not signed but IdP certificate is configured");
-	}
-	await verifyXmlSignature(xml, idpCertificate);
-
-	// 7. Extract attributes
-	const email = extractAttribute(xml, "email")
-		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
+	const email = extractAttribute(assertion.raw, "email")
+		?? extractAttribute(assertion.raw, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")
 		?? nameId;
-	const firstName = extractAttribute(xml, "firstName")
-		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname")
-		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/firstname")
+	const firstName = extractAttribute(assertion.raw, "firstName")
+		?? extractAttribute(assertion.raw, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname")
+		?? extractAttribute(assertion.raw, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/firstname")
 		?? "";
-	const lastName = extractAttribute(xml, "lastName")
-		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname")
-		?? extractAttribute(xml, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/lastname")
+	const lastName = extractAttribute(assertion.raw, "lastName")
+		?? extractAttribute(assertion.raw, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname")
+		?? extractAttribute(assertion.raw, "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/lastname")
 		?? "";
-	const groups = extractAttributeValues(xml, "groups")
-		?? extractAttributeValues(xml, "http://schemas.xmlsoap.org/claims/Group")
+	const groups = extractAttributeValues(assertion.raw, "groups")
+		?? extractAttributeValues(assertion.raw, "http://schemas.xmlsoap.org/claims/Group")
 		?? [];
 
 	return {

@@ -41,6 +41,28 @@ describe("saml helper ReDoS-safe parsing", () => {
 		).rejects.toThrow("SAML IdP certificate is required");
 	});
 
+	test("validateSamlResponse rejects a wrapping unsigned assertion", async () => {
+		const xml = `<?xml version="1.0"?>
+<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" InResponseTo="_req1">
+  <samlp:Status><samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/></samlp:Status>
+  <saml:Assertion ID="_evil">
+    <saml:Subject><saml:NameID>admin@evil.example</saml:NameID></saml:Subject>
+  </saml:Assertion>
+  <saml:Assertion ID="_good">
+    <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+      <ds:SignedInfo>
+        <ds:Reference URI="#_good"><ds:DigestValue>abc</ds:DigestValue></ds:Reference>
+      </ds:SignedInfo>
+      <ds:SignatureValue>QUJD</ds:SignatureValue>
+    </ds:Signature>
+    <saml:Subject><saml:NameID>ada@example.com</saml:NameID></saml:Subject>
+  </saml:Assertion>
+</samlp:Response>`;
+		await expect(validateSamlResponse(b64(xml), "QUJDREVG", "https://acs.example")).rejects.toThrow(
+			"SAML response is not signed",
+		);
+	});
+
 	test("validateSamlResponse rejects unsigned XML when a cert is configured", async () => {
 		const xml = `<?xml version="1.0"?>
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" InResponseTo="_req1">

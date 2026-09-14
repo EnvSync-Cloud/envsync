@@ -174,6 +174,7 @@ if (!isE2E) {
 			// App URLs
 			LANDING_PAGE_URL: "http://localhost:8002",
 			DASHBOARD_URL: "http://app.lvh.me:8001",
+			API_URL: "http://api.lvh.me:4000",
 		});
 
 		// ── 2. Mock external modules ─────────────────────────────────────────
