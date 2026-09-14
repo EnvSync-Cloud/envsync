@@ -147,6 +147,7 @@ interface DeployGeneratedState {
 		minikms_root_key: string;
 		minikms_session_signing_key: string;
 		minikms_db_password: string;
+		saml_session_secret: string;
 	};
 	bootstrap: {
 		completed_at: string;
@@ -1442,6 +1443,7 @@ function emptyGeneratedState(): DeployGeneratedState {
 			minikms_root_key: "",
 			minikms_session_signing_key: "",
 			minikms_db_password: "",
+			saml_session_secret: "",
 		},
 		bootstrap: {
 			completed_at: "",
@@ -1483,6 +1485,7 @@ function normalizeGeneratedState(raw?: Partial<DeployGeneratedState>): DeployGen
 			minikms_session_signing_key:
 				raw?.secrets?.minikms_session_signing_key ?? defaults.secrets.minikms_session_signing_key,
 			minikms_db_password: raw?.secrets?.minikms_db_password ?? defaults.secrets.minikms_db_password,
+			saml_session_secret: raw?.secrets?.saml_session_secret ?? defaults.secrets.saml_session_secret,
 		},
 		bootstrap: {
 			completed_at: raw?.bootstrap?.completed_at ?? defaults.bootstrap.completed_at,
@@ -1539,6 +1542,7 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 			minikms_session_signing_key:
 				env.MINIKMS_SESSION_SIGNING_KEY ?? normalized.secrets.minikms_session_signing_key,
 			minikms_db_password: env.MINIKMS_DB_PASSWORD ?? normalized.secrets.minikms_db_password,
+			saml_session_secret: env.SAML_SESSION_SECRET ?? normalized.secrets.saml_session_secret,
 		},
 		bootstrap: normalized.bootstrap,
 	});
@@ -1571,6 +1575,7 @@ function ensureGeneratedRuntimeState(config: DeployConfig, generated: DeployGene
 			minikms_session_signing_key:
 				generated.secrets.minikms_session_signing_key || generateMinikmsSessionSigningKey(),
 			minikms_db_password: generated.secrets.minikms_db_password || randomSecret(),
+			saml_session_secret: generated.secrets.saml_session_secret || randomBytes(32).toString("hex"),
 		},
 		bootstrap: generated.bootstrap,
 	});

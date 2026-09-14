@@ -133,6 +133,7 @@ export interface DeployGeneratedState {
 		minikms_root_key: string;
 		minikms_session_signing_key: string;
 		minikms_db_password: string;
+		saml_session_secret: string;
 	};
 	bootstrap: {
 		completed_at: string;
@@ -309,6 +310,7 @@ export function buildRuntimeEnv(
 		OPENFGA_MODEL_ID: generated.openfga.model_id,
 		OPENFGA_DB_PASSWORD: generated.secrets.openfga_db_password,
 		API_URL: publicHttpsUrl(config, hosts.api),
+		SAML_SESSION_SECRET: generated.secrets.saml_session_secret,
 		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.api, "/api/v1/manage"),
 		KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS: "3600",
 		KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS: "604800",

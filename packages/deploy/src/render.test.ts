@@ -154,6 +154,7 @@ const generated: DeployGeneratedState = {
 		minikms_root_key: "minikms-root-key",
 		minikms_session_signing_key: "-----BEGIN PRIVATE KEY-----\nDEV\n-----END PRIVATE KEY-----\n",
 		minikms_db_password: "minikms-db-pass",
+		saml_session_secret: "a".repeat(64),
 	},
 	bootstrap: {
 		completed_at: "2026-04-30T00:00:00.000Z",
@@ -271,6 +272,14 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(envFile).not.toContain("API_URL=http://localhost");
 		expect(envFile).toContain("KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS=3600");
 		expect(envFile).toContain("KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS=604800");
+		expect(envFile).toContain(`SAML_SESSION_SECRET=${"a".repeat(64)}`);
+	});
+
+	test("keeps SAML_SESSION_SECRET stable across rerenders", () => {
+		const first = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;
+		const second = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;
+		expect(first).toBe("a".repeat(64));
+		expect(second).toBe(first);
 	});
 });
 

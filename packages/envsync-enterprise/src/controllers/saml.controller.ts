@@ -14,7 +14,14 @@ const SSO_NOT_AVAILABLE_BODY = {
 const SAML_SESSION_TTL_SECONDS = 8 * 3600;
 
 function dashboardUrl() {
-	return (config.DASHBOARD_URL || "http://localhost:8080").replace(/\/$/, "");
+	const url = config.DASHBOARD_URL?.replace(/\/$/, "");
+	if (!url) {
+		throw new AppError("DASHBOARD_URL is required.", 500, "DASHBOARD_URL_MISSING");
+	}
+	if (config.NODE_ENV === "production" && /localhost|127\.0\.0\.1/i.test(url)) {
+		throw new AppError("DASHBOARD_URL must be a public origin in production.", 500, "DASHBOARD_URL_INVALID");
+	}
+	return url;
 }
 
 function isPublicSsoDeny(err: unknown): boolean {
