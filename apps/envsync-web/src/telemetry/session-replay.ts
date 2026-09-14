@@ -1,5 +1,6 @@
 import HyperDX from "@hyperdx/browser";
 import { runtimeConfig } from "@/utils/runtime-config";
+import { capturePostHogEvent, identifyPostHogUser } from "./posthog";
 
 let hdxActive = false;
 
@@ -47,6 +48,7 @@ export function identifyUser(
   userId: string,
   metadata?: Record<string, string | undefined>,
 ): void {
+  identifyPostHogUser(userId, metadata);
   if (!hdxActive) return;
   HyperDX.setGlobalAttributes({
     userId,
@@ -58,6 +60,7 @@ export function identifyUser(
 }
 
 export function trackAction(name: string, attributes: Record<string, SearchableValue> = {}): void {
+  capturePostHogEvent(name, attributes);
   if (!hdxActive) return;
   HyperDX.addAction(name, normalizeActionAttributes(attributes));
 }

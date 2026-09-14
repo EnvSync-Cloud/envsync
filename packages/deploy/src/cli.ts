@@ -115,6 +115,11 @@ interface DeployConfig {
 		lease_ttl_seconds?: number;
 		certificate_validity_days?: number;
 	};
+	analytics?: {
+		posthog_key?: string;
+		posthog_host?: string;
+		disabled?: boolean;
+	};
 	release_channel?: string;
 }
 
@@ -969,6 +974,7 @@ function domainMap(rootDomain: string) {
 		api: `api.${rootDomain}`,
 		auth: `auth.${rootDomain}`,
 		obs: `obs.${rootDomain}`,
+		track: `t.${rootDomain}`,
 		mail: `mail.${rootDomain}`,
 		s3: `s3.${rootDomain}`,
 		s3Console: `console.s3.${rootDomain}`,
@@ -1400,6 +1406,13 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			install_fingerprint: deterministicInstallFingerprint(rootDomain, stackName),
 			certificate_validity_days: 1095,
 		},
+		analytics: raw.analytics
+			? {
+					posthog_key: raw.analytics.posthog_key,
+					posthog_host: raw.analytics.posthog_host,
+					disabled: raw.analytics.disabled,
+				}
+			: undefined,
 	};
 }
 
@@ -3867,6 +3880,7 @@ async function cmdHealth(asJson: boolean) {
 			api: publicHttpsUrl(config, hosts.api, "/health"),
 			auth: publicHttpsUrl(config, hosts.auth, `/realms/${config.auth.keycloak_realm}/.well-known/openid-configuration`),
 			obs: publicHttpsUrl(config, hosts.obs),
+			track: publicHttpsUrl(config, hosts.track),
 		},
 		frontend_runtime: {
 			web: {

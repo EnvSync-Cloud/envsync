@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createHash } from "node:crypto";
 
 import { DB } from "@/libs/db";
+import { captureAuditAnalytics } from "@/libs/posthog";
 import { WebhookService } from "./webhook.service";
 import { LogForwardingService } from "./log-forwarding.service";
 import { z } from "zod";
@@ -148,6 +149,12 @@ export class AuditLogService {
 			details,
 			message,
 		}).catch(() => {});
+
+		try {
+			captureAuditAnalytics({ action, org_id, user_id, details });
+		} catch {
+			// Product analytics must never fail the write path.
+		}
 	};
 
 	public static getAuditLogs = async (

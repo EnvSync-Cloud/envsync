@@ -30,6 +30,8 @@
   },
   "dependencies": {
     "envsync-kernel": "workspace:*",
+    "envsync-analytics": "workspace:*",
+    "posthog-node": "^5.9.0",
     "@aws-sdk/client-iam": "^3.1084.0",
     "@aws-sdk/client-s3": "^3.821.0",
     "@aws-sdk/client-ssm": "^3.1037.0",

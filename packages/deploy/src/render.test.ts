@@ -233,6 +233,7 @@ describe("renderTraefikDynamicConfig", () => {
 		// Apex landing host is Hosted-only; self-host stack does not route marketing site.
 		expect(traefik).not.toContain("Host(`enterprise.example.com`)");
 		expect(traefik).toContain("obs.enterprise.example.com");
+		expect(traefik).toContain("Host(`t.enterprise.example.com`)");
 	});
 });
 
@@ -256,6 +257,8 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(frontendRuntime).toContain("\"deploymentMode\": \"selfhosted\"");
 		expect(frontendRuntime).toContain("\"canCreateOrganization\": false");
 		expect(frontendRuntime).toContain("\"publicSignupEnabled\": false");
+		expect(frontendRuntime).toContain("https://t.enterprise.example.com/ph");
+		expect(frontendRuntime).toContain("https://t.enterprise.example.com/obs");
 	});
 });
 

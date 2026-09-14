@@ -1,5 +1,6 @@
 import HyperDX from "@hyperdx/browser";
 import { runtimeConfig } from "@/utils/runtime-config";
+import { capturePostHogEvent } from "./posthog";
 
 let hdxActive = false;
 
@@ -39,6 +40,7 @@ export function initSessionReplay(): void {
 }
 
 export function trackAction(name: string, attributes: Record<string, SearchableValue> = {}): void {
+  capturePostHogEvent(name, attributes);
   if (!hdxActive) return;
   HyperDX.addAction(name, normalizeActionAttributes(attributes));
 }

@@ -113,6 +113,11 @@ export const BaseEnvSchema = z.object({
 	OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default("http://localhost:14318"),
 	OTEL_SERVICE_NAME: z.string().default("envsync-api"),
 	OTEL_SDK_DISABLED: z.string().default("false"),
+	POSTHOG_KEY: z.string().optional(),
+	POSTHOG_HOST: z.string().default("https://eu.i.posthog.com"),
+	POSTHOG_ASSETS_HOST: z.string().optional(),
+	ENVSYNC_POSTHOG_DISABLED: z.string().optional(),
+	OTEL_BROWSER_PROXY_TARGET: z.string().optional(),
 	// Required in production to issue/verify SAML session cookies. Dev may fall back to a derived secret.
 	SAML_SESSION_SECRET: z.string().optional(),
 	SAML_SP_CERT: z.string().optional(),

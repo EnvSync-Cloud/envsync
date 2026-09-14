@@ -2,6 +2,7 @@ import { Button } from "@/components/primitives/Button"
 import { DotTexture } from "@/components/primitives/DotTexture"
 import { Github } from "lucide-react"
 import { Link } from "react-router-dom"
+import { trackAction } from "@/telemetry"
 
 const NewCTA = () => {
   return (
@@ -20,12 +21,12 @@ const NewCTA = () => {
             managed service.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link to="/onboarding">
+            <Link to="/onboarding" onClick={() => trackAction("landing_cta_clicked", { placement: "footer" })}>
               <Button variant="hero" size="lg">
                 Get started
               </Button>
             </Link>
-            <a href="https://github.com/EnvSync-Cloud/envsync">
+            <a href="https://github.com/EnvSync-Cloud/envsync" onClick={() => trackAction("landing_github_clicked", { placement: "footer" })}>
               <Button
                 variant="hero"
                 size="lg"

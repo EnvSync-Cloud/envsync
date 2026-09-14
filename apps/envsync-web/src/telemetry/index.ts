@@ -3,6 +3,7 @@ import { initTracing, getTracerProvider } from "./tracing";
 import { initMetrics, getMeterProvider } from "./metrics";
 import { initLogs, getLoggerProvider } from "./logs";
 import { initErrorTracking } from "./error-tracking";
+import { initPostHog } from "./posthog";
 import { initSessionReplay } from "./session-replay";
 
 let initialized = false;
@@ -18,6 +19,7 @@ export function initTelemetry(): void {
   // first, HyperDX's OTel layer fails and the recorder errors with
   // "RUM OTEL Web must be inited before recorder".
   initSessionReplay();
+  initPostHog();
 
   // Keep our own browser tracer active even when HyperDX session replay
   // is enabled. HyperDX gives us replay and browser UX tooling, but the

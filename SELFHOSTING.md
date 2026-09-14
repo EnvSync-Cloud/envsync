@@ -24,12 +24,15 @@ Recommended public hosts:
 - `api.<root-domain>` for the API (product **and** Enterprise manage at `/api/v1/manage/...`)
 - `auth.<root-domain>` for Keycloak
 - `obs.<root-domain>` for ClickStack (if observability enabled)
+- `t.<root-domain>` for first-party analytics (`/ph` → PostHog, `/obs` → OTLP)
 - `s3.<root-domain>` for the S3-compatible API
 - `console.s3.<root-domain>` for the object storage console
 
 There is **no** separate `manage-api.<root-domain>` service. Enterprise self-host uses the enterprise API image (`envsync-api-enterprise`) with manage routes on the same API host.
 
 Self-host does **not** require a marketing landing host. Public signup is Hosted-only.
+
+Product analytics (PostHog) is optional. If `POSTHOG_KEY` / `VITE_POSTHOG_KEY` are set, the API and dashboard send **non-secret** product events (creates, invites, SSO, KMS attach — never env/secret values). Set `ENVSYNC_POSTHOG_DISABLED=true` to turn this off.
 
 ## Deploy CLI flow (OSS)
 
