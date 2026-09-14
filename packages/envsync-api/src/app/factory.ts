@@ -255,7 +255,9 @@ export async function createApiApp(surface: ApiSurface) {
 	const coreAllow = isManagement
 		? []
 		: ["/api/system/status", "/api/setup/status", "/api/setup/org"];
-	const publicSamlAllow = manageMounted ? ["/api/saml/metadata"] : [];
+	const publicSamlAllow = manageMounted
+		? ["/api/saml/metadata", "/api/saml/acs", "/api/saml/sso"]
+		: [];
 	app.use("/api/*", enterpriseLicenseLockMiddleware([...coreAllow, ...manageAllow, ...publicSamlAllow]));
 
 	app.use(logger());

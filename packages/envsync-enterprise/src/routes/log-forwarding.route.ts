@@ -49,7 +49,7 @@ app.post(
         },
     }),
     zValidator("json", createLogForwardingRequestSchema),
-    requirePermission("can_view", "org"),
+    requirePermission("can_manage_org_settings", "org"),
     LogForwardingController.createConfig,
 );
 
@@ -147,7 +147,7 @@ app.delete(
             },
         },
     }),
-    requirePermission("can_view", "org"),
+    requirePermission("can_manage_org_settings", "org"),
     LogForwardingController.deleteConfig,
 );
 

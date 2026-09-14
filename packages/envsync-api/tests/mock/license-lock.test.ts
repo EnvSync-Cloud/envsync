@@ -49,6 +49,38 @@ describe("enterpriseLicenseLockMiddleware", () => {
 		});
 	});
 
+	test("allows SAML ACS and SSO prefixes under lock", async () => {
+		LicenseStateService.getEnforcementDecision = async () => ({
+			required: true,
+			locked: true,
+			reason: "ENTERPRISE_LICENSE_EXPIRED",
+			state: {
+				id: "default",
+				status: "expired",
+				signed_lease: null,
+				lease_expires_at: null,
+				fingerprint: null,
+				last_verified_at: null,
+				last_error_code: "ENTERPRISE_LICENSE_EXPIRED",
+				last_error_message: "Lease expired.",
+				created_at: null,
+				updated_at: null,
+			},
+		});
+
+		const app = new Hono();
+		app.use("/api/*", enterpriseLicenseLockMiddleware(["/api/saml/metadata", "/api/saml/acs", "/api/saml/sso"]));
+		app.get("/api/saml/metadata/org-1", ctx => ctx.json({ ok: true }));
+		app.post("/api/saml/acs/org-1", ctx => ctx.json({ ok: true }));
+		app.get("/api/saml/sso/acme", ctx => ctx.json({ ok: true }));
+		app.get("/api/org", ctx => ctx.json({ ok: true }));
+
+		expect((await app.request("http://localhost/api/saml/metadata/org-1")).status).toBe(200);
+		expect((await app.request("http://localhost/api/saml/acs/org-1", { method: "POST" })).status).toBe(200);
+		expect((await app.request("http://localhost/api/saml/sso/acme")).status).toBe(200);
+		expect((await app.request("http://localhost/api/org")).status).toBe(423);
+	});
+
 	test("passes through when the deployment is not locked", async () => {
 		LicenseStateService.getEnforcementDecision = async () => ({
 			required: true,
