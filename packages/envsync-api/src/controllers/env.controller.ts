@@ -51,35 +51,6 @@ async function resolveExportEnvType(org_id: string, app_id: string, env_type_id?
 	return matches[0];
 }
 
-async function ensureEnvMutationAllowed(c: Context, env_type_id: string) {
-	const env_type = await EnvTypeService.getEnvType(env_type_id);
-	const canEdit = await AuthorizationService.check(
-		c.get("user_id"),
-		env_type.is_protected ? "can_manage_protected" : "can_edit",
-		"env_type",
-		env_type_id,
-	);
-	if (!canEdit) {
-		return {
-			env_type,
-			response: c.json({ error: "You do not have permission to perform this action." }, 403),
-		};
-	}
-	if (env_type.is_protected) {
-		return {
-			env_type,
-			response: c.json(
-				{
-					error: "Protected environments require a change request.",
-					code: "PROTECTED_ENV_REQUIRES_CHANGE_REQUEST",
-				},
-				409,
-			),
-		};
-	}
-	return { env_type, response: null };
-}
-
 export class EnvController {
 	public static readonly exportEnv = async (c: Context) => {
 		const org_id = c.get("org_id");
@@ -183,8 +154,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Check if the environment variable already exists
 		const existingEnv = await EnvService.getEnv({
@@ -252,8 +221,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current value for tracking
 		const currentEnv = await EnvService.getEnv({
@@ -321,8 +288,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current value for tracking
 		const currentEnv = await EnvService.getEnv({
@@ -470,8 +435,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		await EnvService.batchCreateEnvs(org_id, app_id, env_type_id, envs, user_id);
 
@@ -520,8 +483,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current values for tracking changes
 		const currentEnvs = await Promise.all(
@@ -590,8 +551,6 @@ export class EnvController {
 		}
 
 		// env_type_id
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current values for tracking deletions
 		const currentEnvs = await Promise.all(
@@ -868,8 +827,6 @@ export class EnvController {
 		}
 
 		// Check env type permissions
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current state for comparison
 		const currentEnvs = await EnvService.getAllEnv({
@@ -992,8 +949,6 @@ export class EnvController {
 		}
 
 		// Check env type permissions
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Validate timestamp
 		const targetTimestamp = new Date(timestamp);
@@ -1124,8 +1079,6 @@ export class EnvController {
 		}
 
 		// Check env type permissions
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Get current variable state
 		const currentEnv = await EnvService.getEnv({
@@ -1267,8 +1220,6 @@ export class EnvController {
 		}
 
 		// Check env type permissions
-		const { response } = await ensureEnvMutationAllowed(c, env_type_id);
-		if (response) return response;
 
 		// Validate timestamp
 		const targetTimestamp = new Date(timestamp);

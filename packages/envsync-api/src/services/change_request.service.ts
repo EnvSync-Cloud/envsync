@@ -607,49 +607,61 @@ export class ChangeRequestService {
 		user_id: string,
 	) {
 		if (item.operation === "CREATE") {
-			await EnvService.createEnv({
-				key: item.key,
-				value: item.proposed_value ?? "",
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
+			await EnvService.createEnv(
+				{
+					key: item.key,
+					value: item.proposed_value ?? "",
+					app_id: request.app_id,
+					org_id: request.org_id,
+					env_type_id: request.target_env_type_id,
+					user_id,
+				},
+				{ allowProtected: true },
+			);
 			return;
 		}
 		if (item.operation === "UPDATE") {
 			try {
-				await EnvService.updateEnv({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
+				await EnvService.updateEnv(
+					{
+						key: item.key,
+						value: item.proposed_value ?? "",
+						app_id: request.app_id,
+						org_id: request.org_id,
+						env_type_id: request.target_env_type_id,
+						user_id,
+					},
+					{ allowProtected: true },
+				);
 			} catch (err) {
 				if (!(err instanceof NotFoundError)) {
 					throw err;
 				}
-				await EnvService.createEnv({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
+				await EnvService.createEnv(
+					{
+						key: item.key,
+						value: item.proposed_value ?? "",
+						app_id: request.app_id,
+						org_id: request.org_id,
+						env_type_id: request.target_env_type_id,
+						user_id,
+					},
+					{ allowProtected: true },
+				);
 			}
 			return;
 		}
 		if (item.operation === "DELETE") {
-			await EnvService.deleteEnv({
-				key: item.key,
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
+			await EnvService.deleteEnv(
+				{
+					key: item.key,
+					app_id: request.app_id,
+					org_id: request.org_id,
+					env_type_id: request.target_env_type_id,
+					user_id,
+				},
+				{ allowProtected: true },
+			);
 		}
 	}
 
@@ -667,49 +679,61 @@ export class ChangeRequestService {
 		user_id: string,
 	) {
 		if (item.operation === "CREATE") {
-			await SecretService.createSecret({
-				key: item.key,
-				value: item.proposed_value ?? "",
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
+			await SecretService.createSecret(
+				{
+					key: item.key,
+					value: item.proposed_value ?? "",
+					app_id: request.app_id,
+					org_id: request.org_id,
+					env_type_id: request.target_env_type_id,
+					user_id,
+				},
+				{ allowProtected: true },
+			);
 			return;
 		}
 		if (item.operation === "UPDATE") {
 			try {
-				await SecretService.updateSecret({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
+				await SecretService.updateSecret(
+					{
+						key: item.key,
+						value: item.proposed_value ?? "",
+						app_id: request.app_id,
+						org_id: request.org_id,
+						env_type_id: request.target_env_type_id,
+						user_id,
+					},
+					{ allowProtected: true },
+				);
 			} catch (err) {
 				if (!(err instanceof NotFoundError)) {
 					throw err;
 				}
-				await SecretService.createSecret({
-					key: item.key,
-					value: item.proposed_value ?? "",
-					app_id: request.app_id,
-					org_id: request.org_id,
-					env_type_id: request.target_env_type_id,
-					user_id,
-				});
+				await SecretService.createSecret(
+					{
+						key: item.key,
+						value: item.proposed_value ?? "",
+						app_id: request.app_id,
+						org_id: request.org_id,
+						env_type_id: request.target_env_type_id,
+						user_id,
+					},
+					{ allowProtected: true },
+				);
 			}
 			return;
 		}
 		if (item.operation === "DELETE") {
-			await SecretService.deleteSecret({
-				key: item.key,
-				app_id: request.app_id,
-				org_id: request.org_id,
-				env_type_id: request.target_env_type_id,
-				user_id,
-			});
+			await SecretService.deleteSecret(
+				{
+					key: item.key,
+					app_id: request.app_id,
+					org_id: request.org_id,
+					env_type_id: request.target_env_type_id,
+					user_id,
+				},
+				{ allowProtected: true },
+			);
 		}
 	}
 }
