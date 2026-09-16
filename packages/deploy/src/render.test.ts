@@ -267,6 +267,8 @@ describe("renderTraefikDynamicConfig", () => {
 		expect(traefik).not.toContain("Host(`enterprise.example.com`)");
 		expect(traefik).toContain("obs.enterprise.example.com");
 		expect(traefik).toContain("Host(`t.enterprise.example.com`)");
+		expect(traefik).toContain("https://enterprise.example.com");
+		expect(traefik).toContain("otel-cors:");
 	});
 });
 

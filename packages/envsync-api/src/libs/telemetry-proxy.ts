@@ -111,3 +111,39 @@ export async function forwardTelemetryRequest(input: {
 		redirect: "manual",
 	});
 }
+
+const TELEMETRY_CORS_HEADERS = {
+	"Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
+	"Access-Control-Allow-Headers": "Content-Type, Content-Encoding, Authorization, traceparent, tracestate",
+	"Access-Control-Max-Age": "600",
+} as const;
+
+/** Public ingest: browsers on landing/dashboard must read 204s. Do not forward OPTIONS upstream. */
+export function telemetryCorsHeaders(origin: string | null | undefined): HeadersInit {
+	const allowOrigin = origin && origin.length > 0 ? origin : "*";
+	return {
+		...TELEMETRY_CORS_HEADERS,
+		"Access-Control-Allow-Origin": allowOrigin,
+		Vary: "Origin",
+	};
+}
+
+export function telemetryPreflightResponse(origin: string | null | undefined): Response {
+	return new Response(null, {
+		status: 204,
+		headers: telemetryCorsHeaders(origin),
+	});
+}
+
+export function withTelemetryCors(response: Response, origin: string | null | undefined): Response {
+	const headers = new Headers(response.headers);
+	const cors = telemetryCorsHeaders(origin);
+	for (const [key, value] of Object.entries(cors)) {
+		headers.set(key, value);
+	}
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
+}

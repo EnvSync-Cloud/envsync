@@ -30,6 +30,7 @@ import {
 } from "@/modules/load-modules";
 import { createApiRoutes } from "@/routes";
 import { obsProxyRouter, posthogProxyRouter } from "@/routes/telemetry-proxy.route";
+import { expandBrowserOrigins } from "@/libs/browser-origins";
 import { config } from "@/utils/env";
 import { version } from "package.json";
 
@@ -72,10 +73,16 @@ export async function createApiApp(surface: ApiSurface) {
 		? config.MANAGEMENT_API_URL || `${productOrigin.replace(/\/$/, "")}/api/v1/manage`
 		: productOrigin;
 	const docsUrl = "/openapi";
-	const allowedOrigins = [
+	const allowedOrigins = expandBrowserOrigins(
 		config.DASHBOARD_URL,
 		config.LANDING_PAGE_URL,
-	].filter(Boolean);
+		config.ENVSYNC_DEPLOYMENT_MODE === "hosted" || config.ENVSYNC_EDITION === "enterprise"
+			? "https://envsync.cloud"
+			: undefined,
+		config.ENVSYNC_DEPLOYMENT_MODE === "hosted" || config.ENVSYNC_EDITION === "enterprise"
+			? "https://app.envsync.cloud"
+			: undefined,
+	);
 
 	const openApiDescription = [
 		`${apiTitle} documentation.`,
