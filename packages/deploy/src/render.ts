@@ -453,7 +453,7 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 	const landingEnabled = false;
 	const managementEnabled = !isOssConfig(config);
 	const otelAllowedOrigins = [
-		...(landingEnabled ? publicHttpsOriginVariants(config, hosts.landing) : []),
+		...publicHttpsOriginVariants(config, hosts.landing),
 		...publicHttpsOriginVariants(config, hosts.app),
 	];
 	return [

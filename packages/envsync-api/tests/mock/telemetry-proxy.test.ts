@@ -84,5 +84,35 @@ describe("telemetry proxy HTTP", () => {
 	test("rejects unknown /obs paths", async () => {
 		const res = await testRequest("/obs/admin");
 		expect(res.status).toBe(404);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBeTruthy();
+	});
+
+	test("answers OTLP preflight without forwarding and sets CORS", async () => {
+		let forwarded = 0;
+		globalThis.fetch = (async () => {
+			forwarded += 1;
+			return new Response(null, { status: 204 });
+		}) as typeof fetch;
+
+		const res = await testRequest("/obs/v1/traces", {
+			method: "OPTIONS",
+			headers: { origin: "https://envsync.cloud", "access-control-request-method": "POST" },
+		});
+		expect(res.status).toBe(204);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://envsync.cloud");
+		expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");
+		expect(forwarded).toBe(0);
+	});
+
+	test("forwards OTLP POST and keeps CORS on the 204", async () => {
+		globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch;
+
+		const res = await testRequest("/obs/v1/traces", {
+			method: "POST",
+			headers: { origin: "https://envsync.cloud", "content-type": "application/json" },
+			body: { resourceSpans: [] },
+		});
+		expect(res.status).toBe(204);
+		expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://envsync.cloud");
 	});
 });
