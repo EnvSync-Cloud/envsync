@@ -10,14 +10,16 @@ export const orgFeatureGrantParamSchema = z
 
 export const putOrgFeatureGrantRequestSchema = z
 	.object({
-		// Empty [] is a closed set (no EE features). Fern Go tags this field
-		// omitempty, so PUT [] must go through the CLI / TS SDK / raw HTTP.
-		features: z.array(z.string()).openapi({
+		plan: z.enum(["developer", "plus", "enterprise"]).optional().openapi({ example: "plus" }),
+		features: z.array(z.string()).optional().openapi({
 			example: ["saml", "kms"],
 			minItems: 0,
 		}),
 		source: z.enum(["billing", "support", "seed"]).optional().openapi({ example: "billing" }),
 		updated_by: z.string().min(1).optional().openapi({ example: "platform" }),
+	})
+	.refine(value => value.plan !== undefined || value.features !== undefined, {
+		message: "plan or features is required",
 	})
 	.openapi({ ref: "PutOrgFeatureGrantRequest" });
 
@@ -25,6 +27,7 @@ export const orgFeatureGrantResponseSchema = z
 	.object({
 		org_id: z.string().openapi({ example: "org_123" }),
 		unrestricted: z.boolean().openapi({ example: false }),
+		plan: z.string().optional().openapi({ example: "plus" }),
 		features: z.array(z.string()).openapi({ example: ["saml", "kms"] }),
 		source: z.string().nullable().openapi({ example: "billing" }),
 		updated_by: z.string().nullable().openapi({ example: null }),

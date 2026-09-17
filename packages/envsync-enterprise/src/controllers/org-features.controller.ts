@@ -7,6 +7,7 @@ function unrestrictedResponse(orgId: string) {
 	return {
 		org_id: orgId,
 		unrestricted: true,
+		plan: "enterprise",
 		features: [...ALL_ENTERPRISE_FEATURES],
 		source: null,
 		updated_by: null,
@@ -26,6 +27,7 @@ export class OrgFeaturesController {
 		return c.json({
 			org_id: grant.org_id,
 			unrestricted: false,
+			plan: grant.plan,
 			features: grant.features,
 			source: grant.source,
 			updated_by: grant.updated_by,
@@ -37,12 +39,14 @@ export class OrgFeaturesController {
 	public static readonly put = async (c: Context) => {
 		const orgId = c.req.param("orgId");
 		const payload = c.req.valid("json" as never) as {
-			features: string[];
+			plan?: "developer" | "plus" | "enterprise";
+			features?: string[];
 			source?: "billing" | "support" | "seed";
 			updated_by?: string;
 		};
 		const grant = await OrgFeatureGrantService.replaceGrant({
 			orgId,
+			plan: payload.plan,
 			features: payload.features,
 			source: payload.source,
 			updatedBy: payload.updated_by?.trim() || "platform",
@@ -50,6 +54,7 @@ export class OrgFeaturesController {
 		return c.json({
 			org_id: grant.org_id,
 			unrestricted: false,
+			plan: grant.plan,
 			features: grant.features,
 			source: grant.source,
 			updated_by: grant.updated_by,
