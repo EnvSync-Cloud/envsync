@@ -122,15 +122,19 @@ export const OrgSettings = () => {
         <BentoGridItem className="md:col-span-3 p-0">
           <div className="rounded-3xl border border-border bg-card p-6">
             <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Plan</p>
-            <h2 className="mt-2 text-xl font-semibold capitalize">{sessionPlan}</h2>
+            <h2 className="mt-2 text-xl font-semibold capitalize">
+              {runtimeConfig.deploymentMode === "selfhosted" && sessionPlan === "plus" ? "OSS (Plus+ included)" : sessionPlan}
+            </h2>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              {sessionPlan === "developer"
-                ? "Free plan: 1 organization, 5 projects, 3 members. Upgrade to Plus+ for change requests, recovery, and higher limits."
-                : sessionPlan === "plus"
-                  ? "Plus+ includes change requests, point-in-time recovery, and higher limits."
-                  : "Enterprise includes the full catalog. Contact EnvSync for changes."}
+              {runtimeConfig.deploymentMode === "selfhosted" && sessionPlan !== "enterprise"
+                ? "Self-host OSS includes Plus+ workflow features (change requests, recovery, higher limits) with one organization. Enterprise is a license."
+                : sessionPlan === "developer"
+                  ? "Hosted free plan: 1 organization, 5 projects, 3 members. Plus+ is billed per member per month."
+                  : sessionPlan === "plus"
+                    ? "Plus+ is billed per member per month. Change requests, recovery, and higher limits are included."
+                    : "Enterprise includes the full catalog. Contact EnvSync for changes."}
             </p>
-            {sessionPlan === "developer" ? (
+            {runtimeConfig.deploymentMode !== "selfhosted" && sessionPlan === "developer" ? (
               <a
                 href="mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B"
                 className="mt-4 inline-flex rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium"

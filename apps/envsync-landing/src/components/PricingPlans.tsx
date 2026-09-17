@@ -15,7 +15,7 @@ const plans = [
     price: "Invoice",
     cta: "Request Plus+",
     href: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
-    blurb: "Paid upgrade from Developer. Also available on OSS self-host (1 org).",
+    blurb: "Hosted, billed per member per month. Self-host OSS includes this workflow set for free (1 org).",
     items: ["Change requests + recovery", "30 members, 10 API keys", "60-day audit", "BYOK secrets"],
   },
   {
@@ -36,7 +36,7 @@ const PricingPlans = () => {
           align="center"
           eyebrow="PRICING"
           title="Developer, Plus+, Enterprise"
-          description="Start free. Upgrade when you need approvals, recovery, and more room."
+          description="Hosted: start free, then Plus+ per seat or Enterprise via our team. Self-host OSS includes Plus+ workflow features with no license."
         />
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           {plans.map((plan) => (
