@@ -1765,7 +1765,16 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	const setupToken = currentOptions.dryRun
 		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
 		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
-	const runtimeEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
+	const existingEnv = loadGeneratedEnv();
+	const runtimeEnv = {
+		...renderHelpers.buildRuntimeEnv(config, generated, { setupToken }),
+		...(existingEnv.ENVSYNC_PLAN ? { ENVSYNC_PLAN: existingEnv.ENVSYNC_PLAN } : {}),
+		...(existingEnv.ENVSYNC_DEPLOYMENT_MODE === "hosted" || existingEnv.ENVSYNC_DEPLOYMENT_MODE === "selfhosted"
+			? { ENVSYNC_DEPLOYMENT_MODE: existingEnv.ENVSYNC_DEPLOYMENT_MODE }
+			: {}),
+		...(existingEnv.ENVSYNC_LANDING_ENABLED ? { ENVSYNC_LANDING_ENABLED: existingEnv.ENVSYNC_LANDING_ENABLED } : {}),
+		...(existingEnv.ENVSYNC_SINGLE_ORG_MODE ? { ENVSYNC_SINGLE_ORG_MODE: existingEnv.ENVSYNC_SINGLE_ORG_MODE } : {}),
+	};
 	logStep("Rendering deploy artifacts");
 	if (!currentOptions.dryRun) {
 		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
