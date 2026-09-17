@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { eeFeaturesForPlan, isPlanId, limitsForPlan } from "@/services/plan.catalog";
+import { applyOverlay, eeFeaturesForPlan, isPlanId, limitsForPlan } from "@/services/plan.catalog";
 
 describe("plan catalog", () => {
 	test("parses plan ids", () => {
@@ -33,5 +33,14 @@ describe("plan catalog", () => {
 		expect(limits.max_projects).toBeNull();
 		expect(limits.certificates).toBe(true);
 		expect(eeFeaturesForPlan("enterprise")).toContain("kms");
+	});
+
+	test("overlay flips plan booleans and unions EE flags without raising caps", () => {
+		const applied = applyOverlay(limitsForPlan("developer"), [], ["change_requests", "saml", "unknown"]);
+		expect(applied.limits.change_requests).toBe(true);
+		expect(applied.limits.sso).toBe(true);
+		expect(applied.limits.max_projects).toBe(5);
+		expect(applied.limits.max_members).toBe(3);
+		expect(applied.features).toEqual(["saml"]);
 	});
 });

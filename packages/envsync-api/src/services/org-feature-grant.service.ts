@@ -5,7 +5,14 @@ import { NotFoundError } from "@/libs/errors";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { OrgService } from "@/services/org.service";
 import { isEnterpriseFeature, type EnterpriseFeature } from "@/services/entitlement.types";
-import { eeFeaturesForPlan, parsePlanId, type PlanId, type PlanLimits } from "@/services/plan.catalog";
+import {
+	eeFeaturesForPlan,
+	normalizeOverlayFeatures,
+	parsePlanId,
+	type HostedOverlayFlag,
+	type PlanId,
+	type PlanLimits,
+} from "@/services/plan.catalog";
 
 export type OrgFeatureGrantSource = "billing" | "support" | "seed";
 
@@ -14,6 +21,7 @@ export type OrgFeatureGrant = {
 	plan: PlanId;
 	features: EnterpriseFeature[];
 	limits: PlanLimits | null;
+	overlay_features: HostedOverlayFlag[];
 	source: string;
 	updated_by: string | null;
 	created_at: string;
@@ -23,7 +31,7 @@ export type OrgFeatureGrant = {
 type CachedGrant = { missing: true } | { missing: false; grant: OrgFeatureGrant };
 
 type GrantTestOverrides = {
-	grant?: OrgFeatureGrant | null;
+	grant?: (Omit<OrgFeatureGrant, "overlay_features"> & { overlay_features?: HostedOverlayFlag[] }) | null;
 };
 
 function isMissingGrantTable(error: unknown): boolean {
@@ -55,6 +63,7 @@ function mapRow(row: {
 	features: string[];
 	plan?: string | null;
 	limits?: unknown;
+	overlay_features?: string[] | null;
 	source: string;
 	updated_by?: string | null;
 	created_at: Date | string;
@@ -65,10 +74,18 @@ function mapRow(row: {
 		plan: parsePlanId(row.plan, "developer"),
 		features: normalizeGrantFeatures(row.features ?? []),
 		limits: (row.limits as PlanLimits | null) ?? null,
+		overlay_features: normalizeOverlayFeatures(row.overlay_features),
 		source: row.source,
 		updated_by: row.updated_by ?? null,
 		created_at: toIso(row.created_at),
 		updated_at: toIso(row.updated_at),
+	};
+}
+
+function normalizeGrant(grant: OrgFeatureGrant): OrgFeatureGrant {
+	return {
+		...grant,
+		overlay_features: normalizeOverlayFeatures(grant.overlay_features),
 	};
 }
 
@@ -86,7 +103,8 @@ export class OrgFeatureGrantService {
 	/** `null` means no row (Hosted unrestricted). */
 	public static async getGrant(orgId: string): Promise<OrgFeatureGrant | null> {
 		if (this.#testOverrides) {
-			return this.#testOverrides.grant ?? null;
+			const grant = this.#testOverrides.grant ?? null;
+			return grant ? normalizeGrant(grant) : null;
 		}
 
 		try {
@@ -119,6 +137,7 @@ export class OrgFeatureGrantService {
 		orgId: string;
 		features?: readonly string[];
 		plan?: PlanId;
+		overlay_features?: readonly string[];
 		source?: string;
 		updatedBy?: string | null;
 	}): Promise<OrgFeatureGrant> {
@@ -126,6 +145,10 @@ export class OrgFeatureGrantService {
 		const features = input.features
 			? normalizeGrantFeatures(input.features)
 			: eeFeaturesForPlan(plan);
+		const overlay_features =
+			input.overlay_features !== undefined
+				? normalizeOverlayFeatures(input.overlay_features)
+				: this.#testOverrides?.grant?.overlay_features ?? [];
 		if (this.#testOverrides) {
 			const now = new Date().toISOString();
 			const grant: OrgFeatureGrant = {
@@ -133,6 +156,7 @@ export class OrgFeatureGrantService {
 				plan,
 				features,
 				limits: null,
+				overlay_features,
 				source: input.source ?? "billing",
 				updated_by: input.updatedBy ?? null,
 				created_at: this.#testOverrides.grant?.created_at ?? now,
@@ -149,12 +173,22 @@ export class OrgFeatureGrantService {
 
 		try {
 			const db = await DB.getInstance();
+			const existing = await db
+				.selectFrom("org_feature_grant")
+				.select(["overlay_features"])
+				.where("org_id", "=", input.orgId)
+				.executeTakeFirst();
+			const persistedOverlay =
+				input.overlay_features !== undefined
+					? overlay_features
+					: normalizeOverlayFeatures(existing?.overlay_features);
 			const row = await db
 				.insertInto("org_feature_grant")
 				.values({
 					org_id: input.orgId,
 					plan,
 					features,
+					overlay_features: persistedOverlay,
 					source,
 					updated_by: updatedBy,
 					created_at: now,
@@ -164,6 +198,7 @@ export class OrgFeatureGrantService {
 					oc.column("org_id").doUpdateSet({
 						plan,
 						features,
+						overlay_features: persistedOverlay,
 						source,
 						updated_by: updatedBy,
 						updated_at: now,
@@ -174,7 +209,7 @@ export class OrgFeatureGrantService {
 
 			await invalidateCache(CacheKeys.orgFeatureGrant(input.orgId));
 			infoLogs(
-				`org_feature_grant_updated org=${input.orgId} source=${source} features=${features.join(",")}`,
+				`org_feature_grant_updated org=${input.orgId} source=${source} features=${features.join(",")} overlay=${persistedOverlay.join(",")}`,
 				LogTypes.LOGS,
 				"ENTITLEMENT",
 			);
@@ -185,6 +220,26 @@ export class OrgFeatureGrantService {
 			}
 			throw error;
 		}
+	}
+
+	/** Patch plan and/or overlay without replacing omitted fields. */
+	public static async patchGrant(input: {
+		orgId: string;
+		plan?: PlanId;
+		overlay_features?: readonly string[];
+		features?: readonly string[];
+		source?: string;
+		updatedBy?: string | null;
+	}): Promise<OrgFeatureGrant> {
+		const current = await this.getGrant(input.orgId);
+		return this.replaceGrant({
+			orgId: input.orgId,
+			plan: input.plan ?? current?.plan ?? "developer",
+			features: input.features ?? current?.features,
+			overlay_features: input.overlay_features ?? current?.overlay_features,
+			source: input.source ?? current?.source ?? "support",
+			updatedBy: input.updatedBy,
+		});
 	}
 
 	public static async deleteGrant(orgId: string): Promise<boolean> {

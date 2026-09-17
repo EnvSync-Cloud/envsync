@@ -364,6 +364,23 @@ describe("assertOrgFeature Hosted grants", () => {
 		await expect(EntitlementService.assertFeature("saml")).resolves.toBeUndefined();
 	});
 
+	test("hosted overlay saml passes assertOrgFeature without changing plan features[]", async () => {
+		EditionPolicyService.setTestOverrides({
+			edition: "enterprise",
+			deployment_mode: "hosted",
+		});
+		OrgFeatureGrantService.setTestOverrides({
+			grant: { ...hostedGrant([]), overlay_features: ["saml"] },
+		});
+
+		await expect(EntitlementService.assertOrgFeature("org_none", "saml")).resolves.toBeUndefined();
+		await expect(EntitlementService.assertOrgFeature("org_none", "integrations")).rejects.toMatchObject({
+			code: "ORG_FEATURE_MISSING",
+		});
+		expect(await EntitlementService.getOrgFeatures("org_none")).toEqual(expect.arrayContaining(["saml", "multi_org"]));
+		expect(await EntitlementService.getOrgFeatures("org_none")).not.toContain("integrations");
+	});
+
 	test("hosted + empty features denies every EE feature", async () => {
 		EditionPolicyService.setTestOverrides({
 			edition: "enterprise",

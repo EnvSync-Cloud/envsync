@@ -57,4 +57,18 @@ describe("PlanLimitService", () => {
 		expect(resolved.limits.max_api_keys).toBe(2);
 		expect(resolved.limits.max_webhooks).toBe(1);
 	});
+
+	test("Developer overlay change_requests passes without raising the project cap", async () => {
+		EditionPolicyService.setTestOverrides({ edition: "enterprise", deployment_mode: "hosted" });
+		OrgFeatureGrantService.setTestOverrides({
+			grant: { ...grant("developer"), overlay_features: ["change_requests"] },
+		});
+		await expect(PlanLimitService.assertFeature("org_plan", "change_requests")).resolves.toMatchObject({
+			plan: "developer",
+		});
+		const resolved = await PlanLimitService.resolve("org_plan");
+		expect(resolved.limits.change_requests).toBe(true);
+		expect(resolved.limits.max_projects).toBe(5);
+		expect(resolved.limits.max_members).toBe(3);
+	});
 });
