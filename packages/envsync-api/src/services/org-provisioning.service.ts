@@ -153,6 +153,19 @@ export class OrgProvisioningService {
 					},
 				},
 				{
+					name: "assign-developer-plan",
+					execute: async (ctx) => {
+						if (!EditionPolicyService.isHosted()) return;
+						const { OrgFeatureGrantService } = await import("@/services/org-feature-grant.service");
+						await OrgFeatureGrantService.replaceGrant({
+							orgId: ctx.org_id,
+							plan: "developer",
+							source: "signup",
+							updatedBy: "signup",
+						});
+					},
+				},
+				{
 					name: "accept-invite",
 					execute: async () => {
 						if (!input.inviteId) {

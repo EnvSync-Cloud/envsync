@@ -25,6 +25,9 @@ export type EntitledAuthSession = AuthSession & {
   features: string[];
   install_features: string[];
   auth_type: AuthSessionAuthType;
+  plan?: string;
+  plan_limits?: Record<string, unknown>;
+  plan_usage?: Record<string, number> | null;
 };
 
 const AUTH_TYPES = new Set<AuthSessionAuthType>(["jwt", "saml", "oidc", "api_key"]);

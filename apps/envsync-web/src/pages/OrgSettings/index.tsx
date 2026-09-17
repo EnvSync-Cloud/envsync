@@ -47,7 +47,8 @@ export const OrgSettings = () => {
     isSaving,
     isDeleting,
   } = useOrgSettings();
-  const { allowedScopes } = useAuthContext();
+  const { allowedScopes, user } = useAuthContext();
+  const sessionPlan = user?.plan ?? "developer";
   const enterpriseSections = getSettingsSections().filter((section) =>
     allowedScopes.includes(section.scopeId),
   );
@@ -116,6 +117,35 @@ export const OrgSettings = () => {
 
         <BentoGridItem className="md:col-span-1 p-0">
           <OrgOverviewCard orgData={orgData} />
+        </BentoGridItem>
+
+        <BentoGridItem className="md:col-span-3 p-0">
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Plan</p>
+            <h2 className="mt-2 text-xl font-semibold capitalize">{sessionPlan}</h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              {sessionPlan === "developer"
+                ? "Free plan: 1 organization, 5 projects, 3 members. Upgrade to Plus+ for change requests, recovery, and higher limits."
+                : sessionPlan === "plus"
+                  ? "Plus+ includes change requests, point-in-time recovery, and higher limits."
+                  : "Enterprise includes the full catalog. Contact EnvSync for changes."}
+            </p>
+            {sessionPlan === "developer" ? (
+              <a
+                href="mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B"
+                className="mt-4 inline-flex rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium"
+              >
+                Request Plus+
+              </a>
+            ) : sessionPlan !== "enterprise" ? (
+              <a
+                href="mailto:hello@envsync.cloud?subject=Enterprise%20plan"
+                className="mt-4 inline-flex rounded-xl border border-border px-4 py-2 text-sm font-medium"
+              >
+                Contact us for Enterprise
+              </a>
+            ) : null}
+          </div>
         </BentoGridItem>
 
         <BentoGridItem className="md:col-span-3 p-0">

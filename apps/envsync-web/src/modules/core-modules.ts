@@ -22,7 +22,15 @@ import {
   projectsPath,
 } from "@/lib/app-routes";
 
+import type { WhoAmIResponse } from "@envsync-cloud/envsync-ts-sdk";
+
 import type { WebModule, WebRouteDefinition } from "./types";
+
+function planAllows(user: WhoAmIResponse, flag: "change_requests" | "point_in_time" | "certificates") {
+  const limits = (user as { plan_limits?: Record<string, boolean> }).plan_limits;
+  if (!limits) return true;
+  return limits[flag] !== false;
+}
 
 const legacyRedirectRoutes: WebRouteDefinition[] = LEGACY_REDIRECTS.map((redirect) => ({
   id: redirect.id,
@@ -259,13 +267,15 @@ export const coreWebModules: WebModule[] = [
       teams: () => true,
       roles: user => user.role.is_admin || user.role.is_master,
       access: () => true,
-      "change-requests": user => user.role.can_edit || user.role.is_admin || user.role.is_master,
+      "change-requests": user =>
+        (user.role.can_edit || user.role.is_admin || user.role.is_master)
+        && planAllows(user, "change_requests"),
       organisation: user => user.role.is_admin || user.role.is_master,
       audit: user => user.role.is_admin || user.role.is_master,
       settings: () => true,
       webhooks: () => true,
-      gpgkeys: () => true,
-      certificates: () => true,
+      gpgkeys: user => planAllows(user, "certificates"),
+      certificates: user => planAllows(user, "certificates"),
     },
     settingsSections: [],
   },
