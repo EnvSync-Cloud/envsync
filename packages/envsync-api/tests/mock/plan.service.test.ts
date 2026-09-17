@@ -43,12 +43,12 @@ describe("PlanService.resolve", () => {
 		expect(resolved.source).toBe("signup");
 	});
 
-	test("OSS install uses ENVSYNC_PLAN and no EE features", async () => {
+	test("OSS install defaults to free Plus+ limits with no EE features", async () => {
 		EditionPolicyService.setTestOverrides({ edition: "oss", deployment_mode: "selfhosted" });
-		(config as { ENVSYNC_PLAN?: string }).ENVSYNC_PLAN = "plus";
 		const resolved = await PlanService.resolve("org_oss");
 		expect(resolved.plan).toBe("plus");
 		expect(resolved.limits.max_orgs).toBe(1);
+		expect(resolved.limits.max_members).toBe(30);
 		expect(resolved.limits.change_requests).toBe(true);
 		expect(resolved.features).toEqual([]);
 		expect(resolved.source).toBe("install");

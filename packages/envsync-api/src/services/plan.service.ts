@@ -20,7 +20,7 @@ export type ResolvedPlan = {
 
 export class PlanService {
 	public static installPlan(): PlanId {
-		return parsePlanId(config.ENVSYNC_PLAN, "developer");
+		return parsePlanId(config.ENVSYNC_PLAN, "plus");
 	}
 
 	public static hostedMissingGrantPlan(): PlanId {
