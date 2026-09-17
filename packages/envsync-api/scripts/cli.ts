@@ -1464,15 +1464,76 @@ async function grantOrgFeatures() {
 		.map(value => value.trim())
 		.filter(Boolean);
 	const source = getFlagValue(rawArgs, "source") ?? "seed";
+	const planFlag = getFlagValue(rawArgs, "plan");
 	const grant = await OrgFeatureGrantService.replaceGrant({
 		orgId: org.id,
 		features,
+		plan: planFlag === "developer" || planFlag === "plus" || planFlag === "enterprise" ? planFlag : undefined,
 		source,
 		updatedBy: "cli",
 	});
 	console.log(
-		`Set org feature grant for ${org.slug} (${org.id}): [${grant.features.join(", ")}] source=${grant.source}`,
+		`Set org feature grant for ${org.slug} (${org.id}): plan=${grant.plan} [${grant.features.join(", ")}] source=${grant.source}`,
 	);
+}
+
+async function setOrgPlan() {
+	const rawArgs = process.argv.slice(3);
+	const orgSlug = getFlagValue(rawArgs, "org-slug");
+	const plan = getFlagValue(rawArgs, "plan");
+	if (!orgSlug || !plan) {
+		throw new Error("--org-slug and --plan are required");
+	}
+	if (plan !== "developer" && plan !== "plus" && plan !== "enterprise") {
+		throw new Error("--plan must be developer, plus, or enterprise");
+	}
+	const db = await DB.getInstance();
+	const org = await db.selectFrom("orgs").selectAll().where("slug", "=", orgSlug).executeTakeFirst();
+	if (!org) {
+		throw new Error(`Organization not found for slug ${orgSlug}`);
+	}
+	const { OrgFeatureGrantService } = await import("../src/services/org-feature-grant.service");
+	const grant = await OrgFeatureGrantService.replaceGrant({
+		orgId: org.id,
+		plan,
+		source: getFlagValue(rawArgs, "source") ?? "support",
+		updatedBy: "cli",
+	});
+	console.log(`Set plan for ${org.slug} (${org.id}): ${grant.plan} features=[${grant.features.join(", ")}]`);
+}
+
+async function backfillHostedPlans() {
+	const rawArgs = process.argv.slice(3);
+	const plan = getFlagValue(rawArgs, "plan") ?? "enterprise";
+	if (plan !== "developer" && plan !== "plus" && plan !== "enterprise") {
+		throw new Error("--plan must be developer, plus, or enterprise");
+	}
+	const dryRun = rawArgs.includes("--dry-run");
+	const db = await DB.getInstance();
+	const orgs = await db.selectFrom("orgs").select(["id", "slug"]).execute();
+	const { OrgFeatureGrantService } = await import("../src/services/org-feature-grant.service");
+	let written = 0;
+	for (const org of orgs) {
+		const existing = await OrgFeatureGrantService.getGrant(org.id);
+		if (existing) {
+			console.log(`skip ${org.slug} already plan=${existing.plan}`);
+			continue;
+		}
+		if (dryRun) {
+			console.log(`would set ${org.slug} → ${plan}`);
+			written += 1;
+			continue;
+		}
+		await OrgFeatureGrantService.replaceGrant({
+			orgId: org.id,
+			plan,
+			source: "backfill",
+			updatedBy: "cli",
+		});
+		console.log(`set ${org.slug} → ${plan}`);
+		written += 1;
+	}
+	console.log(`backfill ${dryRun ? "dry-run " : ""}complete: ${written}/${orgs.length} orgs`);
 }
 
 const cmd = process.argv[2];
@@ -1484,6 +1545,10 @@ if (cmd === "init") {
 	await bootstrapUiHarness();
 } else if (cmd === "grant-org-features") {
 	await grantOrgFeatures();
+} else if (cmd === "set-plan") {
+	await setOrgPlan();
+} else if (cmd === "backfill-hosted-plans") {
+	await backfillHostedPlans();
 } else if (cmd === "bootstrap-org") {
 	const rawArgs = process.argv.slice(3);
 	const orgName = getFlagValue(rawArgs, "org-name") ?? DEV_ORG_NAME;
@@ -1499,7 +1564,7 @@ if (cmd === "init") {
 	console.log(`Bootstrap completed for org ${org.slug} (${org.id})`);
 } else {
 	console.log(
-		"Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org|grant-org-features>",
+		"Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org|grant-org-features|set-plan|backfill-hosted-plans>",
 	);
 	process.exit(cmd ? 1 : 0);
 }

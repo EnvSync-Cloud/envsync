@@ -5,12 +5,15 @@ import { NotFoundError } from "@/libs/errors";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { OrgService } from "@/services/org.service";
 import { isEnterpriseFeature, type EnterpriseFeature } from "@/services/entitlement.types";
+import { eeFeaturesForPlan, parsePlanId, type PlanId, type PlanLimits } from "@/services/plan.catalog";
 
 export type OrgFeatureGrantSource = "billing" | "support" | "seed";
 
 export type OrgFeatureGrant = {
 	org_id: string;
+	plan: PlanId;
 	features: EnterpriseFeature[];
+	limits: PlanLimits | null;
 	source: string;
 	updated_by: string | null;
 	created_at: string;
@@ -50,6 +53,8 @@ function normalizeGrantFeatures(raw: readonly string[]): EnterpriseFeature[] {
 function mapRow(row: {
 	org_id: string;
 	features: string[];
+	plan?: string | null;
+	limits?: unknown;
 	source: string;
 	updated_by?: string | null;
 	created_at: Date | string;
@@ -57,7 +62,9 @@ function mapRow(row: {
 }): OrgFeatureGrant {
 	return {
 		org_id: row.org_id,
+		plan: parsePlanId(row.plan, "developer"),
 		features: normalizeGrantFeatures(row.features ?? []),
+		limits: (row.limits as PlanLimits | null) ?? null,
 		source: row.source,
 		updated_by: row.updated_by ?? null,
 		created_at: toIso(row.created_at),
@@ -110,15 +117,22 @@ export class OrgFeatureGrantService {
 
 	public static async replaceGrant(input: {
 		orgId: string;
-		features: readonly string[];
+		features?: readonly string[];
+		plan?: PlanId;
 		source?: string;
 		updatedBy?: string | null;
 	}): Promise<OrgFeatureGrant> {
+		const plan = input.plan ?? "developer";
+		const features = input.features
+			? normalizeGrantFeatures(input.features)
+			: eeFeaturesForPlan(plan);
 		if (this.#testOverrides) {
 			const now = new Date().toISOString();
 			const grant: OrgFeatureGrant = {
 				org_id: input.orgId,
-				features: normalizeGrantFeatures(input.features),
+				plan,
+				features,
+				limits: null,
 				source: input.source ?? "billing",
 				updated_by: input.updatedBy ?? null,
 				created_at: this.#testOverrides.grant?.created_at ?? now,
@@ -130,7 +144,6 @@ export class OrgFeatureGrantService {
 
 		await OrgService.getOrg(input.orgId);
 		const now = new Date();
-		const features = normalizeGrantFeatures(input.features);
 		const source = input.source?.trim() || "billing";
 		const updatedBy = input.updatedBy ?? null;
 
@@ -140,6 +153,7 @@ export class OrgFeatureGrantService {
 				.insertInto("org_feature_grant")
 				.values({
 					org_id: input.orgId,
+					plan,
 					features,
 					source,
 					updated_by: updatedBy,
@@ -148,6 +162,7 @@ export class OrgFeatureGrantService {
 				})
 				.onConflict(oc =>
 					oc.column("org_id").doUpdateSet({
+						plan,
 						features,
 						source,
 						updated_by: updatedBy,

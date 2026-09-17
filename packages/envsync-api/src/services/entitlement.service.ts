@@ -281,14 +281,15 @@ export class EntitlementService {
 
 	public static async getOrgFeatures(orgId: string): Promise<EnterpriseFeature[]> {
 		const ceiling = await this.getInstallFeatures();
-		if (!EditionPolicyService.isHosted() || !orgId) {
+		if (!orgId) {
 			return ceiling;
 		}
-		const grant = await OrgFeatureGrantService.getGrant(orgId);
-		if (!grant) {
+		if (!EditionPolicyService.isHosted()) {
 			return ceiling;
 		}
-		const granted = new Set(grant.features);
+		const { PlanService } = await import("@/services/plan.service");
+		const resolved = await PlanService.resolve(orgId);
+		const granted = new Set(resolved.features);
 		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
 	}
 

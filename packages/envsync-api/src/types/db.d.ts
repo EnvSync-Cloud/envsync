@@ -433,6 +433,8 @@ export interface LogForwardingConfig extends BaseTable {
 export interface OrgFeatureGrant {
 	org_id: ColumnType<string>;
 	features: ColumnType<string[]>;
+	plan: ColumnType<string>;
+	limits?: ColumnType<JsonValue | null>;
 	source: ColumnType<string>;
 	updated_by?: ColumnType<string | null>;
 	created_at: ColumnType<Date>;

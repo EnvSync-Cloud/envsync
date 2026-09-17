@@ -284,6 +284,7 @@ const requiredEeMigrations = [
 	"025_saml_sso_login_path.ts",
 	"026_org_feature_grant.ts",
 	"027_org_kms.ts",
+	"029_org_plan.ts",
 ];
 const apiMigrationsDir = path.join(root, "packages/envsync-api/src/libs/db/migrations");
 const dbIndex = fs.readFileSync(path.join(root, "packages/envsync-api/src/libs/db/index.ts"), "utf8");
