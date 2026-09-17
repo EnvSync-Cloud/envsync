@@ -1192,6 +1192,19 @@ async function ensureUiHarnessMembership(
 	return refreshedMembership;
 }
 
+async function ensureUiHarnessPlan(orgId: string) {
+	const { EditionPolicyService } = await import("../src/services/edition-policy.service");
+	if (!EditionPolicyService.isHosted()) return;
+	const { OrgFeatureGrantService } = await import("../src/services/org-feature-grant.service");
+	const grant = await OrgFeatureGrantService.replaceGrant({
+		orgId,
+		plan: "enterprise",
+		source: "seed",
+		updatedBy: "ui-harness",
+	});
+	console.log(`UI harness plan=${grant.plan} org=${orgId}`);
+}
+
 async function bootstrapUiHarness() {
 	const rawArgs = process.argv.slice(3);
 	const orgName = getFlagValue(rawArgs, "org-name") ?? `EnvSync UI ${Date.now()}`;
@@ -1203,6 +1216,7 @@ async function bootstrapUiHarness() {
 		full_name: UI_HARNESS_IDENTITIES[0]!.fullName,
 		password: DEV_USER_PASSWORD,
 	});
+	await ensureUiHarnessPlan(org.id);
 	const roles = await ensureDefaultRoles(org.id);
 
 	for (const identity of UI_HARNESS_IDENTITIES) {
