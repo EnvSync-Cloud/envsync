@@ -6,6 +6,7 @@ import NewHowItWorks from "@/components/NewHowItWorks";
 import NewIntegrations from "@/components/NewIntegrations";
 // import NewTestimonial from "@/components/NewTestimonial";
 import NewCompare from "@/components/NewCompare";
+import PricingPlans from "@/components/PricingPlans";
 import NewCTA from "@/components/NewCTA";
 import { ActivityStream } from "@/components/activity/ActivityStream";
 
@@ -24,6 +25,7 @@ const Index = () => {
         <NewIntegrations />
         {/*<NewTestimonial />*/}
         <NewCompare />
+        <PricingPlans />
         <NewCTA />
       </main>
       <Footer />
