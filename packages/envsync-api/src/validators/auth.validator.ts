@@ -72,6 +72,10 @@ export const whoAmIResponseSchema = z
 				"kms",
 			],
 		}),
+		plan: z.string().optional().openapi({ example: "developer" }),
+		plan_limits: z.record(z.any()).optional(),
+		plan_usage: z.record(z.number()).nullable().optional(),
+		feature_overrides: z.array(z.string()).optional().openapi({ example: ["change_requests"] }),
 		auth_type: z.enum(["jwt", "saml", "oidc", "api_key", "service_token"]).openapi({ example: "jwt" }),
 	})
 	.openapi({ ref: "WhoAmIResponse" });

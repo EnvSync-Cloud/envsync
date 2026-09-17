@@ -84,6 +84,7 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 		plan: resolvedPlan.plan,
 		plan_limits: resolvedPlan.limits,
 		plan_usage: usage,
+		feature_overrides: resolvedPlan.overlay_features,
 		auth_type: options?.authType ?? "jwt",
 	};
 }
