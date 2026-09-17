@@ -53,6 +53,10 @@ export class OrganizationProvisioningService {
 		await OrgProvisioningService.assertProvisioningAllowed(source);
 
 		const currentUser = await UserService.getUser(input.currentUserId);
+		if (currentUser.auth_service_id) {
+			const { PlanLimitService } = await import("@/services/plan_limit.service");
+			await PlanLimitService.assertOrgCreate(currentUser.org_id, currentUser.auth_service_id);
+		}
 		const slug = await generateUniqueOrganizationSlug(input.organizationName);
 		const sagaCtx = { org_id: "", admin_role_id: "", user_id: "" };
 

@@ -9,6 +9,7 @@ import { applyChangeRequestItems } from "@/services/change_request_apply";
 import { EnvService } from "@/services/env.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { SecretService } from "@/services/secret.service";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 type ChangeOperation = "CREATE" | "UPDATE" | "DELETE";
 
@@ -51,6 +52,7 @@ export class ChangeRequestService {
 		if (!hasAnyItems(envs, secrets)) {
 			throw new ValidationError("At least one env or secret change is required.");
 		}
+		await PlanLimitService.assertFeature(org_id, "change_requests");
 
 		const targetEnvType = await EnvTypeService.getEnvType(target_env_type_id);
 		if (targetEnvType.org_id !== org_id || targetEnvType.app_id !== app_id) {
@@ -177,6 +179,7 @@ export class ChangeRequestService {
 		if (source_env_type_id === target_env_type_id) {
 			throw new ValidationError("Source and target environments must be different.");
 		}
+		await PlanLimitService.assertFeature(org_id, "change_requests");
 
 		const [sourceEnvType, targetEnvType] = await Promise.all([
 			EnvTypeService.getEnvType(source_env_type_id),

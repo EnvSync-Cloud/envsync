@@ -225,6 +225,15 @@ export class AuditLogService {
 			);
 		}
 
+		const { PlanService } = await import("@/services/plan.service");
+		const plan = await PlanService.resolve(org_id);
+		if (plan.limits.audit_retention_days !== null) {
+			const retentionStart = new Date();
+			retentionStart.setDate(retentionStart.getDate() - plan.limits.audit_retention_days);
+			auditLogsQuery = auditLogsQuery.where("created_at", ">=", retentionStart);
+			totalCountQuery = totalCountQuery.where("created_at", ">=", retentionStart);
+		}
+
 		if (filter_by_past_time) {
 			const pastTime = new Date();
 			switch (filter_by_past_time) {

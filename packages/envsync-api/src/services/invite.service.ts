@@ -3,6 +3,7 @@ import { SecretKeyGenerator } from "sk-keygen";
 
 import { DB } from "@/libs/db";
 import { ConflictError } from "@/libs/errors";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class InviteService {
 	public static createOrgInvite = async (email: string) => {
@@ -48,6 +49,7 @@ export class InviteService {
 
 	public static createUserInvite = async (email: string, org_id: string, role_id: string) => {
 		const db = await DB.getInstance();
+		await PlanLimitService.assertCount(org_id, "members");
 
 		const existingUser = await db
 			.selectFrom("users")

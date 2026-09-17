@@ -136,6 +136,14 @@ export class VaultEntryService {
 			user_id: input.user_id,
 			allowProtected: options?.allowProtected,
 		});
+		if (entryType === "secret") {
+			const { AppService } = await import("@/services/app.service");
+			const { PlanLimitService } = await import("@/services/plan_limit.service");
+			const app = await AppService.getApp({ id: input.app_id });
+			if (!app.is_managed_secret) {
+				await PlanLimitService.assertFeature(input.org_id, "byok_secrets");
+			}
+		}
 
 		const keyCheck = await KeyValidationService.checkKeyExists({
 			key: input.key,

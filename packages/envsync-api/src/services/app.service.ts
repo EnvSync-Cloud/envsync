@@ -11,6 +11,7 @@ import { KMSClient } from "@/libs/kms/client";
 import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
 import { AuthorizationService } from "@/services/authorization.service";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class AppService {
 	private static getEnvCountsByOrg = async ({ org_id, app_id }: { org_id: string; app_id?: string }) => {
@@ -97,6 +98,11 @@ export class AppService {
 
 		if (existing) {
 			throw new ConflictError("Project name already exists in this organization");
+		}
+
+		await PlanLimitService.assertCount(org_id, "projects");
+		if (!is_managed_secret) {
+			await PlanLimitService.assertFeature(org_id, "byok_secrets");
 		}
 
 		const ctx: { app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date } } = {};
