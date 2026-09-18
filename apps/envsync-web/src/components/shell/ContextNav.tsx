@@ -13,7 +13,7 @@ import type { WebNavGroup, WebNavItem } from "@/modules/types";
 
 import { buildProjectNavItems, hasRequiredPermission } from "./context-nav";
 
-const CERTIFICATE_NAV_IDS = new Set(["certificates"]);
+const CERTIFICATE_NAV_IDS = new Set(["certificates", "gpgkeys"]);
 const SECRETS_ORG_NAV_IDS = new Set(["dashboard", "applications"]);
 
 interface ContextNavProps {

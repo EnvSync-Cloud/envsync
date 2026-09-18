@@ -52,5 +52,16 @@ describe("core web routes", () => {
     expect(items.every((item) => !item.href.startsWith("/applications"))).toBe(true);
     expect(items.every((item) => item.href !== "/org/users" && item.href !== "/users")).toBe(true);
   });
+
+  test("lists GPG Keys with Certificates, not under Organization", () => {
+    const groups = coreWebModules.flatMap((module) => module.navGroups);
+    const certificateGroup = groups.find((group) => group.label === "Certificates");
+    const orgGroup = groups.find((group) => group.label === "Admin");
+    const securityGroup = groups.find((group) => group.label === "Security");
+
+    expect(certificateGroup?.items.map((item) => item.id)).toEqual(["certificates", "gpgkeys"]);
+    expect(orgGroup?.items.map((item) => item.id)).not.toContain("gpgkeys");
+    expect(securityGroup?.items.map((item) => item.id)).toEqual(["apikeys"]);
+  });
 });
 

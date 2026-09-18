@@ -235,11 +235,16 @@ export const coreWebModules: WebModule[] = [
         ],
       },
       {
+        label: "Certificates",
+        items: [
+          { id: "certificates", name: "Certificates", href: orgCertificatesPath(), icon: ShieldCheck },
+          { id: "gpgkeys", name: "GPG Keys", href: "/gpgkeys", icon: KeyRound },
+        ],
+      },
+      {
         label: "Security",
         items: [
           { id: "apikeys", name: "API Keys", href: apiKeysPath(), icon: Key },
-          { id: "gpgkeys", name: "GPG Keys", href: "/gpgkeys", icon: KeyRound },
-          { id: "certificates", name: "Certificates", href: orgCertificatesPath(), icon: ShieldCheck },
         ],
       },
       {
