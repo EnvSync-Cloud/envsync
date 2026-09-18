@@ -126,9 +126,9 @@ describe("CLI Commands E2E", () => {
 		});
 		expect(result.exitCode).toBe(0);
 		expect(result.stderr).not.toContain("panic");
-		// Should display some user/org info from the API
-		const output = result.stdout + result.stderr;
-		expect(output).not.toContain("404");
+		expect(result.stdout).toContain("You are logged in");
+		expect(result.stdout).toContain("UserID:");
+		expect(result.stdout).toContain("Organization:");
 	});
 
 	test("app list shows apps", async () => {
