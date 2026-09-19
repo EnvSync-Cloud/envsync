@@ -83,6 +83,17 @@ export interface IssueMemberCertResult {
 	serialHex: string;
 }
 
+export interface IssueLeafCertResult {
+	certPem: string;
+	keyPem: string;
+	serialHex: string;
+}
+
+export interface SignCSRResult {
+	certPem: string;
+	serialHex: string;
+}
+
 export interface RevokeCertResult {
 	success: boolean;
 }
@@ -211,6 +222,8 @@ interface GrpcBatchDecryptResponse { items: Array<{ plaintext: Buffer | string }
 interface GrpcHealthResponse { status: string }
 interface GrpcCreateOrgCAResponse { cert_pem: string; serial_hex: string }
 interface GrpcIssueMemberCertResponse { cert_pem: string; key_pem: string; serial_hex: string }
+interface GrpcIssueLeafCertResponse { cert_pem: string; key_pem: string; serial_hex: string }
+interface GrpcSignCSRResponse { cert_pem: string; serial_hex: string }
 interface GrpcRevokeCertResponse { success: boolean }
 interface GrpcGetCRLResponse { crl_der: Buffer | string; crl_number: string | number; is_delta: boolean }
 interface GrpcCheckOCSPResponse { status: number; revoked_at: string }
@@ -670,6 +683,59 @@ export class KMSClient {
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`PKI IssueMemberCert error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async issueLeafCert(input: {
+		orgId: string;
+		commonName: string;
+		dnsSans: string[];
+		ttlDays: number;
+		keyAlgorithm: string;
+	}): Promise<IssueLeafCertResult> {
+		await KMSClient.beforeTenantOp(input.orgId, "");
+		try {
+			const response = await this.rpcCall<GrpcIssueLeafCertResponse>(this.pkiStub, "IssueLeafCert", {
+				org_id: input.orgId,
+				common_name: input.commonName,
+				dns_sans: input.dnsSans,
+				ttl_days: input.ttlDays,
+				key_algorithm: input.keyAlgorithm,
+			});
+			return {
+				certPem: response.cert_pem,
+				keyPem: response.key_pem,
+				serialHex: response.serial_hex,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`PKI IssueLeafCert error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async signCsr(input: {
+		orgId: string;
+		csrPem: string;
+		ttlDays: number;
+	}): Promise<SignCSRResult> {
+		await KMSClient.beforeTenantOp(input.orgId, "");
+		try {
+			const response = await this.rpcCall<GrpcSignCSRResponse>(this.pkiStub, "SignCSR", {
+				org_id: input.orgId,
+				csr_pem: input.csrPem,
+				ttl_days: input.ttlDays,
+			});
+			return {
+				certPem: response.cert_pem,
+				serialHex: response.serial_hex,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`PKI SignCSR error: ${error.message}`, LogTypes.ERROR, "KMSClient");
 			}
 			throw error;
 		}

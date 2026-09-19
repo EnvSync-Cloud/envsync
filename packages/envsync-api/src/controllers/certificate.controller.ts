@@ -45,6 +45,53 @@ export class CertificateController {
 		return c.json(result, 200);
 	};
 
+	public static readonly issueLeaf = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const user_id = c.get("user_id");
+		const body = await c.req.json();
+		const cert = await CertificateService.issueLeaf({
+			org_id,
+			app_id: body.app_id,
+			env_type_id: body.env_type_id,
+			issued_by_user_id: user_id,
+			common_name: body.common_name,
+			sans: body.sans,
+			ttl_days: body.ttl_days,
+			key_algorithm: body.key_algorithm,
+			description: body.description,
+		});
+		await AuditLogService.notifyAuditSystem({
+			action: "cert_leaf_issued",
+			org_id,
+			user_id,
+			message: `Leaf certificate issued: ${body.common_name}`,
+			details: { certificate_id: cert.id, serial_hex: cert.serial_hex, app_id: body.app_id },
+		});
+		return c.json(cert, 201);
+	};
+
+	public static readonly signCsr = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const user_id = c.get("user_id");
+		const body = await c.req.json();
+		const cert = await CertificateService.signCsr({
+			org_id,
+			app_id: body.app_id,
+			issued_by_user_id: user_id,
+			csr_pem: body.csr_pem,
+			ttl_days: body.ttl_days,
+			description: body.description,
+		});
+		await AuditLogService.notifyAuditSystem({
+			action: "cert_csr_signed",
+			org_id,
+			user_id,
+			message: `CSR signed: ${cert.subject_cn}`,
+			details: { certificate_id: cert.id, serial_hex: cert.serial_hex },
+		});
+		return c.json(cert, 201);
+	};
+
 	public static readonly issueMemberCert = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");

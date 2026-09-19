@@ -311,6 +311,52 @@ export const MockKMSClient = {
 		return { certPem, keyPem, serialHex };
 	},
 
+	async issueLeafCert(input: {
+		orgId: string;
+		commonName: string;
+		dnsSans: string[];
+		ttlDays: number;
+		keyAlgorithm: string;
+	}): Promise<{ certPem: string; keyPem: string; serialHex: string }> {
+		await beforeTenantOp(input.orgId, "");
+		if (!orgCAs.has(input.orgId)) {
+			throw new Error("Org CA not initialized");
+		}
+		const serialHex = nextSerial();
+		const certPem = mockCertPem(input.commonName);
+		const keyPem = mockKeyPem();
+		pkiCerts.set(serialHex, {
+			serialHex,
+			orgId: input.orgId,
+			certType: "leaf",
+			revoked: false,
+			revokedAt: "",
+		});
+		return { certPem, keyPem, serialHex };
+	},
+
+	async signCsr(input: {
+		orgId: string;
+		csrPem: string;
+		ttlDays: number;
+	}): Promise<{ certPem: string; serialHex: string }> {
+		await beforeTenantOp(input.orgId, "");
+		if (!orgCAs.has(input.orgId)) {
+			throw new Error("Org CA not initialized");
+		}
+		const serialHex = nextSerial();
+		const cn = input.csrPem.includes("CN=") ? "csr.example.test" : "csr.example.test";
+		const certPem = mockCertPem(cn);
+		pkiCerts.set(serialHex, {
+			serialHex,
+			orgId: input.orgId,
+			certType: "leaf",
+			revoked: false,
+			revokedAt: "",
+		});
+		return { certPem, serialHex };
+	},
+
 	async revokeCert(
 		serialHex: string,
 		orgId: string,

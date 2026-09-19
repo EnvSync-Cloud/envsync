@@ -139,6 +139,8 @@ type GpgKeyAuditActions =
 type CertificateAuditActions =
 	| "cert_ca_initialized"
 	| "cert_member_issued"
+	| "cert_leaf_issued"
+	| "cert_csr_signed"
 	| "certs_viewed"
 	| "cert_viewed"
 	| "cert_bundle_retrieved"

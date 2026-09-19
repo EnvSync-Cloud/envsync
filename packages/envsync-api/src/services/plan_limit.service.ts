@@ -4,7 +4,7 @@ import { PlanService, type ResolvedPlan } from "@/services/plan.service";
 import type { PlanLimits } from "@/services/plan.catalog";
 
 export type PlanCountDimension = "projects" | "members" | "api_keys" | "webhooks" | "orgs";
-export type PlanFlag = "change_requests" | "point_in_time" | "byok_secrets";
+export type PlanFlag = "change_requests" | "point_in_time" | "byok_secrets" | "certificates";
 
 export class PlanLimitService {
 	public static async resolve(orgId: string): Promise<ResolvedPlan> {

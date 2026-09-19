@@ -216,6 +216,9 @@ export interface OrgCertificate extends BaseTable {
 	supersedes_certificate_id?: ColumnType<string | null>;
 	is_system_generated: ColumnType<boolean>;
 	encrypted_key_pem?: ColumnType<string | null>;
+	app_id?: ColumnType<string | null>;
+	env_type_id?: ColumnType<string | null>;
+	sans: ColumnType<string[]>;
 }
 
 export interface ChangeRequest extends BaseTable {

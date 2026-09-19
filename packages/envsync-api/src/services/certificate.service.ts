@@ -9,6 +9,8 @@ import { runSaga } from "@/helpers/saga";
 import { KMSClient } from "@/libs/kms/client";
 import { invalidateSessionToken } from "@/libs/kms/session-manager";
 import { AuthorizationService } from "@/services/authorization.service";
+import { AppService } from "@/services/app.service";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 const OCSP_STATUS_MAP: Record<number, string> = {
 	0: "good",
@@ -288,6 +290,222 @@ export class CertificateService {
 			...cert,
 			key_pem: memberKeyPem,
 		};
+	};
+
+	public static issueLeaf = async ({
+		org_id,
+		app_id,
+		env_type_id,
+		issued_by_user_id,
+		common_name,
+		sans = [],
+		ttl_days = 90,
+		key_algorithm = "ECDSA_P256",
+		description,
+	}: {
+		org_id: string;
+		app_id: string;
+		env_type_id?: string;
+		issued_by_user_id: string;
+		common_name: string;
+		sans?: string[];
+		ttl_days?: number;
+		key_algorithm?: string;
+		description?: string;
+	}) => {
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const orgCA = await this.getActiveOrgCARecord(org_id);
+		if (!orgCA) {
+			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.", 409, "ORG_CA_REQUIRED");
+		}
+		const app = await AppService.getApp({ id: app_id });
+		if (app.org_id !== org_id) {
+			throw new NotFoundError("App", app_id);
+		}
+
+		const dnsSans = [...new Set([common_name, ...sans].map(value => value.trim()).filter(Boolean))];
+		const db = await DB.getInstance();
+		const certId = uuidv4();
+		let certPem = "";
+		let keyPem = "";
+		let serialHex = "";
+		const now = new Date();
+		const notAfter = new Date(now.getTime() + ttl_days * 24 * 60 * 60 * 1000);
+
+		await runSaga("issueLeafCert", {}, [
+			{
+				name: "kms-issue-leaf",
+				execute: async () => {
+					const kms = await KMSClient.getInstance();
+					const result = await kms.issueLeafCert({
+						orgId: org_id,
+						commonName: common_name,
+						dnsSans,
+						ttlDays: ttl_days,
+						keyAlgorithm: key_algorithm,
+					});
+					certPem = result.certPem;
+					keyPem = result.keyPem;
+					serialHex = result.serialHex;
+				},
+			},
+			{
+				name: "db-insert",
+				execute: async () => {
+					await db
+						.insertInto("org_certificates")
+						.values({
+							id: certId,
+							org_id,
+							user_id: issued_by_user_id,
+							serial_hex: serialHex,
+							cert_type: "leaf",
+							subject_cn: common_name,
+							subject_email: null,
+							status: "active",
+							cert_pem: certPem,
+							description: description || null,
+							metadata: normalizeMetadata({ issued_by_user_id, issued_source: "leaf" }),
+							is_system_generated: false,
+							encrypted_key_pem: null,
+							supersedes_certificate_id: null,
+							app_id,
+							env_type_id: env_type_id || null,
+							sans: dnsSans,
+							not_before: now,
+							not_after: notAfter,
+							created_at: now,
+							updated_at: now,
+						})
+						.executeTakeFirstOrThrow();
+				},
+				compensate: async () => {
+					await db.deleteFrom("org_certificates").where("id", "=", certId).execute();
+				},
+			},
+			{
+				name: "fga-write",
+				execute: async () => {
+					await AuthorizationService.writeCertificateRelations(certId, org_id, issued_by_user_id);
+				},
+				compensate: async () => {
+					await AuthorizationService.deleteResourceTuples("certificate", certId);
+				},
+			},
+			{
+				name: "cache-invalidate",
+				execute: async () => {
+					await invalidateCache(CacheKeys.certsByOrg(org_id));
+				},
+			},
+		]);
+
+		const cert = await this.getCertificate(certId);
+		return { ...cert, key_pem: keyPem };
+	};
+
+	public static signCsr = async ({
+		org_id,
+		app_id,
+		issued_by_user_id,
+		csr_pem,
+		ttl_days = 90,
+		description,
+	}: {
+		org_id: string;
+		app_id?: string;
+		issued_by_user_id: string;
+		csr_pem: string;
+		ttl_days?: number;
+		description?: string;
+	}) => {
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const orgCA = await this.getActiveOrgCARecord(org_id);
+		if (!orgCA) {
+			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.", 409, "ORG_CA_REQUIRED");
+		}
+		if (app_id) {
+			const app = await AppService.getApp({ id: app_id });
+			if (app.org_id !== org_id) {
+				throw new NotFoundError("App", app_id);
+			}
+		}
+
+		const db = await DB.getInstance();
+		const certId = uuidv4();
+		let certPem = "";
+		let serialHex = "";
+		const now = new Date();
+		const notAfter = new Date(now.getTime() + ttl_days * 24 * 60 * 60 * 1000);
+		const cnMatch = csr_pem.match(/CN\s*=\s*([^,\n/]+)/i);
+		const subjectCn = cnMatch?.[1]?.trim() || "csr";
+
+		await runSaga("signCsr", {}, [
+			{
+				name: "kms-sign-csr",
+				execute: async () => {
+					const kms = await KMSClient.getInstance();
+					const result = await kms.signCsr({
+						orgId: org_id,
+						csrPem: csr_pem,
+						ttlDays: ttl_days,
+					});
+					certPem = result.certPem;
+					serialHex = result.serialHex;
+				},
+			},
+			{
+				name: "db-insert",
+				execute: async () => {
+					await db
+						.insertInto("org_certificates")
+						.values({
+							id: certId,
+							org_id,
+							user_id: issued_by_user_id,
+							serial_hex: serialHex,
+							cert_type: "leaf",
+							subject_cn: subjectCn,
+							subject_email: null,
+							status: "active",
+							cert_pem: certPem,
+							description: description || null,
+							metadata: normalizeMetadata({ issued_by_user_id, issued_source: "csr" }),
+							is_system_generated: false,
+							encrypted_key_pem: null,
+							supersedes_certificate_id: null,
+							app_id: app_id || null,
+							env_type_id: null,
+							sans: [],
+							not_before: now,
+							not_after: notAfter,
+							created_at: now,
+							updated_at: now,
+						})
+						.executeTakeFirstOrThrow();
+				},
+				compensate: async () => {
+					await db.deleteFrom("org_certificates").where("id", "=", certId).execute();
+				},
+			},
+			{
+				name: "fga-write",
+				execute: async () => {
+					await AuthorizationService.writeCertificateRelations(certId, org_id, issued_by_user_id);
+				},
+				compensate: async () => {
+					await AuthorizationService.deleteResourceTuples("certificate", certId);
+				},
+			},
+			{
+				name: "cache-invalidate",
+				execute: async () => {
+					await invalidateCache(CacheKeys.certsByOrg(org_id));
+				},
+			},
+		]);
+
+		return this.getCertificate(certId);
 	};
 
 	public static listCertificates = async (

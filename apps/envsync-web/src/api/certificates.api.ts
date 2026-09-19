@@ -96,6 +96,65 @@ const useInitOrgCA = ({
   });
 };
 
+export type IssueLeafCertRequest = {
+  app_id: string;
+  env_type_id?: string;
+  common_name: string;
+  sans?: string[];
+  ttl_days?: number;
+  key_algorithm?: "ECDSA_P256" | "RSA_2048";
+  description?: string;
+};
+
+export type SignCsrRequest = {
+  app_id?: string;
+  csr_pem: string;
+  ttl_days?: number;
+  description?: string;
+};
+
+const useIssueLeafCert = ({
+  onSuccess,
+  onError,
+}: MutationOptions<MemberCertResponse, IssueLeafCertRequest> = {}) => {
+  const { invalidateCertificates } = useInvalidateQueries();
+  return useMutation({
+    mutationFn: (data: IssueLeafCertRequest) =>
+      apiRequest<MemberCertResponse>("/api/certificate/issue-leaf", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (data, variables) => {
+      onSuccess?.({ data, variables });
+      invalidateCertificates();
+    },
+    onError: (error, variables) => {
+      onError?.({ error: error as Error, variables });
+    },
+  });
+};
+
+const useSignCsr = ({
+  onSuccess,
+  onError,
+}: MutationOptions<OrgCAResponse, SignCsrRequest> = {}) => {
+  const { invalidateCertificates } = useInvalidateQueries();
+  return useMutation({
+    mutationFn: (data: SignCsrRequest) =>
+      apiRequest<OrgCAResponse>("/api/certificate/sign-csr", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (data, variables) => {
+      onSuccess?.({ data, variables });
+      invalidateCertificates();
+    },
+    onError: (error, variables) => {
+      onError?.({ error: error as Error, variables });
+    },
+  });
+};
+
 const useIssueMemberCert = ({
   onSuccess,
   onError,
@@ -205,6 +264,8 @@ export const certificates = {
   getMyCertificateBundle: useMyCertificateBundle,
   initOrgCA: useInitOrgCA,
   issueMemberCert: useIssueMemberCert,
+  issueLeafCert: useIssueLeafCert,
+  signCsr: useSignCsr,
   revokeCert: useRevokeCert,
   getCRL: useCRL,
   checkOCSP: useCheckOCSP,

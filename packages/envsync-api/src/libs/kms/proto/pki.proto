@@ -9,6 +9,8 @@ option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
 service PKIService {
     rpc CreateOrgCA(CreateOrgCARequest) returns (CreateOrgCAResponse);
     rpc IssueMemberCert(IssueMemberCertRequest) returns (IssueMemberCertResponse);
+    rpc IssueLeafCert(IssueLeafCertRequest) returns (IssueLeafCertResponse);
+    rpc SignCSR(SignCSRRequest) returns (SignCSRResponse);
     rpc RevokeCert(RevokeCertRequest) returns (RevokeCertResponse);
     rpc GetCRL(GetCRLRequest) returns (GetCRLResponse);
     rpc CheckOCSP(CheckOCSPRequest) returns (CheckOCSPResponse);
@@ -36,6 +38,31 @@ message IssueMemberCertResponse {
     string cert_pem = 1;
     string key_pem = 2;
     string serial_hex = 3;
+}
+
+message IssueLeafCertRequest {
+    string org_id = 1;
+    string common_name = 2;
+    repeated string dns_sans = 3;
+    int32 ttl_days = 4;
+    string key_algorithm = 5; // RSA_2048 | ECDSA_P256
+}
+
+message IssueLeafCertResponse {
+    string cert_pem = 1;
+    string key_pem = 2;
+    string serial_hex = 3;
+}
+
+message SignCSRRequest {
+    string org_id = 1;
+    string csr_pem = 2;
+    int32 ttl_days = 3;
+}
+
+message SignCSRResponse {
+    string cert_pem = 1;
+    string serial_hex = 2;
 }
 
 message RevokeCertRequest {

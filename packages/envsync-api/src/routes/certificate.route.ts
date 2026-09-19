@@ -7,6 +7,8 @@ import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	initOrgCARequestSchema,
 	issueMemberCertRequestSchema,
+	issueLeafCertRequestSchema,
+	signCsrRequestSchema,
 	revokeCertRequestSchema,
 	renewCertRequestSchema,
 	rotateCertRequestSchema,
@@ -121,6 +123,44 @@ app.post(
 	}),
 	zValidator("json", issueMemberCertRequestSchema),
 	CertificateController.issueMemberCert,
+);
+
+app.post(
+	"/issue-leaf",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "issueLeafCert",
+		summary: "Issue service leaf certificate",
+		description: "Issue a project-scoped leaf certificate with DNS/IP SANs. Private key is returned once.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Leaf certificate issued",
+				content: { "application/json": { schema: resolver(memberCertResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", issueLeafCertRequestSchema),
+	CertificateController.issueLeaf,
+);
+
+app.post(
+	"/sign-csr",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "signCertificateCsr",
+		summary: "Sign a CSR",
+		description: "Sign a client-generated CSR with the organization CA. Private key never leaves the client.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Certificate signed",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", signCsrRequestSchema),
+	CertificateController.signCsr,
 );
 
 // Get CRL
