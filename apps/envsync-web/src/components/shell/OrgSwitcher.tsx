@@ -40,7 +40,6 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
     [activeMembershipUserId, memberships],
   );
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
-  const activeRole = activeMembership?.role_name || user?.role?.name || "Member";
   const canSwitchOrganizations =
     runtimeConfig.edition === "enterprise" && user?.auth_type !== "saml";
   const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
@@ -99,11 +98,6 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
           className="w-[320px] border-border bg-popover p-0"
         >
           <Command className="bg-transparent text-foreground">
-            <div className="border-b border-border px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active organization</p>
-              <p className="mt-1 truncate text-sm font-medium text-foreground">{activeOrgName}</p>
-              <p className="truncate text-xs text-tertiary">{activeRole}</p>
-            </div>
             <CommandInput placeholder="Search organizations..." className="text-foreground placeholder:text-tertiary" />
             <CommandList className="max-h-[320px]">
               <CommandEmpty className="text-tertiary">No organizations found.</CommandEmpty>

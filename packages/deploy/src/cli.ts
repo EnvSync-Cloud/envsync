@@ -2235,6 +2235,7 @@ const MINIKMS_MIGRATE_SQL = [
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql",
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/003_escrow_recovery.sql",
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/004_multi_replica_ha.sql",
+	"psql -h minikms_db -U postgres -d minikms -f /migrations/005_leaf_cert_type.sql",
 ].join(" && ");
 
 function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
