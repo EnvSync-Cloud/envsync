@@ -5,226 +5,211 @@ export type MarketingDoc = {
   lead: string;
   ctaLabel: string;
   ctaHref: string;
-  sections: { heading: string; body?: string; items?: string[] }[];
+  illustration: string;
+  illustrationAlt: string;
+  capabilities: { title: string; body: string }[];
+  steps: { title: string; body: string }[];
 };
 
 export const marketingDocs: MarketingDoc[] = [
   {
     path: "/companies/startups",
-    eyebrow: "Companies · Startups",
-    title: "Ship config without a security team.",
-    lead: "EnvSync on the Developer plan is one organization, CLI and SDK, and managed secrets. You are not buying a PKI suite — you are stopping .env files in Slack.",
+    eyebrow: "For startups",
+    title: "Stop pasting .env in Slack.",
+    lead: "One organization, the CLI, and managed secrets. Ship staging and production without a security hire.",
     ctaLabel: "Start free",
     ctaHref: "/onboarding",
-    sections: [
-      {
-        heading: "How you use it",
-        body: "Create the org from Hosted signup, add a project per app, put staging and production in environment types, pull with the CLI in CI.",
-        items: [
-          "One org, five projects, three members on Developer",
-          "Managed secrets — no BYOK required to start",
-          "SDK and CLI against the same API",
-          "Hosted overlay can trial a feature without changing plan",
-        ],
-      },
-      {
-        heading: "When you outgrow it",
-        body: "Change requests, point-in-time recovery, and BYOK live on Plus+. Certificates, SSO, and rotation are Enterprise — or a Hosted overlay if we turn them on for a trial.",
-      },
+    illustration: "/images/illustrations/startups.png",
+    illustrationAlt: "Two developers sharing project keys at a desk",
+    capabilities: [
+      { title: "Create and pull", body: "A project per app. Environment types for staging and production. envsync pull in CI." },
+      { title: "Share without a dump", body: "Invite the team. They get the values they are allowed to see — not a zip of everyone’s keys." },
+      { title: "Grow when you need to", body: "Plus+ adds reviews and recovery. Enterprise adds SSO and certificates. Trial a Hosted feature without switching plans." },
+    ],
+    steps: [
+      { title: "Sign up", body: "Hosted Developer: one org, five projects, three members." },
+      { title: "Push your first env", body: "CLI or dashboard. Staging and production stay separate." },
+      { title: "Hook CI", body: "Same API from GitHub Actions, GitLab, or the SDK." },
     ],
   },
   {
     path: "/companies/msme",
-    eyebrow: "Companies · MSME",
-    title: "Approvals and recovery without an Enterprise contract.",
-    lead: "For small and mid-size teams the product is Plus+: more seats, change requests, point-in-time, BYOK secrets. The plan name stays Plus+. MSME is who it is for.",
+    eyebrow: "For MSME",
+    title: "Production changes get a review. Accidents get a rollback.",
+    lead: "Plus+ is built for small and mid-size teams: more seats, change requests, point-in-time, and BYOK secrets — without an Enterprise contract.",
     ctaLabel: "Request Plus+",
     ctaHref: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
-    sections: [
-      {
-        heading: "How you use it",
-        body: "Production env types are protected. Promotions go through change requests. Audit retention is 60 days. Secrets can use your key.",
-        items: [
-          "Change requests and recovery on Hosted Plus+",
-          "Self-host OSS includes this workflow set for one org, no license",
-          "30 members, 10 API keys, 5 webhooks",
-          "SSO and rotation stay on Enterprise unless overlayed",
-        ],
-      },
+    illustration: "/images/illustrations/msme.png",
+    illustrationAlt: "A small team reviewing a config change",
+    capabilities: [
+      { title: "Protect production", body: "Mark an environment type protected. Promotions wait for a change request." },
+      { title: "Recover in minutes", body: "Point-in-time history on secrets and env values. Undo a bad push." },
+      { title: "Your key, our workflow", body: "BYOK secrets on Plus+. Self-host OSS includes this workflow for a single org." },
+    ],
+    steps: [
+      { title: "Protect prod", body: "Turn on change requests for the production environment type." },
+      { title: "Review in the dashboard", body: "Approvers see the diff. Apply or reject." },
+      { title: "Keep shipping", body: "Staging stays fast. Production stays gated." },
     ],
   },
   {
     path: "/companies/enterprise",
-    eyebrow: "Companies · Enterprise",
-    title: "Provisioned identity, certs, and encryption — not self-serve.",
-    lead: "Enterprise is turned on by EnvSync after you talk to us. Unlimited orgs and seats, SSO, rotation, certificates, GPG, log forwarding. Not a Developer upgrade button.",
-    ctaLabel: "Contact EnvSync",
+    eyebrow: "For Enterprise",
+    title: "SSO, certificates, and your own keys — provisioned for you.",
+    lead: "Unlimited orgs and seats. OIDC or SAML. Service certificates. Rotation and log forwarding. We turn it on after we talk — not a self-serve upgrade.",
+    ctaLabel: "Talk to EnvSync",
     ctaHref: "mailto:hello@envsync.cloud?subject=Enterprise%20plan",
-    sections: [
-      {
-        heading: "How you use it",
-        body: "We provision the org. You connect OIDC or SAML, issue service certificates into projects, rotate secrets, forward logs. Overlay can preview a module before the contract.",
-        items: [
-          "SSO (OIDC/SAML), rotation, dynamic secrets",
-          "Certificates: org CA, member and service leaves, CSR, internal ACME",
-          "CMK / BYOK, audit, log forwarding",
-          "Hosted or self-host Enterprise image — not OSS pretending to be EE",
-        ],
-      },
+    illustration: "/images/illustrations/enterprise.png",
+    illustrationAlt: "A larger team collaborating on identity and secrets",
+    capabilities: [
+      { title: "One identity model", body: "Members, API keys, service tokens, and workload certificates in the same org." },
+      { title: "Your encryption", body: "CMK on AWS, GCP, or Azure. Org CA and leaf keys stay in miniKMS." },
+      { title: "Operations you can audit", body: "Rotation, dynamic secrets, log forwarding, long retention." },
+    ],
+    steps: [
+      { title: "Talk to us", body: "We provision Hosted Enterprise or a licensed self-host image." },
+      { title: "Connect SSO", body: "OIDC or SAML. Roles map onto OpenFGA." },
+      { title: "Issue and rotate", body: "Service certs into projects. Secrets rotate on a schedule." },
     ],
   },
   {
     path: "/product/secrets",
-    eyebrow: "Product · Secrets",
-    title: "Environments and secrets, one API.",
-    lead: "Projects, environment types, promotion, CLI and SDK. This is the core product on Hosted and on self-host OSS.",
-    ctaLabel: "Get started",
+    eyebrow: "Environments & secrets",
+    title: "One place for every environment. Promote with a review.",
+    lead: "Projects, environment types, CLI and SDK. Pull staging. Push production. The team sees the same values — without a shared .env.",
+    ctaLabel: "Start free",
     ctaHref: "/onboarding",
-    sections: [
-      {
-        heading: "What you get",
-        items: [
-          "Projects scoped to an organization",
-          "Environment types (dev / staging / production) with protection",
-          "CLI pull/push and generated TS/Go SDKs",
-          "Webhooks on env and secret events",
-        ],
-      },
-      {
-        heading: "What this is not",
-        body: "Not a second HashiCorp Vault UI. Values are encrypted through miniKMS. Change requests and point-in-time are Plus+ / OSS workflow, not Developer Hosted.",
-      },
+    illustration: "/images/illustrations/secrets.png",
+    illustrationAlt: "Keys moving from staging into production",
+    capabilities: [
+      { title: "Projects and envs", body: "One project per app. Dev, staging, and production as first-class environment types." },
+      { title: "CLI and SDK", body: "envsync pull / push. Generated TypeScript and Go clients. Same API as the dashboard." },
+      { title: "Webhooks", body: "Know when an environment or secret changes. Route it to Slack, Discord, or your bus." },
+    ],
+    steps: [
+      { title: "Create a project", body: "Add environment types. Protect production if you need a review." },
+      { title: "Put values in once", body: "Dashboard or CLI. Encrypted at rest through miniKMS." },
+      { title: "Pull at runtime", body: "CI, local, or the SDK. No copy-paste between machines." },
     ],
   },
   {
     path: "/product/certificates",
-    eyebrow: "Product · Certificates",
-    title: "Identity certs for people and workloads.",
-    lead: "Org intermediate CA in miniKMS. Member certs, project leaves with SANs, CSR so the key never hits EnvSync, expiry webhooks, auto-renew into ENVSYNC_TLS_*. Internal ACME for .internal — not Let’s Encrypt.",
-    ctaLabel: "See OSS encryption",
-    ctaHref: "/oss/encryption",
-    sections: [
-      {
-        heading: "Shipped",
-        items: [
-          "Inventory with expiry and CRL URL",
-          "Issue leaf (managed key once) or sign a CSR",
-          "cert_expiring / cert_expired webhooks",
-          "Enterprise auto-renew into project secrets or a change request",
-        ],
-      },
-      {
-        heading: "Out of this product",
-        body: "No public CAs, EST/SCEP, discovery scanners, or Venafi. Certificates stay on the same identity line as API keys and service tokens.",
-      },
+    eyebrow: "Certificates",
+    title: "mTLS for people and services. The key can stay on the box.",
+    lead: "Stand up an org CA. Issue a member cert or a service leaf with SANs. Or sign a CSR so the private key never hits EnvSync. Expiry shows up in the list — and in a webhook.",
+    ctaLabel: "Start free",
+    ctaHref: "/onboarding",
+    illustration: "/images/illustrations/certs.png",
+    illustrationAlt: "Two services exchanging identity",
+    capabilities: [
+      { title: "Issue or sign", body: "Managed key once, or bring a CSR. DNS, IP, and SPIFFE URIs." },
+      { title: "Stay ahead of expiry", body: "Inventory, warn before 30 days, cert_expiring and cert_expired webhooks." },
+      { title: "Renew into secrets", body: "Enterprise auto-renew writes ENVSYNC_TLS_* — or opens a change request if production is protected." },
+    ],
+    steps: [
+      { title: "Initialize the org CA", body: "One intermediate in miniKMS. Download the chain. Copy the CRL URL." },
+      { title: "Issue a service cert", body: "Pick the project, common name, SANs. Or paste a CSR." },
+      { title: "Wire the workload", body: "CLI, dashboard download, or internal ACME for cert-manager on .internal names." },
     ],
   },
   {
     path: "/product/access",
-    eyebrow: "Product · Access",
-    title: "Who can read secrets — and how they prove it.",
-    lead: "Members, RBAC, API keys, service tokens. Enterprise adds OIDC and SAML. Org create on Hosted is POST /auth/create-organization only.",
-    ctaLabel: "Get started",
+    eyebrow: "Access & SSO",
+    title: "The right people, the right keys, the same org.",
+    lead: "Members and roles. API keys and service tokens. Enterprise adds OIDC and SAML so nobody shares a password to the dashboard.",
+    ctaLabel: "Start free",
     ctaHref: "/onboarding",
-    sections: [
-      {
-        heading: "Core",
-        items: ["Organization members and roles", "API keys", "Service tokens", "OpenFGA checks on every product route"],
-      },
-      {
-        heading: "Enterprise",
-        items: ["OIDC", "SAML", "Keycloak theme on Hosted and self-host"],
-      },
+    illustration: "/images/illustrations/access.png",
+    illustrationAlt: "A teammate waved through with a badge",
+    capabilities: [
+      { title: "Roles that stick", body: "View, edit, admin. OpenFGA on every product route." },
+      { title: "Machines get tokens", body: "API keys for CI. Service tokens for workloads. Not a human password in Jenkins." },
+      { title: "SSO when you’re ready", body: "OIDC or SAML on Enterprise. Keycloak on Hosted and self-host." },
+    ],
+    steps: [
+      { title: "Invite the team", body: "They join the org. Roles apply immediately." },
+      { title: "Mint a key for CI", body: "Scope it. Rotate it. Revoke it without touching humans." },
+      { title: "Turn on SSO", body: "Map IdP groups to EnvSync roles." },
     ],
   },
   {
     path: "/product/security",
-    eyebrow: "Product · Security",
-    title: "Approvals, keys, and an audit trail.",
-    lead: "Change requests, audit, BYOK/CMK, rotation, dynamic secrets, log forwarding. Most of this is Plus+ or Enterprise — OSS self-host already includes the Plus+ workflow set for one org.",
-    ctaLabel: "Contact EnvSync",
-    ctaHref: "mailto:hello@envsync.cloud?subject=Security%20and%20Enterprise",
-    sections: [
-      {
-        heading: "Operations",
-        items: [
-          "Change requests on protected environments",
-          "Point-in-time recovery",
-          "Audit log + webhooks",
-          "Secret rotation and dynamic secrets (Enterprise)",
-          "Log forwarding (Enterprise)",
-          "CMK: AWS / GCP / Azure (Enterprise)",
-        ],
-      },
+    eyebrow: "Security & operations",
+    title: "Reviews before prod. Your keys. A trail you can hand to audit.",
+    lead: "Change requests, point-in-time, BYOK and CMK, rotation, dynamic secrets, log forwarding. Plus+ and OSS cover the workflow. Enterprise covers the rest.",
+    ctaLabel: "Talk to EnvSync",
+    ctaHref: "mailto:hello@envsync.cloud?subject=Security%20and%20operations",
+    illustration: "/images/illustrations/security.png",
+    illustrationAlt: "Two people approving a change",
+    capabilities: [
+      { title: "Approve production", body: "Protected environments. Diffs. Apply or reject." },
+      { title: "Bring your own key", body: "Plus+ BYOK secrets. Enterprise CMK on AWS, GCP, or Azure." },
+      { title: "Rotate and forward", body: "Scheduled rotation, dynamic secrets, logs to your stack." },
+    ],
+    steps: [
+      { title: "Protect the env", body: "Production requires a change request." },
+      { title: "Attach your key", body: "BYOK or CMK. miniKMS still does the envelope." },
+      { title: "Watch the trail", body: "Audit log, webhooks, optional log forwarding." },
     ],
   },
   {
     path: "/oss",
-    eyebrow: "OSS",
-    title: "Dual license. One API process. No fake Enterprise.",
-    lead: "The public monorepo is MIT core plus proprietary EE packages. Self-host OSS is @envsync-cloud/deploy, one org, dashboard shell. EE modules do not load. Plus+ workflow features (change requests, PIT, BYOK secrets) are included for that single org.",
-    ctaLabel: "GitHub",
+    eyebrow: "Open source",
+    title: "Run the same engine we run. On your cluster.",
+    lead: "MIT core: one API, dashboard, CLI, SDKs, miniKMS. One organization. Change requests and recovery included. Enterprise modules stay proprietary — we don’t pretend otherwise.",
+    ctaLabel: "View on GitHub",
     ctaHref: "https://github.com/EnvSync-Cloud/envsync",
-    sections: [
-      {
-        heading: "What OSS is",
-        items: [
-          "envsync-api, envsync-web shell, CLI, TS/Go SDKs",
-          "miniKMS for encryption and org CA",
-          "Single org — no self-serve org create on the landing",
-          "Deploy with the public OSS CLI",
-        ],
-      },
-      {
-        heading: "What OSS is not",
-        body: "Not Hosted signup. Not /api/v1/manage. Not SSO, rotation, certificates overlay, or log forwarding unless you run the Enterprise image with a license.",
-      },
+    illustration: "/images/illustrations/oss.png",
+    illustrationAlt: "A team around an open toolbox",
+    capabilities: [
+      { title: "One process", body: "envsync-api serves product routes. No second management API." },
+      { title: "Deploy yourself", body: "Public @envsync-cloud/deploy. Postgres, Redis, miniKMS, Keycloak." },
+      { title: "Honest editions", body: "OSS is one org. Hosted signup and SSO are not in the MIT graph." },
+    ],
+    steps: [
+      { title: "Clone and compose", body: "bun install, docker compose, cli init." },
+      { title: "Create the first org", body: "Bootstrap via the OSS CLI — not the public landing." },
+      { title: "Pull secrets", body: "Same CLI and SDKs as Hosted." },
     ],
   },
   {
     path: "/oss/minikms",
-    eyebrow: "OSS · Engine",
-    title: "miniKMS is the encryption and PKI engine.",
-    lead: "A gRPC service, not a dashboard. EnvSync API talks to it for envelope encryption, org intermediate CAs, member and leaf certificates. Image ghcr.io/envsync-cloud/minikms. Keys do not live in Postgres as plaintext.",
-    ctaLabel: "Encryption path",
+    eyebrow: "miniKMS",
+    title: "The engine behind every secret and every cert.",
+    lead: "A gRPC service. Envelope encryption, org CAs, member and service certificates. You never log into it — the API does.",
+    ctaLabel: "How encryption works",
     ctaHref: "/oss/encryption",
-    sections: [
-      {
-        heading: "What it does",
-        items: [
-          "Tenant-scoped encrypt/decrypt",
-          "Org CA issue (members, service leaves, CSR sign)",
-          "CRL / OCSP",
-          "HA: persisted org CA keys, shared root CA material",
-        ],
-      },
-      {
-        heading: "What it is not",
-        body: "Not a HashiCorp Vault replacement UI. Not Let’s Encrypt. Operators do not log into miniKMS — the API is the product.",
-      },
+    illustration: "/images/illustrations/minikms.png",
+    illustrationAlt: "Sealed envelopes entering and leaving a vault",
+    capabilities: [
+      { title: "Encrypt and decrypt", body: "Tenant and app scope. Values never sit plaintext in Postgres." },
+      { title: "Issue identity", body: "Org intermediate, member certs, SAN leaves, CSR sign, CRL." },
+      { title: "Built to replicate", body: "Persisted org CA keys. Shared root CA. Pin ghcr.io/envsync-cloud/minikms." },
+    ],
+    steps: [
+      { title: "Run the image", body: "Compose or Swarm. Session key and root CA material on disk." },
+      { title: "Point the API at it", body: "gRPC. Product code never talks PKCS." },
+      { title: "Issue and encrypt", body: "Dashboard and CLI keep using /api." },
     ],
   },
   {
     path: "/oss/encryption",
-    eyebrow: "OSS · Encryption",
-    title: "How EnvSync uses miniKMS.",
-    lead: "The API never stores raw secret values. Encrypt and decrypt go through miniKMS with org and app scope. Enterprise can wrap with a customer CMK. Certificate private keys for managed leaves are returned once; CA keys stay in miniKMS.",
-    ctaLabel: "Read the OSS edition",
+    eyebrow: "Encryption",
+    title: "Secrets go in. Ciphertext comes out. Keys stay in the engine.",
+    lead: "EnvSync API authenticates you, then asks miniKMS to encrypt. Enterprise can wrap with your CMK. Certificate CA keys never leave miniKMS.",
+    ctaLabel: "Open source edition",
     ctaHref: "/oss",
-    sections: [
-      {
-        heading: "Path",
-        items: [
-          "Client → envsync-api (auth, FGA, plan flags)",
-          "API → miniKMS gRPC (encrypt / decrypt / PKI)",
-          "Optional Enterprise CMK (AWS KMS, GCP, Azure) for org wrapping",
-          "Vault entries can be wrapped to the org CA for member recovery",
-        ],
-      },
-      {
-        heading: "Operators",
-        body: "Self-host: pin the miniKMS image, mount a session signing key and root CA material, run SQL migrations 001–007. Hosted runs the same engine.",
-      },
+    illustration: "/images/illustrations/minikms.png",
+    illustrationAlt: "Sealed envelopes entering and leaving a vault",
+    capabilities: [
+      { title: "Envelope by default", body: "API → miniKMS. Org and project in the AAD." },
+      { title: "Your CMK on top", body: "Enterprise: AWS, GCP, or Azure wrap. Same product API." },
+      { title: "Cert keys stay put", body: "Managed leaves return a key once. Org CA private keys stay durable in miniKMS." },
+    ],
+    steps: [
+      { title: "Write a secret", body: "Dashboard or CLI. API encrypts before disk." },
+      { title: "Read a secret", body: "Decrypt on the way out. FGA still decides who sees it." },
+      { title: "Issue a cert", body: "miniKMS signs. EnvSync stores the inventory." },
     ],
   },
 ];

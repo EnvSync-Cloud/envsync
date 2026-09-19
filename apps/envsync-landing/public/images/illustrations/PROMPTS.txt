@@ -1,0 +1,45 @@
+GLOBAL PREFIX (paste above every scene)
+
+Flat hand-drawn editorial vector illustration, square 1:1 canvas, plain warm off-white/cream background (hex #EDECE1). Strict limited palette of exactly three colors: mint/emerald green (#3ED9A0), solid ink black (#101010), and the same cream off-white used for skin and clothing fills. Absolutely no gradients, no drop shadows, no 3D, no textures other than flat solid shapes. Bold black ink outlines of slightly variable weight, rounded line ends. Minimal faces: pointed triangular noses, simple dot or line eyes, small smiles. Short parallel hatch strokes and tiny stipple dots as shading. Flat mint-green abstract backdrop shapes (rounded rectangles, organic blobs, circles) behind the figures. Style: modern startup editorial, mid-century flat, clean vector, whimsical professional. NEGATIVE: no photorealism, no 3D, no gradients, no shadows, no extra colors, no text, no letters, no watermark, no border frames.
+
+Keep the same character kit as collab.png: woman with bun and glasses, bearded man, curly outline hair, long straight hair.
+
+---
+collab.png — Home (already generated)
+User master prompt: four people in a loop sharing a mint folder of keys, lightbulb, black sparkle.
+
+---
+secrets.png — /product/secrets
+Two characters from the kit. Three stacked mint rounded rectangles like shelves (dev / staging / prod — no letters). They pass a mint folder of keys upward. The top person stamps a black check. Small sparkle.
+
+---
+certs.png — /product/certificates
+Two characters face each other. Between them a mint rounded badge with a black keyhole. One holds a small black key, the other an open palm. Abstract mint blobs behind. mTLS / identity, not a padlock farm.
+
+---
+access.png — /product/access
+A mint rounded arch/door. One person holds a black badge card, another waves them through. Third at a desk with a green keyring. No logos.
+
+---
+security.png — /product/security
+Two people over a mint clipboard. One points, one holds a black stamp. A third waits with a folder. Sparkle = approved.
+
+---
+startups.png — /companies/startups
+Two people at one black-outline desk. Laptop as a black rounded rectangle. One mint folder of keys between them. Tiny black coffee cup. Small-team energy.
+
+---
+msme.png — /companies/msme
+Three people. Middle reviews a mint document. Left offers a folder. Right has a small smile, one hand on the table. Collaboration with a gate, not a boardroom.
+
+---
+enterprise.png — /companies/enterprise
+Four people in a loose ring (same kit as collab). One in a black blazer holds a mint stepped rectangle (building, flat, not 3D). More formal, still playful.
+
+---
+oss.png — /oss
+Three people around an open mint crate. Gears as flat green circles with black teeth. A black key rests inside the crate.
+
+---
+minikms.png — /oss/minikms and /oss/encryption
+Large mint rounded vault with a black keyhole. Person on the left hands in a sealed mint envelope. Person on the right receives a sealed envelope. Nothing open. API in, ciphertext out.

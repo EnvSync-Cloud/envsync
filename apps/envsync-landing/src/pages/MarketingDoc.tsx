@@ -9,7 +9,7 @@ const MarketingDoc = () => {
   if (!doc) {
     return <NotFound />;
   }
-  return <MarketingPage doc={doc} />;
+  return <MarketingPage key={doc.path} doc={doc} />;
 };
 
 export default MarketingDoc;
