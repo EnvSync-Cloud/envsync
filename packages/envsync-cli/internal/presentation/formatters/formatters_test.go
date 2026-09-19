@@ -911,8 +911,8 @@ func TestRotationFormatter_FormatCreateSuccess(t *testing.T) {
 	f := NewRotationFormatter()
 
 	policy := &managementsdk.RotationPolicyResponse{
-		Id: "rp-new", EngineType: managementsdk.RotationPolicyResponseEngineTypeAzureSp,
-		VariableKey: "AZURE_SECRET", ScheduleCron: "0 0 * * 1",
+		Id: "rp-new", EngineType: managementsdk.RotationPolicyResponseEngineTypeAwsIam,
+		VariableKey: "AWS_SECRET", ScheduleCron: "0 0 * * 1",
 	}
 
 	var buf bytes.Buffer
@@ -921,7 +921,7 @@ func TestRotationFormatter_FormatCreateSuccess(t *testing.T) {
 		t.Fatalf("FormatCreateSuccess() error = %v", err)
 	}
 	output := buf.String()
-	for _, text := range []string{"rp-new", "azure-sp", "AZURE_SECRET", "created successfully"} {
+	for _, text := range []string{"rp-new", "aws-iam", "AWS_SECRET", "created successfully"} {
 		if !strings.Contains(output, text) {
 			t.Errorf("output = %q, want it to contain %q", output, text)
 		}
@@ -1081,7 +1081,7 @@ func TestDynamicSecretFormatter_FormatEngineList(t *testing.T) {
 					Id: "e1", Name: "PG", EngineType: managementsdk.DynamicSecretEngineResponseEngineTypePostgres, Enabled: true,
 				},
 				&managementsdk.DynamicSecretEngineResponse{
-					Id: "e2", Name: "AWS", EngineType: managementsdk.DynamicSecretEngineResponseEngineTypeAwsIam, Enabled: false,
+					Id: "e2", Name: "MySQL", EngineType: managementsdk.DynamicSecretEngineResponseEngineTypeMysql, Enabled: false,
 				},
 			},
 			wantText: []string{"e1", "e2", "disabled"},
@@ -1132,7 +1132,7 @@ func TestDynamicSecretFormatter_FormatEngineDetail_Disabled(t *testing.T) {
 
 	engine := &managementsdk.DynamicSecretEngineResponse{
 		Id: "eng-off", Name: "Off Engine",
-		EngineType: managementsdk.DynamicSecretEngineResponseEngineTypeAwsIam,
+		EngineType: managementsdk.DynamicSecretEngineResponseEngineTypeMysql,
 		Enabled:    false, CreatedAt: "2025-01-01", UpdatedAt: "2025-01-01",
 	}
 
@@ -1152,7 +1152,7 @@ func TestDynamicSecretFormatter_FormatCreateEngineSuccess(t *testing.T) {
 
 	engine := &managementsdk.DynamicSecretEngineResponse{
 		Id: "eng-new", Name: "New Engine",
-		EngineType: managementsdk.DynamicSecretEngineResponseEngineTypeAzureSp,
+		EngineType: managementsdk.DynamicSecretEngineResponseEngineTypePostgres,
 	}
 
 	var buf bytes.Buffer
@@ -1161,7 +1161,7 @@ func TestDynamicSecretFormatter_FormatCreateEngineSuccess(t *testing.T) {
 		t.Fatalf("FormatCreateEngineSuccess() error = %v", err)
 	}
 	output := buf.String()
-	for _, text := range []string{"eng-new", "New Engine", "azure-sp", "created successfully"} {
+	for _, text := range []string{"eng-new", "New Engine", "postgres", "created successfully"} {
 		if !strings.Contains(output, text) {
 			t.Errorf("output = %q, want it to contain %q", output, text)
 		}
