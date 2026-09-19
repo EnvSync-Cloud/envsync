@@ -117,6 +117,10 @@ const Certificates = () => {
     },
     onError: ({ error }) => toast.error(error.message || "Failed to sign CSR"),
   });
+  const setAutoRenew = api.certificates.setAutoRenew({
+    onSuccess: () => toast.success("Auto-renew updated"),
+    onError: ({ error }) => toast.error(error.message || "Failed to update auto-renew"),
+  });
   const rotateCert = api.certificates.rotateCert({
     onSuccess: ({ data }) => {
       toast.success("Certificate rotated");
@@ -556,6 +560,23 @@ const Certificates = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex justify-end gap-1">
+                          {cert.status === "active" && cert.cert_type === "leaf" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={(cert as { auto_renew?: boolean }).auto_renew ? "text-emerald-400" : "text-muted-foreground"}
+                              data-testid="certificate-auto-renew-button"
+                              onClick={() =>
+                                setAutoRenew.mutate({
+                                  id: cert.id,
+                                  auto_renew: !(cert as { auto_renew?: boolean }).auto_renew,
+                                })
+                              }
+                              title="Toggle auto-renew"
+                            >
+                              Auto
+                            </Button>
+                          )}
                           {cert.status === "active" && cert.cert_type !== "org_ca" && (
                             <Button
                               variant="ghost"

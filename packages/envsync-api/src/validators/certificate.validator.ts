@@ -86,6 +86,14 @@ export const rotateCertRequestSchema = z
 	})
 	.openapi({ ref: "RotateCertRequest" });
 
+export const setAutoRenewRequestSchema = z
+	.object({
+		auto_renew: z.boolean(),
+		renew_days_before: z.number().int().min(1).max(365).optional(),
+		env_type_id: z.string().nullable().optional(),
+	})
+	.openapi({ ref: "SetAutoRenewRequest" });
+
 export const getCRLQuerySchema = z
 	.object({
 		delta_only: z.string().optional().openapi({ example: "false" }),

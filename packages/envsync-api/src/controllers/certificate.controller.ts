@@ -285,4 +285,18 @@ export class CertificateController {
 	public static readonly rotateCert = async (c: Context) => {
 		return this.renewCert(c);
 	};
+
+	public static readonly setAutoRenew = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const id = c.req.param("id");
+		const body = await c.req.json();
+		const cert = await CertificateService.setAutoRenew({
+			id,
+			org_id,
+			auto_renew: body.auto_renew,
+			renew_days_before: body.renew_days_before,
+			env_type_id: body.env_type_id,
+		});
+		return c.json(cert, 200);
+	};
 }

@@ -219,6 +219,8 @@ export interface OrgCertificate extends BaseTable {
 	app_id?: ColumnType<string | null>;
 	env_type_id?: ColumnType<string | null>;
 	sans: ColumnType<string[]>;
+	auto_renew: ColumnType<boolean>;
+	renew_days_before: ColumnType<number>;
 }
 
 export interface ChangeRequest extends BaseTable {

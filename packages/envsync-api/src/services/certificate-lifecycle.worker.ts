@@ -1,5 +1,6 @@
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { CertificateService } from "@/services/certificate.service";
+import { EditionPolicyService } from "@/services/edition-policy.service";
 
 let workerTimer: ReturnType<typeof setInterval> | null = null;
 let isWorkerPassRunning = false;
@@ -23,9 +24,12 @@ async function runCertificateLifecyclePass() {
 	isWorkerPassRunning = true;
 	try {
 		const result = await CertificateService.processLifecycle();
-		if (result.expired || result.expiring) {
+		const renewed = EditionPolicyService.isEnterprise()
+			? await CertificateService.processAutoRenewals()
+			: { renewed: 0 };
+		if (result.expired || result.expiring || renewed.renewed) {
 			infoLogs(
-				`Certificate lifecycle: expired=${result.expired} expiring=${result.expiring}`,
+				`Certificate lifecycle: expired=${result.expired} expiring=${result.expiring} renewed=${renewed.renewed}`,
 				LogTypes.LOGS,
 				"CertificateLifecycleWorker",
 			);

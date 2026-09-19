@@ -11,7 +11,11 @@ import { invalidateSessionToken } from "@/libs/kms/session-manager";
 import { AuthorizationService } from "@/services/authorization.service";
 import { AppService } from "@/services/app.service";
 import { AuditLogService } from "@/services/audit_log.service";
+import { ChangeRequestService } from "@/services/change_request.service";
+import { EditionPolicyService } from "@/services/edition-policy.service";
+import { EnvTypeService } from "@/services/env_type.service";
 import { PlanLimitService } from "@/services/plan_limit.service";
+import { SecretService } from "@/services/secret.service";
 
 const OCSP_STATUS_MAP: Record<number, string> = {
 	0: "good",
@@ -146,6 +150,8 @@ export class CertificateService {
 							metadata: normalizeMetadata(metadata),
 							is_system_generated: options?.is_system_generated ?? false,
 							supersedes_certificate_id: null,
+							auto_renew: false,
+							renew_days_before: 30,
 							created_at: now,
 							updated_at: now,
 						})
@@ -259,6 +265,8 @@ export class CertificateService {
 							is_system_generated,
 							encrypted_key_pem: encryptedKeyPem,
 							supersedes_certificate_id: null,
+							auto_renew: false,
+							renew_days_before: 30,
 							created_at: now,
 							updated_at: now,
 						})
@@ -373,6 +381,8 @@ export class CertificateService {
 							app_id,
 							env_type_id: env_type_id || null,
 							sans: dnsSans,
+							auto_renew: false,
+							renew_days_before: 30,
 							not_before: now,
 							not_after: notAfter,
 							created_at: now,
@@ -478,6 +488,8 @@ export class CertificateService {
 							app_id: app_id || null,
 							env_type_id: null,
 							sans: [],
+							auto_renew: false,
+							renew_days_before: 30,
 							not_before: now,
 							not_after: notAfter,
 							created_at: now,
@@ -806,5 +818,245 @@ export class CertificateService {
 		}
 
 		return { expired, expiring };
+	};
+
+	public static setAutoRenew = async ({
+		id,
+		org_id,
+		auto_renew,
+		renew_days_before = 30,
+		env_type_id,
+	}: {
+		id: string;
+		org_id: string;
+		auto_renew: boolean;
+		renew_days_before?: number;
+		env_type_id?: string | null;
+	}) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError(
+				"Auto-renew requires the Enterprise edition.",
+				403,
+				"ENTERPRISE_REQUIRED",
+			);
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const cert = await this.getCertificate(id);
+		if (cert.org_id !== org_id) {
+			throw new NotFoundError("Certificate", id);
+		}
+		if (cert.cert_type !== "leaf") {
+			throw new BusinessRuleError("Auto-renew is only available for service certificates.");
+		}
+		const meta = (cert.metadata as Record<string, string> | null) ?? {};
+		if (meta.issued_source === "csr") {
+			throw new BusinessRuleError("CSR-signed certificates cannot auto-renew; the private key is client-held.");
+		}
+		if (auto_renew && (env_type_id || cert.env_type_id)) {
+			const envType = await EnvTypeService.getEnvType(env_type_id || cert.env_type_id!);
+			if (envType.org_id !== org_id) {
+				throw new NotFoundError("EnvType", env_type_id || cert.env_type_id!);
+			}
+		}
+
+		const db = await DB.getInstance();
+		const now = new Date();
+		await db
+			.updateTable("org_certificates")
+			.set({
+				auto_renew,
+				renew_days_before,
+				env_type_id: env_type_id === undefined ? cert.env_type_id : env_type_id,
+				updated_at: now,
+			})
+			.where("id", "=", id)
+			.execute();
+		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		return this.getCertificate(id);
+	};
+
+	public static processAutoRenewals = async (now = new Date()) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			return { renewed: 0 };
+		}
+		const db = await DB.getInstance();
+		const candidates = await db
+			.selectFrom("org_certificates")
+			.selectAll()
+			.where("status", "=", "active")
+			.where("cert_type", "=", "leaf")
+			.where("auto_renew", "=", true)
+			.where("not_after", "is not", null)
+			.execute();
+
+		let renewed = 0;
+		for (const cert of candidates) {
+			if (!cert.not_after || !cert.app_id) {
+				continue;
+			}
+			const windowMs = (cert.renew_days_before || 30) * 24 * 60 * 60 * 1000;
+			if (new Date(cert.not_after).getTime() > now.getTime() + windowMs) {
+				continue;
+			}
+			const meta = (cert.metadata as Record<string, string> | null) ?? {};
+			if (meta.issued_source === "csr") {
+				continue;
+			}
+			try {
+				await this.renewLeaf(cert, now);
+				renewed += 1;
+			} catch (error) {
+				await AuditLogService.notifyAuditSystem({
+					action: "certificate_renewed",
+					org_id: cert.org_id,
+					user_id: cert.user_id,
+					message: `Auto-renew failed for ${cert.subject_cn}`,
+					details: {
+						certificate_id: cert.id,
+						error: error instanceof Error ? error.message : String(error),
+						app_id: cert.app_id ?? undefined,
+					},
+				});
+			}
+		}
+		return { renewed };
+	};
+
+	private static renewLeaf = async (
+		cert: {
+			id: string;
+			org_id: string;
+			user_id: string;
+			app_id?: string | null;
+			env_type_id?: string | null;
+			subject_cn: string;
+			sans: string[];
+			description?: string | null;
+			auto_renew: boolean;
+			renew_days_before: number;
+		},
+		now = new Date(),
+	) => {
+		const issued = await this.issueLeaf({
+			org_id: cert.org_id,
+			app_id: cert.app_id!,
+			env_type_id: cert.env_type_id || undefined,
+			issued_by_user_id: cert.user_id,
+			common_name: cert.subject_cn,
+			sans: cert.sans ?? [],
+			ttl_days: 90,
+			description: cert.description || undefined,
+		});
+
+		const db = await DB.getInstance();
+		await db
+			.updateTable("org_certificates")
+			.set({
+				auto_renew: cert.auto_renew,
+				renew_days_before: cert.renew_days_before,
+				supersedes_certificate_id: cert.id,
+				updated_at: now,
+			})
+			.where("id", "=", issued.id)
+			.execute();
+		await db
+			.updateTable("org_certificates")
+			.set({ status: "superseded", updated_at: now })
+			.where("id", "=", cert.id)
+			.execute();
+
+		if (cert.env_type_id && issued.cert_pem && issued.key_pem) {
+			await this.writeTlsSecrets({
+				org_id: cert.org_id,
+				app_id: cert.app_id!,
+				env_type_id: cert.env_type_id,
+				user_id: cert.user_id,
+				cert_pem: issued.cert_pem,
+				key_pem: issued.key_pem,
+				subject_cn: cert.subject_cn,
+			});
+		}
+
+		await AuditLogService.notifyAuditSystem({
+			action: "certificate_renewed",
+			org_id: cert.org_id,
+			user_id: cert.user_id,
+			message: `Service certificate auto-renewed: ${cert.subject_cn}`,
+			details: {
+				certificate_id: issued.id,
+				supersedes_certificate_id: cert.id,
+				app_id: cert.app_id ?? undefined,
+			},
+		});
+		return issued;
+	};
+
+	private static writeTlsSecrets = async ({
+		org_id,
+		app_id,
+		env_type_id,
+		user_id,
+		cert_pem,
+		key_pem,
+		subject_cn,
+	}: {
+		org_id: string;
+		app_id: string;
+		env_type_id: string;
+		user_id: string;
+		cert_pem: string;
+		key_pem: string;
+		subject_cn: string;
+	}) => {
+		const envType = await EnvTypeService.getEnvType(env_type_id);
+		const entries = [
+			{ key: "ENVSYNC_TLS_CERT", value: cert_pem },
+			{ key: "ENVSYNC_TLS_KEY", value: key_pem },
+		];
+		if (envType.is_protected) {
+			await ChangeRequestService.createDirect({
+				org_id,
+				app_id,
+				target_env_type_id: env_type_id,
+				requested_by_user_id: user_id,
+				title: `Auto-renew TLS for ${subject_cn}`,
+				message: "Managed leaf certificate auto-renewed; apply to update project secrets.",
+				secrets: entries.map(entry => ({
+					key: entry.key,
+					operation: "UPDATE" as const,
+					proposed_value: entry.value,
+				})),
+			});
+			return;
+		}
+
+		for (const entry of entries) {
+			try {
+				await SecretService.getSecret({
+					key: entry.key,
+					env_type_id,
+					app_id,
+					org_id,
+					user_id,
+				});
+				await SecretService.updateSecret({
+					key: entry.key,
+					value: entry.value,
+					env_type_id,
+					app_id,
+					org_id,
+					user_id,
+				});
+			} catch {
+				await SecretService.createSecret({
+					key: entry.key,
+					value: entry.value,
+					env_type_id,
+					app_id,
+					org_id,
+					user_id,
+				});
+			}
+		}
 	};
 }

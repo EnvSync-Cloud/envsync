@@ -12,6 +12,7 @@ import {
 	revokeCertRequestSchema,
 	renewCertRequestSchema,
 	rotateCertRequestSchema,
+	setAutoRenewRequestSchema,
 	orgCAResponseSchema,
 	memberCertResponseSchema,
 	certificateListResponseSchema,
@@ -323,6 +324,25 @@ app.post(
 	}),
 	zValidator("json", rotateCertRequestSchema),
 	CertificateController.rotateCert,
+);
+
+app.patch(
+	"/:id/auto-renew",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "setCertificateAutoRenew",
+		summary: "Configure leaf auto-renew",
+		description: "Enterprise-only. Auto-renew managed service certificates and optionally write ENVSYNC_TLS_* secrets.",
+		tags: ["Certificates"],
+		responses: {
+			200: {
+				description: "Auto-renew updated",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", setAutoRenewRequestSchema),
+	CertificateController.setAutoRenew,
 );
 
 // Check OCSP status

@@ -257,6 +257,27 @@ const useRotateCert = ({
   });
 };
 
+const useSetAutoRenew = ({
+  onSuccess,
+  onError,
+}: MutationOptions<OrgCAResponse, { id: string; auto_renew: boolean; renew_days_before?: number; env_type_id?: string | null }> = {}) => {
+  const { invalidateCertificates } = useInvalidateQueries();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; auto_renew: boolean; renew_days_before?: number; env_type_id?: string | null }) =>
+      apiRequest<OrgCAResponse>(`/api/certificate/${id}/auto-renew`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (data, variables) => {
+      onSuccess?.({ data, variables });
+      invalidateCertificates();
+    },
+    onError: (error, variables) => {
+      onError?.({ error: error as Error, variables });
+    },
+  });
+};
+
 export const certificates = {
   getCertificates: useCertificates,
   getOrgCA: useOrgCA,
@@ -271,4 +292,5 @@ export const certificates = {
   checkOCSP: useCheckOCSP,
   renewCert: useRenewCert,
   rotateCert: useRotateCert,
+  setAutoRenew: useSetAutoRenew,
 };
