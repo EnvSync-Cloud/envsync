@@ -366,19 +366,7 @@ export class ChangeRequestService {
 		if (!["pending", "failed"].includes(request.status)) {
 			throw new BusinessRuleError("Only pending or failed requests can be approved.");
 		}
-		if (request.requested_by_user_id === reviewer_user_id) {
-			throw new BusinessRuleError("Requesters cannot approve their own change request.", 403);
-		}
-
-		const canApprove = await AuthorizationService.check(
-			reviewer_user_id,
-			"can_manage_protected",
-			"env_type",
-			request.target_env_type_id,
-		);
-		if (!canApprove) {
-			throw new BusinessRuleError("You do not have permission to approve this change request.", 403);
-		}
+		await this.assertReviewer(request, reviewer_user_id);
 
 		const claimTime = new Date();
 		const claimed = await db
@@ -572,8 +560,23 @@ export class ChangeRequestService {
 		if (request.status !== "pending") {
 			throw new BusinessRuleError("Only pending requests can be reviewed.");
 		}
+		await this.assertReviewer(request, reviewer_user_id, "review");
+		return request;
+	}
+
+	private static async assertReviewer(
+		request: { requested_by_user_id: string; org_id: string; target_env_type_id: string },
+		reviewer_user_id: string,
+		verb: "approve" | "review" = "approve",
+	) {
 		if (request.requested_by_user_id === reviewer_user_id) {
-			throw new BusinessRuleError("Requesters cannot review their own change request.", 403);
+			const [isAdmin, isMaster] = await Promise.all([
+				AuthorizationService.check(reviewer_user_id, "admin", "org", request.org_id),
+				AuthorizationService.check(reviewer_user_id, "master", "org", request.org_id),
+			]);
+			if (!isAdmin && !isMaster) {
+				throw new BusinessRuleError(`Requesters cannot ${verb} their own change request.`, 403);
+			}
 		}
 		const canApprove = await AuthorizationService.check(
 			reviewer_user_id,
@@ -582,8 +585,7 @@ export class ChangeRequestService {
 			request.target_env_type_id,
 		);
 		if (!canApprove) {
-			throw new BusinessRuleError("You do not have permission to review this change request.", 403);
+			throw new BusinessRuleError(`You do not have permission to ${verb} this change request.`, 403);
 		}
-		return request;
 	}
 }

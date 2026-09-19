@@ -217,9 +217,7 @@ const ChangeRequests = () => {
     (request) => request.status === "pending"
   ).length;
   const awaitingReview = requestRows.filter(
-    (request) =>
-      request.status === "pending" &&
-      request.requested_by_user_id !== user?.user.id
+    (request) => request.status === "pending",
   ).length;
 
   return (
@@ -458,7 +456,7 @@ const ChangeRequests = () => {
                 )}
 
                 <div className="rounded-lg border border-border bg-card/60 p-4 text-sm text-muted-foreground">
-                  Requesters can propose the change. Reviewers with protected-environment authority approve or reject it.
+                  Requesters can propose the change. Org admins can approve or reject, including their own requests.
                 </div>
 
                 <Button
@@ -516,8 +514,7 @@ const ChangeRequests = () => {
                               View
                             </Button>
                             {request.status === "pending" &&
-                              canReview &&
-                              request.requested_by_user_id !== user?.user.id && (
+                              canReview && (
                                 <Button
                                   variant="ghost"
                                   className="text-green-300 hover:bg-green-950 hover:text-green-200"
@@ -535,8 +532,7 @@ const ChangeRequests = () => {
                                 </Button>
                               )}
                             {request.status === "failed" &&
-                              canReview &&
-                              request.requested_by_user_id !== user?.user.id && (
+                              canReview && (
                                 <Button
                                   variant="ghost"
                                   className="text-amber-300 hover:bg-amber-950 hover:text-amber-200"
@@ -674,8 +670,7 @@ const ChangeRequests = () => {
               </div>
 
               {selectedRequest.status === "failed" &&
-                canReview &&
-                selectedRequest.requested_by_user_id !== user?.user.id && (
+                canReview && (
                   <div className="flex justify-end">
                     <Button
                       data-testid="change-request-retry-button"
@@ -693,8 +688,7 @@ const ChangeRequests = () => {
                 )}
 
               {selectedRequest.status === "pending" &&
-                canReview &&
-                selectedRequest.requested_by_user_id !== user?.user.id && (
+                canReview && (
                   <div className="rounded-lg border border-yellow-800/40 bg-yellow-950/30 p-4">
                     <div className="mb-3 flex items-center gap-2 text-yellow-300">
                       <ShieldAlert className="size-4" />
