@@ -202,6 +202,25 @@ export class UserService {
 		return { id: ctx.userId };
 	};
 
+	public static getIdentityByEmail = async (email: string) => {
+		const db = await DB.getInstance();
+		return db
+			.selectFrom("users")
+			.selectAll()
+			.where("email", "=", email)
+			.executeTakeFirst();
+	};
+
+	public static getMembershipByEmailAndOrg = async (email: string, org_id: string) => {
+		const db = await DB.getInstance();
+		return db
+			.selectFrom("users")
+			.select("id")
+			.where("email", "=", email)
+			.where("org_id", "=", org_id)
+			.executeTakeFirst();
+	};
+
 	public static getUser = async (id: string) => {
 		return cacheAside(CacheKeys.user(id), CacheTTL.SHORT, async () => {
 			const db = await DB.getInstance();
