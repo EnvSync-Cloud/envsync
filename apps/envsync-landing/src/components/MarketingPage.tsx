@@ -4,13 +4,9 @@ import { Button } from "@/components/primitives/Button";
 import NewCTA from "@/components/NewCTA";
 import type { MarketingDoc } from "@/content/marketing";
 import { Link } from "react-router-dom";
-import { useState } from "react";
-
-const FALLBACK_ART = "/images/illustrations/collab.png";
 
 const MarketingPage = ({ doc }: { doc: MarketingDoc }) => {
   const isExternalCta = doc.ctaHref.startsWith("http") || doc.ctaHref.startsWith("mailto:");
-  const [art, setArt] = useState(doc.illustration);
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,10 +38,10 @@ const MarketingPage = ({ doc }: { doc: MarketingDoc }) => {
             </div>
             <div className="overflow-hidden rounded-lg border border-border bg-[#EDECE1]">
               <img
-                src={art}
+                key={doc.illustration}
+                src={doc.illustration}
                 alt={doc.illustrationAlt}
-                className="aspect-square w-full object-cover"
-                onError={() => setArt(FALLBACK_ART)}
+                className="aspect-square w-full object-contain"
               />
             </div>
           </div>
