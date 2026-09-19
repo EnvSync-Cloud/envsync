@@ -15,6 +15,8 @@ type CertificateService interface {
 	GetCA(ctx context.Context) (domain.Certificate, error)
 	GetRootCA(ctx context.Context) (string, error)
 	IssueMemberCert(ctx context.Context, req requests.IssueMemberCertRequest) (domain.Certificate, error)
+	IssueLeafCert(ctx context.Context, req requests.IssueLeafCertRequest) (domain.Certificate, error)
+	SignCsr(ctx context.Context, req requests.SignCsrRequest) (domain.Certificate, error)
 	ListCerts(ctx context.Context) ([]domain.Certificate, error)
 	RevokeCert(ctx context.Context, serialHex string, reason int) (responses.RevokeCertResponse, error)
 	GetCRL(ctx context.Context) (domain.CRLResult, error)
@@ -58,6 +60,22 @@ func (s *certService) GetRootCA(ctx context.Context) (string, error) {
 
 func (s *certService) IssueMemberCert(ctx context.Context, req requests.IssueMemberCertRequest) (domain.Certificate, error) {
 	res, err := s.repo.IssueMemberCert(ctx, req)
+	if err != nil {
+		return domain.Certificate{}, err
+	}
+	return mappers.MemberCertResponseToDomain(res), nil
+}
+
+func (s *certService) IssueLeafCert(ctx context.Context, req requests.IssueLeafCertRequest) (domain.Certificate, error) {
+	res, err := s.repo.IssueLeafCert(ctx, req)
+	if err != nil {
+		return domain.Certificate{}, err
+	}
+	return mappers.MemberCertResponseToDomain(res), nil
+}
+
+func (s *certService) SignCsr(ctx context.Context, req requests.SignCsrRequest) (domain.Certificate, error) {
+	res, err := s.repo.SignCsr(ctx, req)
 	if err != nil {
 		return domain.Certificate{}, err
 	}

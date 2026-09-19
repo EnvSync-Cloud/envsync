@@ -12,6 +12,23 @@ type IssueMemberCertRequest struct {
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
+type IssueLeafCertRequest struct {
+	AppID        string
+	EnvTypeID    string
+	CommonName   string
+	SANs         []string
+	TTLDays      int
+	KeyAlgorithm string
+	Description  string
+}
+
+type SignCsrRequest struct {
+	AppID       string
+	CSRPEM      string
+	TTLDays     int
+	Description string
+}
+
 type RevokeCertRequest struct {
 	Reason int `json:"reason"`
 }
