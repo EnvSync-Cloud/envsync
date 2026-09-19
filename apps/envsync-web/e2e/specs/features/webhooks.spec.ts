@@ -29,8 +29,8 @@ test.describe("feature: webhooks", () => {
 		const row = page.locator("tr").filter({ hasText: webhookName }).first();
 		await expect(row).toBeVisible();
 
-		page.once("dialog", dialog => dialog.accept());
 		await row.locator('[title="Delete Webhook"]').click();
+		await page.getByTestId("confirm-delete-webhook").click();
 		await expect(page.locator("tr").filter({ hasText: webhookName })).toHaveCount(0);
 	});
 });

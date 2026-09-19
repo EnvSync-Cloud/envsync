@@ -54,7 +54,6 @@ test.describe("feature: service tokens", () => {
 		await expect(tokenTable).not.toContainText(createdToken);
 		await expect(page.getByTestId("reveal-service-token-dialog")).toBeHidden();
 
-		page.once("dialog", (dialog) => dialog.accept());
 		const rotateResponse = waitForTrackedResponse(page, {
 			method: "POST",
 			pathFragment: `/api/service_token/${createdId}/rotate`,
@@ -63,6 +62,7 @@ test.describe("feature: service tokens", () => {
 			failOnUnexpectedStatus: true,
 		});
 		await tokenRow.getByRole("button", { name: "Rotate" }).click();
+		await page.getByTestId("confirm-rotate-service-token").click();
 		const rotated = await rotateResponse;
 		expect(rotated.requestBody).toMatchObject({ grace_hours: 24 });
 		expect(rotated.response.url()).toContain(`/api/service_token/${createdId}/rotate`);
@@ -76,7 +76,6 @@ test.describe("feature: service tokens", () => {
 		await expect(tokenTable).not.toContainText(createdToken);
 		await expect(tokenTable).not.toContainText(rotatedToken);
 
-		page.once("dialog", (dialog) => dialog.accept());
 		const firstDelete = waitForTrackedResponse(page, {
 			method: "DELETE",
 			pathFragment: "/api/service_token/",
@@ -84,10 +83,10 @@ test.describe("feature: service tokens", () => {
 			failOnUnexpectedStatus: true,
 		});
 		await tokenRow.first().getByRole("button", { name: "Revoke" }).click();
+		await page.getByTestId("confirm-revoke-service-token").click();
 		await firstDelete;
 		await expect(tokenRow).toHaveCount(1);
 
-		page.once("dialog", (dialog) => dialog.accept());
 		const secondDelete = waitForTrackedResponse(page, {
 			method: "DELETE",
 			pathFragment: "/api/service_token/",
@@ -95,6 +94,7 @@ test.describe("feature: service tokens", () => {
 			failOnUnexpectedStatus: true,
 		});
 		await tokenRow.first().getByRole("button", { name: "Revoke" }).click();
+		await page.getByTestId("confirm-revoke-service-token").click();
 		await secondDelete;
 		await expect(tokenRow).toHaveCount(0);
 	});
@@ -141,7 +141,6 @@ test.describe("feature: service tokens", () => {
 		await expect(tokenRow).not.toContainText(createdToken);
 		await expect(tokenRow).toContainText("Read & Write");
 
-		page.once("dialog", (dialog) => dialog.accept());
 		const deleteResponse = waitForTrackedResponse(page, {
 			method: "DELETE",
 			pathFragment: "/api/service_token/",
@@ -149,6 +148,7 @@ test.describe("feature: service tokens", () => {
 			failOnUnexpectedStatus: true,
 		});
 		await tokenRow.getByRole("button", { name: "Revoke" }).click();
+		await page.getByTestId("confirm-revoke-service-token").click();
 		await deleteResponse;
 		await expect(tokenRow).toHaveCount(0);
 	});
