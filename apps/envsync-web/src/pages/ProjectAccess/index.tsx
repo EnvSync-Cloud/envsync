@@ -114,7 +114,6 @@ const ProjectAccess = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Project Access"
-        description={`Direct project grants, team-based access, and org-derived visibility for ${project.name}.`}
         icon={LockKeyhole}
         actions={
           <Button asChild variant="outline" className="border-border text-foreground">
@@ -122,10 +121,9 @@ const ProjectAccess = () => {
           </Button>
         }
         stats={[
-          { label: "Project User Grants", value: <span data-testid="project-access-summary-direct-users">{grantSummary.directUsers}</span>, hint: "Users granted on this project directly" },
-          { label: "Team Grants", value: <span data-testid="project-access-summary-team-grants">{grantSummary.directTeams}</span>, hint: "Team level access bundles" },
-          { label: "Org Baseline Users", value: <span>{grantSummary.orgUsers}</span>, hint: "Users visible here because of org level access", tone: grantSummary.orgUsers > 0 ? "success" : "default" },
-          { label: "Team Inherited Users", value: <span data-testid="project-access-summary-inherited-users">{grantSummary.inherited}</span>, hint: "Users inheriting access through teams", tone: grantSummary.inherited > 0 ? "success" : "default" },
+          { label: "direct users", value: <span data-testid="project-access-summary-direct-users">{grantSummary.directUsers}</span> },
+          { label: "team grants", value: <span data-testid="project-access-summary-team-grants">{grantSummary.directTeams}</span> },
+          { label: "inherited", value: <span data-testid="project-access-summary-inherited-users">{grantSummary.inherited}</span> },
         ]}
         secondaryNav={
           <Tabs data-testid="project-access-tabs" value={activeSection} onValueChange={handleSectionChange}>

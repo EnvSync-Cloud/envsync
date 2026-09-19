@@ -216,39 +216,17 @@ const ChangeRequests = () => {
   const pendingRequests = requestRows.filter(
     (request) => request.status === "pending"
   ).length;
-  const awaitingReview = requestRows.filter(
-    (request) => request.status === "pending",
-  ).length;
 
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
         title={isProjectScoped ? "Approvals" : "Change Requests"}
-        description={
-          isProjectScoped
-            ? "Review and request protected changes for this project."
-            : "Route protected environment changes through a reviewable, auditable workflow."
-        }
         icon={GitPullRequest}
-        stats={[
-          {
-            label: "Requests",
-            value: requestRows.length,
-            hint: "Open and recent change requests",
-          },
-          {
-            label: "Pending",
-            value: pendingRequests,
-            hint: "Waiting on action",
-            tone: pendingRequests > 0 ? "warning" : "default",
-          },
-          {
-            label: "Need Review",
-            value: awaitingReview,
-            hint: "Requests others submitted",
-            tone: awaitingReview > 0 ? "danger" : "default",
-          },
-        ]}
+        stats={
+          pendingRequests > 0
+            ? [{ label: "Pending", value: pendingRequests }]
+            : undefined
+        }
         secondaryNav={
           <Tabs
             value={activeView}
@@ -472,10 +450,10 @@ const ChangeRequests = () => {
 
           <TabsContent value="requests" className="mt-0">
             <Card data-testid="change-requests-list" className="border-border bg-card/70">
-              <CardHeader>
-                <CardTitle className="text-foreground">Open and Recent Requests</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
+                {requestRows.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">No requests yet.</p>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
@@ -572,6 +550,7 @@ const ChangeRequests = () => {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

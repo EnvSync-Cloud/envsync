@@ -41,7 +41,7 @@ export const UsersTable = ({
       <CardHeader>
         <CardTitle className="text-foreground flex items-center gap-3">
           <Users className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
-          Team Members
+          Members
           <Count size="xl" variant="subtle" count={users?.length} />
         </CardTitle>
       </CardHeader>

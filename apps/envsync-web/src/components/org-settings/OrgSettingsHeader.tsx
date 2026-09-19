@@ -11,13 +11,8 @@ export const OrgSettingsHeader = ({ orgName }: OrgSettingsHeaderProps) => {
         <Building2 className="size-5 text-emerald-400" />
       </div>
       <div>
-        <h1 className="text-xl font-medium text-foreground tracking-tight">Organization Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Manage your organization configuration and preferences
-          {orgName && (
-            <span className="ml-2 text-emerald-400">• {orgName}</span>
-          )}
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Organization</h1>
+        {orgName ? <p className="text-sm text-muted-foreground">{orgName}</p> : null}
       </div>
     </div>
   );

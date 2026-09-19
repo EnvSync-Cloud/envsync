@@ -97,15 +97,6 @@ const Teams = () => {
       ),
     [searchQuery, teams]
   );
-  const totalMembers = useMemo(
-    () => teams.reduce((count, team) => count + (team.member_count || 0), 0),
-    [teams]
-  );
-  const teamsWithRole = useMemo(
-    () => teams.filter((team) => team.role_id).length,
-    [teams]
-  );
-
   const openCreate = () => {
     setEditingTeamId(null);
     setName("");
@@ -154,23 +145,17 @@ const Teams = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Teams"
-        description="Create role-bearing teams, manage membership, and make inherited access easier to understand."
         icon={Users}
         isLoading={teamsLoading}
         stickyActions
         actions={
           canManage ? (
-            <Button data-testid="teams-create" className="bg-emerald-500 hover:bg-emerald-600" onClick={openCreate}>
+            <Button data-testid="teams-create" onClick={openCreate}>
               <Plus className="mr-2 size-4" />
               New Team
             </Button>
           ) : null
         }
-        stats={[
-          { label: "Teams", value: teams.length, hint: "Collaboration groups across the org" },
-          { label: "Members", value: totalMembers, hint: "Team memberships in total", tone: totalMembers > 0 ? "success" : "default" },
-          { label: "Teams With Role", value: teamsWithRole, hint: "Ready for inherited access", tone: teamsWithRole > 0 ? "warning" : "default" },
-        ]}
         secondaryNav={
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "teams" | "detail")}>
             <TabsList className="h-auto bg-transparent p-0">

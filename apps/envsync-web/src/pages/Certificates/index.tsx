@@ -151,21 +151,12 @@ const Certificates = () => {
 
   const hasCA = orgCA && !("error" in orgCA);
   const certificateRows = certificates || [];
-  const activeCertificates = certificateRows.filter((cert) => cert.status === "active").length;
-  const revokedCertificates = certificateRows.filter((cert) => cert.status === "revoked").length;
-  const memberCertificates = certificateRows.filter((cert) => cert.cert_type !== "org_ca").length;
 
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Certificates"
-        description="Operate the organization CA and member certificate lifecycle from a clearer, trust-focused surface."
         icon={ShieldCheck}
-        stats={[
-          { label: "Active", value: activeCertificates, hint: "Currently valid certificates", tone: activeCertificates > 0 ? "success" : "default" },
-          { label: "Revoked", value: revokedCertificates, hint: "Certificates taken out of service", tone: revokedCertificates > 0 ? "warning" : "default" },
-          { label: "Member Certs", value: memberCertificates, hint: "User-scoped certificates issued" },
-        ]}
         actions={<div className="flex gap-2">
           {hasCA && (
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>

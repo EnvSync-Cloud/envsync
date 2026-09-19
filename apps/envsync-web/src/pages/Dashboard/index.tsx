@@ -39,9 +39,9 @@ export default function Dashboard() {
   return (
     <PageShell
       title="Dashboard"
-      description="Overview of your organization"
       icon={LayoutDashboard}
       isLoading={isLoading}
+      statLayout="cards"
       stats={[
         {
           label: "Projects",
