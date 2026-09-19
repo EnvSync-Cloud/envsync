@@ -253,7 +253,7 @@ export default function OrgLogForwarding() {
                     id="lf-logstash-endpoint"
                     value={endpoint}
                     onChange={(event) => setEndpoint(event.target.value)}
-                    placeholder="http://logstash.example.com:8080 or OpenObserve _json URL"
+                    placeholder="http://logstash.example.com:8080"
                   />
                 </div>
                 <div className="space-y-2">
@@ -281,7 +281,7 @@ export default function OrgLogForwarding() {
                 </div>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
-                  JSON batch array (Logstash `json_batch` / OpenObserve `_json`)
+                  Send a JSON array of events
                 </label>
               </>
             )}
@@ -296,7 +296,7 @@ export default function OrgLogForwarding() {
                     onChange={(event) => setFluentProtocol(event.target.value as "forward" | "http")}
                   >
                     <option value="forward">forward (port 24224)</option>
-                    <option value="http">http (in_http / json_array)</option>
+                    <option value="http">HTTP</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -350,7 +350,7 @@ export default function OrgLogForwarding() {
                     </div>
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
-                      JSON array (`json_array true`)
+                      Send a JSON array of events
                     </label>
                   </>
                 )}
