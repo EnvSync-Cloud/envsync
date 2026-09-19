@@ -24,6 +24,7 @@ const urlSetMap = {
     secret: (appId: string) => `${config.DASHBOARD_URL}/projects/${appId}/secrets`,
     env_manage: (appId: string) => `${config.DASHBOARD_URL}/projects/${appId}/manage-environments`,
     api_keys: config.DASHBOARD_URL + "/apikeys",
+    certificates: config.DASHBOARD_URL + "/org/certificates",
     base: config.DASHBOARD_URL,
 };
 
@@ -302,6 +303,20 @@ export class WebhookService {
                     case "apikeys_viewed":
                     case "apikey_regenerated":
                         url_for_entity_in_question = urlSetMap.api_keys;
+                        break;
+                    case "cert_ca_initialized":
+                    case "cert_member_issued":
+                    case "cert_leaf_issued":
+                    case "cert_csr_signed":
+                    case "cert_revoked":
+                    case "certificate_renewed":
+                    case "certificate_rotated":
+                    case "cert_expiring":
+                    case "cert_expired":
+                    case "certs_viewed":
+                    case "cert_viewed":
+                    case "cert_bundle_retrieved":
+                        url_for_entity_in_question = urlSetMap.certificates;
                         break;
                     default:
                         url_for_entity_in_question = urlSetMap.base;

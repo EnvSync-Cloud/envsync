@@ -563,7 +563,12 @@ export const WEBHOOK_EVENT_CATEGORIES = [
         events: [
           { value: "cert_ca_initialized", label: "CA Initialized" },
           { value: "cert_member_issued", label: "Member Cert Issued" },
+          { value: "cert_leaf_issued", label: "Service Cert Issued" },
+          { value: "cert_csr_signed", label: "CSR Signed" },
           { value: "cert_revoked", label: "Certificate Revoked" },
+          { value: "cert_expiring", label: "Certificate Expiring" },
+          { value: "cert_expired", label: "Certificate Expired" },
+          { value: "certificate_renewed", label: "Certificate Renewed" },
           { value: "certs_viewed", label: "Certificates Viewed" },
           { value: "cert_viewed", label: "Certificate Viewed" }
         ]
@@ -572,7 +577,12 @@ export const WEBHOOK_EVENT_CATEGORIES = [
     events: [
       { value: "cert_ca_initialized", label: "CA Initialized" },
       { value: "cert_member_issued", label: "Member Cert Issued" },
+      { value: "cert_leaf_issued", label: "Service Cert Issued" },
+      { value: "cert_csr_signed", label: "CSR Signed" },
       { value: "cert_revoked", label: "Certificate Revoked" },
+      { value: "cert_expiring", label: "Certificate Expiring" },
+      { value: "cert_expired", label: "Certificate Expired" },
+      { value: "certificate_renewed", label: "Certificate Renewed" },
       { value: "certs_viewed", label: "Certificates Viewed" },
       { value: "cert_viewed", label: "Certificate Viewed" }
     ]

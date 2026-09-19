@@ -10,6 +10,7 @@ import { KMSClient } from "@/libs/kms/client";
 import { invalidateSessionToken } from "@/libs/kms/session-manager";
 import { AuthorizationService } from "@/services/authorization.service";
 import { AppService } from "@/services/app.service";
+import { AuditLogService } from "@/services/audit_log.service";
 import { PlanLimitService } from "@/services/plan_limit.service";
 
 const OCSP_STATUS_MAP: Record<number, string> = {
@@ -726,5 +727,84 @@ export class CertificateService {
 			...renewed,
 			supersedes_certificate_id: cert.id,
 		};
+	};
+
+	/** Mark expired certs and fire expiring webhooks (once per calendar day). */
+	public static processLifecycle = async (now = new Date()) => {
+		const db = await DB.getInstance();
+		const expiringBefore = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+		const today = now.toISOString().slice(0, 10);
+
+		const due = await db
+			.selectFrom("org_certificates")
+			.selectAll()
+			.where("status", "=", "active")
+			.where("not_after", "is not", null)
+			.where("not_after", "<=", expiringBefore)
+			.execute();
+
+		let expired = 0;
+		let expiring = 0;
+
+		for (const cert of due) {
+			if (!cert.not_after) {
+				continue;
+			}
+			const notAfter = new Date(cert.not_after);
+			if (notAfter.getTime() <= now.getTime()) {
+				await db
+					.updateTable("org_certificates")
+					.set({ status: "expired", updated_at: now })
+					.where("id", "=", cert.id)
+					.where("status", "=", "active")
+					.execute();
+				await AuditLogService.notifyAuditSystem({
+					action: "cert_expired",
+					org_id: cert.org_id,
+					user_id: cert.user_id,
+					message: `Certificate expired: ${cert.subject_cn}`,
+					details: {
+						certificate_id: cert.id,
+						serial_hex: cert.serial_hex,
+						app_id: cert.app_id ?? undefined,
+					},
+				});
+				expired += 1;
+				continue;
+			}
+
+			const meta = (cert.metadata as Record<string, string> | null) ?? {};
+			if (meta.expiry_notified_date === today) {
+				continue;
+			}
+			await db
+				.updateTable("org_certificates")
+				.set({
+					metadata: normalizeMetadata({ ...meta, expiry_notified_date: today }),
+					updated_at: now,
+				})
+				.where("id", "=", cert.id)
+				.execute();
+			await AuditLogService.notifyAuditSystem({
+				action: "cert_expiring",
+				org_id: cert.org_id,
+				user_id: cert.user_id,
+				message: `Certificate expiring: ${cert.subject_cn}`,
+				details: {
+					certificate_id: cert.id,
+					serial_hex: cert.serial_hex,
+					app_id: cert.app_id ?? undefined,
+					not_after: notAfter.toISOString(),
+				},
+			});
+			expiring += 1;
+		}
+
+		if (expired || expiring) {
+			const orgIds = [...new Set(due.map(cert => cert.org_id))];
+			await Promise.all(orgIds.map(orgId => invalidateCache(CacheKeys.certsByOrg(orgId))));
+		}
+
+		return { expired, expiring };
 	};
 }

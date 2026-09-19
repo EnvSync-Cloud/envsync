@@ -146,7 +146,9 @@ type CertificateAuditActions =
 	| "cert_bundle_retrieved"
 	| "cert_revoked"
 	| "certificate_renewed"
-	| "certificate_rotated";
+	| "certificate_rotated"
+	| "cert_expiring"
+	| "cert_expired";
 
 type CliAuditActions = "cli_command_executed";
 
