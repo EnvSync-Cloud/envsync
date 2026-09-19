@@ -14,6 +14,7 @@ import { AuditLogService } from "@/services/audit_log.service";
 import { ChangeRequestService } from "@/services/change_request.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
 import { EnvTypeService } from "@/services/env_type.service";
+import { OrgService } from "@/services/org.service";
 import { PlanLimitService } from "@/services/plan_limit.service";
 import { SecretService } from "@/services/secret.service";
 
@@ -182,6 +183,74 @@ export class CertificateService {
 		return this.getCertificate(certId, { include_system_generated: true });
 	};
 
+	public static createOrgCACSR = async (org_id: string, org_name: string) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("Offline-root CSRs require the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const existing = await this.getActiveOrgCARecord(org_id);
+		if (existing) {
+			throw new ConflictError("Organization CA already initialized");
+		}
+		const kms = await KMSClient.getInstance();
+		const { csrPem } = await kms.createOrgCACSR(org_id, org_name);
+		return { csr_pem: csrPem };
+	};
+
+	public static installOrgCA = async ({
+		org_id,
+		user_id,
+		cert_pem,
+		chain_pem,
+		description,
+	}: {
+		org_id: string;
+		user_id: string;
+		cert_pem: string;
+		chain_pem?: string;
+		description?: string;
+	}) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("Installing an external root requires the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const existing = await this.getActiveOrgCARecord(org_id);
+		if (existing) {
+			throw new ConflictError("Organization CA already initialized");
+		}
+		const kms = await KMSClient.getInstance();
+		const installed = await kms.installOrgCA(org_id, cert_pem, chain_pem || "");
+		const db = await DB.getInstance();
+		const certId = uuidv4();
+		const now = new Date();
+		await db
+			.insertInto("org_certificates")
+			.values({
+				id: certId,
+				org_id,
+				user_id,
+				serial_hex: installed.serialHex,
+				cert_type: "org_ca",
+				subject_cn: "Organization CA",
+				status: "active",
+				cert_pem: installed.certPem,
+				description: description || "Installed from offline root",
+				metadata: normalizeMetadata({ installed: "true" }),
+				is_system_generated: false,
+				sans: [],
+				auto_renew: false,
+				renew_days_before: 30,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+		if (chain_pem) {
+			await this.importChain({ org_id, user_id, chain_pem, description: "Offline root chain" });
+		}
+		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		return this.getCertificate(certId);
+	};
+
 	public static issueMemberCert = async ({
 		org_id,
 		target_user_id,
@@ -311,6 +380,7 @@ export class CertificateService {
 		ttl_days = 90,
 		key_algorithm = "ECDSA_P256",
 		description,
+		skipApproval = false,
 	}: {
 		org_id: string;
 		app_id: string;
@@ -321,8 +391,25 @@ export class CertificateService {
 		ttl_days?: number;
 		key_algorithm?: string;
 		description?: string;
+		skipApproval?: boolean;
 	}) => {
 		await PlanLimitService.assertFeature(org_id, "certificates");
+		if (!skipApproval) {
+			const org = await OrgService.getOrg(org_id);
+			if (org.metadata?.certificates_require_approval) {
+				if (!env_type_id) {
+					throw new BusinessRuleError("env_type_id is required when certificate approval is enabled.");
+				}
+				return ChangeRequestService.createCertificateOp({
+					org_id,
+					app_id,
+					target_env_type_id: env_type_id,
+					requested_by_user_id: issued_by_user_id,
+					operation: "ISSUE_LEAF",
+					payload: { app_id, env_type_id, common_name, sans, ttl_days, key_algorithm, description },
+				});
+			}
+		}
 		const orgCA = await this.getActiveOrgCARecord(org_id);
 		if (!orgCA) {
 			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.", 409, "ORG_CA_REQUIRED");
@@ -352,6 +439,7 @@ export class CertificateService {
 						dnsSans,
 						ttlDays: ttl_days,
 						keyAlgorithm: key_algorithm,
+						envId: env_type_id,
 					});
 					certPem = result.certPem;
 					keyPem = result.keyPem;
@@ -687,6 +775,8 @@ export class CertificateService {
 		if (existing) {
 			throw new ConflictError("Environment CA already exists for this environment");
 		}
+		const kms = await KMSClient.getInstance();
+		const issued = await kms.createEnvCA(org_id, env_type_id, name || `${envType.name} CA`);
 		const certId = uuidv4();
 		const now = new Date();
 		await db
@@ -695,12 +785,12 @@ export class CertificateService {
 				id: certId,
 				org_id,
 				user_id,
-				serial_hex: `envca-${certId.replace(/-/g, "").slice(0, 16)}`,
+				serial_hex: issued.serialHex,
 				cert_type: "org_ca",
 				subject_cn: name || `${envType.name} CA`,
 				status: "active",
-				cert_pem: orgCA.cert_pem,
-				description: "Environment-scoped CA label; leaves are still signed by the organization intermediate.",
+				cert_pem: issued.certPem,
+				description: "Environment issuing CA signed by the organization intermediate.",
 				metadata: normalizeMetadata({ env_ca: "true", parent_org_ca: orgCA.id }),
 				is_system_generated: false,
 				env_type_id,

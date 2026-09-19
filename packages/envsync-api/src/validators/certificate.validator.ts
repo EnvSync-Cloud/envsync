@@ -10,6 +10,20 @@ export const initOrgCARequestSchema = z
 	})
 	.openapi({ ref: "InitOrgCARequest" });
 
+export const createOrgCaCsrRequestSchema = z
+	.object({
+		org_name: z.string().min(1),
+	})
+	.openapi({ ref: "CreateOrgCaCsrRequest" });
+
+export const installOrgCaRequestSchema = z
+	.object({
+		cert_pem: z.string().min(32),
+		chain_pem: z.string().optional(),
+		description: z.string().optional(),
+	})
+	.openapi({ ref: "InstallOrgCaRequest" });
+
 export const issueMemberCertRequestSchema = z
 	.object({
 		member_email: z.string().email().openapi({ example: "user@example.com" }),

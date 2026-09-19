@@ -51,6 +51,27 @@ export class CertificateController {
 		return c.json(chain, 200);
 	};
 
+	public static readonly createOrgCACSR = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const body = await c.req.json();
+		const csr = await CertificateService.createOrgCACSR(org_id, body.org_name);
+		return c.json(csr, 201);
+	};
+
+	public static readonly installOrgCA = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const user_id = c.get("user_id");
+		const body = await c.req.json();
+		const cert = await CertificateService.installOrgCA({
+			org_id,
+			user_id,
+			cert_pem: body.cert_pem,
+			chain_pem: body.chain_pem,
+			description: body.description,
+		});
+		return c.json(cert, 201);
+	};
+
 	public static readonly importChain = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");

@@ -48,7 +48,16 @@ export class AcmeController {
 		const orgSlug = c.req.param("orgSlug");
 		withNonce(c);
 		const jws = await readAcmeJws(c);
-		const verified = await verifyAcmeJws(jws);
+		let verified: Awaited<ReturnType<typeof verifyAcmeJws>>;
+		try {
+			verified = await verifyAcmeJws(jws);
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("nonce")) {
+				c.header("Retry-After", "0");
+				return c.json({ type: "urn:ietf:params:acme:error:badNonce", detail: error.message }, 400);
+			}
+			throw error;
+		}
 		const eab = verified.payload.externalAccountBinding as AcmeJws | undefined;
 		if (!eab) {
 			throw new BusinessRuleError("External Account Binding is required.", 400, "ACME_EAB_REQUIRED");

@@ -30,6 +30,7 @@ export class AcmeService {
 			meta: {
 				website: "https://envsync.cloud",
 				caaIdentities: ["envsync.internal"],
+				externalAccountRequired: true,
 			},
 		};
 	}

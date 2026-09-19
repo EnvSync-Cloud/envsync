@@ -8,6 +8,9 @@ option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
 // Root CA -> Org Intermediate CA (IsCA:true, MaxPathLen:0) -> Member Certificate (IsCA:false)
 service PKIService {
     rpc CreateOrgCA(CreateOrgCARequest) returns (CreateOrgCAResponse);
+    rpc CreateOrgCACSR(CreateOrgCACSRRequest) returns (CreateOrgCACSRResponse);
+    rpc InstallOrgCA(InstallOrgCARequest) returns (CreateOrgCAResponse);
+    rpc CreateEnvCA(CreateEnvCARequest) returns (CreateEnvCAResponse);
     rpc IssueMemberCert(IssueMemberCertRequest) returns (IssueMemberCertResponse);
     rpc IssueLeafCert(IssueLeafCertRequest) returns (IssueLeafCertResponse);
     rpc SignCSR(SignCSRRequest) returns (SignCSRResponse);
@@ -23,6 +26,32 @@ message CreateOrgCARequest {
 }
 
 message CreateOrgCAResponse {
+    string cert_pem = 1;
+    string serial_hex = 2;
+}
+
+message CreateOrgCACSRRequest {
+    string org_id = 1;
+    string org_name = 2;
+}
+
+message CreateOrgCACSRResponse {
+    string csr_pem = 1;
+}
+
+message InstallOrgCARequest {
+    string org_id = 1;
+    string cert_pem = 2;
+    string chain_pem = 3;
+}
+
+message CreateEnvCARequest {
+    string org_id = 1;
+    string env_id = 2;
+    string name = 3;
+}
+
+message CreateEnvCAResponse {
     string cert_pem = 1;
     string serial_hex = 2;
 }
@@ -46,6 +75,7 @@ message IssueLeafCertRequest {
     repeated string dns_sans = 3;
     int32 ttl_days = 4;
     string key_algorithm = 5; // RSA_2048 | ECDSA_P256
+    string env_id = 6;
 }
 
 message IssueLeafCertResponse {
@@ -58,6 +88,7 @@ message SignCSRRequest {
     string org_id = 1;
     string csr_pem = 2;
     int32 ttl_days = 3;
+    string env_id = 4;
 }
 
 message SignCSRResponse {

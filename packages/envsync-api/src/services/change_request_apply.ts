@@ -9,6 +9,8 @@ type ApplyRequest = {
 	org_id: string;
 	target_env_type_id: string;
 	message: string;
+	request_kind?: string;
+	requested_by_user_id?: string;
 };
 
 type ApplyItem = {
@@ -115,6 +117,28 @@ export async function applyChangeRequestItems({
 	secretItems: ApplyItem[];
 	reviewer_user_id: string;
 }) {
+	if (request.request_kind === "certificate") {
+		const { CertificateService } = await import("@/services/certificate.service");
+		const body = JSON.parse(request.message || "{}") as {
+			operation?: string;
+			payload?: Record<string, unknown>;
+		};
+		const payload = body.payload ?? {};
+		if (body.operation === "ISSUE_LEAF") {
+			await CertificateService.issueLeaf({
+				org_id: request.org_id,
+				app_id: String(payload.app_id ?? request.app_id),
+				env_type_id: typeof payload.env_type_id === "string" ? payload.env_type_id : undefined,
+				issued_by_user_id: request.requested_by_user_id || reviewer_user_id,
+				common_name: String(payload.common_name ?? ""),
+				sans: Array.isArray(payload.sans) ? payload.sans.map(String) : [],
+				ttl_days: typeof payload.ttl_days === "number" ? payload.ttl_days : 90,
+				description: typeof payload.description === "string" ? payload.description : undefined,
+				skipApproval: true,
+			});
+		}
+		return;
+	}
 	for (const item of envItems) {
 		await applyEnvItem(request, item, reviewer_user_id);
 	}

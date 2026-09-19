@@ -24,6 +24,8 @@ import {
 	certificateChainResponseSchema,
 	importChainRequestSchema,
 	labelEnvCaRequestSchema,
+	createOrgCaCsrRequestSchema,
+	installOrgCaRequestSchema,
 } from "@/validators/certificate.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { authMiddleware } from "@/middlewares/auth.middleware";
@@ -121,6 +123,33 @@ app.get(
 		},
 	}),
 	CertificateController.getChain,
+);
+
+app.post(
+	"/ca/csr",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "createOrgCaCsr",
+		summary: "Create an organization CA CSR for an offline root",
+		description: "Enterprise-only. Private key stays in miniKMS; sign the CSR offline and install the certificate.",
+		tags: ["Certificates"],
+		responses: { 201: { description: "CSR PEM" } },
+	}),
+	zValidator("json", createOrgCaCsrRequestSchema),
+	CertificateController.createOrgCACSR,
+);
+
+app.post(
+	"/ca/install",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "installOrgCa",
+		summary: "Install an organization CA signed by an offline root",
+		tags: ["Certificates"],
+		responses: { 201: { description: "CA installed" } },
+	}),
+	zValidator("json", installOrgCaRequestSchema),
+	CertificateController.installOrgCA,
 );
 
 app.post(
