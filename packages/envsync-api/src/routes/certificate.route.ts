@@ -21,6 +21,9 @@ import {
 	ocspResponseSchema,
 	rootCAResponseSchema,
 	myCertificateBundleResponseSchema,
+	certificateChainResponseSchema,
+	importChainRequestSchema,
+	labelEnvCaRequestSchema,
 } from "@/validators/certificate.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { authMiddleware } from "@/middlewares/auth.middleware";
@@ -100,6 +103,62 @@ app.get(
 		},
 	}),
 	CertificateController.getRootCA,
+);
+
+app.get(
+	"/chain",
+	requirePermission("can_view", "org"),
+	describeRoute({
+		operationId: "getCertificateChain",
+		summary: "Get CA chain",
+		description: "PEM bundle of imported chains, organization CA, and root CA",
+		tags: ["Certificates"],
+		responses: {
+			200: {
+				description: "CA chain",
+				content: { "application/json": { schema: resolver(certificateChainResponseSchema) } },
+			},
+		},
+	}),
+	CertificateController.getChain,
+);
+
+app.post(
+	"/ca/import-chain",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "importCertificateChain",
+		summary: "Import an external CA chain",
+		description: "Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Chain imported",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", importChainRequestSchema),
+	CertificateController.importChain,
+);
+
+app.post(
+	"/ca/env",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "labelEnvironmentCa",
+		summary: "Label an environment CA",
+		description: "Enterprise-only. Record an environment-scoped CA label. Leaves remain signed by the org intermediate.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Environment CA labeled",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", labelEnvCaRequestSchema),
+	CertificateController.labelEnvCa,
 );
 
 // Issue member certificate

@@ -45,6 +45,39 @@ export class CertificateController {
 		return c.json(result, 200);
 	};
 
+	public static readonly getChain = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const chain = await CertificateService.getChain(org_id);
+		return c.json(chain, 200);
+	};
+
+	public static readonly importChain = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const user_id = c.get("user_id");
+		const body = await c.req.json();
+		const cert = await CertificateService.importChain({
+			org_id,
+			user_id,
+			chain_pem: body.chain_pem,
+			env_type_id: body.env_type_id,
+			description: body.description,
+		});
+		return c.json(cert, 201);
+	};
+
+	public static readonly labelEnvCa = async (c: Context) => {
+		const org_id = c.get("org_id");
+		const user_id = c.get("user_id");
+		const body = await c.req.json();
+		const cert = await CertificateService.labelEnvCa({
+			org_id,
+			user_id,
+			env_type_id: body.env_type_id,
+			name: body.name,
+		});
+		return c.json(cert, 201);
+	};
+
 	public static readonly issueLeaf = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");

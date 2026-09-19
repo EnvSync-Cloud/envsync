@@ -160,3 +160,27 @@ export const rootCAResponseSchema = z
 		cert_pem: z.string().openapi({ example: "-----BEGIN CERTIFICATE-----..." }),
 	})
 	.openapi({ ref: "RootCAResponse" });
+
+export const certificateChainResponseSchema = z
+	.object({
+		chain_pem: z.string(),
+		org_ca_pem: z.string().nullable(),
+		root_ca_pem: z.string(),
+		imported_count: z.number().int(),
+	})
+	.openapi({ ref: "CertificateChainResponse" });
+
+export const importChainRequestSchema = z
+	.object({
+		chain_pem: z.string().min(32),
+		env_type_id: z.string().optional(),
+		description: z.string().optional(),
+	})
+	.openapi({ ref: "ImportChainRequest" });
+
+export const labelEnvCaRequestSchema = z
+	.object({
+		env_type_id: z.string().min(1),
+		name: z.string().optional(),
+	})
+	.openapi({ ref: "LabelEnvCaRequest" });

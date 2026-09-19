@@ -563,6 +563,158 @@ export class CertificateService {
 
 	public static getOrgCA = async (org_id: string) => this.getActiveOrgCARecord(org_id);
 
+	public static getChain = async (org_id: string) => {
+		const [orgCA, rootCA, imported] = await Promise.all([
+			this.getActiveOrgCARecord(org_id),
+			this.getRootCA(),
+			(async () => {
+				const db = await DB.getInstance();
+				return db
+					.selectFrom("org_certificates")
+					.selectAll()
+					.where("org_id", "=", org_id)
+					.where("cert_type", "=", "imported_chain")
+					.where("status", "=", "active")
+					.orderBy("created_at", "desc")
+					.execute();
+			})(),
+		]);
+		const pems = [
+			...imported.map(row => row.cert_pem).filter(Boolean),
+			orgCA?.cert_pem,
+			rootCA.cert_pem,
+		].filter((value): value is string => Boolean(value));
+		return {
+			chain_pem: pems.join("\n"),
+			org_ca_pem: orgCA?.cert_pem ?? null,
+			root_ca_pem: rootCA.cert_pem,
+			imported_count: imported.length,
+		};
+	};
+
+	public static importChain = async ({
+		org_id,
+		user_id,
+		chain_pem,
+		env_type_id,
+		description,
+	}: {
+		org_id: string;
+		user_id: string;
+		chain_pem: string;
+		env_type_id?: string;
+		description?: string;
+	}) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("CA chain import requires the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		if (!/BEGIN CERTIFICATE/.test(chain_pem)) {
+			throw new BusinessRuleError("chain_pem must contain at least one PEM certificate.");
+		}
+		const orgCA = await this.getActiveOrgCARecord(org_id);
+		if (!orgCA) {
+			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.", 409, "ORG_CA_REQUIRED");
+		}
+		if (env_type_id) {
+			const envType = await EnvTypeService.getEnvType(env_type_id);
+			if (envType.org_id !== org_id) {
+				throw new NotFoundError("EnvType", env_type_id);
+			}
+		}
+		const db = await DB.getInstance();
+		const now = new Date();
+		const certId = uuidv4();
+		await db
+			.insertInto("org_certificates")
+			.values({
+				id: certId,
+				org_id,
+				user_id,
+				serial_hex: `import-${certId.replace(/-/g, "").slice(0, 16)}`,
+				cert_type: "imported_chain",
+				subject_cn: description || "Imported CA chain",
+				status: "active",
+				cert_pem: chain_pem,
+				description: description || null,
+				metadata: normalizeMetadata({ imported_by: user_id }),
+				is_system_generated: false,
+				app_id: null,
+				env_type_id: env_type_id || null,
+				sans: [],
+				auto_renew: false,
+				renew_days_before: 30,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		return this.getCertificate(certId);
+	};
+
+	public static labelEnvCa = async ({
+		org_id,
+		user_id,
+		env_type_id,
+		name,
+	}: {
+		org_id: string;
+		user_id: string;
+		env_type_id: string;
+		name?: string;
+	}) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("Environment CAs require the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const orgCA = await this.getActiveOrgCARecord(org_id);
+		if (!orgCA || !orgCA.cert_pem) {
+			throw new BusinessRuleError("Organization CA not initialized. Initialize CA first.", 409, "ORG_CA_REQUIRED");
+		}
+		const envType = await EnvTypeService.getEnvType(env_type_id);
+		if (envType.org_id !== org_id) {
+			throw new NotFoundError("EnvType", env_type_id);
+		}
+		const db = await DB.getInstance();
+		const existing = await db
+			.selectFrom("org_certificates")
+			.select("id")
+			.where("org_id", "=", org_id)
+			.where("cert_type", "=", "org_ca")
+			.where("env_type_id", "=", env_type_id)
+			.where("status", "=", "active")
+			.executeTakeFirst();
+		if (existing) {
+			throw new ConflictError("Environment CA already exists for this environment");
+		}
+		const certId = uuidv4();
+		const now = new Date();
+		await db
+			.insertInto("org_certificates")
+			.values({
+				id: certId,
+				org_id,
+				user_id,
+				serial_hex: `envca-${certId.replace(/-/g, "").slice(0, 16)}`,
+				cert_type: "org_ca",
+				subject_cn: name || `${envType.name} CA`,
+				status: "active",
+				cert_pem: orgCA.cert_pem,
+				description: "Environment-scoped CA label; leaves are still signed by the organization intermediate.",
+				metadata: normalizeMetadata({ env_ca: "true", parent_org_ca: orgCA.id }),
+				is_system_generated: false,
+				env_type_id,
+				sans: [],
+				auto_renew: false,
+				renew_days_before: 30,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		return this.getCertificate(certId);
+	};
+
 	public static getLatestActiveSystemMemberCert = async (org_id: string, user_id: string) => {
 		const db = await DB.getInstance();
 		return db
