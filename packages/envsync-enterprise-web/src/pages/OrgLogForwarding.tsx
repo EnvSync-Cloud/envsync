@@ -48,6 +48,10 @@ export default function OrgLogForwarding() {
   const [token, setToken] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [sumoUrl, setSumoUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [fluentTag, setFluentTag] = useState("envsync.audit");
+  const [authorization, setAuthorization] = useState("");
 
   const resetForm = () => {
     setName("");
@@ -57,6 +61,10 @@ export default function OrgLogForwarding() {
     setToken("");
     setEndpoint("");
     setSumoUrl("");
+    setUsername("");
+    setPassword("");
+    setFluentTag("envsync.audit");
+    setAuthorization("");
   };
 
   const onCreate = async () => {
@@ -69,7 +77,13 @@ export default function OrgLogForwarding() {
         ? { api_key: apiKey, site }
         : providerType === CreateLogForwardingRequest.provider_type.SPLUNK
           ? { token, endpoint }
-          : { url: sumoUrl };
+          : providerType === CreateLogForwardingRequest.provider_type.SUMO_LOGIC
+            ? { url: sumoUrl }
+            : providerType === CreateLogForwardingRequest.provider_type.LOGSTASH
+              ? { endpoint, ...(username ? { username } : {}), ...(password ? { password } : {}) }
+              : providerType === CreateLogForwardingRequest.provider_type.FLUENTD
+                ? { endpoint, tag: fluentTag }
+                : { endpoint, ...(authorization ? { authorization } : {}) };
     try {
       await createConfig.mutateAsync({
         name: name.trim(),
@@ -88,7 +102,7 @@ export default function OrgLogForwarding() {
   return (
     <EnterprisePageFrame
       title="Log forwarding"
-      description="Send audit events to Datadog, Splunk, or Sumo Logic. Values are stored on the API and never shown again after create."
+      description="Send audit events to Datadog, Splunk, Sumo Logic, Logstash, Fluentd, or OTLP. Credentials are write-only after create."
       icon={<ScrollText className="size-7" />}
       enabled={enabled}
       isError={isError}
@@ -154,6 +168,9 @@ export default function OrgLogForwarding() {
                 <option value="datadog">Datadog</option>
                 <option value="splunk">Splunk</option>
                 <option value="sumo-logic">Sumo Logic</option>
+                <option value="logstash">Logstash</option>
+                <option value="fluentd">Fluentd</option>
+                <option value="otlp">OTLP</option>
               </select>
             </div>
             {providerType === CreateLogForwardingRequest.provider_type.DATADOG && (
@@ -185,6 +202,72 @@ export default function OrgLogForwarding() {
                 <Label htmlFor="lf-url">Collector URL</Label>
                 <Input id="lf-url" value={sumoUrl} onChange={(event) => setSumoUrl(event.target.value)} />
               </div>
+            )}
+            {providerType === CreateLogForwardingRequest.provider_type.LOGSTASH && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-endpoint">HTTP input URL</Label>
+                  <Input
+                    id="lf-logstash-endpoint"
+                    value={endpoint}
+                    onChange={(event) => setEndpoint(event.target.value)}
+                    placeholder="https://logstash.example.com:8080"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-user">Username (optional)</Label>
+                  <Input id="lf-logstash-user" value={username} onChange={(event) => setUsername(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-pass">Password (optional)</Label>
+                  <Input
+                    id="lf-logstash-pass"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </div>
+              </>
+            )}
+            {providerType === CreateLogForwardingRequest.provider_type.FLUENTD && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-fluentd-endpoint">HTTP input URL</Label>
+                  <Input
+                    id="lf-fluentd-endpoint"
+                    value={endpoint}
+                    onChange={(event) => setEndpoint(event.target.value)}
+                    placeholder="https://fluentd.example.com:8888"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-fluentd-tag">Tag</Label>
+                  <Input id="lf-fluentd-tag" value={fluentTag} onChange={(event) => setFluentTag(event.target.value)} />
+                </div>
+              </>
+            )}
+            {providerType === CreateLogForwardingRequest.provider_type.OTLP && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-endpoint">OTLP HTTP endpoint</Label>
+                  <Input
+                    id="lf-otlp-endpoint"
+                    value={endpoint}
+                    onChange={(event) => setEndpoint(event.target.value)}
+                    placeholder="https://collector.example.com:4318"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-auth">Authorization (optional)</Label>
+                  <Input
+                    id="lf-otlp-auth"
+                    type="password"
+                    value={authorization}
+                    onChange={(event) => setAuthorization(event.target.value)}
+                    placeholder="Bearer …"
+                  />
+                </div>
+              </>
             )}
           </div>
           <SheetFooter>

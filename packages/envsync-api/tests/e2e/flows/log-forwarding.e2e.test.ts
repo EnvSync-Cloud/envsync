@@ -3,7 +3,7 @@
  *
  * Uses real PostgreSQL and OpenFGA.
  * Tests the log forwarding configuration management surface.
- * Supports Datadog, Splunk, and Sumo Logic providers.
+ * Supports Datadog, Splunk, Sumo Logic, Logstash, Fluentd, and OTLP.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 
@@ -151,6 +151,76 @@ describe("Log Forwarding E2E", () => {
 		expect(body.provider_type).toBe("sumo-logic");
 
 		// Clean up
+		await managementTestRequest(`/api/log_forwarding/${body.id}`, {
+			method: "DELETE",
+			token: seed.masterUser.token,
+		});
+	});
+
+	test("create Logstash log forwarding config", async () => {
+		const res = await managementTestRequest("/api/log_forwarding", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "E2E Logstash Config",
+				provider_type: "logstash",
+				config: {
+					endpoint: "https://logstash.example.com:8080",
+					username: "logstash",
+					password: "secret",
+				},
+				enabled: true,
+			},
+		});
+		expect(res.status).toBe(201);
+		const body = await res.json<{ id: string; provider_type: string }>();
+		expect(body.provider_type).toBe("logstash");
+		await managementTestRequest(`/api/log_forwarding/${body.id}`, {
+			method: "DELETE",
+			token: seed.masterUser.token,
+		});
+	});
+
+	test("create Fluentd log forwarding config", async () => {
+		const res = await managementTestRequest("/api/log_forwarding", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "E2E Fluentd Config",
+				provider_type: "fluentd",
+				config: {
+					endpoint: "https://fluentd.example.com:8888",
+					tag: "envsync.audit",
+				},
+				enabled: true,
+			},
+		});
+		expect(res.status).toBe(201);
+		const body = await res.json<{ id: string; provider_type: string }>();
+		expect(body.provider_type).toBe("fluentd");
+		await managementTestRequest(`/api/log_forwarding/${body.id}`, {
+			method: "DELETE",
+			token: seed.masterUser.token,
+		});
+	});
+
+	test("create OTLP log forwarding config", async () => {
+		const res = await managementTestRequest("/api/log_forwarding", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "E2E OTLP Config",
+				provider_type: "otlp",
+				config: {
+					endpoint: "https://collector.example.com:4318",
+					authorization: "Bearer e2e-token",
+				},
+				enabled: true,
+			},
+		});
+		expect(res.status).toBe(201);
+		const body = await res.json<{ id: string; provider_type: string }>();
+		expect(body.provider_type).toBe("otlp");
 		await managementTestRequest(`/api/log_forwarding/${body.id}`, {
 			method: "DELETE",
 			token: seed.masterUser.token,

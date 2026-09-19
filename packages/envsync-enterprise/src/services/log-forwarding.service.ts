@@ -4,7 +4,7 @@ import { DB, JsonValue } from "envsync-api/ports/db";
 import { orNotFound } from "envsync-api/ports/errors";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
-export type ProviderType = "datadog" | "splunk" | "sumo-logic";
+export type ProviderType = "datadog" | "splunk" | "sumo-logic" | "logstash" | "fluentd" | "otlp";
 
 interface AuditLogPayload {
     readonly action: AuditActions;
@@ -14,7 +14,7 @@ interface AuditLogPayload {
     readonly message: string;
 }
 
-const SENSITIVE_CONFIG_KEYS = ["api_key", "token"] as const;
+const SENSITIVE_CONFIG_KEYS = ["api_key", "token", "password", "authorization"] as const;
 
 function maskSensitiveConfig(config: Record<string, unknown>): Record<string, unknown> {
     const masked: Record<string, unknown> = {};
@@ -132,6 +132,105 @@ async function forwardToSumoLogic(
     }
 }
 
+function auditEvent(payload: AuditLogPayload) {
+    return {
+        action: payload.action,
+        org_id: payload.org_id,
+        user_id: payload.user_id,
+        message: payload.message,
+        details: payload.details,
+    };
+}
+
+async function postJson(url: string, body: unknown, headers: Record<string, string>, label: string) {
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...headers,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) {
+        throw new Error(`${label} returned ${response.status}: ${await response.text()}`);
+    }
+}
+
+async function forwardToLogstash(
+    config: Record<string, unknown>,
+    payload: AuditLogPayload,
+): Promise<void> {
+    const endpoint = config.endpoint as string;
+    const username = config.username as string | undefined;
+    const password = config.password as string | undefined;
+    const headers: Record<string, string> = {};
+    if (username && password) {
+        headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+    }
+    await postJson(endpoint, auditEvent(payload), headers, "Logstash");
+}
+
+async function forwardToFluentd(
+    config: Record<string, unknown>,
+    payload: AuditLogPayload,
+): Promise<void> {
+    const endpoint = (config.endpoint as string).replace(/\/$/, "");
+    const tag = ((config.tag as string | undefined) ?? "envsync.audit").replace(/^\//, "");
+    const url = endpoint.includes(tag) ? endpoint : `${endpoint}/${tag}`;
+    await postJson(url, auditEvent(payload), {}, "Fluentd");
+}
+
+function otlpLogsUrl(endpoint: string) {
+    const trimmed = endpoint.replace(/\/$/, "");
+    return trimmed.endsWith("/v1/logs") ? trimmed : `${trimmed}/v1/logs`;
+}
+
+async function forwardToOtlp(
+    config: Record<string, unknown>,
+    payload: AuditLogPayload,
+): Promise<void> {
+    const url = otlpLogsUrl(config.endpoint as string);
+    const authorization = config.authorization as string | undefined;
+    const headers: Record<string, string> = {};
+    if (authorization) {
+        headers.Authorization = authorization;
+    }
+    const nowNs = `${BigInt(Date.now()) * 1_000_000n}`;
+    await postJson(
+        url,
+        {
+            resourceLogs: [
+                {
+                    resource: {
+                        attributes: [
+                            { key: "service.name", value: { stringValue: "envsync" } },
+                            { key: "org.id", value: { stringValue: payload.org_id } },
+                        ],
+                    },
+                    scopeLogs: [
+                        {
+                            logRecords: [
+                                {
+                                    timeUnixNano: nowNs,
+                                    severityText: "INFO",
+                                    body: { stringValue: payload.message },
+                                    attributes: [
+                                        { key: "audit.action", value: { stringValue: String(payload.action) } },
+                                        { key: "audit.user_id", value: { stringValue: payload.user_id } },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+        headers,
+        "OTLP",
+    );
+}
+
 async function forwardToProvider(
     providerType: ProviderType,
     config: Record<string, unknown>,
@@ -144,6 +243,12 @@ async function forwardToProvider(
             return forwardToSplunk(config, payload);
         case "sumo-logic":
             return forwardToSumoLogic(config, payload);
+        case "logstash":
+            return forwardToLogstash(config, payload);
+        case "fluentd":
+            return forwardToFluentd(config, payload);
+        case "otlp":
+            return forwardToOtlp(config, payload);
         default: {
             const _exhaustive: never = providerType;
             throw new Error(`Unsupported provider type: ${String(_exhaustive)}`);

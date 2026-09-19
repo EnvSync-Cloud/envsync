@@ -1,7 +1,7 @@
 import z from "zod";
 import "zod-openapi/extend";
 
-const providerType = z.enum(["datadog", "splunk", "sumo-logic"]);
+const providerType = z.enum(["datadog", "splunk", "sumo-logic", "logstash", "fluentd", "otlp"]);
 
 const datadogConfigSchema = z.object({
     api_key: z.string().min(1).openapi({ example: "abc123" }),
@@ -21,10 +21,29 @@ const sumoLogicConfigSchema = z.object({
     url: z.string().url().openapi({ example: "https://collectors.sumologic.com/receiver/v1/http/..." }),
 });
 
+const logstashConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "https://logstash.example.com:8080" }),
+    username: z.string().optional().openapi({ example: "logstash" }),
+    password: z.string().optional().openapi({ example: "secret" }),
+});
+
+const fluentdConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "https://fluentd.example.com:8888" }),
+    tag: z.string().optional().openapi({ example: "envsync.audit" }),
+});
+
+const otlpConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "https://collector.example.com:4318" }),
+    authorization: z.string().optional().openapi({ example: "Bearer token" }),
+});
+
 const providerConfigSchema = z.discriminatedUnion("provider_type", [
     z.object({ provider_type: z.literal("datadog"), config: datadogConfigSchema }),
     z.object({ provider_type: z.literal("splunk"), config: splunkConfigSchema }),
     z.object({ provider_type: z.literal("sumo-logic"), config: sumoLogicConfigSchema }),
+    z.object({ provider_type: z.literal("logstash"), config: logstashConfigSchema }),
+    z.object({ provider_type: z.literal("fluentd"), config: fluentdConfigSchema }),
+    z.object({ provider_type: z.literal("otlp"), config: otlpConfigSchema }),
 ]);
 
 export const createLogForwardingRequestSchema = z
