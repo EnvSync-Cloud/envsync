@@ -20,7 +20,23 @@ import {
   appSecretsPath,
   appSettingsPath,
 } from "@/lib/app-routes";
-import type { WebNavItem } from "@/modules/types";
+import type { WebNavGroup, WebNavItem } from "@/modules/types";
+
+export const CERTIFICATE_NAV_IDS = new Set(["certificates", "gpgkeys"]);
+
+export function filterCertificateNavGroups(
+  groups: WebNavGroup[],
+  permissions?: EffectivePermissions,
+): WebNavGroup[] {
+  return groups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(
+        item => CERTIFICATE_NAV_IDS.has(item.id) && hasRequiredPermission(item, permissions),
+      ),
+    }))
+    .filter(group => group.items.length > 0);
+}
 
 export function hasRequiredPermission(
   item: Pick<WebNavItem, "requiredPermission">,

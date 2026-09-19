@@ -36,6 +36,10 @@ describe("breadcrumb labels", () => {
     expect(
       buildBreadcrumbs(`/projects/${APP_ID}/settings/service-tokens`, apps).map((crumb) => crumb.label),
     ).toEqual(["Projects", "Core Platform", "Settings", "Service Tokens"]);
+    expect(buildBreadcrumbs("/org/certificates").map((crumb) => crumb.label)).toEqual([
+      "Certificates",
+    ]);
+    expect(buildBreadcrumbs("/gpgkeys").map((crumb) => crumb.label)).toEqual(["GPG Keys"]);
     expect(buildBreadcrumbs("/org/users").map((crumb) => crumb.label)).toEqual([
       "Organization",
       "Users",

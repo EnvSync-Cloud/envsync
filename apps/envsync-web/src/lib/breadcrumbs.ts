@@ -69,6 +69,11 @@ export function buildBreadcrumbs(
 
     if (isProjectSettings) {
       crumbs.push({ label: "Settings", href: currentPath });
+    } else if (
+      (segment === "org" || segment === "organisation") &&
+      segments[i + 1] === "certificates"
+    ) {
+      continue;
     } else if (ROUTE_LABELS[segment]) {
       crumbs.push({ label: ROUTE_LABELS[segment], href: currentPath });
     } else if (UUID_REGEX.test(segment) && apps) {
