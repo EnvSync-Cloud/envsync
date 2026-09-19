@@ -73,26 +73,15 @@ export default function LicenseSettings() {
   const verify = useVerifyLicense();
 
   const license = status?.license;
-  const system = status?.system as
-    | {
-        edition?: string;
-        org_count?: number;
-        single_org_mode?: boolean;
-        observability_enabled?: boolean;
-        deployment_mode?: string;
-        entitlement?: { features?: string[] };
-      }
-    | undefined;
+  const system = status?.system as { deployment_mode?: string } | undefined;
   const session = user as {
     features?: string[];
-    install_features?: string[];
     plan?: string;
     feature_overrides?: string[];
   } | null;
 
   const hosted = system?.deployment_mode === "hosted";
   const orgFeatures = session?.features ?? [];
-  const installFeatures = system?.entitlement?.features ?? session?.install_features ?? [];
   const overlay = session?.feature_overrides ?? [];
   const plan = session?.plan;
   const licenseStatus = license?.state?.status ?? "unknown";
@@ -164,13 +153,9 @@ export default function LicenseSettings() {
                   <dt className="text-muted-foreground">Plan</dt>
                   <dd className="font-medium">{plan ? (PLAN_LABELS[plan] ?? plan) : "—"}</dd>
                 </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Deployment</dt>
-                  <dd className="font-medium">Hosted</dd>
-                </div>
               </dl>
               <FeatureList
-                label="Overlay (trial flags)"
+                label="Preview flags"
                 features={overlay}
                 empty="No extra flags. Plan defaults only."
               />
@@ -218,41 +203,12 @@ export default function LicenseSettings() {
           )}
 
           <article className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-medium">Install</h2>
-            <dl className="grid gap-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Edition</dt>
-                <dd className="font-medium capitalize">{system?.edition ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Organizations</dt>
-                <dd className="font-medium">{system?.org_count ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Single-org mode</dt>
-                <dd className="font-medium">{system?.single_org_mode ? "yes" : "no"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Observability</dt>
-                <dd className="font-medium">{system?.observability_enabled ? "enabled" : "disabled"}</dd>
-              </div>
-            </dl>
-          </article>
-
-          <article className="rounded-xl border border-border bg-card p-6 space-y-6 md:col-span-2">
             <h2 className="text-lg font-medium">Features</h2>
-            <div className="grid gap-6 md:grid-cols-2">
-              <FeatureList
-                label="This organization"
-                features={orgFeatures}
-                empty="No extra features on this plan."
-              />
-              <FeatureList
-                label="Install catalog"
-                features={installFeatures}
-                empty={hosted ? "Hosted catalog follows the plan, not a license file." : "Fills in after a license is activated."}
-              />
-            </div>
+            <FeatureList
+              label="Available in this organization"
+              features={orgFeatures}
+              empty="No extra features on this plan."
+            />
           </article>
         </div>
       )}
