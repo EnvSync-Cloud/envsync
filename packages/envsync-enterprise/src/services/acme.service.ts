@@ -69,6 +69,24 @@ export class AcmeService {
 			.execute();
 	}
 
+	public static async listEabByKid(orgSlug: string, kid: string) {
+		const org = await OrgService.getOrgBySlug(orgSlug);
+		if (!org) {
+			throw new NotFoundError("Organization", orgSlug);
+		}
+		const db = await DB.getInstance();
+		const eab = await db
+			.selectFrom("org_acme_eab")
+			.selectAll()
+			.where("org_id", "=", org.id)
+			.where("kid", "=", kid)
+			.executeTakeFirst();
+		if (!eab) {
+			throw new BusinessRuleError("Unknown ACME EAB kid.", 401, "ACME_EAB_INVALID");
+		}
+		return eab;
+	}
+
 	public static async newAccount({
 		orgSlug,
 		kid,

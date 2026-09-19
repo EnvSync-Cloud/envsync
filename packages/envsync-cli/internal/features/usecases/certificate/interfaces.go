@@ -15,8 +15,21 @@ type CAStatusUseCase interface {
 	Execute(ctx context.Context) (*domain.Certificate, error)
 }
 
+type IssueCertInput struct {
+	Email       string
+	Role        string
+	Description string
+	Metadata    map[string]string
+	AppID       string
+	EnvTypeID   string
+	CommonName  string
+	SANs        []string
+	CSRPath     string
+	TTLDays     int
+}
+
 type IssueCertUseCase interface {
-	Execute(ctx context.Context, email, role, description string, metadata map[string]string) (*domain.Certificate, error)
+	Execute(ctx context.Context, input IssueCertInput) (*domain.Certificate, error)
 }
 
 type ListCertsUseCase interface {
