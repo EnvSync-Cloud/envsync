@@ -30,7 +30,7 @@ func (r *serviceTokenRepo) Create(ctx context.Context, req *sdk.CreateServiceTok
 }
 
 func (r *serviceTokenRepo) GetAll(ctx context.Context) (sdk.ServiceTokensResponse, error) {
-	return r.client.ServiceTokens.GetAllServiceTokens(ctx)
+	return r.client.ServiceTokens.GetAllServiceTokens(ctx, &sdk.GetAllServiceTokensRequest{})
 }
 
 func (r *serviceTokenRepo) GetByID(ctx context.Context, id string) (*sdk.ServiceTokenResponse, error) {

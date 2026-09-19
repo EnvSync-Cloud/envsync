@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Certificates = () => {
   const { data: certificates, isLoading } = api.certificates.getCertificates();
@@ -431,7 +432,20 @@ const Certificates = () => {
         </div>}
       >
 
-      {/* CA Status Card */}
+      <Tabs defaultValue="inventory" className="space-y-4">
+        <TabsList data-testid="certificates-tabs" className="h-auto bg-transparent p-0">
+          <TabsTrigger data-testid="certificates-tab-inventory" value="inventory" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+            Inventory
+          </TabsTrigger>
+          <TabsTrigger data-testid="certificates-tab-issue" value="issue" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+            Issue
+          </TabsTrigger>
+          <TabsTrigger data-testid="certificates-tab-ca" value="ca" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+            CA
+          </TabsTrigger>
+        </TabsList>
+
+      <TabsContent value="ca" className="mt-0">
       <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
@@ -503,8 +517,22 @@ const Certificates = () => {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
 
-      {/* Certificates Table */}
+      <TabsContent value="issue" className="mt-0">
+        <Card className="bg-card">
+          <CardHeader>
+            <CardTitle>Issue</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Use <span className="text-foreground">Issue Certificate</span> for members or{" "}
+            <span className="text-foreground">Issue service cert</span> for project leaves and CSRs.
+            {hasCA ? "" : " Initialize the organization CA on the CA tab first."}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="inventory" className="mt-0">
       <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
@@ -626,6 +654,8 @@ const Certificates = () => {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
+      </Tabs>
 
       {/* Revoke Dialog */}
       <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>

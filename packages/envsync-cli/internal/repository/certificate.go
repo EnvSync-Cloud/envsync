@@ -16,6 +16,8 @@ type CertificateRepository interface {
 	GetCA(ctx context.Context) (responses.OrgCAResponse, error)
 	GetRootCA(ctx context.Context) (responses.RootCAResponse, error)
 	IssueMemberCert(ctx context.Context, req requests.IssueMemberCertRequest) (responses.MemberCertResponse, error)
+	IssueLeafCert(ctx context.Context, req requests.IssueLeafCertRequest) (responses.MemberCertResponse, error)
+	SignCsr(ctx context.Context, req requests.SignCsrRequest) (responses.MemberCertResponse, error)
 	List(ctx context.Context) ([]responses.CertificateResponse, error)
 	Revoke(ctx context.Context, serialHex string, req requests.RevokeCertRequest) (responses.RevokeCertResponse, error)
 	GetCRL(ctx context.Context) (responses.CRLResponse, error)
@@ -110,6 +112,83 @@ func (r *certRepo) IssueMemberCert(ctx context.Context, req requests.IssueMember
 		KeyPEM:       resp.KeyPem,
 		CreatedAt:    resp.CreatedAt,
 	}, nil
+}
+
+func (r *certRepo) IssueLeafCert(ctx context.Context, req requests.IssueLeafCertRequest) (responses.MemberCertResponse, error) {
+	sdkReq := &sdk.IssueLeafCertRequest{
+		AppId:      req.AppID,
+		CommonName: req.CommonName,
+		Sans:       req.SANs,
+	}
+	if req.EnvTypeID != "" {
+		sdkReq.EnvTypeId = &req.EnvTypeID
+	}
+	if req.TTLDays > 0 {
+		sdkReq.TtlDays = &req.TTLDays
+	}
+	if req.KeyAlgorithm != "" {
+		algo, err := sdk.NewIssueLeafCertRequestKeyAlgorithmFromString(req.KeyAlgorithm)
+		if err == nil {
+			sdkReq.KeyAlgorithm = &algo
+		}
+	}
+	if req.Description != "" {
+		sdkReq.Description = &req.Description
+	}
+	resp, err := r.client.Certificates.IssueLeafCert(ctx, sdkReq)
+	if err != nil {
+		return responses.MemberCertResponse{}, err
+	}
+	return sdkMemberCertToResponse(resp), nil
+}
+
+func (r *certRepo) SignCsr(ctx context.Context, req requests.SignCsrRequest) (responses.MemberCertResponse, error) {
+	sdkReq := &sdk.SignCsrRequest{CsrPem: req.CSRPEM}
+	if req.AppID != "" {
+		sdkReq.AppId = &req.AppID
+	}
+	if req.TTLDays > 0 {
+		sdkReq.TtlDays = &req.TTLDays
+	}
+	if req.Description != "" {
+		sdkReq.Description = &req.Description
+	}
+	resp, err := r.client.Certificates.SignCertificateCsr(ctx, sdkReq)
+	if err != nil {
+		return responses.MemberCertResponse{}, err
+	}
+	return responses.MemberCertResponse{
+		ID:        resp.Id,
+		OrgID:     resp.OrgId,
+		SerialHex: resp.SerialHex,
+		CertType:  resp.CertType,
+		SubjectCN: resp.SubjectCn,
+		Status:    resp.Status,
+		CertPEM:   derefString(resp.CertPem),
+		CreatedAt: resp.CreatedAt,
+	}, nil
+}
+
+func sdkMemberCertToResponse(resp *sdk.MemberCertResponse) responses.MemberCertResponse {
+	metadata := make(map[string]string)
+	for k, v := range resp.Metadata {
+		if v != nil {
+			metadata[k] = *v
+		}
+	}
+	return responses.MemberCertResponse{
+		ID:           resp.Id,
+		OrgID:        resp.OrgId,
+		SerialHex:    resp.SerialHex,
+		CertType:     resp.CertType,
+		SubjectCN:    resp.SubjectCn,
+		SubjectEmail: resp.SubjectEmail,
+		Status:       resp.Status,
+		Metadata:     metadata,
+		CertPEM:      derefString(resp.CertPem),
+		KeyPEM:       resp.KeyPem,
+		CreatedAt:    resp.CreatedAt,
+	}
 }
 
 func (r *certRepo) List(ctx context.Context) ([]responses.CertificateResponse, error) {

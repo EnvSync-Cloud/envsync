@@ -81,11 +81,8 @@ func (h *CertificateHandler) CAStatus(ctx context.Context, cmd *cli.Command) err
 }
 
 func (h *CertificateHandler) IssueCert(ctx context.Context, cmd *cli.Command) error {
-	email := cmd.String("email")
-	role := cmd.String("role")
 	description := cmd.String("description")
 
-	// Parse metadata from key=value,key=value format
 	var metadata map[string]string
 	metadataStr := cmd.String("metadata")
 	if metadataStr != "" {
@@ -99,7 +96,27 @@ func (h *CertificateHandler) IssueCert(ctx context.Context, cmd *cli.Command) er
 		}
 	}
 
-	cert, err := h.issueCertUseCase.Execute(ctx, email, role, description, metadata)
+	var sans []string
+	if sanStr := cmd.String("san"); sanStr != "" {
+		for _, part := range strings.Split(sanStr, ",") {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				sans = append(sans, trimmed)
+			}
+		}
+	}
+
+	cert, err := h.issueCertUseCase.Execute(ctx, certUC.IssueCertInput{
+		Email:       cmd.String("email"),
+		Role:        cmd.String("role"),
+		Description: description,
+		Metadata:    metadata,
+		AppID:       cmd.String("app"),
+		EnvTypeID:   cmd.String("env-type"),
+		CommonName:  cmd.String("cn"),
+		SANs:        sans,
+		CSRPath:     cmd.String("csr"),
+		TTLDays:     cmd.Int("ttl-days"),
+	})
 	if err != nil {
 		return h.formatError(cmd, err)
 	}

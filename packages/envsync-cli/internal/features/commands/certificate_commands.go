@@ -56,19 +56,41 @@ func certCACommands(handler *handlers.CertificateHandler) *cli.Command {
 
 func certIssueCommand(handler *handlers.CertificateHandler) *cli.Command {
 	return &cli.Command{
-		Name:   "issue",
-		Usage:  "Issue a member/service certificate",
+		Name:  "issue",
+		Usage: "Issue a member or service certificate",
 		Action: handler.IssueCert,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "email",
-				Usage:    "Member or service email (e.g., user@example.com or svc@internal)",
-				Required: true,
+				Name:  "email",
+				Usage: "Member email (member certs)",
 			},
 			&cli.StringFlag{
-				Name:     "role",
-				Usage:    "Certificate role (e.g., developer, gateway, api)",
-				Required: true,
+				Name:  "role",
+				Usage: "Certificate role (member certs)",
+			},
+			&cli.StringFlag{
+				Name:  "app",
+				Usage: "Project ID (service/leaf certs)",
+			},
+			&cli.StringFlag{
+				Name:  "env-type",
+				Usage: "Environment type ID for the leaf",
+			},
+			&cli.StringFlag{
+				Name:  "cn",
+				Usage: "Common name for a service certificate",
+			},
+			&cli.StringFlag{
+				Name:  "san",
+				Usage: "Comma-separated DNS/IP SANs",
+			},
+			&cli.StringFlag{
+				Name:  "csr",
+				Usage: "Path to a PEM CSR to sign (caller keeps the key)",
+			},
+			&cli.IntFlag{
+				Name:  "ttl-days",
+				Usage: "Leaf certificate lifetime in days",
 			},
 			&cli.StringFlag{
 				Name:  "description",
