@@ -389,6 +389,7 @@ export const ServiceTokens = () => {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
+                data-testid="confirm-rotate-service-token"
                 onClick={() => {
                   if (pendingRotate) rotateToken.mutate({ id: pendingRotate.id, grace_hours: 24 });
                   setPendingRotate(null);
@@ -411,6 +412,7 @@ export const ServiceTokens = () => {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
+                data-testid="confirm-revoke-service-token"
                 onClick={() => {
                   if (pendingRevoke) deleteToken.mutate(pendingRevoke.id);
                   setPendingRevoke(null);

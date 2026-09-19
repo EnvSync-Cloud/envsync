@@ -16,7 +16,7 @@ test.describe("permissions: editor vs admin", () => {
 			await expect(adminPage.getByTestId("teams-create")).toBeVisible();
 
 			await adminPage.goto("/org", { waitUntil: "domcontentloaded" });
-			await expect(adminPage.getByRole("heading", { name: /^(Organization|Organisation) Settings$/i })).toBeVisible();
+			await expect(adminPage.getByTestId("org-settings-heading")).toBeVisible();
 		} finally {
 			await editorContext.close();
 			await adminContext.close();
