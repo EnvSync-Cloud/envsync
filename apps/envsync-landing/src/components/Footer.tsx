@@ -2,8 +2,7 @@ import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import { runtimeConfig } from "@/utils/runtime-config";
 
-// Version synced from package.json — update manually on release.
-export const VERSION = "v0.11.0";
+export const VERSION = `v${__APP_VERSION__}`;
 
 const linkClasses =
   "rounded-sm text-sm text-muted-foreground transition-colors duration-200 " +
@@ -11,24 +10,38 @@ const linkClasses =
 
 const linkGroups = [
   {
-    heading: "Developer",
+    heading: "Product",
     links: [
-      { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
-      { label: "GitHub", href: "https://github.com/EnvSync-Cloud/envsync", external: true },
+      { label: "Environments & secrets", href: "/product/secrets", external: false },
+      { label: "Certificates", href: "/product/certificates", external: false },
+      { label: "Access & SSO", href: "/product/access", external: false },
+      { label: "Security & operations", href: "/product/security", external: false },
+      { label: "Integrations", href: "/integrations", external: false },
     ],
   },
   {
-    heading: "Workflow",
+    heading: "Companies",
     links: [
-      { label: "Integrations", href: "/integrations", external: false },
-      { label: "Get Started", href: "/onboarding", external: false },
+      { label: "For startups", href: "/companies/startups", external: false },
+      { label: "For MSME", href: "/companies/msme", external: false },
+      { label: "For Enterprise", href: "/companies/enterprise", external: false },
+    ],
+  },
+  {
+    heading: "OSS",
+    links: [
+      { label: "Open source", href: "/oss", external: false },
+      { label: "miniKMS", href: "/oss/minikms", external: false },
+      { label: "Encryption", href: "/oss/encryption", external: false },
+      { label: "GitHub", href: "https://github.com/EnvSync-Cloud/envsync", external: true },
     ],
   },
   {
     heading: "Company",
     links: [
       { label: "About", href: "/about", external: false },
-      { label: "Roadmap", href: "https://envsync.notion.site", external: true },
+      { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
+      { label: "Get Started", href: "/onboarding", external: false },
       { label: "Contact", href: "mailto:team@envsync.cloud", external: true },
     ],
   },
@@ -38,7 +51,7 @@ const Footer = () => {
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-8">
-        <div className="grid gap-12 md:grid-cols-[2fr_1fr_1fr_1fr]">
+        <div className="grid gap-12 md:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
           {/* Brand column */}
           <div>
             <Link to="/" className="flex items-center gap-2">

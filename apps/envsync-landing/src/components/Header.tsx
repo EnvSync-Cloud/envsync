@@ -1,15 +1,10 @@
 import { Button, ThemeToggle } from "@/components/primitives";
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { trackAction } from "@/telemetry";
 import { runtimeConfig } from "@/utils/runtime-config";
-
-const navLinks = [
-  { label: "Integrations", href: "/integrations", external: false },
-  { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
-  { label: "GitHub", href: "https://github.com/EnvSync-Cloud/envsync", external: true },
-] as const;
+import { navGroups, pathInGroup, standaloneNav, type NavGroup } from "@/nav";
 
 const linkClasses =
   "rounded-md px-3 py-1.5 text-base font-medium text-muted-foreground " +
@@ -18,21 +13,28 @@ const linkClasses =
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const location = useLocation();
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    setOpenGroup(null);
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isMenuOpen && !openGroup) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
+        setOpenGroup(null);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, openGroup]);
 
   return (
     <header
@@ -40,7 +42,6 @@ const Header = () => {
       className="sticky top-0 z-50 w-full border-b border-border bg-background"
     >
       <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-4 sm:px-8">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <img src="/EnvSync.svg" alt="EnvSync Logo" className="h-7 w-7" />
           <span className="text-base font-medium text-foreground">EnvSync</span>
@@ -49,28 +50,30 @@ const Header = () => {
           </span>
         </Link>
 
-        {/* Center nav — desktop */}
         <nav className="hidden h-full items-center gap-1 md:flex">
-          {navLinks.map((link) =>
+          {navGroups.map((group) => (
+            <NavDropdown
+              key={group.id}
+              group={group}
+              open={openGroup === group.id}
+              onOpen={() => setOpenGroup(group.id)}
+              onClose={() => setOpenGroup(null)}
+              pathname={location.pathname}
+            />
+          ))}
+          {standaloneNav.map((link) =>
             link.external ? (
               <a key={link.label} href={link.href} className={linkClasses}>
                 {link.label}
               </a>
             ) : (
-              <Link
-                key={link.label}
-                to={link.href}
-                className={`${linkClasses} ${
-                  location.pathname === link.href ? "!text-foreground" : ""
-                }`}
-              >
+              <Link key={link.label} to={link.href} className={linkClasses}>
                 {link.label}
               </Link>
             ),
           )}
         </nav>
 
-        {/* Right cluster — desktop */}
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
           <a href={runtimeConfig.appBaseUrl}>
@@ -85,7 +88,6 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Hamburger — mobile */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="text-muted-foreground hover:text-foreground md:hidden"
@@ -96,24 +98,36 @@ const Header = () => {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {isMenuOpen && (
         <div className="border-t border-border bg-background md:hidden">
-          <nav className="flex flex-col gap-1 px-4 py-4">
-            {navLinks.map((link) =>
+          <nav className="flex flex-col gap-4 px-4 py-4">
+            {navGroups.map((group) => (
+              <div key={group.id}>
+                <p className="font-mono text-xs uppercase tracking-[0.16em] text-tertiary">{group.label}</p>
+                <div className="mt-2 flex flex-col">
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={`${linkClasses} ${location.pathname === item.href ? "!text-foreground" : ""}`}
+                      onClick={() => {
+                        trackAction("landing_nav_clicked", { group: group.id, href: item.href });
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {standaloneNav.map((link) =>
               link.external ? (
                 <a key={link.label} href={link.href} className={linkClasses}>
                   {link.label}
                 </a>
               ) : (
-                <Link
-                  key={link.label}
-                  to={link.href}
-                  className={`${linkClasses} ${
-                    location.pathname === link.href ? "!text-foreground" : ""
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                <Link key={link.label} to={link.href} className={linkClasses} onClick={() => setIsMenuOpen(false)}>
                   {link.label}
                 </Link>
               ),
@@ -139,5 +153,55 @@ const Header = () => {
     </header>
   );
 };
+
+function NavDropdown({
+  group,
+  open,
+  onOpen,
+  onClose,
+  pathname,
+}: {
+  group: NavGroup;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  pathname: string;
+}) {
+  const active = pathInGroup(pathname, group);
+  return (
+    <div className="relative h-full" onMouseEnter={onOpen} onMouseLeave={onClose}>
+      <button
+        type="button"
+        className={`${linkClasses} inline-flex h-full items-center gap-1 ${active || open ? "!text-foreground" : ""}`}
+        aria-expanded={open}
+        data-testid={`landing-nav-${group.id}`}
+        onClick={() => (open ? onClose() : onOpen())}
+      >
+        {group.label}
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-50 min-w-[240px] border border-border bg-popover py-2">
+          {group.items.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className={`block px-4 py-2 text-sm text-muted-foreground hover:bg-card hover:text-foreground ${
+                pathname === item.href ? "!text-foreground" : ""
+              }`}
+              data-testid={`landing-nav-${group.id}-${item.href.replace(/\//g, "-")}`}
+              onClick={() => {
+                trackAction("landing_nav_clicked", { group: group.id, href: item.href });
+                onClose();
+              }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default Header;
