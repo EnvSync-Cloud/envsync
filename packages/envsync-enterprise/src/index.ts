@@ -1,6 +1,8 @@
 export { enterpriseManagementModules } from "./management-modules";
 export { startCmkRewrapWorker, startEnterpriseSyncWorker, startLicenseHeartbeat } from "./background";
 export { publicSamlRouter } from "./routes/public-saml.route";
+export { publicAcmeRouter } from "./routes/public-acme.route";
+export { AcmeService } from "./services/acme.service";
 export { EnterpriseIntegrationService } from "./services/enterprise-integration.service";
 export { EnterpriseProviderSyncService } from "./services/enterprise-provider-sync.service";
 export { SamlService } from "./services/saml.service";

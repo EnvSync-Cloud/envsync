@@ -475,6 +475,30 @@ export interface OrgKmsRewrapJob {
 	updated_at: ColumnType<Date>;
 }
 
+export interface OrgAcmeEab extends BaseTable {
+	org_id: ColumnType<string>;
+	kid: ColumnType<string>;
+	hmac_key: ColumnType<string>;
+	created_by: ColumnType<string>;
+}
+
+export interface AcmeAccount extends BaseTable {
+	org_id: ColumnType<string>;
+	eab_id: ColumnType<string>;
+	jwk_thumbprint: ColumnType<string>;
+	contacts: ColumnType<string[]>;
+}
+
+export interface AcmeOrder extends BaseTable {
+	org_id: ColumnType<string>;
+	account_id: ColumnType<string>;
+	status: ColumnType<string>;
+	identifiers: ColumnType<Array<{ type: string; value: string }>>;
+	csr_pem?: ColumnType<string | null>;
+	cert_id?: ColumnType<string | null>;
+	expires_at: ColumnType<Date>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -517,6 +541,9 @@ export interface BaseDatabase {
 	org_feature_grant: OrgFeatureGrant;
 	org_kms_config: OrgKmsConfig;
 	org_kms_rewrap_job: OrgKmsRewrapJob;
+	org_acme_eab: OrgAcmeEab;
+	acme_accounts: AcmeAccount;
+	acme_orders: AcmeOrder;
 }
 
 /**
