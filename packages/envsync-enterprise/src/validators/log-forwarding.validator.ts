@@ -21,20 +21,38 @@ const sumoLogicConfigSchema = z.object({
     url: z.string().url().openapi({ example: "https://collectors.sumologic.com/receiver/v1/http/..." }),
 });
 
-const logstashConfigSchema = z.object({
-    endpoint: z.string().url().openapi({ example: "https://logstash.example.com:8080" }),
-    username: z.string().optional().openapi({ example: "logstash" }),
-    password: z.string().optional().openapi({ example: "secret" }),
+const headerMap = z.record(z.string()).optional().openapi({
+    example: { Authorization: "Basic …", "stream-name": "default" },
 });
 
-const fluentdConfigSchema = z.object({
-    endpoint: z.string().url().openapi({ example: "https://fluentd.example.com:8888" }),
-    tag: z.string().optional().openapi({ example: "envsync.audit" }),
+const logstashConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "http://logstash.example.com:8080" }),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    headers: headerMap,
+    json_batch: z.boolean().optional().openapi({ example: true }),
 });
+
+const fluentdConfigSchema = z
+    .object({
+        protocol: z.enum(["forward", "http"]).optional().openapi({ example: "forward" }),
+        host: z.string().optional().openapi({ example: "127.0.0.1" }),
+        port: z.coerce.number().int().positive().optional().openapi({ example: 24224 }),
+        tag: z.string().optional().openapi({ example: "envsync.audit" }),
+        endpoint: z.string().url().optional().openapi({ example: "http://fluentd.example.com:8888" }),
+        username: z.string().optional(),
+        password: z.string().optional(),
+        headers: headerMap,
+        json_array: z.boolean().optional(),
+    })
+    .refine(config => Boolean(config.host) || Boolean(config.endpoint), {
+        message: "Fluentd requires host (forward protocol) or endpoint (HTTP)",
+    });
 
 const otlpConfigSchema = z.object({
-    endpoint: z.string().url().openapi({ example: "https://collector.example.com:4318" }),
-    authorization: z.string().optional().openapi({ example: "Bearer token" }),
+    endpoint: z.string().url().openapi({ example: "http://collector.example.com:4318/api/default" }),
+    authorization: z.string().optional(),
+    headers: headerMap,
 });
 
 const providerConfigSchema = z.discriminatedUnion("provider_type", [

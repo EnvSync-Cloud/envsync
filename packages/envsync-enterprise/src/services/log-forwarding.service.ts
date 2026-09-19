@@ -16,11 +16,25 @@ interface AuditLogPayload {
 
 const SENSITIVE_CONFIG_KEYS = ["api_key", "token", "password", "authorization"] as const;
 
+function maskSecret(value: string): string {
+    if (value.length <= 4) return "****";
+    return value.slice(0, -4).replace(/./g, "*") + value.slice(-4);
+}
+
 function maskSensitiveConfig(config: Record<string, unknown>): Record<string, unknown> {
     const masked: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(config)) {
         if (SENSITIVE_CONFIG_KEYS.includes(key as (typeof SENSITIVE_CONFIG_KEYS)[number]) && typeof value === "string") {
-            masked[key] = value.slice(0, -4).replace(/./g, "*") + value.slice(-4);
+            masked[key] = maskSecret(value);
+        } else if (key === "headers" && value && typeof value === "object" && !Array.isArray(value)) {
+            masked[key] = Object.fromEntries(
+                Object.entries(value as Record<string, unknown>).map(([header, headerValue]) => [
+                    header,
+                    /authorization|password|token/i.test(header) && typeof headerValue === "string"
+                        ? maskSecret(headerValue)
+                        : headerValue,
+                ]),
+            );
         } else {
             masked[key] = value;
         }
@@ -142,6 +156,25 @@ function auditEvent(payload: AuditLogPayload) {
     };
 }
 
+function requestHeaders(config: Record<string, unknown>): Record<string, string> {
+    const headers: Record<string, string> = {};
+    const extra = config.headers;
+    if (extra && typeof extra === "object" && !Array.isArray(extra)) {
+        for (const [key, value] of Object.entries(extra as Record<string, unknown>)) {
+            if (typeof value === "string" && value.length > 0) headers[key] = value;
+        }
+    }
+    if (typeof config.authorization === "string" && config.authorization) {
+        headers.Authorization = config.authorization;
+    }
+    const username = config.username as string | undefined;
+    const password = config.password as string | undefined;
+    if (username && password) {
+        headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+    }
+    return headers;
+}
+
 async function postJson(url: string, body: unknown, headers: Record<string, string>, label: string) {
     const response = await fetch(url, {
         method: "POST",
@@ -161,24 +194,36 @@ async function forwardToLogstash(
     config: Record<string, unknown>,
     payload: AuditLogPayload,
 ): Promise<void> {
-    const endpoint = config.endpoint as string;
-    const username = config.username as string | undefined;
-    const password = config.password as string | undefined;
-    const headers: Record<string, string> = {};
-    if (username && password) {
-        headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
-    }
-    await postJson(endpoint, auditEvent(payload), headers, "Logstash");
+    const event = auditEvent(payload);
+    const body = config.json_batch === false ? event : [event];
+    await postJson(config.endpoint as string, body, requestHeaders(config), "Logstash");
+}
+
+function fluentdProtocol(config: Record<string, unknown>): "forward" | "http" {
+    if (config.protocol === "forward" || config.protocol === "http") return config.protocol;
+    if (typeof config.host === "string" && config.host) return "forward";
+    return "http";
 }
 
 async function forwardToFluentd(
     config: Record<string, unknown>,
     payload: AuditLogPayload,
 ): Promise<void> {
-    const endpoint = (config.endpoint as string).replace(/\/$/, "");
     const tag = ((config.tag as string | undefined) ?? "envsync.audit").replace(/^\//, "");
+    if (fluentdProtocol(config) === "forward") {
+        await forwardFluentdPacked(
+            (config.host as string) ?? "127.0.0.1",
+            Number(config.port ?? 24224),
+            tag,
+            auditEvent(payload),
+        );
+        return;
+    }
+    const endpoint = (config.endpoint as string).replace(/\/$/, "");
     const url = endpoint.includes(tag) ? endpoint : `${endpoint}/${tag}`;
-    await postJson(url, auditEvent(payload), {}, "Fluentd");
+    const event = auditEvent(payload);
+    const body = config.json_array === false ? event : [event];
+    await postJson(url, body, requestHeaders(config), "Fluentd");
 }
 
 function otlpLogsUrl(endpoint: string) {
@@ -191,11 +236,6 @@ async function forwardToOtlp(
     payload: AuditLogPayload,
 ): Promise<void> {
     const url = otlpLogsUrl(config.endpoint as string);
-    const authorization = config.authorization as string | undefined;
-    const headers: Record<string, string> = {};
-    if (authorization) {
-        headers.Authorization = authorization;
-    }
     const nowNs = `${BigInt(Date.now()) * 1_000_000n}`;
     await postJson(
         url,
@@ -226,9 +266,90 @@ async function forwardToOtlp(
                 },
             ],
         },
-        headers,
+        requestHeaders(config),
         "OTLP",
     );
+}
+
+function encodeMsgpack(value: unknown): Uint8Array {
+    const out: number[] = [];
+    const utf8 = new TextEncoder();
+    const write = (item: unknown) => {
+        if (item === null || item === undefined) {
+            out.push(0xc0);
+            return;
+        }
+        if (typeof item === "boolean") {
+            out.push(item ? 0xc3 : 0xc2);
+            return;
+        }
+        if (typeof item === "number") {
+            if (Number.isInteger(item) && item >= 0 && item < 128) {
+                out.push(item);
+                return;
+            }
+            if (Number.isInteger(item) && item >= -32 && item < 0) {
+                out.push(0xe0 | (item + 32));
+                return;
+            }
+            if (Number.isInteger(item) && item >= 0 && item <= 0xffffffff) {
+                out.push(0xce, (item >>> 24) & 0xff, (item >>> 16) & 0xff, (item >>> 8) & 0xff, item & 0xff);
+                return;
+            }
+            const view = new DataView(new ArrayBuffer(9));
+            view.setUint8(0, 0xcb);
+            view.setFloat64(1, item);
+            out.push(...new Uint8Array(view.buffer));
+            return;
+        }
+        if (typeof item === "string") {
+            const bytes = utf8.encode(item);
+            if (bytes.length < 32) out.push(0xa0 | bytes.length);
+            else if (bytes.length < 256) out.push(0xd9, bytes.length);
+            else out.push(0xda, bytes.length >> 8, bytes.length & 0xff);
+            out.push(...bytes);
+            return;
+        }
+        if (Array.isArray(item)) {
+            if (item.length < 16) out.push(0x90 | item.length);
+            else out.push(0xdc, item.length >> 8, item.length & 0xff);
+            item.forEach(write);
+            return;
+        }
+        if (typeof item === "object") {
+            const entries = Object.entries(item as Record<string, unknown>);
+            if (entries.length < 16) out.push(0x80 | entries.length);
+            else out.push(0xde, entries.length >> 8, entries.length & 0xff);
+            for (const [key, val] of entries) {
+                write(key);
+                write(val);
+            }
+        }
+    };
+    write(value);
+    return Uint8Array.from(out);
+}
+
+async function forwardFluentdPacked(
+    host: string,
+    port: number,
+    tag: string,
+    record: Record<string, unknown>,
+): Promise<void> {
+    const net = await import("node:net");
+    const packet = encodeMsgpack([tag, Math.floor(Date.now() / 1000), record]);
+    await new Promise<void>((resolve, reject) => {
+        const socket = net.connect({ host, port }, () => {
+            socket.write(Buffer.from(packet), () => socket.end());
+        });
+        socket.setTimeout(10_000);
+        socket.on("timeout", () => {
+            socket.destroy();
+            reject(new Error(`Fluentd forward ${host}:${port} timed out`));
+        });
+        socket.on("error", reject);
+        socket.on("close", () => resolve());
+    });
 }
 
 async function forwardToProvider(

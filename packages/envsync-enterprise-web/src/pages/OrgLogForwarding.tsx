@@ -52,6 +52,11 @@ export default function OrgLogForwarding() {
   const [password, setPassword] = useState("");
   const [fluentTag, setFluentTag] = useState("envsync.audit");
   const [authorization, setAuthorization] = useState("");
+  const [headersText, setHeadersText] = useState("");
+  const [fluentProtocol, setFluentProtocol] = useState<"forward" | "http">("forward");
+  const [fluentHost, setFluentHost] = useState("127.0.0.1");
+  const [fluentPort, setFluentPort] = useState("24224");
+  const [jsonBatch, setJsonBatch] = useState(true);
 
   const resetForm = () => {
     setName("");
@@ -65,6 +70,23 @@ export default function OrgLogForwarding() {
     setPassword("");
     setFluentTag("envsync.audit");
     setAuthorization("");
+    setHeadersText("");
+    setFluentProtocol("forward");
+    setFluentHost("127.0.0.1");
+    setFluentPort("24224");
+    setJsonBatch(true);
+  };
+
+  const parsedHeaders = () => {
+    const headers: Record<string, string> = {};
+    for (const line of headersText.split("\n")) {
+      const index = line.indexOf(":");
+      if (index <= 0) continue;
+      const key = line.slice(0, index).trim();
+      const value = line.slice(index + 1).trim();
+      if (key && value) headers[key] = value;
+    }
+    return headers;
   };
 
   const onCreate = async () => {
@@ -80,10 +102,30 @@ export default function OrgLogForwarding() {
           : providerType === CreateLogForwardingRequest.provider_type.SUMO_LOGIC
             ? { url: sumoUrl }
             : providerType === CreateLogForwardingRequest.provider_type.LOGSTASH
-              ? { endpoint, ...(username ? { username } : {}), ...(password ? { password } : {}) }
+              ? {
+                  endpoint,
+                  json_batch: jsonBatch,
+                  ...(username ? { username } : {}),
+                  ...(password ? { password } : {}),
+                  ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                }
               : providerType === CreateLogForwardingRequest.provider_type.FLUENTD
-                ? { endpoint, tag: fluentTag }
-                : { endpoint, ...(authorization ? { authorization } : {}) };
+                ? fluentProtocol === "forward"
+                  ? { protocol: "forward", host: fluentHost, port: Number(fluentPort), tag: fluentTag }
+                  : {
+                      protocol: "http",
+                      endpoint,
+                      tag: fluentTag,
+                      json_array: jsonBatch,
+                      ...(username ? { username } : {}),
+                      ...(password ? { password } : {}),
+                      ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                    }
+                : {
+                    endpoint,
+                    ...(authorization ? { authorization } : {}),
+                    ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                  };
     try {
       await createConfig.mutateAsync({
         name: name.trim(),
@@ -206,12 +248,12 @@ export default function OrgLogForwarding() {
             {providerType === CreateLogForwardingRequest.provider_type.LOGSTASH && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="lf-logstash-endpoint">HTTP input URL</Label>
+                  <Label htmlFor="lf-logstash-endpoint">HTTP URL</Label>
                   <Input
                     id="lf-logstash-endpoint"
                     value={endpoint}
                     onChange={(event) => setEndpoint(event.target.value)}
-                    placeholder="https://logstash.example.com:8080"
+                    placeholder="http://logstash.example.com:8080 or OpenObserve _json URL"
                   />
                 </div>
                 <div className="space-y-2">
@@ -227,23 +269,91 @@ export default function OrgLogForwarding() {
                     onChange={(event) => setPassword(event.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-headers">Headers (optional, one per line: Name: value)</Label>
+                  <textarea
+                    id="lf-logstash-headers"
+                    className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                    value={headersText}
+                    onChange={(event) => setHeadersText(event.target.value)}
+                    placeholder={"Authorization: Basic …\nContent-Type: application/json"}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
+                  JSON batch array (Logstash `json_batch` / OpenObserve `_json`)
+                </label>
               </>
             )}
             {providerType === CreateLogForwardingRequest.provider_type.FLUENTD && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="lf-fluentd-endpoint">HTTP input URL</Label>
-                  <Input
-                    id="lf-fluentd-endpoint"
-                    value={endpoint}
-                    onChange={(event) => setEndpoint(event.target.value)}
-                    placeholder="https://fluentd.example.com:8888"
-                  />
+                  <Label htmlFor="lf-fluentd-protocol">Fluentd input</Label>
+                  <select
+                    id="lf-fluentd-protocol"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={fluentProtocol}
+                    onChange={(event) => setFluentProtocol(event.target.value as "forward" | "http")}
+                  >
+                    <option value="forward">forward (port 24224)</option>
+                    <option value="http">http (in_http / json_array)</option>
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lf-fluentd-tag">Tag</Label>
                   <Input id="lf-fluentd-tag" value={fluentTag} onChange={(event) => setFluentTag(event.target.value)} />
                 </div>
+                {fluentProtocol === "forward" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-host">Host</Label>
+                      <Input id="lf-fluentd-host" value={fluentHost} onChange={(event) => setFluentHost(event.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-port">Port</Label>
+                      <Input id="lf-fluentd-port" value={fluentPort} onChange={(event) => setFluentPort(event.target.value)} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-endpoint">HTTP URL</Label>
+                      <Input
+                        id="lf-fluentd-endpoint"
+                        value={endpoint}
+                        onChange={(event) => setEndpoint(event.target.value)}
+                        placeholder="http://fluentd.example.com:8888"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-user">Username (optional)</Label>
+                      <Input id="lf-fluentd-user" value={username} onChange={(event) => setUsername(event.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-pass">Password (optional)</Label>
+                      <Input
+                        id="lf-fluentd-pass"
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-headers">Headers (optional)</Label>
+                      <textarea
+                        id="lf-fluentd-headers"
+                        className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        value={headersText}
+                        onChange={(event) => setHeadersText(event.target.value)}
+                        placeholder="Authorization: Basic …"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
+                      JSON array (`json_array true`)
+                    </label>
+                  </>
+                )}
               </>
             )}
             {providerType === CreateLogForwardingRequest.provider_type.OTLP && (
@@ -254,8 +364,9 @@ export default function OrgLogForwarding() {
                     id="lf-otlp-endpoint"
                     value={endpoint}
                     onChange={(event) => setEndpoint(event.target.value)}
-                    placeholder="https://collector.example.com:4318"
+                    placeholder="http://localhost:5080/api/default"
                   />
+                  <p className="text-xs text-muted-foreground">/v1/logs is appended if missing.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lf-otlp-auth">Authorization (optional)</Label>
@@ -264,7 +375,17 @@ export default function OrgLogForwarding() {
                     type="password"
                     value={authorization}
                     onChange={(event) => setAuthorization(event.target.value)}
-                    placeholder="Bearer …"
+                    placeholder="Basic …"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-headers">Extra headers (one per line)</Label>
+                  <textarea
+                    id="lf-otlp-headers"
+                    className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                    value={headersText}
+                    onChange={(event) => setHeadersText(event.target.value)}
+                    placeholder="stream-name: default"
                   />
                 </div>
               </>

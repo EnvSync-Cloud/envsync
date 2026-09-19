@@ -181,6 +181,31 @@ describe("Log Forwarding E2E", () => {
 		});
 	});
 
+	test("create Fluentd forward log forwarding config", async () => {
+		const res = await managementTestRequest("/api/log_forwarding", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "E2E Fluentd Forward",
+				provider_type: "fluentd",
+				config: {
+					protocol: "forward",
+					host: "127.0.0.1",
+					port: 24224,
+					tag: "envsync.audit",
+				},
+				enabled: true,
+			},
+		});
+		expect(res.status).toBe(201);
+		const body = await res.json<{ id: string; provider_type: string }>();
+		expect(body.provider_type).toBe("fluentd");
+		await managementTestRequest(`/api/log_forwarding/${body.id}`, {
+			method: "DELETE",
+			token: seed.masterUser.token,
+		});
+	});
+
 	test("create Fluentd log forwarding config", async () => {
 		const res = await managementTestRequest("/api/log_forwarding", {
 			method: "POST",
@@ -212,8 +237,9 @@ describe("Log Forwarding E2E", () => {
 				name: "E2E OTLP Config",
 				provider_type: "otlp",
 				config: {
-					endpoint: "https://collector.example.com:4318",
-					authorization: "Bearer e2e-token",
+					endpoint: "https://collector.example.com:4318/api/default",
+					authorization: "Basic e2e-token",
+					headers: { "stream-name": "default" },
 				},
 				enabled: true,
 			},
