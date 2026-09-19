@@ -57,7 +57,7 @@
 
 ### Changed
 
-- Swarm/compose miniKMS image pin is `ghcr.io/envsync-cloud/minikms:sha-9ffbf53`.
+- Swarm/compose miniKMS image pin is `ghcr.io/envsync-cloud/minikms:sha-e4fdb24`.
 - Deploy and compose run miniKMS migration `003_escrow_recovery.sql`.
 
 ---

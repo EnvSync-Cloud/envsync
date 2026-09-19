@@ -229,6 +229,7 @@ const Certificates = () => {
         icon={ShieldCheck}
         actions={<div className="flex gap-2">
           {hasCA && (
+            <>
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-500 hover:bg-emerald-600" data-testid="certificate-issue-button">
@@ -361,7 +362,7 @@ const Certificates = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Dialog open={isLeafOpen} onOpenChange={(open) => { setIsLeafOpen(open); if (!open) { setLeafCsr(""); setLeafCn(""); } }}>
+            <Dialog open={isLeafOpen} onOpenChange={(isOpen) => { setIsLeafOpen(isOpen); if (!isOpen) { setLeafCsr(""); setLeafCn(""); } }}>
               <DialogTrigger asChild>
                 <Button variant="outline" data-testid="certificate-issue-leaf-button">
                   <Plus className="w-4 h-4 mr-2" /> Issue service cert
@@ -421,6 +422,7 @@ const Certificates = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </>
           )}
         </div>}
       >

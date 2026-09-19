@@ -183,7 +183,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-9ffbf53
+    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
     restart: unless-stopped
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
