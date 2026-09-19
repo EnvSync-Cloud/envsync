@@ -185,9 +185,15 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10_000),
     });
+    const responseText = await response.text();
     if (!response.ok) {
-        throw new Error(`${label} returned ${response.status}: ${await response.text()}`);
+        throw new Error(`${label} ${url} returned ${response.status}: ${responseText.slice(0, 300)}`);
     }
+    infoLogs(
+        `${label} forwarded ${response.status} ${url}`,
+        LogTypes.LOGS,
+        "LogForwardingService",
+    );
 }
 
 async function forwardToLogstash(
@@ -254,7 +260,7 @@ async function forwardToOtlp(
                                 {
                                     timeUnixNano: nowNs,
                                     severityText: "INFO",
-                                    body: { stringValue: payload.message },
+                                    body: { stringValue: JSON.stringify(auditEvent(payload)) },
                                     attributes: [
                                         { key: "audit.action", value: { stringValue: String(payload.action) } },
                                         { key: "audit.user_id", value: { stringValue: payload.user_id } },
@@ -471,6 +477,12 @@ export class LogForwardingService {
         if (configs.length === 0) {
             return;
         }
+
+        infoLogs(
+            `Forwarding audit ${payload.action} to ${configs.length} destination(s)`,
+            LogTypes.LOGS,
+            "LogForwardingService",
+        );
 
         await Promise.allSettled(
             configs.map(async (cfg) => {
