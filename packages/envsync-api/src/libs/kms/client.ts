@@ -688,12 +688,26 @@ export class KMSClient {
 		}
 	}
 
+	public async createEnvCA(orgId: string, envId: string, name: string): Promise<CreateOrgCAResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
+		const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateEnvCA", {
+			org_id: orgId,
+			env_id: envId,
+			name,
+		});
+		return {
+			certPem: response.cert_pem,
+			serialHex: response.serial_hex,
+		};
+	}
+
 	public async issueLeafCert(input: {
 		orgId: string;
 		commonName: string;
 		dnsSans: string[];
 		ttlDays: number;
 		keyAlgorithm: string;
+		envId?: string;
 	}): Promise<IssueLeafCertResult> {
 		await KMSClient.beforeTenantOp(input.orgId, "");
 		try {
@@ -703,6 +717,7 @@ export class KMSClient {
 				dns_sans: input.dnsSans,
 				ttl_days: input.ttlDays,
 				key_algorithm: input.keyAlgorithm,
+				env_id: input.envId ?? "",
 			});
 			return {
 				certPem: response.cert_pem,
@@ -721,6 +736,7 @@ export class KMSClient {
 		orgId: string;
 		csrPem: string;
 		ttlDays: number;
+		envId?: string;
 	}): Promise<SignCSRResult> {
 		await KMSClient.beforeTenantOp(input.orgId, "");
 		try {
@@ -728,6 +744,7 @@ export class KMSClient {
 				org_id: input.orgId,
 				csr_pem: input.csrPem,
 				ttl_days: input.ttlDays,
+				env_id: input.envId ?? "",
 			});
 			return {
 				certPem: response.cert_pem,

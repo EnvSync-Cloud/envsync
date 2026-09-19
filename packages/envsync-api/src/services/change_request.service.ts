@@ -159,6 +159,48 @@ export class ChangeRequestService {
 		return this.getChangeRequest(changeRequestId, org_id);
 	};
 
+	public static createCertificateOp = async ({
+		org_id,
+		app_id,
+		target_env_type_id,
+		requested_by_user_id,
+		operation,
+		payload,
+	}: {
+		org_id: string;
+		app_id: string;
+		target_env_type_id: string;
+		requested_by_user_id: string;
+		operation: string;
+		payload: Record<string, unknown>;
+	}) => {
+		const db = await DB.getInstance();
+		const now = new Date();
+		const changeRequestId = uuidv4();
+		await db
+			.insertInto("change_request")
+			.values({
+				id: changeRequestId,
+				org_id,
+				app_id,
+				request_kind: "certificate",
+				source_env_type_id: null,
+				target_env_type_id,
+				status: "pending",
+				title: `Certificate ${operation}`,
+				message: JSON.stringify({ operation, payload }),
+				requested_by_user_id,
+				reviewed_by_user_id: null,
+				reviewed_at: null,
+				applied_at: null,
+				rejection_reason: null,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+		return this.getChangeRequest(changeRequestId, org_id);
+	};
+
 	public static createPromotion = async ({
 		org_id,
 		app_id,

@@ -226,7 +226,7 @@ export interface OrgCertificate extends BaseTable {
 export interface ChangeRequest extends BaseTable {
 	org_id: ColumnType<string>;
 	app_id: ColumnType<string>;
-	request_kind: ColumnType<"direct" | "promotion">;
+	request_kind: ColumnType<"direct" | "promotion" | "certificate">;
 	source_env_type_id?: ColumnType<string | null>;
 	target_env_type_id: ColumnType<string>;
 	status: ColumnType<"pending" | "applying" | "approved" | "rejected" | "cancelled" | "failed">;
