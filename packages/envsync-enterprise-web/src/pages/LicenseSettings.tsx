@@ -11,21 +11,19 @@ import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
 import { useAuthContext } from "@shell/contexts/auth";
 
-const FEATURE_LABELS: Record<string, string> = {
-  log_forwarding: "Log forwarding",
-  multi_org: "Multiple organizations",
-  saml: "SAML SSO",
-  oidc: "OIDC SSO",
-  kms: "Key management",
-  integrations: "Integrations",
-  rotation: "Secret rotation",
-  dynamic_secrets: "Dynamic secrets",
-  management: "Manage API",
-  change_requests: "Change requests",
-  point_in_time: "Point in time",
-  byok_secrets: "BYOK secrets",
-  certificates: "Certificates",
-};
+const FEATURE_CATALOG: Array<{ id: string; label: string; limitKey?: string }> = [
+  { id: "change_requests", label: "Change requests", limitKey: "change_requests" },
+  { id: "point_in_time", label: "Point in time", limitKey: "point_in_time" },
+  { id: "byok_secrets", label: "BYOK secrets", limitKey: "byok_secrets" },
+  { id: "certificates", label: "Certificates", limitKey: "certificates" },
+  { id: "oidc", label: "OIDC SSO" },
+  { id: "saml", label: "SAML SSO" },
+  { id: "rotation", label: "Secret rotation", limitKey: "rotation" },
+  { id: "dynamic_secrets", label: "Dynamic secrets" },
+  { id: "log_forwarding", label: "Log forwarding" },
+  { id: "integrations", label: "Integrations", limitKey: "integrations" },
+  { id: "kms", label: "Key management" },
+];
 
 const LICENSE_STATUS_LABELS: Record<string, string> = {
   unknown: "Not activated",
@@ -42,27 +40,19 @@ const PLAN_LABELS: Record<string, string> = {
   enterprise: "Enterprise",
 };
 
-function featureLabel(id: string) {
-  return FEATURE_LABELS[id] ?? id.replaceAll("_", " ");
-}
+type FeatureSource = "plan" | "preview" | "off";
 
-function FeatureList({ label, features, empty }: { label: string; features: string[]; empty: string }) {
-  return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-foreground">{label}</h3>
-      {features.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{empty}</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {features.map(feature => (
-            <Badge key={feature} variant="outline">
-              {featureLabel(feature)}
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function resolveFeatureSource(
+  id: string,
+  limitKey: string | undefined,
+  overlay: string[],
+  features: string[],
+  limits: Record<string, unknown> | undefined,
+): FeatureSource {
+  if (overlay.includes(id)) return "preview";
+  if (features.includes(id)) return "plan";
+  if (limitKey && limits?.[limitKey] === true) return "plan";
+  return "off";
 }
 
 export default function LicenseSettings() {
@@ -77,6 +67,7 @@ export default function LicenseSettings() {
   const session = user as {
     features?: string[];
     plan?: string;
+    plan_limits?: Record<string, unknown>;
     feature_overrides?: string[];
   } | null;
 
@@ -84,6 +75,11 @@ export default function LicenseSettings() {
   const orgFeatures = session?.features ?? [];
   const overlay = session?.feature_overrides ?? [];
   const plan = session?.plan;
+  const featureRows = FEATURE_CATALOG.map(item => ({
+    ...item,
+    source: resolveFeatureSource(item.id, item.limitKey, overlay, orgFeatures, session?.plan_limits),
+  }));
+  const enabledRows = featureRows.filter(row => row.source !== "off");
   const licenseStatus = license?.state?.status ?? "unknown";
   const busy = activate.isPending || verify.isPending;
 
@@ -144,23 +140,32 @@ export default function LicenseSettings() {
           Loading…
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4">
           {hosted ? (
-            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
-              <h2 className="text-lg font-medium">This organization</h2>
-              <dl className="grid gap-2 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">Plan</dt>
-                  <dd className="font-medium">{plan ? (PLAN_LABELS[plan] ?? plan) : "—"}</dd>
-                </div>
-              </dl>
-              <FeatureList
-                label="Preview flags"
-                features={overlay}
-                empty="No extra flags. Plan defaults only."
-              />
+            <article className="rounded-xl border border-border bg-card p-6 space-y-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-lg font-medium">This organization</h2>
+                <p className="text-sm text-muted-foreground">
+                  Plan <span className="font-medium text-foreground">{plan ? (PLAN_LABELS[plan] ?? plan) : "—"}</span>
+                </p>
+              </div>
+              {enabledRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No extra features on this plan.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {enabledRows.map(row => (
+                    <li key={row.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                      <span>{row.label}</span>
+                      <Badge variant={row.source === "preview" ? "default" : "outline"}>
+                        {row.source === "preview" ? "Preview" : "On plan"}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
           ) : (
+            <>
             <article className="rounded-xl border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2">
                 <KeyRound className="size-5 text-primary" />
@@ -200,16 +205,23 @@ export default function LicenseSettings() {
                 </div>
               )}
             </article>
+            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <h2 className="text-lg font-medium">Features</h2>
+              {enabledRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No extra features on this plan.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {enabledRows.map(row => (
+                    <li key={row.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                      <span>{row.label}</span>
+                      <Badge variant="outline">Included</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          </>
           )}
-
-          <article className="rounded-xl border border-border bg-card p-6 space-y-4">
-            <h2 className="text-lg font-medium">Features</h2>
-            <FeatureList
-              label="Available in this organization"
-              features={orgFeatures}
-              empty="No extra features on this plan."
-            />
-          </article>
         </div>
       )}
     </div>
