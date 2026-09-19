@@ -14,7 +14,7 @@ if (!root) {
 }
 
 createRoot(root).render(
-  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="envsync-theme">
+  <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} storageKey="envsync-theme">
     <ErrorBoundary>
       <App />
     </ErrorBoundary>

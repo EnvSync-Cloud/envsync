@@ -72,11 +72,11 @@ test.describe("route surface", () => {
 		}
 
 		await page.goto("/org/access/users", { waitUntil: "domcontentloaded" });
-		await expect(page.getByTestId("org-access-tabs")).toBeVisible();
-		await page.getByTestId("org-access-tab-teams").click();
+		await expect(page.getByTestId("shell-nav-users")).toBeVisible();
+		await page.getByTestId("shell-nav-teams").click();
 		await expect(page).toHaveURL(/\/org\/access\/teams\/?$/);
 		await expect(page.getByRole("heading", { name: "Teams" }).first()).toBeVisible();
-		await page.getByTestId("org-access-tab-roles").click();
+		await page.getByTestId("shell-nav-roles").click();
 		await expect(page).toHaveURL(/\/org\/access\/roles\/?$/);
 		await expect(page.getByRole("heading", { name: "Roles" }).first()).toBeVisible();
 

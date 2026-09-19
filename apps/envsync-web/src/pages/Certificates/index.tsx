@@ -434,13 +434,13 @@ const Certificates = () => {
 
       <Tabs defaultValue="inventory" className="space-y-4">
         <TabsList data-testid="certificates-tabs" className="h-auto bg-transparent p-0">
-          <TabsTrigger data-testid="certificates-tab-inventory" value="inventory" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+          <TabsTrigger data-testid="certificates-tab-inventory" value="inventory" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
             Inventory
           </TabsTrigger>
-          <TabsTrigger data-testid="certificates-tab-issue" value="issue" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+          <TabsTrigger data-testid="certificates-tab-issue" value="issue" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
             Issue
           </TabsTrigger>
-          <TabsTrigger data-testid="certificates-tab-ca" value="ca" className="rounded-xl data-[state=active]:bg-emerald-500/18">
+          <TabsTrigger data-testid="certificates-tab-ca" value="ca" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
             CA
           </TabsTrigger>
         </TabsList>
