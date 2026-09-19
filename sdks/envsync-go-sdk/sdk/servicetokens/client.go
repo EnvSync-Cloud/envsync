@@ -31,18 +31,26 @@ func NewClient(opts ...option.RequestOption) *Client {
 	}
 }
 
-// Retrieve all service tokens for the organization
+// Retrieve service tokens for the organization. Pass app_id to limit the list to one project.
 func (c *Client) GetAllServiceTokens(
 	ctx context.Context,
+	request *sdk.GetAllServiceTokensRequest,
 	opts ...option.RequestOption,
 ) (sdk.ServiceTokensResponse, error) {
 	options := core.NewRequestOptions(opts...)
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/service_token"
+	queryParams, err := internal.QueryValues(request)
+	if err != nil {
+		return nil, err
+	}
+	if len(queryParams) > 0 {
+		endpointURL += "?" + queryParams.Encode()
+	}
 	headers := internal.MergeHeaders(
 		c.header.Clone(),
 		options.ToHeader(),
@@ -85,7 +93,7 @@ func (c *Client) CreateServiceToken(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/service_token"
 	headers := internal.MergeHeaders(
@@ -122,6 +130,57 @@ func (c *Client) CreateServiceToken(
 	return response, nil
 }
 
+// Issue a new esv_ token for an existing service token. The previous hash stays valid until the grace window ends (default 24h, 0–7 days).
+func (c *Client) RotateServiceToken(
+	ctx context.Context,
+	id string,
+	request *sdk.RotateServiceTokenRequest,
+	opts ...option.RequestOption,
+) (sdk.RotateServiceTokenResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/api/service_token/%v/rotate",
+		id,
+	)
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+	errorCodes := internal.ErrorCodes{
+		500: func(apiError *core.APIError) error {
+			return &sdk.InternalServerError{
+				APIError: apiError,
+			}
+		},
+	}
+
+	var response sdk.RotateServiceTokenResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+			ErrorDecoder:    internal.NewErrorDecoder(errorCodes),
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 // Retrieve a specific service token (does not return the raw token)
 func (c *Client) GetServiceToken(
 	ctx context.Context,
@@ -132,7 +191,7 @@ func (c *Client) GetServiceToken(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/service_token/%v",
@@ -180,7 +239,7 @@ func (c *Client) DeleteServiceToken(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/service_token/%v",

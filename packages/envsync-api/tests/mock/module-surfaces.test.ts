@@ -46,6 +46,7 @@ describe("API module surface boundaries", () => {
 			"log_forwarding",
 			"org_features",
 			"kms",
+			"acme",
 		]);
 		expect(moduleNames).not.toContain("app");
 		expect(moduleNames).not.toContain("auth");

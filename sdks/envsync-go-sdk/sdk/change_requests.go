@@ -509,21 +509,27 @@ type ChangeRequestResponseStatus string
 
 const (
 	ChangeRequestResponseStatusPending   ChangeRequestResponseStatus = "pending"
+	ChangeRequestResponseStatusApplying  ChangeRequestResponseStatus = "applying"
 	ChangeRequestResponseStatusApproved  ChangeRequestResponseStatus = "approved"
 	ChangeRequestResponseStatusRejected  ChangeRequestResponseStatus = "rejected"
 	ChangeRequestResponseStatusCancelled ChangeRequestResponseStatus = "cancelled"
+	ChangeRequestResponseStatusFailed    ChangeRequestResponseStatus = "failed"
 )
 
 func NewChangeRequestResponseStatusFromString(s string) (ChangeRequestResponseStatus, error) {
 	switch s {
 	case "pending":
 		return ChangeRequestResponseStatusPending, nil
+	case "applying":
+		return ChangeRequestResponseStatusApplying, nil
 	case "approved":
 		return ChangeRequestResponseStatusApproved, nil
 	case "rejected":
 		return ChangeRequestResponseStatusRejected, nil
 	case "cancelled":
 		return ChangeRequestResponseStatusCancelled, nil
+	case "failed":
+		return ChangeRequestResponseStatusFailed, nil
 	}
 	var t ChangeRequestResponseStatus
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

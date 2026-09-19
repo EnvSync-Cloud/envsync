@@ -175,8 +175,6 @@ type DynamicSecretEngineResponseEngineType string
 const (
 	DynamicSecretEngineResponseEngineTypePostgres DynamicSecretEngineResponseEngineType = "postgres"
 	DynamicSecretEngineResponseEngineTypeMysql    DynamicSecretEngineResponseEngineType = "mysql"
-	DynamicSecretEngineResponseEngineTypeAwsIam   DynamicSecretEngineResponseEngineType = "aws-iam"
-	DynamicSecretEngineResponseEngineTypeAzureSp  DynamicSecretEngineResponseEngineType = "azure-sp"
 )
 
 func NewDynamicSecretEngineResponseEngineTypeFromString(s string) (DynamicSecretEngineResponseEngineType, error) {
@@ -185,10 +183,6 @@ func NewDynamicSecretEngineResponseEngineTypeFromString(s string) (DynamicSecret
 		return DynamicSecretEngineResponseEngineTypePostgres, nil
 	case "mysql":
 		return DynamicSecretEngineResponseEngineTypeMysql, nil
-	case "aws-iam":
-		return DynamicSecretEngineResponseEngineTypeAwsIam, nil
-	case "azure-sp":
-		return DynamicSecretEngineResponseEngineTypeAzureSp, nil
 	}
 	var t DynamicSecretEngineResponseEngineType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -375,10 +369,8 @@ func (r *RevokeLeaseResponse) String() string {
 }
 
 type CreateDynamicSecretEngineRequestConfig struct {
-	CreateDynamicSecretEngineRequestConfigZero        *CreateDynamicSecretEngineRequestConfigZero
-	CreateDynamicSecretEngineRequestConfigOne         *CreateDynamicSecretEngineRequestConfigOne
-	CreateDynamicSecretEngineRequestConfigAccessKeyId *CreateDynamicSecretEngineRequestConfigAccessKeyId
-	CreateDynamicSecretEngineRequestConfigClientId    *CreateDynamicSecretEngineRequestConfigClientId
+	CreateDynamicSecretEngineRequestConfigZero *CreateDynamicSecretEngineRequestConfigZero
+	CreateDynamicSecretEngineRequestConfigOne  *CreateDynamicSecretEngineRequestConfigOne
 
 	typ string
 }
@@ -397,20 +389,6 @@ func (c *CreateDynamicSecretEngineRequestConfig) GetCreateDynamicSecretEngineReq
 	return c.CreateDynamicSecretEngineRequestConfigOne
 }
 
-func (c *CreateDynamicSecretEngineRequestConfig) GetCreateDynamicSecretEngineRequestConfigAccessKeyId() *CreateDynamicSecretEngineRequestConfigAccessKeyId {
-	if c == nil {
-		return nil
-	}
-	return c.CreateDynamicSecretEngineRequestConfigAccessKeyId
-}
-
-func (c *CreateDynamicSecretEngineRequestConfig) GetCreateDynamicSecretEngineRequestConfigClientId() *CreateDynamicSecretEngineRequestConfigClientId {
-	if c == nil {
-		return nil
-	}
-	return c.CreateDynamicSecretEngineRequestConfigClientId
-}
-
 func (c *CreateDynamicSecretEngineRequestConfig) UnmarshalJSON(data []byte) error {
 	valueCreateDynamicSecretEngineRequestConfigZero := new(CreateDynamicSecretEngineRequestConfigZero)
 	if err := json.Unmarshal(data, &valueCreateDynamicSecretEngineRequestConfigZero); err == nil {
@@ -424,18 +402,6 @@ func (c *CreateDynamicSecretEngineRequestConfig) UnmarshalJSON(data []byte) erro
 		c.CreateDynamicSecretEngineRequestConfigOne = valueCreateDynamicSecretEngineRequestConfigOne
 		return nil
 	}
-	valueCreateDynamicSecretEngineRequestConfigAccessKeyId := new(CreateDynamicSecretEngineRequestConfigAccessKeyId)
-	if err := json.Unmarshal(data, &valueCreateDynamicSecretEngineRequestConfigAccessKeyId); err == nil {
-		c.typ = "CreateDynamicSecretEngineRequestConfigAccessKeyId"
-		c.CreateDynamicSecretEngineRequestConfigAccessKeyId = valueCreateDynamicSecretEngineRequestConfigAccessKeyId
-		return nil
-	}
-	valueCreateDynamicSecretEngineRequestConfigClientId := new(CreateDynamicSecretEngineRequestConfigClientId)
-	if err := json.Unmarshal(data, &valueCreateDynamicSecretEngineRequestConfigClientId); err == nil {
-		c.typ = "CreateDynamicSecretEngineRequestConfigClientId"
-		c.CreateDynamicSecretEngineRequestConfigClientId = valueCreateDynamicSecretEngineRequestConfigClientId
-		return nil
-	}
 	return fmt.Errorf("%s cannot be deserialized as a %T", data, c)
 }
 
@@ -446,20 +412,12 @@ func (c CreateDynamicSecretEngineRequestConfig) MarshalJSON() ([]byte, error) {
 	if c.typ == "CreateDynamicSecretEngineRequestConfigOne" || c.CreateDynamicSecretEngineRequestConfigOne != nil {
 		return json.Marshal(c.CreateDynamicSecretEngineRequestConfigOne)
 	}
-	if c.typ == "CreateDynamicSecretEngineRequestConfigAccessKeyId" || c.CreateDynamicSecretEngineRequestConfigAccessKeyId != nil {
-		return json.Marshal(c.CreateDynamicSecretEngineRequestConfigAccessKeyId)
-	}
-	if c.typ == "CreateDynamicSecretEngineRequestConfigClientId" || c.CreateDynamicSecretEngineRequestConfigClientId != nil {
-		return json.Marshal(c.CreateDynamicSecretEngineRequestConfigClientId)
-	}
 	return nil, fmt.Errorf("type %T does not include a non-empty union type", c)
 }
 
 type CreateDynamicSecretEngineRequestConfigVisitor interface {
 	VisitCreateDynamicSecretEngineRequestConfigZero(*CreateDynamicSecretEngineRequestConfigZero) error
 	VisitCreateDynamicSecretEngineRequestConfigOne(*CreateDynamicSecretEngineRequestConfigOne) error
-	VisitCreateDynamicSecretEngineRequestConfigAccessKeyId(*CreateDynamicSecretEngineRequestConfigAccessKeyId) error
-	VisitCreateDynamicSecretEngineRequestConfigClientId(*CreateDynamicSecretEngineRequestConfigClientId) error
 }
 
 func (c *CreateDynamicSecretEngineRequestConfig) Accept(visitor CreateDynamicSecretEngineRequestConfigVisitor) error {
@@ -469,193 +427,7 @@ func (c *CreateDynamicSecretEngineRequestConfig) Accept(visitor CreateDynamicSec
 	if c.typ == "CreateDynamicSecretEngineRequestConfigOne" || c.CreateDynamicSecretEngineRequestConfigOne != nil {
 		return visitor.VisitCreateDynamicSecretEngineRequestConfigOne(c.CreateDynamicSecretEngineRequestConfigOne)
 	}
-	if c.typ == "CreateDynamicSecretEngineRequestConfigAccessKeyId" || c.CreateDynamicSecretEngineRequestConfigAccessKeyId != nil {
-		return visitor.VisitCreateDynamicSecretEngineRequestConfigAccessKeyId(c.CreateDynamicSecretEngineRequestConfigAccessKeyId)
-	}
-	if c.typ == "CreateDynamicSecretEngineRequestConfigClientId" || c.CreateDynamicSecretEngineRequestConfigClientId != nil {
-		return visitor.VisitCreateDynamicSecretEngineRequestConfigClientId(c.CreateDynamicSecretEngineRequestConfigClientId)
-	}
 	return fmt.Errorf("type %T does not include a non-empty union type", c)
-}
-
-type CreateDynamicSecretEngineRequestConfigAccessKeyId struct {
-	AccessKeyId       string  `json:"access_key_id" url:"access_key_id"`
-	SecretAccessKey   string  `json:"secret_access_key" url:"secret_access_key"`
-	Region            *string `json:"region,omitempty" url:"region,omitempty"`
-	IamPolicy         string  `json:"iam_policy" url:"iam_policy"`
-	DefaultTtlSeconds *int    `json:"default_ttl_seconds,omitempty" url:"default_ttl_seconds,omitempty"`
-	MaxTtlSeconds     *int    `json:"max_ttl_seconds,omitempty" url:"max_ttl_seconds,omitempty"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetAccessKeyId() string {
-	if c == nil {
-		return ""
-	}
-	return c.AccessKeyId
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetSecretAccessKey() string {
-	if c == nil {
-		return ""
-	}
-	return c.SecretAccessKey
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetRegion() *string {
-	if c == nil {
-		return nil
-	}
-	return c.Region
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetIamPolicy() string {
-	if c == nil {
-		return ""
-	}
-	return c.IamPolicy
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetDefaultTtlSeconds() *int {
-	if c == nil {
-		return nil
-	}
-	return c.DefaultTtlSeconds
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetMaxTtlSeconds() *int {
-	if c == nil {
-		return nil
-	}
-	return c.MaxTtlSeconds
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) GetExtraProperties() map[string]interface{} {
-	return c.extraProperties
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateDynamicSecretEngineRequestConfigAccessKeyId
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateDynamicSecretEngineRequestConfigAccessKeyId(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *c)
-	if err != nil {
-		return err
-	}
-	c.extraProperties = extraProperties
-	c.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigAccessKeyId) String() string {
-	if len(c.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
-}
-
-type CreateDynamicSecretEngineRequestConfigClientId struct {
-	TenantId          string   `json:"tenant_id" url:"tenant_id"`
-	ClientId          string   `json:"client_id" url:"client_id"`
-	ClientSecret      string   `json:"client_secret" url:"client_secret"`
-	SubscriptionId    string   `json:"subscription_id" url:"subscription_id"`
-	Roles             []string `json:"roles,omitempty" url:"roles,omitempty"`
-	DefaultTtlSeconds *int     `json:"default_ttl_seconds,omitempty" url:"default_ttl_seconds,omitempty"`
-	MaxTtlSeconds     *int     `json:"max_ttl_seconds,omitempty" url:"max_ttl_seconds,omitempty"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetTenantId() string {
-	if c == nil {
-		return ""
-	}
-	return c.TenantId
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetClientId() string {
-	if c == nil {
-		return ""
-	}
-	return c.ClientId
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetClientSecret() string {
-	if c == nil {
-		return ""
-	}
-	return c.ClientSecret
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetSubscriptionId() string {
-	if c == nil {
-		return ""
-	}
-	return c.SubscriptionId
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetRoles() []string {
-	if c == nil {
-		return nil
-	}
-	return c.Roles
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetDefaultTtlSeconds() *int {
-	if c == nil {
-		return nil
-	}
-	return c.DefaultTtlSeconds
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetMaxTtlSeconds() *int {
-	if c == nil {
-		return nil
-	}
-	return c.MaxTtlSeconds
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) GetExtraProperties() map[string]interface{} {
-	return c.extraProperties
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) UnmarshalJSON(data []byte) error {
-	type unmarshaler CreateDynamicSecretEngineRequestConfigClientId
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*c = CreateDynamicSecretEngineRequestConfigClientId(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *c)
-	if err != nil {
-		return err
-	}
-	c.extraProperties = extraProperties
-	c.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (c *CreateDynamicSecretEngineRequestConfigClientId) String() string {
-	if len(c.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(c); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", c)
 }
 
 type CreateDynamicSecretEngineRequestConfigOne struct {
@@ -959,8 +731,6 @@ type CreateDynamicSecretEngineRequestEngineType string
 const (
 	CreateDynamicSecretEngineRequestEngineTypePostgres CreateDynamicSecretEngineRequestEngineType = "postgres"
 	CreateDynamicSecretEngineRequestEngineTypeMysql    CreateDynamicSecretEngineRequestEngineType = "mysql"
-	CreateDynamicSecretEngineRequestEngineTypeAwsIam   CreateDynamicSecretEngineRequestEngineType = "aws-iam"
-	CreateDynamicSecretEngineRequestEngineTypeAzureSp  CreateDynamicSecretEngineRequestEngineType = "azure-sp"
 )
 
 func NewCreateDynamicSecretEngineRequestEngineTypeFromString(s string) (CreateDynamicSecretEngineRequestEngineType, error) {
@@ -969,10 +739,6 @@ func NewCreateDynamicSecretEngineRequestEngineTypeFromString(s string) (CreateDy
 		return CreateDynamicSecretEngineRequestEngineTypePostgres, nil
 	case "mysql":
 		return CreateDynamicSecretEngineRequestEngineTypeMysql, nil
-	case "aws-iam":
-		return CreateDynamicSecretEngineRequestEngineTypeAwsIam, nil
-	case "azure-sp":
-		return CreateDynamicSecretEngineRequestEngineTypeAzureSp, nil
 	}
 	var t CreateDynamicSecretEngineRequestEngineType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -983,10 +749,8 @@ func (c CreateDynamicSecretEngineRequestEngineType) Ptr() *CreateDynamicSecretEn
 }
 
 type UpdateDynamicSecretEngineRequestConfig struct {
-	UpdateDynamicSecretEngineRequestConfigZero        *UpdateDynamicSecretEngineRequestConfigZero
-	UpdateDynamicSecretEngineRequestConfigOne         *UpdateDynamicSecretEngineRequestConfigOne
-	UpdateDynamicSecretEngineRequestConfigAccessKeyId *UpdateDynamicSecretEngineRequestConfigAccessKeyId
-	UpdateDynamicSecretEngineRequestConfigClientId    *UpdateDynamicSecretEngineRequestConfigClientId
+	UpdateDynamicSecretEngineRequestConfigZero *UpdateDynamicSecretEngineRequestConfigZero
+	UpdateDynamicSecretEngineRequestConfigOne  *UpdateDynamicSecretEngineRequestConfigOne
 
 	typ string
 }
@@ -1005,20 +769,6 @@ func (u *UpdateDynamicSecretEngineRequestConfig) GetUpdateDynamicSecretEngineReq
 	return u.UpdateDynamicSecretEngineRequestConfigOne
 }
 
-func (u *UpdateDynamicSecretEngineRequestConfig) GetUpdateDynamicSecretEngineRequestConfigAccessKeyId() *UpdateDynamicSecretEngineRequestConfigAccessKeyId {
-	if u == nil {
-		return nil
-	}
-	return u.UpdateDynamicSecretEngineRequestConfigAccessKeyId
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfig) GetUpdateDynamicSecretEngineRequestConfigClientId() *UpdateDynamicSecretEngineRequestConfigClientId {
-	if u == nil {
-		return nil
-	}
-	return u.UpdateDynamicSecretEngineRequestConfigClientId
-}
-
 func (u *UpdateDynamicSecretEngineRequestConfig) UnmarshalJSON(data []byte) error {
 	valueUpdateDynamicSecretEngineRequestConfigZero := new(UpdateDynamicSecretEngineRequestConfigZero)
 	if err := json.Unmarshal(data, &valueUpdateDynamicSecretEngineRequestConfigZero); err == nil {
@@ -1032,18 +782,6 @@ func (u *UpdateDynamicSecretEngineRequestConfig) UnmarshalJSON(data []byte) erro
 		u.UpdateDynamicSecretEngineRequestConfigOne = valueUpdateDynamicSecretEngineRequestConfigOne
 		return nil
 	}
-	valueUpdateDynamicSecretEngineRequestConfigAccessKeyId := new(UpdateDynamicSecretEngineRequestConfigAccessKeyId)
-	if err := json.Unmarshal(data, &valueUpdateDynamicSecretEngineRequestConfigAccessKeyId); err == nil {
-		u.typ = "UpdateDynamicSecretEngineRequestConfigAccessKeyId"
-		u.UpdateDynamicSecretEngineRequestConfigAccessKeyId = valueUpdateDynamicSecretEngineRequestConfigAccessKeyId
-		return nil
-	}
-	valueUpdateDynamicSecretEngineRequestConfigClientId := new(UpdateDynamicSecretEngineRequestConfigClientId)
-	if err := json.Unmarshal(data, &valueUpdateDynamicSecretEngineRequestConfigClientId); err == nil {
-		u.typ = "UpdateDynamicSecretEngineRequestConfigClientId"
-		u.UpdateDynamicSecretEngineRequestConfigClientId = valueUpdateDynamicSecretEngineRequestConfigClientId
-		return nil
-	}
 	return fmt.Errorf("%s cannot be deserialized as a %T", data, u)
 }
 
@@ -1054,20 +792,12 @@ func (u UpdateDynamicSecretEngineRequestConfig) MarshalJSON() ([]byte, error) {
 	if u.typ == "UpdateDynamicSecretEngineRequestConfigOne" || u.UpdateDynamicSecretEngineRequestConfigOne != nil {
 		return json.Marshal(u.UpdateDynamicSecretEngineRequestConfigOne)
 	}
-	if u.typ == "UpdateDynamicSecretEngineRequestConfigAccessKeyId" || u.UpdateDynamicSecretEngineRequestConfigAccessKeyId != nil {
-		return json.Marshal(u.UpdateDynamicSecretEngineRequestConfigAccessKeyId)
-	}
-	if u.typ == "UpdateDynamicSecretEngineRequestConfigClientId" || u.UpdateDynamicSecretEngineRequestConfigClientId != nil {
-		return json.Marshal(u.UpdateDynamicSecretEngineRequestConfigClientId)
-	}
 	return nil, fmt.Errorf("type %T does not include a non-empty union type", u)
 }
 
 type UpdateDynamicSecretEngineRequestConfigVisitor interface {
 	VisitUpdateDynamicSecretEngineRequestConfigZero(*UpdateDynamicSecretEngineRequestConfigZero) error
 	VisitUpdateDynamicSecretEngineRequestConfigOne(*UpdateDynamicSecretEngineRequestConfigOne) error
-	VisitUpdateDynamicSecretEngineRequestConfigAccessKeyId(*UpdateDynamicSecretEngineRequestConfigAccessKeyId) error
-	VisitUpdateDynamicSecretEngineRequestConfigClientId(*UpdateDynamicSecretEngineRequestConfigClientId) error
 }
 
 func (u *UpdateDynamicSecretEngineRequestConfig) Accept(visitor UpdateDynamicSecretEngineRequestConfigVisitor) error {
@@ -1077,193 +807,7 @@ func (u *UpdateDynamicSecretEngineRequestConfig) Accept(visitor UpdateDynamicSec
 	if u.typ == "UpdateDynamicSecretEngineRequestConfigOne" || u.UpdateDynamicSecretEngineRequestConfigOne != nil {
 		return visitor.VisitUpdateDynamicSecretEngineRequestConfigOne(u.UpdateDynamicSecretEngineRequestConfigOne)
 	}
-	if u.typ == "UpdateDynamicSecretEngineRequestConfigAccessKeyId" || u.UpdateDynamicSecretEngineRequestConfigAccessKeyId != nil {
-		return visitor.VisitUpdateDynamicSecretEngineRequestConfigAccessKeyId(u.UpdateDynamicSecretEngineRequestConfigAccessKeyId)
-	}
-	if u.typ == "UpdateDynamicSecretEngineRequestConfigClientId" || u.UpdateDynamicSecretEngineRequestConfigClientId != nil {
-		return visitor.VisitUpdateDynamicSecretEngineRequestConfigClientId(u.UpdateDynamicSecretEngineRequestConfigClientId)
-	}
 	return fmt.Errorf("type %T does not include a non-empty union type", u)
-}
-
-type UpdateDynamicSecretEngineRequestConfigAccessKeyId struct {
-	AccessKeyId       string  `json:"access_key_id" url:"access_key_id"`
-	SecretAccessKey   string  `json:"secret_access_key" url:"secret_access_key"`
-	Region            *string `json:"region,omitempty" url:"region,omitempty"`
-	IamPolicy         string  `json:"iam_policy" url:"iam_policy"`
-	DefaultTtlSeconds *int    `json:"default_ttl_seconds,omitempty" url:"default_ttl_seconds,omitempty"`
-	MaxTtlSeconds     *int    `json:"max_ttl_seconds,omitempty" url:"max_ttl_seconds,omitempty"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetAccessKeyId() string {
-	if u == nil {
-		return ""
-	}
-	return u.AccessKeyId
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetSecretAccessKey() string {
-	if u == nil {
-		return ""
-	}
-	return u.SecretAccessKey
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetRegion() *string {
-	if u == nil {
-		return nil
-	}
-	return u.Region
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetIamPolicy() string {
-	if u == nil {
-		return ""
-	}
-	return u.IamPolicy
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetDefaultTtlSeconds() *int {
-	if u == nil {
-		return nil
-	}
-	return u.DefaultTtlSeconds
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetMaxTtlSeconds() *int {
-	if u == nil {
-		return nil
-	}
-	return u.MaxTtlSeconds
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) GetExtraProperties() map[string]interface{} {
-	return u.extraProperties
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) UnmarshalJSON(data []byte) error {
-	type unmarshaler UpdateDynamicSecretEngineRequestConfigAccessKeyId
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*u = UpdateDynamicSecretEngineRequestConfigAccessKeyId(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *u)
-	if err != nil {
-		return err
-	}
-	u.extraProperties = extraProperties
-	u.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigAccessKeyId) String() string {
-	if len(u.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(u.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(u); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", u)
-}
-
-type UpdateDynamicSecretEngineRequestConfigClientId struct {
-	TenantId          string   `json:"tenant_id" url:"tenant_id"`
-	ClientId          string   `json:"client_id" url:"client_id"`
-	ClientSecret      string   `json:"client_secret" url:"client_secret"`
-	SubscriptionId    string   `json:"subscription_id" url:"subscription_id"`
-	Roles             []string `json:"roles,omitempty" url:"roles,omitempty"`
-	DefaultTtlSeconds *int     `json:"default_ttl_seconds,omitempty" url:"default_ttl_seconds,omitempty"`
-	MaxTtlSeconds     *int     `json:"max_ttl_seconds,omitempty" url:"max_ttl_seconds,omitempty"`
-
-	extraProperties map[string]interface{}
-	rawJSON         json.RawMessage
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetTenantId() string {
-	if u == nil {
-		return ""
-	}
-	return u.TenantId
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetClientId() string {
-	if u == nil {
-		return ""
-	}
-	return u.ClientId
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetClientSecret() string {
-	if u == nil {
-		return ""
-	}
-	return u.ClientSecret
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetSubscriptionId() string {
-	if u == nil {
-		return ""
-	}
-	return u.SubscriptionId
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetRoles() []string {
-	if u == nil {
-		return nil
-	}
-	return u.Roles
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetDefaultTtlSeconds() *int {
-	if u == nil {
-		return nil
-	}
-	return u.DefaultTtlSeconds
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetMaxTtlSeconds() *int {
-	if u == nil {
-		return nil
-	}
-	return u.MaxTtlSeconds
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) GetExtraProperties() map[string]interface{} {
-	return u.extraProperties
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) UnmarshalJSON(data []byte) error {
-	type unmarshaler UpdateDynamicSecretEngineRequestConfigClientId
-	var value unmarshaler
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	*u = UpdateDynamicSecretEngineRequestConfigClientId(value)
-	extraProperties, err := internal.ExtractExtraProperties(data, *u)
-	if err != nil {
-		return err
-	}
-	u.extraProperties = extraProperties
-	u.rawJSON = json.RawMessage(data)
-	return nil
-}
-
-func (u *UpdateDynamicSecretEngineRequestConfigClientId) String() string {
-	if len(u.rawJSON) > 0 {
-		if value, err := internal.StringifyJSON(u.rawJSON); err == nil {
-			return value
-		}
-	}
-	if value, err := internal.StringifyJSON(u); err == nil {
-		return value
-	}
-	return fmt.Sprintf("%#v", u)
 }
 
 type UpdateDynamicSecretEngineRequestConfigOne struct {

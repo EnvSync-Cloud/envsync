@@ -18,19 +18,23 @@ type GetOrgFeatureGrantRequest struct {
 
 type PutOrgFeatureGrantRequest struct {
 	EnvSyncPlatformToken string                           `json:"-" url:"-"`
+	Plan                 *PutOrgFeatureGrantRequestPlan   `json:"plan,omitempty" url:"-"`
 	Features             []string                         `json:"features,omitempty" url:"-"`
+	OverlayFeatures      []string                         `json:"overlay_features,omitempty" url:"-"`
 	Source               *PutOrgFeatureGrantRequestSource `json:"source,omitempty" url:"-"`
 	UpdatedBy            *string                          `json:"updated_by,omitempty" url:"-"`
 }
 
 type OrgFeatureGrantResponse struct {
-	OrgId        string   `json:"org_id" url:"org_id"`
-	Unrestricted bool     `json:"unrestricted" url:"unrestricted"`
-	Features     []string `json:"features" url:"features"`
-	Source       *string  `json:"source,omitempty" url:"source,omitempty"`
-	UpdatedBy    *string  `json:"updated_by,omitempty" url:"updated_by,omitempty"`
-	CreatedAt    *string  `json:"created_at,omitempty" url:"created_at,omitempty"`
-	UpdatedAt    *string  `json:"updated_at,omitempty" url:"updated_at,omitempty"`
+	OrgId           string   `json:"org_id" url:"org_id"`
+	Unrestricted    bool     `json:"unrestricted" url:"unrestricted"`
+	Plan            *string  `json:"plan,omitempty" url:"plan,omitempty"`
+	Features        []string `json:"features" url:"features"`
+	OverlayFeatures []string `json:"overlay_features" url:"overlay_features"`
+	Source          *string  `json:"source,omitempty" url:"source,omitempty"`
+	UpdatedBy       *string  `json:"updated_by,omitempty" url:"updated_by,omitempty"`
+	CreatedAt       *string  `json:"created_at,omitempty" url:"created_at,omitempty"`
+	UpdatedAt       *string  `json:"updated_at,omitempty" url:"updated_at,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -50,11 +54,25 @@ func (o *OrgFeatureGrantResponse) GetUnrestricted() bool {
 	return o.Unrestricted
 }
 
+func (o *OrgFeatureGrantResponse) GetPlan() *string {
+	if o == nil {
+		return nil
+	}
+	return o.Plan
+}
+
 func (o *OrgFeatureGrantResponse) GetFeatures() []string {
 	if o == nil {
 		return nil
 	}
 	return o.Features
+}
+
+func (o *OrgFeatureGrantResponse) GetOverlayFeatures() []string {
+	if o == nil {
+		return nil
+	}
+	return o.OverlayFeatures
 }
 
 func (o *OrgFeatureGrantResponse) GetSource() *string {
@@ -115,6 +133,31 @@ func (o *OrgFeatureGrantResponse) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", o)
+}
+
+type PutOrgFeatureGrantRequestPlan string
+
+const (
+	PutOrgFeatureGrantRequestPlanDeveloper  PutOrgFeatureGrantRequestPlan = "developer"
+	PutOrgFeatureGrantRequestPlanPlus       PutOrgFeatureGrantRequestPlan = "plus"
+	PutOrgFeatureGrantRequestPlanEnterprise PutOrgFeatureGrantRequestPlan = "enterprise"
+)
+
+func NewPutOrgFeatureGrantRequestPlanFromString(s string) (PutOrgFeatureGrantRequestPlan, error) {
+	switch s {
+	case "developer":
+		return PutOrgFeatureGrantRequestPlanDeveloper, nil
+	case "plus":
+		return PutOrgFeatureGrantRequestPlanPlus, nil
+	case "enterprise":
+		return PutOrgFeatureGrantRequestPlanEnterprise, nil
+	}
+	var t PutOrgFeatureGrantRequestPlan
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (p PutOrgFeatureGrantRequestPlan) Ptr() *PutOrgFeatureGrantRequestPlan {
+	return &p
 }
 
 type PutOrgFeatureGrantRequestSource string

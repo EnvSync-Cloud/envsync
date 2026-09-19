@@ -15,6 +15,7 @@ export class AuditLogsService {
      * @param filterByUser
      * @param filterByCategory
      * @param filterByPastTime
+     * @param q
      * @returns GetAuditLogsResponseWrapper Audit logs retrieved successfully
      * @throws ApiError
      */
@@ -24,6 +25,7 @@ export class AuditLogsService {
         filterByUser?: string,
         filterByCategory?: 'app*' | 'audit_log*' | 'env*' | 'env_store*' | 'secret_store*' | 'onboarding*' | 'org*' | 'role*' | 'user*' | 'api_key*' | 'webhook*' | 'cli*' | 'gpg_key*' | 'cert*' | 'enterprise*' | 'service_token*',
         filterByPastTime?: 'last_3_hours' | 'last_24_hours' | 'last_7_days' | 'last_30_days' | 'last_90_days' | 'last_180_days' | 'last_1_year' | 'all_time',
+        q?: string,
     ): CancelablePromise<GetAuditLogsResponseWrapper> {
         return this.httpRequest.request({
             method: 'GET',
@@ -34,6 +36,7 @@ export class AuditLogsService {
                 'filter_by_user': filterByUser,
                 'filter_by_category': filterByCategory,
                 'filter_by_past_time': filterByPastTime,
+                'q': q,
             },
             errors: {
                 500: `Internal server error`,

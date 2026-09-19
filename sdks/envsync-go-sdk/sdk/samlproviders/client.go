@@ -40,7 +40,7 @@ func (c *Client) GetAllSamlProviders(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/saml"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) CreateSamlProvider(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/saml"
 	headers := internal.MergeHeaders(
@@ -132,7 +132,7 @@ func (c *Client) GetSamlProvider(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/saml/%v",
@@ -181,7 +181,7 @@ func (c *Client) UpdateSamlProvider(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/saml/%v",
@@ -231,7 +231,7 @@ func (c *Client) DeleteSamlProvider(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/saml/%v",
@@ -279,7 +279,7 @@ func (c *Client) GetSamlMetadata(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/saml/%v/metadata",

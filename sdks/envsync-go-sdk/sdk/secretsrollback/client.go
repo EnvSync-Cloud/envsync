@@ -41,7 +41,7 @@ func (c *Client) RollbackSecretsToPitId(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/secret/rollback/pit"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) RollbackSecretsToTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/secret/rollback/timestamp"
 	headers := internal.MergeHeaders(
@@ -136,7 +136,7 @@ func (c *Client) RollbackSecretVariableToPitId(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/secret/rollback/variable/%v/pit",
@@ -187,7 +187,7 @@ func (c *Client) RollbackSecretVariableToTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/secret/rollback/variable/%v/timestamp",

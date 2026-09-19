@@ -16,12 +16,8 @@ export namespace CreateRotationPolicyRequest {
     export enum engine_type {
         POSTGRES = 'postgres',
         MYSQL = 'mysql',
+        MONGODB = 'mongodb',
         AWS_IAM = 'aws-iam',
-        AZURE_SP = 'azure-sp',
-        GCP_SERVICE_ACCOUNT = 'gcp-service-account',
-        CLOUDFLARE_PAGES = 'cloudflare-pages',
-        SENDGRID = 'sendgrid',
-        TWILIO = 'twilio',
     }
 }
 

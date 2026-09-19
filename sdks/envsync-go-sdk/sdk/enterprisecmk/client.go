@@ -43,7 +43,7 @@ func (c *Client) BreakGlassDetachOrgKms(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/kms/%v/break-glass-detach",
@@ -101,7 +101,7 @@ func (c *Client) GetOrgKmsConfig(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms"
 	headers := internal.MergeHeaders(
@@ -146,7 +146,7 @@ func (c *Client) UpdateOrgKmsConfig(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms"
 	headers := internal.MergeHeaders(
@@ -203,7 +203,7 @@ func (c *Client) CreateOrgKmsCredential(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/credentials"
 	headers := internal.MergeHeaders(
@@ -249,7 +249,7 @@ func (c *Client) VerifyOrgKms(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/verify"
 	headers := internal.MergeHeaders(
@@ -298,7 +298,7 @@ func (c *Client) RotateOrgKmsKek(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/rotate-kek"
 	headers := internal.MergeHeaders(
@@ -342,7 +342,7 @@ func (c *Client) AttachOrgKms(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/attach"
 	headers := internal.MergeHeaders(
@@ -396,7 +396,7 @@ func (c *Client) DetachOrgKms(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/detach"
 	headers := internal.MergeHeaders(
@@ -445,7 +445,7 @@ func (c *Client) GetOrgKmsJob(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/kms/jobs/%v",
@@ -497,7 +497,7 @@ func (c *Client) ListOrgKmsApps(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/kms/apps"
 	headers := internal.MergeHeaders(

@@ -37,10 +37,15 @@ export type WhoAmIResponse = {
         is_admin: boolean;
         is_master: boolean;
         is_active: boolean;
+        is_current: boolean;
     }>;
     active_membership_user_id: string;
     features: Array<string>;
     install_features: Array<string>;
+    plan?: string;
+    plan_limits?: Record<string, any>;
+    plan_usage?: any | null;
+    feature_overrides?: Array<string>;
     auth_type: WhoAmIResponse.auth_type;
 };
 export namespace WhoAmIResponse {
@@ -49,6 +54,7 @@ export namespace WhoAmIResponse {
         SAML = 'saml',
         OIDC = 'oidc',
         API_KEY = 'api_key',
+        SERVICE_TOKEN = 'service_token',
     }
 }
 

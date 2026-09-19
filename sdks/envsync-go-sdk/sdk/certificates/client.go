@@ -41,7 +41,7 @@ func (c *Client) InitOrgCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/ca/init"
 	headers := internal.MergeHeaders(
@@ -87,7 +87,7 @@ func (c *Client) GetOrgCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/ca"
 	headers := internal.MergeHeaders(
@@ -131,7 +131,7 @@ func (c *Client) GetRootCa(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/root-ca"
 	headers := internal.MergeHeaders(
@@ -166,6 +166,120 @@ func (c *Client) GetRootCa(
 	return response, nil
 }
 
+// PEM bundle of imported chains, organization CA, and root CA
+func (c *Client) GetCertificateChain(
+	ctx context.Context,
+	opts ...option.RequestOption,
+) (*sdk.CertificateChainResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/chain"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+
+	var response *sdk.CertificateChainResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodGet,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.
+func (c *Client) ImportCertificateChain(
+	ctx context.Context,
+	request *sdk.ImportChainRequest,
+	opts ...option.RequestOption,
+) (*sdk.OrgCaResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/ca/import-chain"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	var response *sdk.OrgCaResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// Enterprise-only. Record an environment-scoped CA label. Leaves remain signed by the org intermediate.
+func (c *Client) LabelEnvironmentCa(
+	ctx context.Context,
+	request *sdk.LabelEnvCaRequest,
+	opts ...option.RequestOption,
+) (*sdk.OrgCaResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/ca/env"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	var response *sdk.OrgCaResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 // Issue a new member certificate signed by the organization CA
 func (c *Client) IssueMemberCert(
 	ctx context.Context,
@@ -176,7 +290,7 @@ func (c *Client) IssueMemberCert(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/issue"
 	headers := internal.MergeHeaders(
@@ -213,6 +327,84 @@ func (c *Client) IssueMemberCert(
 	return response, nil
 }
 
+// Issue a project-scoped leaf certificate with DNS/IP SANs. Private key is returned once.
+func (c *Client) IssueLeafCert(
+	ctx context.Context,
+	request *sdk.IssueLeafCertRequest,
+	opts ...option.RequestOption,
+) (*sdk.MemberCertResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/issue-leaf"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	var response *sdk.MemberCertResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+// Sign a client-generated CSR with the organization CA. Private key never leaves the client.
+func (c *Client) SignCertificateCsr(
+	ctx context.Context,
+	request *sdk.SignCsrRequest,
+	opts ...option.RequestOption,
+) (*sdk.OrgCaResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/sign-csr"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	var response *sdk.OrgCaResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 // Retrieve the Certificate Revocation List for the organization
 func (c *Client) GetCrl(
 	ctx context.Context,
@@ -222,7 +414,7 @@ func (c *Client) GetCrl(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/crl"
 	headers := internal.MergeHeaders(
@@ -266,7 +458,7 @@ func (c *Client) GetMyCertificateBundle(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate/me"
 	headers := internal.MergeHeaders(
@@ -310,7 +502,7 @@ func (c *Client) ListCertificates(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/certificate"
 	headers := internal.MergeHeaders(
@@ -355,7 +547,7 @@ func (c *Client) GetCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v",
@@ -404,7 +596,7 @@ func (c *Client) RevokeCert(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/revoke",
@@ -455,7 +647,7 @@ func (c *Client) RenewCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/renew",
@@ -506,7 +698,7 @@ func (c *Client) RotateCertificate(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/rotate",
@@ -546,6 +738,49 @@ func (c *Client) RotateCertificate(
 	return response, nil
 }
 
+// Enterprise-only. Auto-renew managed service certificates and optionally write ENVSYNC_TLS_* secrets.
+func (c *Client) SetCertificateAutoRenew(
+	ctx context.Context,
+	id string,
+	request *sdk.SetAutoRenewRequest,
+	opts ...option.RequestOption,
+) (*sdk.OrgCaResponse, error) {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := internal.EncodeURL(
+		baseURL+"/api/certificate/%v/auto-renew",
+		id,
+	)
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	var response *sdk.OrgCaResponse
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPatch,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+			Response:        &response,
+		},
+	); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
 // Check the OCSP status of a certificate
 func (c *Client) CheckOcsp(
 	ctx context.Context,
@@ -556,7 +791,7 @@ func (c *Client) CheckOcsp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/certificate/%v/ocsp",

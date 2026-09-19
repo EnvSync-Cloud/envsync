@@ -4,6 +4,7 @@ package client
 
 import (
 	access "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/access"
+	acme "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/acme"
 	apikeys "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/apikeys"
 	applications "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/applications"
 	auditlogs "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/auditlogs"
@@ -84,8 +85,9 @@ type Client struct {
 	DynamicSecrets                  *dynamicsecrets.Client
 	LogForwarding                   *logforwarding.Client
 	OrgFeatures                     *orgfeatures.Client
-	SamlSso                         *samlsso.Client
 	EnterpriseCmk                   *enterprisecmk.Client
+	Acme                            *acme.Client
+	SamlSso                         *samlsso.Client
 }
 
 func NewClient(opts ...option.RequestOption) *Client {
@@ -133,7 +135,8 @@ func NewClient(opts ...option.RequestOption) *Client {
 		DynamicSecrets:                  dynamicsecrets.NewClient(opts...),
 		LogForwarding:                   logforwarding.NewClient(opts...),
 		OrgFeatures:                     orgfeatures.NewClient(opts...),
-		SamlSso:                         samlsso.NewClient(opts...),
 		EnterpriseCmk:                   enterprisecmk.NewClient(opts...),
+		Acme:                            acme.NewClient(opts...),
+		SamlSso:                         samlsso.NewClient(opts...),
 	}
 }
