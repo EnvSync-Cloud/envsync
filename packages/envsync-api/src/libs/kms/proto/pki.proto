@@ -8,6 +8,8 @@ option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
 // Root CA -> Org Intermediate CA (IsCA:true, MaxPathLen:0) -> Member Certificate (IsCA:false)
 service PKIService {
     rpc CreateOrgCA(CreateOrgCARequest) returns (CreateOrgCAResponse);
+    rpc CreateOrgCACSR(CreateOrgCACSRRequest) returns (CreateOrgCACSRResponse);
+    rpc InstallOrgCA(InstallOrgCARequest) returns (CreateOrgCAResponse);
     rpc CreateEnvCA(CreateEnvCARequest) returns (CreateEnvCAResponse);
     rpc IssueMemberCert(IssueMemberCertRequest) returns (IssueMemberCertResponse);
     rpc IssueLeafCert(IssueLeafCertRequest) returns (IssueLeafCertResponse);
@@ -26,6 +28,21 @@ message CreateOrgCARequest {
 message CreateOrgCAResponse {
     string cert_pem = 1;
     string serial_hex = 2;
+}
+
+message CreateOrgCACSRRequest {
+    string org_id = 1;
+    string org_name = 2;
+}
+
+message CreateOrgCACSRResponse {
+    string csr_pem = 1;
+}
+
+message InstallOrgCARequest {
+    string org_id = 1;
+    string cert_pem = 2;
+    string chain_pem = 3;
 }
 
 message CreateEnvCARequest {

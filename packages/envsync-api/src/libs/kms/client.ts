@@ -688,6 +688,25 @@ export class KMSClient {
 		}
 	}
 
+	public async createOrgCACSR(orgId: string, orgName: string): Promise<{ csrPem: string }> {
+		await KMSClient.beforeTenantOp(orgId, "");
+		const response = await this.rpcCall<{ csr_pem: string }>(this.pkiStub, "CreateOrgCACSR", {
+			org_id: orgId,
+			org_name: orgName,
+		});
+		return { csrPem: response.csr_pem };
+	}
+
+	public async installOrgCA(orgId: string, certPem: string, chainPem: string): Promise<CreateOrgCAResult> {
+		await KMSClient.beforeTenantOp(orgId, "");
+		const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "InstallOrgCA", {
+			org_id: orgId,
+			cert_pem: certPem,
+			chain_pem: chainPem,
+		});
+		return { certPem: response.cert_pem, serialHex: response.serial_hex };
+	}
+
 	public async createEnvCA(orgId: string, envId: string, name: string): Promise<CreateOrgCAResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateEnvCA", {

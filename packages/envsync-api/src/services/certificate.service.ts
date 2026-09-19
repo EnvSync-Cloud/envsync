@@ -183,6 +183,74 @@ export class CertificateService {
 		return this.getCertificate(certId, { include_system_generated: true });
 	};
 
+	public static createOrgCACSR = async (org_id: string, org_name: string) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("Offline-root CSRs require the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const existing = await this.getActiveOrgCARecord(org_id);
+		if (existing) {
+			throw new ConflictError("Organization CA already initialized");
+		}
+		const kms = await KMSClient.getInstance();
+		const { csrPem } = await kms.createOrgCACSR(org_id, org_name);
+		return { csr_pem: csrPem };
+	};
+
+	public static installOrgCA = async ({
+		org_id,
+		user_id,
+		cert_pem,
+		chain_pem,
+		description,
+	}: {
+		org_id: string;
+		user_id: string;
+		cert_pem: string;
+		chain_pem?: string;
+		description?: string;
+	}) => {
+		if (!EditionPolicyService.isEnterprise()) {
+			throw new BusinessRuleError("Installing an external root requires the Enterprise edition.", 403, "ENTERPRISE_REQUIRED");
+		}
+		await PlanLimitService.assertFeature(org_id, "certificates");
+		const existing = await this.getActiveOrgCARecord(org_id);
+		if (existing) {
+			throw new ConflictError("Organization CA already initialized");
+		}
+		const kms = await KMSClient.getInstance();
+		const installed = await kms.installOrgCA(org_id, cert_pem, chain_pem || "");
+		const db = await DB.getInstance();
+		const certId = uuidv4();
+		const now = new Date();
+		await db
+			.insertInto("org_certificates")
+			.values({
+				id: certId,
+				org_id,
+				user_id,
+				serial_hex: installed.serialHex,
+				cert_type: "org_ca",
+				subject_cn: "Organization CA",
+				status: "active",
+				cert_pem: installed.certPem,
+				description: description || "Installed from offline root",
+				metadata: normalizeMetadata({ installed: "true" }),
+				is_system_generated: false,
+				sans: [],
+				auto_renew: false,
+				renew_days_before: 30,
+				created_at: now,
+				updated_at: now,
+			})
+			.execute();
+		if (chain_pem) {
+			await this.importChain({ org_id, user_id, chain_pem, description: "Offline root chain" });
+		}
+		await invalidateCache(CacheKeys.certsByOrg(org_id));
+		return this.getCertificate(certId);
+	};
+
 	public static issueMemberCert = async ({
 		org_id,
 		target_user_id,
