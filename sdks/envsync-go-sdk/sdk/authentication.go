@@ -24,6 +24,10 @@ type WhoAmIResponse struct {
 	ActiveMembershipUserId string                           `json:"active_membership_user_id" url:"active_membership_user_id"`
 	Features               []string                         `json:"features" url:"features"`
 	InstallFeatures        []string                         `json:"install_features" url:"install_features"`
+	Plan                   *string                          `json:"plan,omitempty" url:"plan,omitempty"`
+	PlanLimits             map[string]interface{}           `json:"plan_limits,omitempty" url:"plan_limits,omitempty"`
+	PlanUsage              map[string]*float64              `json:"plan_usage,omitempty" url:"plan_usage,omitempty"`
+	FeatureOverrides       []string                         `json:"feature_overrides,omitempty" url:"feature_overrides,omitempty"`
 	AuthType               WhoAmIResponseAuthType           `json:"auth_type" url:"auth_type"`
 
 	extraProperties map[string]interface{}
@@ -79,6 +83,34 @@ func (w *WhoAmIResponse) GetInstallFeatures() []string {
 	return w.InstallFeatures
 }
 
+func (w *WhoAmIResponse) GetPlan() *string {
+	if w == nil {
+		return nil
+	}
+	return w.Plan
+}
+
+func (w *WhoAmIResponse) GetPlanLimits() map[string]interface{} {
+	if w == nil {
+		return nil
+	}
+	return w.PlanLimits
+}
+
+func (w *WhoAmIResponse) GetPlanUsage() map[string]*float64 {
+	if w == nil {
+		return nil
+	}
+	return w.PlanUsage
+}
+
+func (w *WhoAmIResponse) GetFeatureOverrides() []string {
+	if w == nil {
+		return nil
+	}
+	return w.FeatureOverrides
+}
+
 func (w *WhoAmIResponse) GetAuthType() WhoAmIResponseAuthType {
 	if w == nil {
 		return ""
@@ -121,10 +153,11 @@ func (w *WhoAmIResponse) String() string {
 type WhoAmIResponseAuthType string
 
 const (
-	WhoAmIResponseAuthTypeJwt    WhoAmIResponseAuthType = "jwt"
-	WhoAmIResponseAuthTypeSaml   WhoAmIResponseAuthType = "saml"
-	WhoAmIResponseAuthTypeOidc   WhoAmIResponseAuthType = "oidc"
-	WhoAmIResponseAuthTypeApiKey WhoAmIResponseAuthType = "api_key"
+	WhoAmIResponseAuthTypeJwt          WhoAmIResponseAuthType = "jwt"
+	WhoAmIResponseAuthTypeSaml         WhoAmIResponseAuthType = "saml"
+	WhoAmIResponseAuthTypeOidc         WhoAmIResponseAuthType = "oidc"
+	WhoAmIResponseAuthTypeApiKey       WhoAmIResponseAuthType = "api_key"
+	WhoAmIResponseAuthTypeServiceToken WhoAmIResponseAuthType = "service_token"
 )
 
 func NewWhoAmIResponseAuthTypeFromString(s string) (WhoAmIResponseAuthType, error) {
@@ -137,6 +170,8 @@ func NewWhoAmIResponseAuthTypeFromString(s string) (WhoAmIResponseAuthType, erro
 		return WhoAmIResponseAuthTypeOidc, nil
 	case "api_key":
 		return WhoAmIResponseAuthTypeApiKey, nil
+	case "service_token":
+		return WhoAmIResponseAuthTypeServiceToken, nil
 	}
 	var t WhoAmIResponseAuthType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -147,15 +182,16 @@ func (w WhoAmIResponseAuthType) Ptr() *WhoAmIResponseAuthType {
 }
 
 type WhoAmIResponseMembershipsItem struct {
-	UserId   string `json:"user_id" url:"user_id"`
-	OrgId    string `json:"org_id" url:"org_id"`
-	OrgName  string `json:"org_name" url:"org_name"`
-	OrgSlug  string `json:"org_slug" url:"org_slug"`
-	RoleId   string `json:"role_id" url:"role_id"`
-	RoleName string `json:"role_name" url:"role_name"`
-	IsAdmin  bool   `json:"is_admin" url:"is_admin"`
-	IsMaster bool   `json:"is_master" url:"is_master"`
-	IsActive bool   `json:"is_active" url:"is_active"`
+	UserId    string `json:"user_id" url:"user_id"`
+	OrgId     string `json:"org_id" url:"org_id"`
+	OrgName   string `json:"org_name" url:"org_name"`
+	OrgSlug   string `json:"org_slug" url:"org_slug"`
+	RoleId    string `json:"role_id" url:"role_id"`
+	RoleName  string `json:"role_name" url:"role_name"`
+	IsAdmin   bool   `json:"is_admin" url:"is_admin"`
+	IsMaster  bool   `json:"is_master" url:"is_master"`
+	IsActive  bool   `json:"is_active" url:"is_active"`
+	IsCurrent bool   `json:"is_current" url:"is_current"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -222,6 +258,13 @@ func (w *WhoAmIResponseMembershipsItem) GetIsActive() bool {
 		return false
 	}
 	return w.IsActive
+}
+
+func (w *WhoAmIResponseMembershipsItem) GetIsCurrent() bool {
+	if w == nil {
+		return false
+	}
+	return w.IsCurrent
 }
 
 func (w *WhoAmIResponseMembershipsItem) GetExtraProperties() map[string]interface{} {

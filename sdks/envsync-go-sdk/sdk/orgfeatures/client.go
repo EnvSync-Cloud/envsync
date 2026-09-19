@@ -43,7 +43,7 @@ func (c *Client) GetOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",
@@ -92,7 +92,7 @@ func (c *Client) GetOrgFeatureGrant(
 	return response, nil
 }
 
-// Full replace. Empty features[] denies every EE feature. Unknown catalog keys are dropped.
+// Patch plan and/or overlay_features. Omitted fields stay. Overlay is additive on the plan defaults and does not change numeric caps. Unknown catalog keys are dropped.
 func (c *Client) PutOrgFeatureGrant(
 	ctx context.Context,
 	orgId string,
@@ -103,7 +103,7 @@ func (c *Client) PutOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",
@@ -154,7 +154,7 @@ func (c *Client) PutOrgFeatureGrant(
 	return response, nil
 }
 
-// Drops the grant row so the organization is unrestricted.
+// Resets the organization to the Developer plan with an empty overlay.
 func (c *Client) DeleteOrgFeatureGrant(
 	ctx context.Context,
 	orgId string,
@@ -165,7 +165,7 @@ func (c *Client) DeleteOrgFeatureGrant(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/org-features/%v",

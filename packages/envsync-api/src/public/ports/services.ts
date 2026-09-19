@@ -1,6 +1,8 @@
 /** Public port: core services used by EE modules. */
 export { AppService } from "@/services/app.service";
 export { AuditLogService } from "@/services/audit_log.service";
+export { CertificateService } from "@/services/certificate.service";
+export { PlanLimitService } from "@/services/plan_limit.service";
 export { AuthorizationService } from "@/services/authorization.service";
 export { EditionPolicyService } from "@/services/edition-policy.service";
 export { EnvService } from "@/services/env.service";

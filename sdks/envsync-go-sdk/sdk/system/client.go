@@ -39,7 +39,7 @@ func (c *Client) GetManagementSystemStatus(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/system/status"
 	headers := internal.MergeHeaders(
@@ -82,7 +82,7 @@ func (c *Client) ManageGetManagementSystemStatus(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/system/status"
 	headers := internal.MergeHeaders(

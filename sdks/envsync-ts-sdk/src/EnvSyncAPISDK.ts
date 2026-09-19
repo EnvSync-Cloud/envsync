@@ -6,6 +6,7 @@ import type { BaseHttpRequest } from './core/BaseHttpRequest';
 import type { OpenAPIConfig } from './core/OpenAPI';
 import { FetchHttpRequest } from './core/FetchHttpRequest';
 import { AccessService } from './services/AccessService';
+import { AcmeService } from './services/AcmeService';
 import { ApiKeysService } from './services/ApiKeysService';
 import { ApplicationsService } from './services/ApplicationsService';
 import { AuditLogsService } from './services/AuditLogsService';
@@ -44,6 +45,7 @@ import { WebhooksService } from './services/WebhooksService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class EnvSyncAPISDK {
     public readonly access: AccessService;
+    public readonly acme: AcmeService;
     public readonly apiKeys: ApiKeysService;
     public readonly applications: ApplicationsService;
     public readonly auditLogs: AuditLogsService;
@@ -82,8 +84,8 @@ export class EnvSyncAPISDK {
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
-            BASE: config?.BASE ?? 'http://localhost:0',
-            VERSION: config?.VERSION ?? '0.20.1',
+            BASE: config?.BASE ?? 'http://localhost:4000',
+            VERSION: config?.VERSION ?? '0.22.0',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
             TOKEN: config?.TOKEN,
@@ -93,6 +95,7 @@ export class EnvSyncAPISDK {
             ENCODE_PATH: config?.ENCODE_PATH,
         });
         this.access = new AccessService(this.request);
+        this.acme = new AcmeService(this.request);
         this.apiKeys = new ApiKeysService(this.request);
         this.applications = new ApplicationsService(this.request);
         this.auditLogs = new AuditLogsService(this.request);

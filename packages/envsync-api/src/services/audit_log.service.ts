@@ -146,6 +146,7 @@ export class AuditLogService {
 			event_type: action,
 			org_id: org_id || "",
 			user_id: user_id || "",
+			app_id: typeof details.app_id === "string" ? details.app_id : undefined,
 			message: JSON.stringify(details || {}),
 		}).catch(() => {});
 

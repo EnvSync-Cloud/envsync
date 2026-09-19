@@ -39,7 +39,7 @@ func (c *Client) GetSetupStatus(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/setup/status"
 	headers := internal.MergeHeaders(
@@ -83,7 +83,7 @@ func (c *Client) CreateSetupOrganization(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/setup/org"
 	headers := internal.MergeHeaders(

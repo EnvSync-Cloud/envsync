@@ -16,8 +16,6 @@ export namespace DynamicSecretEngineResponse {
     export enum engine_type {
         POSTGRES = 'postgres',
         MYSQL = 'mysql',
-        AWS_IAM = 'aws-iam',
-        AZURE_SP = 'azure-sp',
     }
 }
 

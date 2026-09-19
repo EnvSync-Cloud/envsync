@@ -41,7 +41,7 @@ func (c *Client) GetAuditLogs(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/audit_log"
 	queryParams, err := internal.QueryValues(request)

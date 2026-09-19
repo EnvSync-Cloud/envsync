@@ -8,9 +8,25 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
+type ImportChainRequest struct {
+	ChainPem    string  `json:"chain_pem" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	Description *string `json:"description,omitempty" url:"-"`
+}
+
 type InitOrgCaRequest struct {
 	OrgName     string  `json:"org_name" url:"-"`
 	Description *string `json:"description,omitempty" url:"-"`
+}
+
+type IssueLeafCertRequest struct {
+	AppId        string                            `json:"app_id" url:"-"`
+	EnvTypeId    *string                           `json:"env_type_id,omitempty" url:"-"`
+	CommonName   string                            `json:"common_name" url:"-"`
+	Sans         []string                          `json:"sans,omitempty" url:"-"`
+	TtlDays      *int                              `json:"ttl_days,omitempty" url:"-"`
+	KeyAlgorithm *IssueLeafCertRequestKeyAlgorithm `json:"key_algorithm,omitempty" url:"-"`
+	Description  *string                           `json:"description,omitempty" url:"-"`
 }
 
 type IssueMemberCertRequest struct {
@@ -18,6 +34,11 @@ type IssueMemberCertRequest struct {
 	Role        *string           `json:"role,omitempty" url:"-"`
 	Description *string           `json:"description,omitempty" url:"-"`
 	Metadata    map[string]string `json:"metadata,omitempty" url:"-"`
+}
+
+type LabelEnvCaRequest struct {
+	EnvTypeId string  `json:"env_type_id" url:"-"`
+	Name      *string `json:"name,omitempty" url:"-"`
 }
 
 type RenewCertRequest struct {
@@ -33,6 +54,19 @@ type RotateCertRequest struct {
 	Description    *string `json:"description,omitempty" url:"-"`
 	RevokePrevious *bool   `json:"revoke_previous,omitempty" url:"-"`
 	Reason         *int    `json:"reason,omitempty" url:"-"`
+}
+
+type SetAutoRenewRequest struct {
+	AutoRenew       bool    `json:"auto_renew" url:"-"`
+	RenewDaysBefore *int    `json:"renew_days_before,omitempty" url:"-"`
+	EnvTypeId       *string `json:"env_type_id,omitempty" url:"-"`
+}
+
+type SignCsrRequest struct {
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	CsrPem      string  `json:"csr_pem" url:"-"`
+	TtlDays     *int    `json:"ttl_days,omitempty" url:"-"`
+	Description *string `json:"description,omitempty" url:"-"`
 }
 
 type BaseCertificateResponse struct {
@@ -207,6 +241,76 @@ func (b *BaseCertificateResponse) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", b)
+}
+
+type CertificateChainResponse struct {
+	ChainPem      string  `json:"chain_pem" url:"chain_pem"`
+	OrgCaPem      *string `json:"org_ca_pem,omitempty" url:"org_ca_pem,omitempty"`
+	RootCaPem     string  `json:"root_ca_pem" url:"root_ca_pem"`
+	ImportedCount int     `json:"imported_count" url:"imported_count"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (c *CertificateChainResponse) GetChainPem() string {
+	if c == nil {
+		return ""
+	}
+	return c.ChainPem
+}
+
+func (c *CertificateChainResponse) GetOrgCaPem() *string {
+	if c == nil {
+		return nil
+	}
+	return c.OrgCaPem
+}
+
+func (c *CertificateChainResponse) GetRootCaPem() string {
+	if c == nil {
+		return ""
+	}
+	return c.RootCaPem
+}
+
+func (c *CertificateChainResponse) GetImportedCount() int {
+	if c == nil {
+		return 0
+	}
+	return c.ImportedCount
+}
+
+func (c *CertificateChainResponse) GetExtraProperties() map[string]interface{} {
+	return c.extraProperties
+}
+
+func (c *CertificateChainResponse) UnmarshalJSON(data []byte) error {
+	type unmarshaler CertificateChainResponse
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*c = CertificateChainResponse(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *c)
+	if err != nil {
+		return err
+	}
+	c.extraProperties = extraProperties
+	c.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (c *CertificateChainResponse) String() string {
+	if len(c.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(c.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(c); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", c)
 }
 
 type CertificateListResponse = []*BaseCertificateResponse
@@ -1025,4 +1129,26 @@ func (r *RootCaResponse) String() string {
 		return value
 	}
 	return fmt.Sprintf("%#v", r)
+}
+
+type IssueLeafCertRequestKeyAlgorithm string
+
+const (
+	IssueLeafCertRequestKeyAlgorithmEcdsaP256 IssueLeafCertRequestKeyAlgorithm = "ECDSA_P256"
+	IssueLeafCertRequestKeyAlgorithmRsa2048   IssueLeafCertRequestKeyAlgorithm = "RSA_2048"
+)
+
+func NewIssueLeafCertRequestKeyAlgorithmFromString(s string) (IssueLeafCertRequestKeyAlgorithm, error) {
+	switch s {
+	case "ECDSA_P256":
+		return IssueLeafCertRequestKeyAlgorithmEcdsaP256, nil
+	case "RSA_2048":
+		return IssueLeafCertRequestKeyAlgorithmRsa2048, nil
+	}
+	var t IssueLeafCertRequestKeyAlgorithm
+	return "", fmt.Errorf("%s is not a valid %T", s, t)
+}
+
+func (i IssueLeafCertRequestKeyAlgorithm) Ptr() *IssueLeafCertRequestKeyAlgorithm {
+	return &i
 }

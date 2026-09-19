@@ -139,12 +139,16 @@ type GpgKeyAuditActions =
 type CertificateAuditActions =
 	| "cert_ca_initialized"
 	| "cert_member_issued"
+	| "cert_leaf_issued"
+	| "cert_csr_signed"
 	| "certs_viewed"
 	| "cert_viewed"
 	| "cert_bundle_retrieved"
 	| "cert_revoked"
 	| "certificate_renewed"
-	| "certificate_rotated";
+	| "certificate_rotated"
+	| "cert_expiring"
+	| "cert_expired";
 
 type CliAuditActions = "cli_command_executed";
 

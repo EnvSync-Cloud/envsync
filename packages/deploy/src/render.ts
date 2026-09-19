@@ -1050,11 +1050,16 @@ ${renderEnvList({
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-9ffbf53
+    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-ca-key && exec minikms
     environment:
 ${renderEnvList({
 		MINIKMS_ROOT_KEY: runtimeEnv.MINIKMS_ROOT_KEY,
 		MINIKMS_SESSION_SIGNING_KEY_FILE: "/run/secrets/minikms-session-signing-key",
+		MINIKMS_ROOT_CA_CERT_FILE: "/run/secrets/minikms-root-ca-cert",
+		MINIKMS_ROOT_CA_KEY_FILE: "/tmp/minikms-root-ca-key",
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
@@ -1062,6 +1067,8 @@ ${renderEnvList({
 	})}
     volumes:
       - ${paths.deployRoot}/minikms-session-signing-key.pem:/run/secrets/minikms-session-signing-key:ro
+      - ${paths.deployRoot}/minikms-root-ca-cert.pem:/run/secrets/minikms-root-ca-cert:ro
+      - ${paths.deployRoot}/minikms-root-ca-key.pem:/run/secrets/minikms-root-ca-key:ro
     networks: [envsync]` : ""}
 
   clickstack:

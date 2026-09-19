@@ -3,7 +3,7 @@
   "info": {
     "title": "EnvSync API",
     "description": "EnvSync API documentation.\n\nEnterprise manage routes are mounted at `/api/v1/manage/{module}/...` on this same process (one OpenAPI document, one API process). Tags marked *Only available in Enterprise deployment* require an Enterprise edition.\n\nBearer-token clients can optionally send the `X-EnvSync-Org-Id` header to select an active organization for that request. Cookie sessions continue to use `envsync_active_membership`, and API-key requests ignore this header.",
-    "version": "0.20.1"
+    "version": "0.22.0"
   },
   "tags": [
     {
@@ -417,10 +417,12 @@
         "properties": {
           "name": {
             "type": "string",
+            "minLength": 1,
             "example": "My Application"
           },
           "description": {
             "type": "string",
+            "minLength": 1,
             "example": "Description of my application"
           },
           "enable_secrets": {
@@ -846,6 +848,10 @@
                 "is_active": {
                   "type": "boolean",
                   "example": true
+                },
+                "is_current": {
+                  "type": "boolean",
+                  "example": true
                 }
               },
               "required": [
@@ -857,7 +863,8 @@
                 "role_name",
                 "is_admin",
                 "is_master",
-                "is_active"
+                "is_active",
+                "is_current"
               ]
             }
           },
@@ -892,13 +899,40 @@
               "kms"
             ]
           },
+          "plan": {
+            "type": "string",
+            "example": "developer"
+          },
+          "plan_limits": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "plan_usage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "feature_overrides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "change_requests"
+            ]
+          },
           "auth_type": {
             "type": "string",
             "enum": [
               "jwt",
               "saml",
               "oidc",
-              "api_key"
+              "api_key",
+              "service_token"
             ],
             "example": "jwt"
           }
@@ -5026,6 +5060,65 @@
           "cert_pem"
         ]
       },
+      "CertificateChainResponse": {
+        "type": "object",
+        "properties": {
+          "chain_pem": {
+            "type": "string"
+          },
+          "org_ca_pem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "root_ca_pem": {
+            "type": "string"
+          },
+          "imported_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain_pem",
+          "org_ca_pem",
+          "root_ca_pem",
+          "imported_count"
+        ]
+      },
+      "ImportChainRequest": {
+        "type": "object",
+        "properties": {
+          "chain_pem": {
+            "type": "string",
+            "minLength": 32
+          },
+          "env_type_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chain_pem"
+        ]
+      },
+      "LabelEnvCaRequest": {
+        "type": "object",
+        "properties": {
+          "env_type_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "env_type_id"
+        ]
+      },
       "MemberCertResponse": {
         "type": "object",
         "properties": {
@@ -5175,6 +5268,83 @@
         },
         "required": [
           "member_email"
+        ]
+      },
+      "IssueLeafCertRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string",
+            "minLength": 1,
+            "example": "app_123"
+          },
+          "env_type_id": {
+            "type": "string"
+          },
+          "common_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "example": "api.internal"
+          },
+          "sans": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            },
+            "maxItems": 20,
+            "example": [
+              "api.internal"
+            ]
+          },
+          "ttl_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 825,
+            "example": 90
+          },
+          "key_algorithm": {
+            "type": "string",
+            "enum": [
+              "ECDSA_P256",
+              "RSA_2048"
+            ],
+            "example": "ECDSA_P256"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "app_id",
+          "common_name"
+        ]
+      },
+      "SignCsrRequest": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "csr_pem": {
+            "type": "string",
+            "minLength": 32,
+            "example": "-----BEGIN CERTIFICATE REQUEST-----"
+          },
+          "ttl_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 825,
+            "example": 90
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "csr_pem"
         ]
       },
       "CRLResponse": {
@@ -5517,6 +5687,28 @@
           }
         }
       },
+      "SetAutoRenewRequest": {
+        "type": "object",
+        "properties": {
+          "auto_renew": {
+            "type": "boolean"
+          },
+          "renew_days_before": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365
+          },
+          "env_type_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "auto_renew"
+        ]
+      },
       "OCSPResponse": {
         "type": "object",
         "properties": {
@@ -5569,9 +5761,11 @@
             "type": "string",
             "enum": [
               "pending",
+              "applying",
               "approved",
               "rejected",
-              "cancelled"
+              "cancelled",
+              "failed"
             ]
           },
           "title": {
@@ -5918,6 +6112,19 @@
           "permissions": {
             "$ref": "#/components/schemas/ServiceTokenPermissions"
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTokenScope"
+            }
+          },
+          "rotated_from_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
           "expires_at": {
             "type": "string",
             "example": "2025-04-01T00:00:00Z"
@@ -5934,6 +6141,8 @@
           "app_id",
           "env_type_id",
           "permissions",
+          "scopes",
+          "rotated_from_id",
           "expires_at",
           "created_at"
         ]
@@ -5953,6 +6162,29 @@
         "required": [
           "read",
           "write"
+        ]
+      },
+      "ServiceTokenScope": {
+        "type": "object",
+        "properties": {
+          "env_type_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "default": "/",
+            "example": "/",
+            "description": "Key prefix (not a folder). `/db` matches `db` and `db/host`, not `dbx`."
+          }
+        },
+        "required": [
+          "path"
         ]
       },
       "CreateServiceTokenRequest": {
@@ -5977,6 +6209,13 @@
           "permissions": {
             "$ref": "#/components/schemas/ServiceTokenPermissions"
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTokenScope"
+            },
+            "minItems": 1
+          },
           "expires_in_days": {
             "type": "integer",
             "minimum": 1,
@@ -5988,6 +6227,21 @@
         "required": [
           "name"
         ]
+      },
+      "RotateServiceTokenResponse": {
+        "$ref": "#/components/schemas/CreateServiceTokenResponse"
+      },
+      "RotateServiceTokenRequest": {
+        "type": "object",
+        "properties": {
+          "grace_hours": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 168,
+            "default": 24,
+            "example": 24
+          }
+        }
       },
       "ServiceTokenResponse": {
         "type": "object",
@@ -6017,6 +6271,26 @@
           "permissions": {
             "$ref": "#/components/schemas/ServiceTokenPermissions"
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTokenScope"
+            }
+          },
+          "rotated_from_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "grace_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
           "expires_at": {
             "type": "string",
             "example": "2025-04-01T00:00:00Z"
@@ -6039,6 +6313,9 @@
           "app_id",
           "env_type_id",
           "permissions",
+          "scopes",
+          "rotated_from_id",
+          "grace_until",
           "expires_at",
           "last_used_at",
           "created_at"
@@ -6048,6 +6325,28 @@
         "type": "array",
         "items": {
           "$ref": "#/components/schemas/ServiceTokenResponse"
+        }
+      },
+      "ListServiceTokensQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          },
+          "per_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "example": 50
+          },
+          "app_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "Return tokens for this project only"
+          }
         }
       },
       "SystemStatusResponse": {
@@ -7459,12 +7758,8 @@
             "enum": [
               "postgres",
               "mysql",
-              "aws-iam",
-              "azure-sp",
-              "gcp-service-account",
-              "cloudflare-pages",
-              "sendgrid",
-              "twilio"
+              "mongodb",
+              "aws-iam"
             ]
           },
           "schedule_cron": {
@@ -7532,12 +7827,8 @@
             "enum": [
               "postgres",
               "mysql",
-              "aws-iam",
-              "azure-sp",
-              "gcp-service-account",
-              "cloudflare-pages",
-              "sendgrid",
-              "twilio"
+              "mongodb",
+              "aws-iam"
             ]
           },
           "schedule_cron": {
@@ -7695,9 +7986,7 @@
             "type": "string",
             "enum": [
               "postgres",
-              "mysql",
-              "aws-iam",
-              "azure-sp"
+              "mysql"
             ],
             "example": "postgres"
           },
@@ -7744,9 +8033,7 @@
             "type": "string",
             "enum": [
               "postgres",
-              "mysql",
-              "aws-iam",
-              "azure-sp"
+              "mysql"
             ],
             "example": "postgres"
           },
@@ -7890,100 +8177,6 @@
                   "host",
                   "database",
                   "superuser"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "access_key_id": {
-                    "type": "string",
-                    "example": "AKIAIOSFODNN7EXAMPLE"
-                  },
-                  "secret_access_key": {
-                    "type": "string",
-                    "example": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                  },
-                  "region": {
-                    "type": "string",
-                    "default": "us-east-1",
-                    "example": "us-east-1"
-                  },
-                  "iam_policy": {
-                    "type": "string",
-                    "example": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:*\",\"Resource\":\"*\"}]}"
-                  },
-                  "default_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 900,
-                    "maximum": 43200,
-                    "default": 3600,
-                    "example": 3600
-                  },
-                  "max_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 900,
-                    "maximum": 43200,
-                    "default": 43200,
-                    "example": 43200
-                  }
-                },
-                "required": [
-                  "access_key_id",
-                  "secret_access_key",
-                  "iam_policy"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "tenant_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "client_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "client_secret": {
-                    "type": "string",
-                    "example": "supersecret"
-                  },
-                  "subscription_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "roles": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": [
-                      "Contributor"
-                    ],
-                    "example": [
-                      "Contributor"
-                    ]
-                  },
-                  "default_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 300,
-                    "maximum": 86400,
-                    "default": 3600,
-                    "example": 3600
-                  },
-                  "max_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 300,
-                    "maximum": 604800,
-                    "default": 86400,
-                    "example": 86400
-                  }
-                },
-                "required": [
-                  "tenant_id",
-                  "client_id",
-                  "client_secret",
-                  "subscription_id"
                 ]
               }
             ]
@@ -8150,100 +8343,6 @@
                   "database",
                   "superuser"
                 ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "access_key_id": {
-                    "type": "string",
-                    "example": "AKIAIOSFODNN7EXAMPLE"
-                  },
-                  "secret_access_key": {
-                    "type": "string",
-                    "example": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                  },
-                  "region": {
-                    "type": "string",
-                    "default": "us-east-1",
-                    "example": "us-east-1"
-                  },
-                  "iam_policy": {
-                    "type": "string",
-                    "example": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:*\",\"Resource\":\"*\"}]}"
-                  },
-                  "default_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 900,
-                    "maximum": 43200,
-                    "default": 3600,
-                    "example": 3600
-                  },
-                  "max_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 900,
-                    "maximum": 43200,
-                    "default": 43200,
-                    "example": 43200
-                  }
-                },
-                "required": [
-                  "access_key_id",
-                  "secret_access_key",
-                  "iam_policy"
-                ]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "tenant_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "client_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "client_secret": {
-                    "type": "string",
-                    "example": "supersecret"
-                  },
-                  "subscription_id": {
-                    "type": "string",
-                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                  },
-                  "roles": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "default": [
-                      "Contributor"
-                    ],
-                    "example": [
-                      "Contributor"
-                    ]
-                  },
-                  "default_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 300,
-                    "maximum": 86400,
-                    "default": 3600,
-                    "example": 3600
-                  },
-                  "max_ttl_seconds": {
-                    "type": "integer",
-                    "minimum": 300,
-                    "maximum": 604800,
-                    "default": 86400,
-                    "example": 86400
-                  }
-                },
-                "required": [
-                  "tenant_id",
-                  "client_id",
-                  "client_secret",
-                  "subscription_id"
-                ]
               }
             ]
           },
@@ -8402,7 +8501,10 @@
             "enum": [
               "datadog",
               "splunk",
-              "sumo-logic"
+              "sumo-logic",
+              "logstash",
+              "fluentd",
+              "otlp"
             ],
             "example": "datadog"
           },
@@ -8451,7 +8553,10 @@
             "enum": [
               "datadog",
               "splunk",
-              "sumo-logic"
+              "sumo-logic",
+              "logstash",
+              "fluentd",
+              "otlp"
             ],
             "example": "datadog"
           },
@@ -8492,6 +8597,10 @@
             "type": "boolean",
             "example": false
           },
+          "plan": {
+            "type": "string",
+            "example": "plus"
+          },
           "features": {
             "type": "array",
             "items": {
@@ -8500,6 +8609,15 @@
             "example": [
               "saml",
               "kms"
+            ]
+          },
+          "overlay_features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "change_requests"
             ]
           },
           "source": {
@@ -8535,6 +8653,7 @@
           "org_id",
           "unrestricted",
           "features",
+          "overlay_features",
           "source",
           "updated_by",
           "created_at",
@@ -8557,6 +8676,15 @@
       "PutOrgFeatureGrantRequest": {
         "type": "object",
         "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer",
+              "plus",
+              "enterprise"
+            ],
+            "example": "plus"
+          },
           "features": {
             "type": "array",
             "items": {
@@ -8565,6 +8693,17 @@
             "example": [
               "saml",
               "kms"
+            ],
+            "minItems": 0
+          },
+          "overlay_features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "change_requests",
+              "saml"
             ],
             "minItems": 0
           },
@@ -8582,80 +8721,84 @@
             "minLength": 1,
             "example": "platform"
           }
-        },
-        "required": [
-          "features"
-        ]
-      },
-      "SamlSsoResponse": {
-        "type": "object",
-        "properties": {
-          "redirect_url": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://example.okta.com/app/abc123/sso/saml?SAMLRequest=...",
-            "description": "URL to redirect the user to for IdP authentication"
-          },
-          "request_id": {
-            "type": "string",
-            "example": "_550e8400-e29b-41d4-a716-446655440000",
-            "description": "AuthnRequest ID for tracking"
-          }
-        },
-        "required": [
-          "redirect_url",
-          "request_id"
-        ]
-      },
-      "PublicSamlSsoRequest": {
-        "type": "object",
-        "properties": {
-          "provider_id": {
-            "type": "string",
-            "format": "uuid",
-            "example": "550e8400-e29b-41d4-a716-446655440000",
-            "description": "Optional SAML provider ID. Must belong to the organization and be enabled."
-          }
         }
       },
-      "OrgKmsVerifyResponse": {
+      "OrgKmsJobResponse": {
         "type": "object",
         "properties": {
-          "ok": {
-            "type": "boolean",
-            "example": true
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
           },
-          "source": {
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "app_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "kind": {
             "type": "string",
             "enum": [
-              "managed",
-              "aws-kms",
-              "gcp-kms",
-              "azure-kv"
+              "kek_rewrap",
+              "dek_rewrap",
+              "detach_managed"
             ],
-            "example": "managed"
+            "example": "detach_managed"
           },
           "status": {
             "type": "string",
             "enum": [
-              "active",
               "pending",
-              "rotating",
-              "unavailable",
-              "disabled"
+              "running",
+              "succeeded",
+              "failed"
             ],
-            "example": "active"
+            "example": "pending"
           },
-          "last_verified_at": {
+          "progress": {
+            "type": "object",
+            "additionalProperties": {},
+            "example": {}
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "user_123"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          },
+          "updated_at": {
             "type": "string",
             "example": "2026-09-13T00:00:00.000Z"
           }
         },
         "required": [
-          "ok",
-          "source",
+          "id",
+          "org_id",
+          "app_id",
+          "kind",
           "status",
-          "last_verified_at"
+          "progress",
+          "error_message",
+          "created_by",
+          "created_at",
+          "updated_at"
         ]
       },
       "OrgKmsBreakGlassParam": {
@@ -8762,6 +8905,94 @@
           "implicit"
         ]
       },
+      "OrgKmsCredentialResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "org_id": {
+            "type": "string",
+            "example": "org_123"
+          },
+          "key": {
+            "type": "string",
+            "example": "aws-kms-prod"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "AWS access key for org CMK"
+          },
+          "configured": {
+            "type": "boolean",
+            "const": true,
+            "example": true
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "key",
+          "description",
+          "configured",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateOrgKmsConfigRequest": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "aws-kms",
+              "gcp-kms",
+              "azure-kv"
+            ],
+            "example": "managed"
+          },
+          "key_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "arn:aws:kms:us-east-1:123:key/abc"
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "us-east-1"
+          },
+          "credential_secret_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "example": "secret_123"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
       "CreateOrgKmsCredentialRequest": {
         "type": "object",
         "properties": {
@@ -8786,6 +9017,73 @@
         "required": [
           "key",
           "value"
+        ]
+      },
+      "OrgKmsVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "example": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "managed",
+              "aws-kms",
+              "gcp-kms",
+              "azure-kv"
+            ],
+            "example": "managed"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "rotating",
+              "unavailable",
+              "disabled"
+            ],
+            "example": "active"
+          },
+          "last_verified_at": {
+            "type": "string",
+            "example": "2026-09-13T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "ok",
+          "source",
+          "status",
+          "last_verified_at"
+        ]
+      },
+      "OrgKmsJobParam": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "OrgKmsAppsResponse": {
+        "type": "object",
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgKmsAppKeyInfo"
+            }
+          }
+        },
+        "required": [
+          "apps"
         ]
       },
       "OrgKmsAppKeyInfo": {
@@ -8842,198 +9140,36 @@
           "status"
         ]
       },
-      "OrgKmsAppsResponse": {
+      "SamlSsoResponse": {
         "type": "object",
         "properties": {
-          "apps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrgKmsAppKeyInfo"
-            }
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.okta.com/app/abc123/sso/saml?SAMLRequest=...",
+            "description": "URL to redirect the user to for IdP authentication"
+          },
+          "request_id": {
+            "type": "string",
+            "example": "_550e8400-e29b-41d4-a716-446655440000",
+            "description": "AuthnRequest ID for tracking"
           }
         },
         "required": [
-          "apps"
+          "redirect_url",
+          "request_id"
         ]
       },
-      "OrgKmsCredentialResponse": {
+      "PublicSamlSsoRequest": {
         "type": "object",
         "properties": {
-          "id": {
+          "provider_id": {
             "type": "string",
-            "example": "550e8400-e29b-41d4-a716-446655440000"
-          },
-          "org_id": {
-            "type": "string",
-            "example": "org_123"
-          },
-          "key": {
-            "type": "string",
-            "example": "aws-kms-prod"
-          },
-          "description": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "example": "AWS access key for org CMK"
-          },
-          "configured": {
-            "type": "boolean",
-            "const": true,
-            "example": true
-          },
-          "created_at": {
-            "type": "string",
-            "example": "2026-09-13T00:00:00.000Z"
-          },
-          "updated_at": {
-            "type": "string",
-            "example": "2026-09-13T00:00:00.000Z"
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000",
+            "description": "Optional SAML provider ID. Must belong to the organization and be enabled."
           }
-        },
-        "required": [
-          "id",
-          "org_id",
-          "key",
-          "description",
-          "configured",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "OrgKmsJobParam": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "example": "550e8400-e29b-41d4-a716-446655440000"
-          }
-        },
-        "required": [
-          "id"
-        ]
-      },
-      "OrgKmsJobResponse": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "example": "550e8400-e29b-41d4-a716-446655440000"
-          },
-          "org_id": {
-            "type": "string",
-            "example": "org_123"
-          },
-          "app_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "example": null
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "kek_rewrap",
-              "dek_rewrap",
-              "detach_managed"
-            ],
-            "example": "detach_managed"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "succeeded",
-              "failed"
-            ],
-            "example": "pending"
-          },
-          "progress": {
-            "type": "object",
-            "additionalProperties": {},
-            "example": {}
-          },
-          "error_message": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "example": null
-          },
-          "created_by": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "example": "user_123"
-          },
-          "created_at": {
-            "type": "string",
-            "example": "2026-09-13T00:00:00.000Z"
-          },
-          "updated_at": {
-            "type": "string",
-            "example": "2026-09-13T00:00:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "org_id",
-          "app_id",
-          "kind",
-          "status",
-          "progress",
-          "error_message",
-          "created_by",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "UpdateOrgKmsConfigRequest": {
-        "type": "object",
-        "properties": {
-          "source": {
-            "type": "string",
-            "enum": [
-              "managed",
-              "aws-kms",
-              "gcp-kms",
-              "azure-kv"
-            ],
-            "example": "managed"
-          },
-          "key_ref": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1,
-            "example": "arn:aws:kms:us-east-1:123:key/abc"
-          },
-          "region": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1,
-            "example": "us-east-1"
-          },
-          "credential_secret_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1,
-            "example": "secret_123"
-          }
-        },
-        "required": [
-          "source"
-        ]
+        }
       }
     }
   },
@@ -9810,6 +9946,17 @@
               ],
               "example": "last_30_days",
               "description": "Filter by past time, e.g., 'last_3_hours', 'last_24_hours', 'last_7_days', 'last_30_days', 'last_90_days', 'last_180_days', 'last_1_year', 'all_time'"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "example": "app_created",
+              "description": "Case-insensitive search across action, details, and message"
             }
           }
         ],
@@ -14572,6 +14719,93 @@
         "description": "Retrieve the root CA certificate"
       }
     },
+    "/api/certificate/chain": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "CA chain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateChainResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getCertificateChain",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Get CA chain",
+        "description": "PEM bundle of imported chains, organization CA, and root CA"
+      }
+    },
+    "/api/certificate/ca/import-chain": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Chain imported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCAResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "importCertificateChain",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Import an external CA chain",
+        "description": "Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportChainRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/certificate/ca/env": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Environment CA labeled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCAResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "labelEnvironmentCa",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Label an environment CA",
+        "description": "Enterprise-only. Record an environment-scoped CA label. Leaves remain signed by the org intermediate.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelEnvCaRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/certificate/issue": {
       "post": {
         "responses": {
@@ -14608,6 +14842,70 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/IssueMemberCertRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/certificate/issue-leaf": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Leaf certificate issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberCertResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "issueLeafCert",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Issue service leaf certificate",
+        "description": "Issue a project-scoped leaf certificate with DNS/IP SANs. Private key is returned once.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueLeafCertRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/certificate/sign-csr": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Certificate signed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCAResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "signCertificateCsr",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Sign a CSR",
+        "description": "Sign a client-generated CSR with the organization CA. Private key never leaves the client.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignCsrRequest"
               }
             }
           }
@@ -14908,6 +15206,47 @@
         }
       }
     },
+    "/api/certificate/{id}/auto-renew": {
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Auto-renew updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgCAResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "setCertificateAutoRenew",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Configure leaf auto-renew",
+        "description": "Enterprise-only. Auto-renew managed service certificates and optionally write ENVSYNC_TLS_* secrets.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAutoRenewRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/certificate/{serial_hex}/ocsp": {
       "get": {
         "responses": {
@@ -15044,7 +15383,7 @@
         ],
         "parameters": [],
         "summary": "List Change Requests",
-        "description": "List change requests for the current organization."
+        "description": "List change requests for the current organization. Pass app_id to limit the list to one project."
       }
     },
     "/api/change_request/{id}": {
@@ -15282,9 +15621,68 @@
         "tags": [
           "Service Tokens"
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "#/components/schemas/ListServiceTokensQuery",
+            "schema": {
+              "$ref": "#/components/schemas/ListServiceTokensQuery"
+            }
+          }
+        ],
         "summary": "Get All Service Tokens",
-        "description": "Retrieve all service tokens for the organization"
+        "description": "Retrieve service tokens for the organization. Pass app_id to limit the list to one project."
+      }
+    },
+    "/api/service_token/{id}/rotate": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Service token rotated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RotateServiceTokenResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "rotateServiceToken",
+        "tags": [
+          "Service Tokens"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "summary": "Rotate Service Token",
+        "description": "Issue a new esv_ token for an existing service token. The previous hash stays valid until the grace window ends (default 24h, 0–7 days).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateServiceTokenRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/api/service_token/{id}": {
@@ -18505,7 +18903,7 @@
           }
         ],
         "summary": "Replace Organization Feature Grant",
-        "description": "Full replace. Empty features[] denies every EE feature. Unknown catalog keys are dropped.",
+        "description": "Patch plan and/or overlay_features. Omitted fields stay. Overlay is additive on the plan defaults and does not change numeric caps. Unknown catalog keys are dropped.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -18589,162 +18987,7 @@
           }
         ],
         "summary": "Delete Organization Feature Grant",
-        "description": "Drops the grant row so the organization is unrestricted."
-      }
-    },
-    "/api/saml/metadata/{orgId}": {
-      "get": {
-        "responses": {
-          "200": {
-            "description": "SP metadata XML",
-            "content": {
-              "application/xml": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "SSO is not available",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getPublicSamlMetadata",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "orgId",
-            "required": true
-          }
-        ],
-        "summary": "Get public SAML SP metadata",
-        "description": "Unauthenticated SP metadata XML for the organization",
-        "security": []
-      }
-    },
-    "/api/saml/acs/{orgId}": {
-      "post": {
-        "responses": {
-          "302": {
-            "description": "Authentication successful"
-          },
-          "401": {
-            "description": "Authentication failed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "handlePublicSamlAcs",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "orgId",
-            "required": true
-          }
-        ],
-        "summary": "SAML Assertion Consumer Service",
-        "description": "Receive and validate a SAML Response from the identity provider",
-        "security": []
-      }
-    },
-    "/api/saml/sso/{orgSlug}": {
-      "post": {
-        "responses": {
-          "200": {
-            "description": "Redirect URL generated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SamlSsoResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "SSO is not available",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "startPublicSamlSso",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "orgSlug",
-            "required": true
-          }
-        ],
-        "summary": "Start SAML SSO",
-        "description": "Unauthenticated SP-initiated start. Returns a redirect URL for the login page or CLI.",
-        "security": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublicSamlSsoRequest"
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "responses": {
-          "302": {
-            "description": "Redirect to the IdP or /login?sso=failed"
-          }
-        },
-        "operationId": "startPublicSamlSsoRedirect",
-        "tags": [
-          "SAML SSO"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "in": "path",
-            "name": "orgSlug",
-            "required": true
-          }
-        ],
-        "summary": "Bookmark SAML SSO start",
-        "description": "Success redirects to the IdP. Any error redirects to the dashboard login page.",
-        "security": []
+        "description": "Resets the organization to the Developer plan with an empty overlay."
       }
     },
     "/api/v1/manage/kms/{orgId}/break-glass-detach": {
@@ -19240,6 +19483,189 @@
         "parameters": [],
         "summary": "List per-app KMS key info",
         "description": "Calls GetKeyInfo per app. Never returns key material."
+      }
+    },
+    "/api/v1/manage/acme/eab": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "EAB created"
+          }
+        },
+        "operationId": "createAcmeEab",
+        "tags": [
+          "ACME"
+        ],
+        "parameters": [],
+        "summary": "Create ACME External Account Binding credentials"
+      },
+      "get": {
+        "responses": {
+          "200": {
+            "description": "EAB keys"
+          }
+        },
+        "operationId": "listAcmeEab",
+        "tags": [
+          "ACME"
+        ],
+        "parameters": [],
+        "summary": "List ACME EAB key ids"
+      }
+    },
+    "/api/saml/metadata/{orgId}": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "SP metadata XML",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SSO is not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getPublicSamlMetadata",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgId",
+            "required": true
+          }
+        ],
+        "summary": "Get public SAML SP metadata",
+        "description": "Unauthenticated SP metadata XML for the organization",
+        "security": []
+      }
+    },
+    "/api/saml/acs/{orgId}": {
+      "post": {
+        "responses": {
+          "302": {
+            "description": "Authentication successful"
+          },
+          "401": {
+            "description": "Authentication failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "handlePublicSamlAcs",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgId",
+            "required": true
+          }
+        ],
+        "summary": "SAML Assertion Consumer Service",
+        "description": "Receive and validate a SAML Response from the identity provider",
+        "security": []
+      }
+    },
+    "/api/saml/sso/{orgSlug}": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Redirect URL generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SamlSsoResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SSO is not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "startPublicSamlSso",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgSlug",
+            "required": true
+          }
+        ],
+        "summary": "Start SAML SSO",
+        "description": "Unauthenticated SP-initiated start. Returns a redirect URL for the login page or CLI.",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSamlSsoRequest"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "responses": {
+          "302": {
+            "description": "Redirect to the IdP or /login?sso=failed"
+          }
+        },
+        "operationId": "startPublicSamlSsoRedirect",
+        "tags": [
+          "SAML SSO"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "orgSlug",
+            "required": true
+          }
+        ],
+        "summary": "Bookmark SAML SSO start",
+        "description": "Success redirects to the IdP. Any error redirects to the dashboard login page.",
+        "security": []
       }
     }
   }

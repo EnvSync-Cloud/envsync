@@ -49,9 +49,11 @@ export namespace ChangeRequestResponse {
     }
     export enum status {
         PENDING = 'pending',
+        APPLYING = 'applying',
         APPROVED = 'approved',
         REJECTED = 'rejected',
         CANCELLED = 'cancelled',
+        FAILED = 'failed',
     }
 }
 

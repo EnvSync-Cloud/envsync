@@ -39,7 +39,7 @@ func (c *Client) ListEnterpriseProviders(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/providers"
 	headers := internal.MergeHeaders(
@@ -82,7 +82,7 @@ func (c *Client) GetEnterpriseOrgSecretModel(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/org-secrets/model"
 	headers := internal.MergeHeaders(
@@ -125,7 +125,7 @@ func (c *Client) ListEnterpriseProviderConnections(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/provider-connections"
 	headers := internal.MergeHeaders(
@@ -169,7 +169,7 @@ func (c *Client) CreateEnterpriseProviderConnection(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/provider-connections"
 	headers := internal.MergeHeaders(
@@ -216,7 +216,7 @@ func (c *Client) UpdateEnterpriseProviderConnection(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/provider-connections/%v",
@@ -264,7 +264,7 @@ func (c *Client) ListEnterpriseOrgSecrets(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/org-secrets"
 	headers := internal.MergeHeaders(
@@ -308,7 +308,7 @@ func (c *Client) CreateEnterpriseOrgSecret(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/org-secrets"
 	headers := internal.MergeHeaders(
@@ -355,7 +355,7 @@ func (c *Client) UpdateEnterpriseOrgSecret(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/org-secrets/%v",
@@ -404,7 +404,7 @@ func (c *Client) ListEnterpriseIntegrationBindings(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/bindings",
@@ -452,7 +452,7 @@ func (c *Client) CreateEnterpriseIntegrationBinding(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/bindings",
@@ -503,7 +503,7 @@ func (c *Client) UpdateEnterpriseIntegrationBinding(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/bindings/%v",
@@ -553,7 +553,7 @@ func (c *Client) ListEnterpriseEnvTypeMappings(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/env-type-mappings",
@@ -601,7 +601,7 @@ func (c *Client) CreateEnterpriseEnvTypeMapping(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/env-type-mappings",
@@ -652,7 +652,7 @@ func (c *Client) UpdateEnterpriseEnvTypeMapping(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/apps/%v/env-type-mappings/%v",
@@ -701,7 +701,7 @@ func (c *Client) ListEnterpriseSyncRuns(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/sync-runs"
 	headers := internal.MergeHeaders(
@@ -745,7 +745,7 @@ func (c *Client) CreateEnterpriseManualSyncRun(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/enterprise/sync-runs/manual"
 	headers := internal.MergeHeaders(
@@ -791,7 +791,7 @@ func (c *Client) ListEnterpriseSyncAuditEvents(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/enterprise/sync-runs/%v/events",

@@ -13,18 +13,29 @@ type CreateServiceTokenRequest struct {
 	AppId         *string                  `json:"app_id,omitempty" url:"-"`
 	EnvTypeId     *string                  `json:"env_type_id,omitempty" url:"-"`
 	Permissions   *ServiceTokenPermissions `json:"permissions,omitempty" url:"-"`
+	Scopes        []*ServiceTokenScope     `json:"scopes,omitempty" url:"-"`
 	ExpiresInDays *int                     `json:"expires_in_days,omitempty" url:"-"`
 }
 
+type GetAllServiceTokensRequest struct {
+	ComponentsSchemasListServiceTokensQuery *ListServiceTokensQuery `json:"-" url:"#/components/schemas/ListServiceTokensQuery,omitempty"`
+}
+
+type RotateServiceTokenRequest struct {
+	GraceHours *int `json:"grace_hours,omitempty" url:"-"`
+}
+
 type CreateServiceTokenResponse struct {
-	Id          string                   `json:"id" url:"id"`
-	Token       string                   `json:"token" url:"token"`
-	Name        string                   `json:"name" url:"name"`
-	AppId       *string                  `json:"app_id,omitempty" url:"app_id,omitempty"`
-	EnvTypeId   *string                  `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
-	Permissions *ServiceTokenPermissions `json:"permissions" url:"permissions"`
-	ExpiresAt   string                   `json:"expires_at" url:"expires_at"`
-	CreatedAt   string                   `json:"created_at" url:"created_at"`
+	Id            string                   `json:"id" url:"id"`
+	Token         string                   `json:"token" url:"token"`
+	Name          string                   `json:"name" url:"name"`
+	AppId         *string                  `json:"app_id,omitempty" url:"app_id,omitempty"`
+	EnvTypeId     *string                  `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	Permissions   *ServiceTokenPermissions `json:"permissions" url:"permissions"`
+	Scopes        []*ServiceTokenScope     `json:"scopes" url:"scopes"`
+	RotatedFromId *string                  `json:"rotated_from_id,omitempty" url:"rotated_from_id,omitempty"`
+	ExpiresAt     string                   `json:"expires_at" url:"expires_at"`
+	CreatedAt     string                   `json:"created_at" url:"created_at"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -72,6 +83,20 @@ func (c *CreateServiceTokenResponse) GetPermissions() *ServiceTokenPermissions {
 	return c.Permissions
 }
 
+func (c *CreateServiceTokenResponse) GetScopes() []*ServiceTokenScope {
+	if c == nil {
+		return nil
+	}
+	return c.Scopes
+}
+
+func (c *CreateServiceTokenResponse) GetRotatedFromId() *string {
+	if c == nil {
+		return nil
+	}
+	return c.RotatedFromId
+}
+
 func (c *CreateServiceTokenResponse) GetExpiresAt() string {
 	if c == nil {
 		return ""
@@ -117,6 +142,71 @@ func (c *CreateServiceTokenResponse) String() string {
 	}
 	return fmt.Sprintf("%#v", c)
 }
+
+type ListServiceTokensQuery struct {
+	Page    *int `json:"page,omitempty" url:"page,omitempty"`
+	PerPage *int `json:"per_page,omitempty" url:"per_page,omitempty"`
+	// Return tokens for this project only
+	AppId *string `json:"app_id,omitempty" url:"app_id,omitempty"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (l *ListServiceTokensQuery) GetPage() *int {
+	if l == nil {
+		return nil
+	}
+	return l.Page
+}
+
+func (l *ListServiceTokensQuery) GetPerPage() *int {
+	if l == nil {
+		return nil
+	}
+	return l.PerPage
+}
+
+func (l *ListServiceTokensQuery) GetAppId() *string {
+	if l == nil {
+		return nil
+	}
+	return l.AppId
+}
+
+func (l *ListServiceTokensQuery) GetExtraProperties() map[string]interface{} {
+	return l.extraProperties
+}
+
+func (l *ListServiceTokensQuery) UnmarshalJSON(data []byte) error {
+	type unmarshaler ListServiceTokensQuery
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*l = ListServiceTokensQuery(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *l)
+	if err != nil {
+		return err
+	}
+	l.extraProperties = extraProperties
+	l.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (l *ListServiceTokensQuery) String() string {
+	if len(l.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(l.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(l); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", l)
+}
+
+type RotateServiceTokenResponse = *CreateServiceTokenResponse
 
 type ServiceTokenPermissions struct {
 	Read  bool `json:"read" url:"read"`
@@ -173,14 +263,17 @@ func (s *ServiceTokenPermissions) String() string {
 }
 
 type ServiceTokenResponse struct {
-	Id          string                   `json:"id" url:"id"`
-	Name        string                   `json:"name" url:"name"`
-	AppId       *string                  `json:"app_id,omitempty" url:"app_id,omitempty"`
-	EnvTypeId   *string                  `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
-	Permissions *ServiceTokenPermissions `json:"permissions" url:"permissions"`
-	ExpiresAt   string                   `json:"expires_at" url:"expires_at"`
-	LastUsedAt  *string                  `json:"last_used_at,omitempty" url:"last_used_at,omitempty"`
-	CreatedAt   string                   `json:"created_at" url:"created_at"`
+	Id            string                   `json:"id" url:"id"`
+	Name          string                   `json:"name" url:"name"`
+	AppId         *string                  `json:"app_id,omitempty" url:"app_id,omitempty"`
+	EnvTypeId     *string                  `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	Permissions   *ServiceTokenPermissions `json:"permissions" url:"permissions"`
+	Scopes        []*ServiceTokenScope     `json:"scopes" url:"scopes"`
+	RotatedFromId *string                  `json:"rotated_from_id,omitempty" url:"rotated_from_id,omitempty"`
+	GraceUntil    *string                  `json:"grace_until,omitempty" url:"grace_until,omitempty"`
+	ExpiresAt     string                   `json:"expires_at" url:"expires_at"`
+	LastUsedAt    *string                  `json:"last_used_at,omitempty" url:"last_used_at,omitempty"`
+	CreatedAt     string                   `json:"created_at" url:"created_at"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -219,6 +312,27 @@ func (s *ServiceTokenResponse) GetPermissions() *ServiceTokenPermissions {
 		return nil
 	}
 	return s.Permissions
+}
+
+func (s *ServiceTokenResponse) GetScopes() []*ServiceTokenScope {
+	if s == nil {
+		return nil
+	}
+	return s.Scopes
+}
+
+func (s *ServiceTokenResponse) GetRotatedFromId() *string {
+	if s == nil {
+		return nil
+	}
+	return s.RotatedFromId
+}
+
+func (s *ServiceTokenResponse) GetGraceUntil() *string {
+	if s == nil {
+		return nil
+	}
+	return s.GraceUntil
 }
 
 func (s *ServiceTokenResponse) GetExpiresAt() string {
@@ -263,6 +377,61 @@ func (s *ServiceTokenResponse) UnmarshalJSON(data []byte) error {
 }
 
 func (s *ServiceTokenResponse) String() string {
+	if len(s.rawJSON) > 0 {
+		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
+			return value
+		}
+	}
+	if value, err := internal.StringifyJSON(s); err == nil {
+		return value
+	}
+	return fmt.Sprintf("%#v", s)
+}
+
+type ServiceTokenScope struct {
+	EnvTypeId *string `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	// Key prefix (not a folder). `/db` matches `db` and `db/host`, not `dbx`.
+	Path string `json:"path" url:"path"`
+
+	extraProperties map[string]interface{}
+	rawJSON         json.RawMessage
+}
+
+func (s *ServiceTokenScope) GetEnvTypeId() *string {
+	if s == nil {
+		return nil
+	}
+	return s.EnvTypeId
+}
+
+func (s *ServiceTokenScope) GetPath() string {
+	if s == nil {
+		return ""
+	}
+	return s.Path
+}
+
+func (s *ServiceTokenScope) GetExtraProperties() map[string]interface{} {
+	return s.extraProperties
+}
+
+func (s *ServiceTokenScope) UnmarshalJSON(data []byte) error {
+	type unmarshaler ServiceTokenScope
+	var value unmarshaler
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*s = ServiceTokenScope(value)
+	extraProperties, err := internal.ExtractExtraProperties(data, *s)
+	if err != nil {
+		return err
+	}
+	s.extraProperties = extraProperties
+	s.rawJSON = json.RawMessage(data)
+	return nil
+}
+
+func (s *ServiceTokenScope) String() string {
 	if len(s.rawJSON) > 0 {
 		if value, err := internal.StringifyJSON(s.rawJSON); err == nil {
 			return value

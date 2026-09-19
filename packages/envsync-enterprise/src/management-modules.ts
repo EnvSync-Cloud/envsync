@@ -77,4 +77,9 @@ export const enterpriseManagementModules: ApiModule[] = [
 		createRouter: async () => (await import("./routes/kms.route")).default,
 		registerBackgroundHandlers: startCmkRewrapWorker,
 	},
+	{
+		name: "acme",
+		mountPath: "/acme",
+		createRouter: async () => (await import("./routes/acme.route")).default,
+	},
 ];

@@ -90,6 +90,12 @@ export const coreApiModules: ApiModule[] = [
 		name: "certificate",
 		mountPath: "/certificate",
 		createRouter: async () => (await import("@/routes/certificate.route")).default,
+		registerBackgroundHandlers: async () => {
+			const { startCertificateLifecycleWorker } = await import(
+				"@/services/certificate-lifecycle.worker"
+			);
+			startCertificateLifecycleWorker();
+		},
 	},
 	{
 		name: "change_request",

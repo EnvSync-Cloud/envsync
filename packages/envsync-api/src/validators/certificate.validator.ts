@@ -19,6 +19,27 @@ export const issueMemberCertRequestSchema = z
 	})
 	.openapi({ ref: "IssueMemberCertRequest" });
 
+export const issueLeafCertRequestSchema = z
+	.object({
+		app_id: z.string().min(1).openapi({ example: "app_123" }),
+		env_type_id: z.string().optional(),
+		common_name: z.string().min(1).max(253).openapi({ example: "api.internal" }),
+		sans: z.array(z.string().min(1).max(253)).max(20).optional().openapi({ example: ["api.internal"] }),
+		ttl_days: z.number().int().min(1).max(825).optional().openapi({ example: 90 }),
+		key_algorithm: z.enum(["ECDSA_P256", "RSA_2048"]).optional().openapi({ example: "ECDSA_P256" }),
+		description: z.string().optional(),
+	})
+	.openapi({ ref: "IssueLeafCertRequest" });
+
+export const signCsrRequestSchema = z
+	.object({
+		app_id: z.string().optional(),
+		csr_pem: z.string().min(32).openapi({ example: "-----BEGIN CERTIFICATE REQUEST-----" }),
+		ttl_days: z.number().int().min(1).max(825).optional().openapi({ example: 90 }),
+		description: z.string().optional(),
+	})
+	.openapi({ ref: "SignCsrRequest" });
+
 const certificateMetadataSchema = z.record(z.string(), z.string()).nullable().optional();
 const baseCertificateFields = {
 	id: z.string().openapi({ example: "uuid" }),
@@ -64,6 +85,14 @@ export const rotateCertRequestSchema = z
 		reason: z.number().int().min(0).max(10).default(0),
 	})
 	.openapi({ ref: "RotateCertRequest" });
+
+export const setAutoRenewRequestSchema = z
+	.object({
+		auto_renew: z.boolean(),
+		renew_days_before: z.number().int().min(1).max(365).optional(),
+		env_type_id: z.string().nullable().optional(),
+	})
+	.openapi({ ref: "SetAutoRenewRequest" });
 
 export const getCRLQuerySchema = z
 	.object({
@@ -131,3 +160,27 @@ export const rootCAResponseSchema = z
 		cert_pem: z.string().openapi({ example: "-----BEGIN CERTIFICATE-----..." }),
 	})
 	.openapi({ ref: "RootCAResponse" });
+
+export const certificateChainResponseSchema = z
+	.object({
+		chain_pem: z.string(),
+		org_ca_pem: z.string().nullable(),
+		root_ca_pem: z.string(),
+		imported_count: z.number().int(),
+	})
+	.openapi({ ref: "CertificateChainResponse" });
+
+export const importChainRequestSchema = z
+	.object({
+		chain_pem: z.string().min(32),
+		env_type_id: z.string().optional(),
+		description: z.string().optional(),
+	})
+	.openapi({ ref: "ImportChainRequest" });
+
+export const labelEnvCaRequestSchema = z
+	.object({
+		env_type_id: z.string().min(1),
+		name: z.string().optional(),
+	})
+	.openapi({ ref: "LabelEnvCaRequest" });

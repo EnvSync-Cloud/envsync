@@ -305,8 +305,9 @@ export async function createApiApp(surface: ApiSurface) {
 	// Single manage product path (core + optional second process).
 	if (manageMounted) {
 		app.route(MANAGE_API_PREFIX, await createApiRoutes("management"));
-		const { publicSamlRouter } = await import("envsync-enterprise");
+		const { publicSamlRouter, publicAcmeRouter } = await import("envsync-enterprise");
 		app.route("/api/saml", publicSamlRouter);
+		app.route("/api/acme", publicAcmeRouter);
 	}
 
 	const openApiDocumentation = {

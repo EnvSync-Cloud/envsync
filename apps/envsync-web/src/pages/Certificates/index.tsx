@@ -37,6 +37,7 @@ const Certificates = () => {
   const { data: orgCA } = api.certificates.getOrgCA();
   const { data: rootCA } = api.certificates.getRootCA();
   const { data: users = [] } = api.users.getAllUsers();
+  const { data: apps = [] } = api.applications.allApplications();
   const copy = useCopy({ onSuccess: () => toast.success("Copied") });
   const crlUrl = `${runtimeConfig.apiBaseUrl.replace(/\/$/, "")}/api/certificate/crl`;
 
@@ -50,7 +51,13 @@ const Certificates = () => {
   const [issueEmail, setIssueEmail] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
   const [issueMetadata, setIssueMetadata] = useState<{key: string, value: string}[]>([]);
-  const [issuedCert, setIssuedCert] = useState<{ cert_pem: string; key_pem: string } | null>(null);
+  const [issuedCert, setIssuedCert] = useState<{ cert_pem: string; key_pem?: string } | null>(null);
+  const [isLeafOpen, setIsLeafOpen] = useState(false);
+  const [leafAppId, setLeafAppId] = useState("");
+  const [leafCn, setLeafCn] = useState("");
+  const [leafSans, setLeafSans] = useState("");
+  const [leafCsr, setLeafCsr] = useState("");
+  const [leafMode, setLeafMode] = useState<"managed" | "csr">("managed");
 
   // Revoke dialog
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
@@ -92,6 +99,28 @@ const Certificates = () => {
     },
     onError: ({ error }) => toast.error(error.message || "Failed to renew certificate"),
   });
+  const issueLeaf = api.certificates.issueLeafCert({
+    onSuccess: ({ data }) => {
+      toast.success("Service certificate issued");
+      setIssuedCert({ cert_pem: data.cert_pem || "", key_pem: data.key_pem });
+      setIsLeafOpen(false);
+      setIsIssueOpen(true);
+    },
+    onError: ({ error }) => toast.error(error.message || "Failed to issue leaf"),
+  });
+  const signCsr = api.certificates.signCsr({
+    onSuccess: ({ data }) => {
+      toast.success("CSR signed");
+      setIssuedCert({ cert_pem: data.cert_pem || "" });
+      setIsLeafOpen(false);
+      setIsIssueOpen(true);
+    },
+    onError: ({ error }) => toast.error(error.message || "Failed to sign CSR"),
+  });
+  const setAutoRenew = api.certificates.setAutoRenew({
+    onSuccess: () => toast.success("Auto-renew updated"),
+    onError: ({ error }) => toast.error(error.message || "Failed to update auto-renew"),
+  });
   const rotateCert = api.certificates.rotateCert({
     onSuccess: ({ data }) => {
       toast.success("Certificate rotated");
@@ -119,6 +148,25 @@ const Certificates = () => {
       metadata: Object.keys(metadataObj).length > 0 ? metadataObj : undefined,
     });
   }, [issueEmail, issueDescription, issueMetadata, issueCert]);
+
+  const handleIssueLeaf = useCallback(() => {
+    if (leafMode === "csr") {
+      if (!leafCsr.trim()) return;
+      signCsr.mutate({
+        app_id: leafAppId || undefined,
+        csr_pem: leafCsr,
+        ttl_days: 90,
+      });
+      return;
+    }
+    if (!leafAppId || !leafCn.trim()) return;
+    issueLeaf.mutate({
+      app_id: leafAppId,
+      common_name: leafCn.trim(),
+      sans: leafSans.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean),
+      ttl_days: 90,
+    });
+  }, [leafMode, leafCsr, leafAppId, leafCn, leafSans, signCsr, issueLeaf]);
 
   const handleRevoke = useCallback(() => {
     if (!revokeSerial) return;
@@ -162,7 +210,9 @@ const Certificates = () => {
   const getTypeBadge = (type: string) => {
     return type === "org_ca"
       ? <Badge className="bg-blue-600">CA</Badge>
-      : <Badge variant="outline" className="border-border text-muted-foreground">Member</Badge>;
+      : type === "leaf"
+        ? <Badge variant="outline">Service</Badge>
+        : <Badge variant="outline" className="border-border text-muted-foreground">Member</Badge>;
   };
 
   if (isLoading) {
@@ -183,6 +233,7 @@ const Certificates = () => {
         icon={ShieldCheck}
         actions={<div className="flex gap-2">
           {hasCA && (
+            <>
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
               <DialogTrigger asChild>
                 <Button className="bg-emerald-500 hover:bg-emerald-600" data-testid="certificate-issue-button">
@@ -315,6 +366,67 @@ const Certificates = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <Dialog open={isLeafOpen} onOpenChange={(isOpen) => { setIsLeafOpen(isOpen); if (!isOpen) { setLeafCsr(""); setLeafCn(""); } }}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="certificate-issue-leaf-button">
+                  <Plus className="w-4 h-4 mr-2" /> Issue service cert
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Issue service certificate</DialogTitle>
+                  <DialogDescription>Project leaf for TLS/mTLS. Key is shown once, or sign your CSR.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button type="button" variant={leafMode === "managed" ? "default" : "outline"} size="sm" onClick={() => setLeafMode("managed")}>
+                      Managed key
+                    </Button>
+                    <Button type="button" variant={leafMode === "csr" ? "default" : "outline"} size="sm" onClick={() => setLeafMode("csr")}>
+                      Sign CSR
+                    </Button>
+                  </div>
+                  <div>
+                    <Label>Project</Label>
+                    <select
+                      className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      value={leafAppId}
+                      onChange={(event) => setLeafAppId(event.target.value)}
+                    >
+                      <option value="">Select project</option>
+                      {apps.map((app) => (
+                        <option key={app.id} value={app.id}>{app.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {leafMode === "managed" ? (
+                    <>
+                      <div>
+                        <Label>Common name</Label>
+                        <Input value={leafCn} onChange={(event) => setLeafCn(event.target.value)} placeholder="api.internal" />
+                      </div>
+                      <div>
+                        <Label>SANs (comma-separated)</Label>
+                        <Input value={leafSans} onChange={(event) => setLeafSans(event.target.value)} placeholder="api.internal, 10.0.0.4" />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <Label>CSR PEM</Label>
+                      <Textarea value={leafCsr} onChange={(event) => setLeafCsr(event.target.value)} className="min-h-32 font-mono text-xs" />
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsLeafOpen(false)}>Cancel</Button>
+                  <Button onClick={handleIssueLeaf} disabled={issueLeaf.isPending || signCsr.isPending}>
+                    {(issueLeaf.isPending || signCsr.isPending) && <Loader2 className="mr-2 size-4 animate-spin" />}
+                    {leafMode === "csr" ? "Sign" : "Issue"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            </>
           )}
         </div>}
       >
@@ -448,6 +560,23 @@ const Certificates = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex justify-end gap-1">
+                          {cert.status === "active" && cert.cert_type === "leaf" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={(cert as { auto_renew?: boolean }).auto_renew ? "text-emerald-400" : "text-muted-foreground"}
+                              data-testid="certificate-auto-renew-button"
+                              onClick={() =>
+                                setAutoRenew.mutate({
+                                  id: cert.id,
+                                  auto_renew: !(cert as { auto_renew?: boolean }).auto_renew,
+                                })
+                              }
+                              title="Toggle auto-renew"
+                            >
+                              Auto
+                            </Button>
+                          )}
                           {cert.status === "active" && cert.cert_type !== "org_ca" && (
                             <Button
                               variant="ghost"

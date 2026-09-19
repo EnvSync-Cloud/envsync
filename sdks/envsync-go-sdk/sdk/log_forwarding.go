@@ -123,6 +123,9 @@ const (
 	LogForwardingResponseProviderTypeDatadog   LogForwardingResponseProviderType = "datadog"
 	LogForwardingResponseProviderTypeSplunk    LogForwardingResponseProviderType = "splunk"
 	LogForwardingResponseProviderTypeSumoLogic LogForwardingResponseProviderType = "sumo-logic"
+	LogForwardingResponseProviderTypeLogstash  LogForwardingResponseProviderType = "logstash"
+	LogForwardingResponseProviderTypeFluentd   LogForwardingResponseProviderType = "fluentd"
+	LogForwardingResponseProviderTypeOtlp      LogForwardingResponseProviderType = "otlp"
 )
 
 func NewLogForwardingResponseProviderTypeFromString(s string) (LogForwardingResponseProviderType, error) {
@@ -133,6 +136,12 @@ func NewLogForwardingResponseProviderTypeFromString(s string) (LogForwardingResp
 		return LogForwardingResponseProviderTypeSplunk, nil
 	case "sumo-logic":
 		return LogForwardingResponseProviderTypeSumoLogic, nil
+	case "logstash":
+		return LogForwardingResponseProviderTypeLogstash, nil
+	case "fluentd":
+		return LogForwardingResponseProviderTypeFluentd, nil
+	case "otlp":
+		return LogForwardingResponseProviderTypeOtlp, nil
 	}
 	var t LogForwardingResponseProviderType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -150,6 +159,9 @@ const (
 	CreateLogForwardingRequestProviderTypeDatadog   CreateLogForwardingRequestProviderType = "datadog"
 	CreateLogForwardingRequestProviderTypeSplunk    CreateLogForwardingRequestProviderType = "splunk"
 	CreateLogForwardingRequestProviderTypeSumoLogic CreateLogForwardingRequestProviderType = "sumo-logic"
+	CreateLogForwardingRequestProviderTypeLogstash  CreateLogForwardingRequestProviderType = "logstash"
+	CreateLogForwardingRequestProviderTypeFluentd   CreateLogForwardingRequestProviderType = "fluentd"
+	CreateLogForwardingRequestProviderTypeOtlp      CreateLogForwardingRequestProviderType = "otlp"
 )
 
 func NewCreateLogForwardingRequestProviderTypeFromString(s string) (CreateLogForwardingRequestProviderType, error) {
@@ -160,6 +172,12 @@ func NewCreateLogForwardingRequestProviderTypeFromString(s string) (CreateLogFor
 		return CreateLogForwardingRequestProviderTypeSplunk, nil
 	case "sumo-logic":
 		return CreateLogForwardingRequestProviderTypeSumoLogic, nil
+	case "logstash":
+		return CreateLogForwardingRequestProviderTypeLogstash, nil
+	case "fluentd":
+		return CreateLogForwardingRequestProviderTypeFluentd, nil
+	case "otlp":
+		return CreateLogForwardingRequestProviderTypeOtlp, nil
 	}
 	var t CreateLogForwardingRequestProviderType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

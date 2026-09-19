@@ -7,9 +7,12 @@ import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	initOrgCARequestSchema,
 	issueMemberCertRequestSchema,
+	issueLeafCertRequestSchema,
+	signCsrRequestSchema,
 	revokeCertRequestSchema,
 	renewCertRequestSchema,
 	rotateCertRequestSchema,
+	setAutoRenewRequestSchema,
 	orgCAResponseSchema,
 	memberCertResponseSchema,
 	certificateListResponseSchema,
@@ -18,6 +21,9 @@ import {
 	ocspResponseSchema,
 	rootCAResponseSchema,
 	myCertificateBundleResponseSchema,
+	certificateChainResponseSchema,
+	importChainRequestSchema,
+	labelEnvCaRequestSchema,
 } from "@/validators/certificate.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { authMiddleware } from "@/middlewares/auth.middleware";
@@ -99,6 +105,62 @@ app.get(
 	CertificateController.getRootCA,
 );
 
+app.get(
+	"/chain",
+	requirePermission("can_view", "org"),
+	describeRoute({
+		operationId: "getCertificateChain",
+		summary: "Get CA chain",
+		description: "PEM bundle of imported chains, organization CA, and root CA",
+		tags: ["Certificates"],
+		responses: {
+			200: {
+				description: "CA chain",
+				content: { "application/json": { schema: resolver(certificateChainResponseSchema) } },
+			},
+		},
+	}),
+	CertificateController.getChain,
+);
+
+app.post(
+	"/ca/import-chain",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "importCertificateChain",
+		summary: "Import an external CA chain",
+		description: "Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Chain imported",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", importChainRequestSchema),
+	CertificateController.importChain,
+);
+
+app.post(
+	"/ca/env",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "labelEnvironmentCa",
+		summary: "Label an environment CA",
+		description: "Enterprise-only. Record an environment-scoped CA label. Leaves remain signed by the org intermediate.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Environment CA labeled",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", labelEnvCaRequestSchema),
+	CertificateController.labelEnvCa,
+);
+
 // Issue member certificate
 app.post(
 	"/issue",
@@ -121,6 +183,44 @@ app.post(
 	}),
 	zValidator("json", issueMemberCertRequestSchema),
 	CertificateController.issueMemberCert,
+);
+
+app.post(
+	"/issue-leaf",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "issueLeafCert",
+		summary: "Issue service leaf certificate",
+		description: "Issue a project-scoped leaf certificate with DNS/IP SANs. Private key is returned once.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Leaf certificate issued",
+				content: { "application/json": { schema: resolver(memberCertResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", issueLeafCertRequestSchema),
+	CertificateController.issueLeaf,
+);
+
+app.post(
+	"/sign-csr",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "signCertificateCsr",
+		summary: "Sign a CSR",
+		description: "Sign a client-generated CSR with the organization CA. Private key never leaves the client.",
+		tags: ["Certificates"],
+		responses: {
+			201: {
+				description: "Certificate signed",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", signCsrRequestSchema),
+	CertificateController.signCsr,
 );
 
 // Get CRL
@@ -283,6 +383,25 @@ app.post(
 	}),
 	zValidator("json", rotateCertRequestSchema),
 	CertificateController.rotateCert,
+);
+
+app.patch(
+	"/:id/auto-renew",
+	requirePermission("can_manage_certificates", "org"),
+	describeRoute({
+		operationId: "setCertificateAutoRenew",
+		summary: "Configure leaf auto-renew",
+		description: "Enterprise-only. Auto-renew managed service certificates and optionally write ENVSYNC_TLS_* secrets.",
+		tags: ["Certificates"],
+		responses: {
+			200: {
+				description: "Auto-renew updated",
+				content: { "application/json": { schema: resolver(orgCAResponseSchema) } },
+			},
+		},
+	}),
+	zValidator("json", setAutoRenewRequestSchema),
+	CertificateController.setAutoRenew,
 );
 
 // Check OCSP status

@@ -40,7 +40,7 @@ func (c *Client) GetLogForwardingConfigs(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/log_forwarding"
 	headers := internal.MergeHeaders(
@@ -85,7 +85,7 @@ func (c *Client) CreateLogForwardingConfig(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/v1/manage/log_forwarding"
 	headers := internal.MergeHeaders(
@@ -132,7 +132,7 @@ func (c *Client) GetLogForwardingConfig(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/log_forwarding/%v",
@@ -185,7 +185,7 @@ func (c *Client) DeleteLogForwardingConfig(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/v1/manage/log_forwarding/%v",

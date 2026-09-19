@@ -5,7 +5,9 @@
 export type OrgFeatureGrantResponse = {
     org_id: string;
     unrestricted: boolean;
+    plan?: string;
     features: Array<string>;
+    overlay_features: Array<string>;
     source: string | null;
     updated_by: string | null;
     created_at: string | null;

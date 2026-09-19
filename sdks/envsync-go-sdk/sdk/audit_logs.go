@@ -14,6 +14,7 @@ type GetAuditLogsRequest struct {
 	FilterByUser     *string                              `json:"-" url:"filter_by_user,omitempty"`
 	FilterByCategory *GetAuditLogsRequestFilterByCategory `json:"-" url:"filter_by_category,omitempty"`
 	FilterByPastTime *GetAuditLogsRequestFilterByPastTime `json:"-" url:"filter_by_past_time,omitempty"`
+	Q                *string                              `json:"-" url:"q,omitempty"`
 }
 
 type GetAuditLogsResponse = []*GetAuditLogsResponseItem

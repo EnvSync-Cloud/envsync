@@ -148,7 +148,7 @@ services:
 
   minikms_migrate:
     image: postgres:17
-    command: ["sh", "-c", "psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/002_vault_storage.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/003_escrow_recovery.sql"]
+    command: ["sh", "-c", "psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/002_vault_storage.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/003_escrow_recovery.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/004_multi_replica_ha.sql"]
     environment:
       PGPASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
     volumes:
@@ -159,18 +159,25 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-9ffbf53
+    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
     ports:
       - "${MINIKMS_GRPC_PORT:-50051}:50051"
     restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-ca-key && exec minikms
     environment:
       MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
       MINIKMS_SESSION_SIGNING_KEY_FILE: /run/secrets/minikms-session-signing-key
+      MINIKMS_ROOT_CA_CERT_FILE: /run/secrets/minikms-root-ca-cert
+      MINIKMS_ROOT_CA_KEY_FILE: /tmp/minikms-root-ca-key
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_GRPC_ADDR: 0.0.0.0:50051
     volumes:
       - ./docker/minikms/session-signing-key.dev.pem:/run/secrets/minikms-session-signing-key:ro
+      - ./docker/minikms/root-ca-cert.dev.pem:/run/secrets/minikms-root-ca-cert:ro
+      - ./docker/minikms/root-ca-key.dev.pem:/run/secrets/minikms-root-ca-key:ro
     depends_on:
       - minikms_migrate
       - redis

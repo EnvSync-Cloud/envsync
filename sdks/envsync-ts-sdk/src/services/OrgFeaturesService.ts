@@ -38,7 +38,7 @@ export class OrgFeaturesService {
     }
     /**
      * Replace Organization Feature Grant
-     * Full replace. Empty features[] denies every EE feature. Unknown catalog keys are dropped.
+     * Patch plan and/or overlay_features. Omitted fields stay. Overlay is additive on the plan defaults and does not change numeric caps. Unknown catalog keys are dropped.
      * @param xEnvSyncPlatformToken
      * @param orgId
      * @param requestBody
@@ -70,7 +70,7 @@ export class OrgFeaturesService {
     }
     /**
      * Delete Organization Feature Grant
-     * Drops the grant row so the organization is unrestricted.
+     * Resets the organization to the Developer plan with an empty overlay.
      * @param xEnvSyncPlatformToken
      * @param orgId
      * @returns OrgFeatureGrantResponse Grant deleted; organization unrestricted

@@ -50,7 +50,7 @@ export class ChangeRequestsService {
     }
     /**
      * List Change Requests
-     * List change requests for the current organization.
+     * List change requests for the current organization. Pass app_id to limit the list to one project.
      * @returns ChangeRequestListResponse Change requests listed
      * @throws ApiError
      */

@@ -2,10 +2,14 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CertificateChainResponse } from '../models/CertificateChainResponse';
 import type { CertificateListResponse } from '../models/CertificateListResponse';
 import type { CRLResponse } from '../models/CRLResponse';
+import type { ImportChainRequest } from '../models/ImportChainRequest';
 import type { InitOrgCARequest } from '../models/InitOrgCARequest';
+import type { IssueLeafCertRequest } from '../models/IssueLeafCertRequest';
 import type { IssueMemberCertRequest } from '../models/IssueMemberCertRequest';
+import type { LabelEnvCaRequest } from '../models/LabelEnvCaRequest';
 import type { MemberCertResponse } from '../models/MemberCertResponse';
 import type { MyCertificateBundleResponse } from '../models/MyCertificateBundleResponse';
 import type { OCSPResponse } from '../models/OCSPResponse';
@@ -15,6 +19,8 @@ import type { RevokeCertRequest } from '../models/RevokeCertRequest';
 import type { RevokeCertResponse } from '../models/RevokeCertResponse';
 import type { RootCAResponse } from '../models/RootCAResponse';
 import type { RotateCertRequest } from '../models/RotateCertRequest';
+import type { SetAutoRenewRequest } from '../models/SetAutoRenewRequest';
+import type { SignCsrRequest } from '../models/SignCsrRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class CertificatesService {
@@ -70,6 +76,52 @@ export class CertificatesService {
         });
     }
     /**
+     * Get CA chain
+     * PEM bundle of imported chains, organization CA, and root CA
+     * @returns CertificateChainResponse CA chain
+     * @throws ApiError
+     */
+    public getCertificateChain(): CancelablePromise<CertificateChainResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/api/certificate/chain',
+        });
+    }
+    /**
+     * Import an external CA chain
+     * Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.
+     * @param requestBody
+     * @returns OrgCAResponse Chain imported
+     * @throws ApiError
+     */
+    public importCertificateChain(
+        requestBody?: ImportChainRequest,
+    ): CancelablePromise<OrgCAResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/ca/import-chain',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Label an environment CA
+     * Enterprise-only. Record an environment-scoped CA label. Leaves remain signed by the org intermediate.
+     * @param requestBody
+     * @returns OrgCAResponse Environment CA labeled
+     * @throws ApiError
+     */
+    public labelEnvironmentCa(
+        requestBody?: LabelEnvCaRequest,
+    ): CancelablePromise<OrgCAResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/ca/env',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
      * Issue Member Certificate
      * Issue a new member certificate signed by the organization CA
      * @param requestBody
@@ -87,6 +139,40 @@ export class CertificatesService {
             errors: {
                 500: `Internal server error`,
             },
+        });
+    }
+    /**
+     * Issue service leaf certificate
+     * Issue a project-scoped leaf certificate with DNS/IP SANs. Private key is returned once.
+     * @param requestBody
+     * @returns MemberCertResponse Leaf certificate issued
+     * @throws ApiError
+     */
+    public issueLeafCert(
+        requestBody?: IssueLeafCertRequest,
+    ): CancelablePromise<MemberCertResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/issue-leaf',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Sign a CSR
+     * Sign a client-generated CSR with the organization CA. Private key never leaves the client.
+     * @param requestBody
+     * @returns OrgCAResponse Certificate signed
+     * @throws ApiError
+     */
+    public signCertificateCsr(
+        requestBody?: SignCsrRequest,
+    ): CancelablePromise<OrgCAResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/sign-csr',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**
@@ -228,6 +314,28 @@ export class CertificatesService {
             errors: {
                 500: `Internal server error`,
             },
+        });
+    }
+    /**
+     * Configure leaf auto-renew
+     * Enterprise-only. Auto-renew managed service certificates and optionally write ENVSYNC_TLS_* secrets.
+     * @param id
+     * @param requestBody
+     * @returns OrgCAResponse Auto-renew updated
+     * @throws ApiError
+     */
+    public setCertificateAutoRenew(
+        id: string,
+        requestBody?: SetAutoRenewRequest,
+    ): CancelablePromise<OrgCAResponse> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/api/certificate/{id}/auto-renew',
+            path: {
+                'id': id,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

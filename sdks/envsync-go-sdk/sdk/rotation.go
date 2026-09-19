@@ -226,14 +226,10 @@ func (r *RotationPolicyResponse) String() string {
 type RotationPolicyResponseEngineType string
 
 const (
-	RotationPolicyResponseEngineTypePostgres          RotationPolicyResponseEngineType = "postgres"
-	RotationPolicyResponseEngineTypeMysql             RotationPolicyResponseEngineType = "mysql"
-	RotationPolicyResponseEngineTypeAwsIam            RotationPolicyResponseEngineType = "aws-iam"
-	RotationPolicyResponseEngineTypeAzureSp           RotationPolicyResponseEngineType = "azure-sp"
-	RotationPolicyResponseEngineTypeGcpServiceAccount RotationPolicyResponseEngineType = "gcp-service-account"
-	RotationPolicyResponseEngineTypeCloudflarePages   RotationPolicyResponseEngineType = "cloudflare-pages"
-	RotationPolicyResponseEngineTypeSendgrid          RotationPolicyResponseEngineType = "sendgrid"
-	RotationPolicyResponseEngineTypeTwilio            RotationPolicyResponseEngineType = "twilio"
+	RotationPolicyResponseEngineTypePostgres RotationPolicyResponseEngineType = "postgres"
+	RotationPolicyResponseEngineTypeMysql    RotationPolicyResponseEngineType = "mysql"
+	RotationPolicyResponseEngineTypeMongodb  RotationPolicyResponseEngineType = "mongodb"
+	RotationPolicyResponseEngineTypeAwsIam   RotationPolicyResponseEngineType = "aws-iam"
 )
 
 func NewRotationPolicyResponseEngineTypeFromString(s string) (RotationPolicyResponseEngineType, error) {
@@ -242,18 +238,10 @@ func NewRotationPolicyResponseEngineTypeFromString(s string) (RotationPolicyResp
 		return RotationPolicyResponseEngineTypePostgres, nil
 	case "mysql":
 		return RotationPolicyResponseEngineTypeMysql, nil
+	case "mongodb":
+		return RotationPolicyResponseEngineTypeMongodb, nil
 	case "aws-iam":
 		return RotationPolicyResponseEngineTypeAwsIam, nil
-	case "azure-sp":
-		return RotationPolicyResponseEngineTypeAzureSp, nil
-	case "gcp-service-account":
-		return RotationPolicyResponseEngineTypeGcpServiceAccount, nil
-	case "cloudflare-pages":
-		return RotationPolicyResponseEngineTypeCloudflarePages, nil
-	case "sendgrid":
-		return RotationPolicyResponseEngineTypeSendgrid, nil
-	case "twilio":
-		return RotationPolicyResponseEngineTypeTwilio, nil
 	}
 	var t RotationPolicyResponseEngineType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)
@@ -432,14 +420,10 @@ func (t *TriggerRotationResponse) String() string {
 type CreateRotationPolicyRequestEngineType string
 
 const (
-	CreateRotationPolicyRequestEngineTypePostgres          CreateRotationPolicyRequestEngineType = "postgres"
-	CreateRotationPolicyRequestEngineTypeMysql             CreateRotationPolicyRequestEngineType = "mysql"
-	CreateRotationPolicyRequestEngineTypeAwsIam            CreateRotationPolicyRequestEngineType = "aws-iam"
-	CreateRotationPolicyRequestEngineTypeAzureSp           CreateRotationPolicyRequestEngineType = "azure-sp"
-	CreateRotationPolicyRequestEngineTypeGcpServiceAccount CreateRotationPolicyRequestEngineType = "gcp-service-account"
-	CreateRotationPolicyRequestEngineTypeCloudflarePages   CreateRotationPolicyRequestEngineType = "cloudflare-pages"
-	CreateRotationPolicyRequestEngineTypeSendgrid          CreateRotationPolicyRequestEngineType = "sendgrid"
-	CreateRotationPolicyRequestEngineTypeTwilio            CreateRotationPolicyRequestEngineType = "twilio"
+	CreateRotationPolicyRequestEngineTypePostgres CreateRotationPolicyRequestEngineType = "postgres"
+	CreateRotationPolicyRequestEngineTypeMysql    CreateRotationPolicyRequestEngineType = "mysql"
+	CreateRotationPolicyRequestEngineTypeMongodb  CreateRotationPolicyRequestEngineType = "mongodb"
+	CreateRotationPolicyRequestEngineTypeAwsIam   CreateRotationPolicyRequestEngineType = "aws-iam"
 )
 
 func NewCreateRotationPolicyRequestEngineTypeFromString(s string) (CreateRotationPolicyRequestEngineType, error) {
@@ -448,18 +432,10 @@ func NewCreateRotationPolicyRequestEngineTypeFromString(s string) (CreateRotatio
 		return CreateRotationPolicyRequestEngineTypePostgres, nil
 	case "mysql":
 		return CreateRotationPolicyRequestEngineTypeMysql, nil
+	case "mongodb":
+		return CreateRotationPolicyRequestEngineTypeMongodb, nil
 	case "aws-iam":
 		return CreateRotationPolicyRequestEngineTypeAwsIam, nil
-	case "azure-sp":
-		return CreateRotationPolicyRequestEngineTypeAzureSp, nil
-	case "gcp-service-account":
-		return CreateRotationPolicyRequestEngineTypeGcpServiceAccount, nil
-	case "cloudflare-pages":
-		return CreateRotationPolicyRequestEngineTypeCloudflarePages, nil
-	case "sendgrid":
-		return CreateRotationPolicyRequestEngineTypeSendgrid, nil
-	case "twilio":
-		return CreateRotationPolicyRequestEngineTypeTwilio, nil
 	}
 	var t CreateRotationPolicyRequestEngineType
 	return "", fmt.Errorf("%s is not a valid %T", s, t)

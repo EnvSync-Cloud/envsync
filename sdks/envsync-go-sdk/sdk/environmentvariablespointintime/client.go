@@ -41,7 +41,7 @@ func (c *Client) GetEnvHistory(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/history"
 	headers := internal.MergeHeaders(
@@ -88,7 +88,7 @@ func (c *Client) GetEnvsAtPointInTime(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/pit"
 	headers := internal.MergeHeaders(
@@ -135,7 +135,7 @@ func (c *Client) GetEnvsAtTimestamp(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/timestamp"
 	headers := internal.MergeHeaders(
@@ -182,7 +182,7 @@ func (c *Client) GetEnvDiff(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/diff"
 	headers := internal.MergeHeaders(
@@ -229,7 +229,7 @@ func (c *Client) GetEnvDiffByTimestampRange(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := baseURL + "/api/env/diff/timestamp-range"
 	headers := internal.MergeHeaders(
@@ -277,7 +277,7 @@ func (c *Client) GetVariableTimeline(
 	baseURL := internal.ResolveBaseURL(
 		options.BaseURL,
 		c.baseURL,
-		"http://localhost:0",
+		"http://localhost:4000",
 	)
 	endpointURL := internal.EncodeURL(
 		baseURL+"/api/env/timeline/%v",

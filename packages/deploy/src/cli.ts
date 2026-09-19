@@ -287,6 +287,8 @@ const OTEL_AGENT_CONF = path.join(DEPLOY_ROOT, "otel-agent.yaml");
 const CLICKSTACK_CLICKHOUSE_CONF = path.join(DEPLOY_ROOT, "clickhouse-listen.xml");
 const INTERNAL_CONFIG_JSON = path.join(DEPLOY_ROOT, "config.json");
 const MINIKMS_SESSION_SIGNING_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-session-signing-key.pem");
+const MINIKMS_ROOT_CA_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-cert.pem");
+const MINIKMS_ROOT_CA_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-key.pem");
 const UPGRADE_BACKUPS_ROOT = path.join(BACKUPS_ROOT, "upgrade");
 const WIREGUARD_STATE_FILE = path.join(WIREGUARD_ROOT, "state.json");
 const WIREGUARD_PRIVATE_KEY_FILE = path.join(WIREGUARD_ROOT, "server-private.key");
@@ -669,6 +671,45 @@ function randomSecret(bytes = 24) {
 function generateMinikmsSessionSigningKey() {
 	const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
 	return privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+}
+
+function writeMinikmsRootCaIfMissing() {
+	if (fs.existsSync(MINIKMS_ROOT_CA_CERT_FILE) && fs.existsSync(MINIKMS_ROOT_CA_KEY_FILE)) {
+		return;
+	}
+	const key = spawnSync(
+		"openssl",
+		["ecparam", "-name", "secp384r1", "-genkey", "-noout"],
+		{ encoding: "utf8" },
+	);
+	if (key.status !== 0) {
+		throw new Error(`openssl failed to generate miniKMS root CA key: ${key.stderr}`);
+	}
+	writeFileMaybe(MINIKMS_ROOT_CA_KEY_FILE, key.stdout, 0o644);
+	const cert = spawnSync(
+		"openssl",
+		[
+			"req",
+			"-new",
+			"-x509",
+			"-key",
+			MINIKMS_ROOT_CA_KEY_FILE,
+			"-sha384",
+			"-days",
+			"3650",
+			"-subj",
+			"/CN=EnvSync miniKMS Root CA/O=EnvSync",
+			"-addext",
+			"basicConstraints=critical,CA:TRUE,pathlen:1",
+			"-addext",
+			"keyUsage=critical,keyCertSign,cRLSign",
+		],
+		{ encoding: "utf8" },
+	);
+	if (cert.status !== 0) {
+		throw new Error(`openssl failed to generate miniKMS root CA cert: ${cert.stderr}`);
+	}
+	writeFileMaybe(MINIKMS_ROOT_CA_CERT_FILE, cert.stdout, 0o644);
 }
 
 function deterministicInstallFingerprint(rootDomain: string, stackName: string) {
@@ -1785,6 +1826,7 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	}
 	// 0644: Swarm bind-mounts keep host uid; miniKMS does not run as root.
 	writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o644);
+	writeMinikmsRootCaIfMissing();
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
 	writeFileMaybe(
 		INTERNAL_CONFIG_JSON,
@@ -2192,6 +2234,7 @@ const MINIKMS_MIGRATE_SQL = [
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/001_initial_schema.sql",
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/002_vault_storage.sql",
 	"psql -h minikms_db -U postgres -d minikms -f /migrations/003_escrow_recovery.sql",
+	"psql -h minikms_db -U postgres -d minikms -f /migrations/004_multi_replica_ha.sql",
 ].join(" && ");
 
 function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
