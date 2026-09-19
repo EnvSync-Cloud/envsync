@@ -174,7 +174,7 @@ const Certificates = () => {
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-muted border-border">
+              <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-foreground">Issue Member Certificate</DialogTitle>
                   <DialogDescription className="text-muted-foreground">Issue a new certificate signed by the org CA</DialogDescription>
@@ -283,12 +283,17 @@ const Certificates = () => {
                 )}
                 <DialogFooter>
                   {!issuedCert ? (
-                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-emerald-500 hover:bg-emerald-600">
-                      {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Issue
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={() => setIsIssueOpen(false)} disabled={issueCert.isPending}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleIssue} disabled={issueCert.isPending}>
+                        {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {issueCert.isPending ? "Issuing..." : "Issue"}
+                      </Button>
+                    </>
                   ) : (
-                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline" className="border-border text-muted-foreground">
+                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline">
                       Done
                     </Button>
                   )}
@@ -333,7 +338,7 @@ const Certificates = () => {
                     Initialize CA
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-muted border-border">
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle className="text-foreground">Initialize Organization CA</DialogTitle>
                     <DialogDescription className="text-muted-foreground">Create an intermediate CA for your organization</DialogDescription>
@@ -349,9 +354,12 @@ const Certificates = () => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                    <Button variant="outline" onClick={() => setIsInitCAOpen(false)} disabled={initCA.isPending}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleInitCA} disabled={initCA.isPending}>
                       {initCA.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Initialize
+                      {initCA.isPending ? "Initializing..." : "Initialize"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -469,7 +477,7 @@ const Certificates = () => {
 
       {/* Revoke Dialog */}
       <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>
-        <DialogContent className="bg-muted border-border">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-foreground">Revoke Certificate</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -491,7 +499,7 @@ const Certificates = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRevokeOpen(false)} className="border-border text-muted-foreground">Cancel</Button>
+            <Button variant="outline" onClick={() => setIsRevokeOpen(false)}>Cancel</Button>
             <Button onClick={handleRevoke} disabled={revokeCert.isPending} variant="destructive">
               {revokeCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Revoke

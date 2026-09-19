@@ -392,6 +392,9 @@ export default function OrgLogForwarding() {
             )}
           </div>
           <SheetFooter>
+            <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={createConfig.isPending}>
+              Cancel
+            </Button>
             <Button onClick={() => void onCreate()} disabled={createConfig.isPending}>
               Create destination
             </Button>

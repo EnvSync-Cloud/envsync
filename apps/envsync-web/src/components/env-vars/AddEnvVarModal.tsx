@@ -345,7 +345,6 @@ export const AddEnvVarModal = ({
           </Button>
           <Button
             onClick={handleSave}
-            className={`text-foreground ${buttonColor}`}
             disabled={
               isSaving ||
               !formData.key ||

@@ -325,7 +325,6 @@ export const RoleEditForm = ({
           {edit ? (
             <Button
               onClick={handleUpdateRole}
-              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
               disabled={!unsavedChanges || updateRoleMutation.isPending}
             >
               Update
@@ -333,7 +332,6 @@ export const RoleEditForm = ({
           ) : (
             <Button
               onClick={handleCreateRole}
-              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
               disabled={!name || createRoleMutation.isPending}
             >
               Create

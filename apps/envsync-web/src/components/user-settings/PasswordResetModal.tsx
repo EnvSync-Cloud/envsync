@@ -69,7 +69,6 @@ export const PasswordResetModal = ({
           </Button>
           <Button
             onClick={onResetPassword}
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isLoading}
           >
             {isLoading ? (

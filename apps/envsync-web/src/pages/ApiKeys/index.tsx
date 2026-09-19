@@ -5,6 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Plus, Key, Copy } from "lucide-react";
 import { useState, useCallback } from "react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -30,6 +40,9 @@ export const ApiKeys = () => {
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyDescription, setNewKeyDescription] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [createdKeyMode, setCreatedKeyMode] = useState<"created" | "rotated">("created");
+  const [pendingRotateId, setPendingRotateId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [actionLoadingStates, setActionLoadingStates] = useState<
     Record<string, boolean>
   >({});
@@ -43,6 +56,7 @@ export const ApiKeys = () => {
   const createApiKey = api.apiKeys.createApiKey({
     onSuccess: ({ data }) => {
       setCreatedKey(data.key);
+      setCreatedKeyMode("created");
       setNewKeyName("");
       setNewKeyDescription("");
       setIsCreateModalOpen(false);
@@ -58,6 +72,7 @@ export const ApiKeys = () => {
       setActionLoading(apiKeyId, true);
     },
     onSuccess: ({ variables: apiKeyId }) => {
+      setPendingDeleteId(null);
       setActionLoading(apiKeyId, false);
     },
     onError: ({ variables: apiKeyId }) => {
@@ -86,6 +101,8 @@ export const ApiKeys = () => {
     },
     onSuccess: ({ data, variables: apiKeyId }) => {
       setCreatedKey(data.newKey);
+      setCreatedKeyMode("rotated");
+      setPendingRotateId(null);
       setShowCreatedKeyModalOpen(true);
       setActionLoading(apiKeyId, false);
     },
@@ -110,14 +127,7 @@ export const ApiKeys = () => {
   const handleDeleteApiKey = useCallback(
     (apiKeyId: string) => {
       if (actionLoadingStates[apiKeyId] || deleteApiKey.isPending) return;
-
-      if (
-        window.confirm(
-          "Are you sure you want to delete this API key? This action cannot be undone."
-        )
-      ) {
-        deleteApiKey.mutate(apiKeyId);
-      }
+      setPendingDeleteId(apiKeyId);
     },
     [actionLoadingStates, deleteApiKey]
   );
@@ -125,7 +135,7 @@ export const ApiKeys = () => {
   const handleRegenerateKey = useCallback(
     (apiKeyId: string) => {
       if (actionLoadingStates[apiKeyId] || regenerateApiKey.isPending) return;
-      regenerateApiKey.mutate(apiKeyId);
+      setPendingRotateId(apiKeyId);
     },
     [actionLoadingStates, regenerateApiKey]
   );
@@ -168,10 +178,13 @@ export const ApiKeys = () => {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>API Key Created</DialogTitle>
+              <DialogTitle>
+                {createdKeyMode === "rotated" ? "API Key Rotated" : "API Key Created"}
+              </DialogTitle>
               <DialogDescription>
-                Your new API key has been created successfully. Make sure to
-                copy it as you won't be able to see it again.
+                {createdKeyMode === "rotated"
+                  ? "The previous value no longer works. Copy the new key — it is shown only once."
+                  : "Your new API key has been created. Copy it — you won't be able to see it again."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -200,7 +213,7 @@ export const ApiKeys = () => {
                 variant="outline"
                 onClick={() => setShowCreatedKeyModalOpen(false)}
               >
-                Close
+                Done
               </Button>
               <Button
                 onClick={() => copy.mutate(createdKey || "")}
@@ -373,6 +386,44 @@ export const ApiKeys = () => {
           )}
         </CardContent>
       </Card>
+
+        <AlertDialog open={Boolean(pendingRotateId)} onOpenChange={(open) => !open && setPendingRotateId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rotate API key?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The current secret stops working immediately. You will see the new value once.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => pendingRotateId && regenerateApiKey.mutate(pendingRotateId)}
+              >
+                Rotate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={Boolean(pendingDeleteId)} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete API key?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This cannot be undone. Anything using this key will fail.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => pendingDeleteId && deleteApiKey.mutate(pendingDeleteId)}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageShell>
     </div>
   );

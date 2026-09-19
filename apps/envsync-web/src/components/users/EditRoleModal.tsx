@@ -131,7 +131,6 @@ export const EditRoleModal = ({
           </Button>
           <Button
             onClick={onSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isLoading}
           >
             {isLoading ? (

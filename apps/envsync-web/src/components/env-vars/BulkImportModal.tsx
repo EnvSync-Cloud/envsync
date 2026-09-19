@@ -653,7 +653,6 @@ PORT=3000`
           </Button>
           <Button
             onClick={handleImport}
-            className={`text-foreground ${buttonColor}`}
             disabled={!canImport || isImporting}
           >
             {isImporting ? (

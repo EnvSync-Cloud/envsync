@@ -789,14 +789,12 @@ export function CreateWebhookDialog({
                   <Button
                     variant="outline"
                     onClick={() => onOpenChange(false)}
-                    className="text-foreground border-border hover:bg-muted"
                     disabled={isCreating}
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={onCreate}
-                    className="bg-teal-500 hover:bg-teal-600 text-foreground"
                     disabled={isCreating || !isBasicInfoComplete || !isConfigComplete || !isEventsComplete}
                   >
                     {isCreating ? (
