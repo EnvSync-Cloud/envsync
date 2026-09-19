@@ -1,5 +1,4 @@
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 import { KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
 
 import {
@@ -12,21 +11,52 @@ import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
 import { useAuthContext } from "@shell/contexts/auth";
 
-/**
- * Enterprise license + install status (absorbed from envsync-management-web).
- * Route: /organisation/license
- */
-function FeatureList({ label, features }: { label: string; features: string[] }) {
+const FEATURE_LABELS: Record<string, string> = {
+  log_forwarding: "Log forwarding",
+  multi_org: "Multiple organizations",
+  saml: "SAML SSO",
+  oidc: "OIDC SSO",
+  kms: "Key management",
+  integrations: "Integrations",
+  rotation: "Secret rotation",
+  dynamic_secrets: "Dynamic secrets",
+  management: "Manage API",
+  change_requests: "Change requests",
+  point_in_time: "Point in time",
+  byok_secrets: "BYOK secrets",
+  certificates: "Certificates",
+};
+
+const LICENSE_STATUS_LABELS: Record<string, string> = {
+  unknown: "Not activated",
+  active: "Active",
+  inactive: "Inactive",
+  expired: "Expired",
+  error: "Error",
+  locked: "Locked",
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  developer: "Developer",
+  plus: "Plus+",
+  enterprise: "Enterprise",
+};
+
+function featureLabel(id: string) {
+  return FEATURE_LABELS[id] ?? id.replaceAll("_", " ");
+}
+
+function FeatureList({ label, features, empty }: { label: string; features: string[]; empty: string }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium">{label}</h3>
+      <h3 className="text-sm font-medium text-foreground">{label}</h3>
       {features.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None</p>
+        <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {features.map((feature) => (
-            <Badge key={feature} variant="outline" className="font-mono">
-              {feature}
+          {features.map(feature => (
+            <Badge key={feature} variant="outline">
+              {featureLabel(feature)}
             </Badge>
           ))}
         </div>
@@ -43,11 +73,29 @@ export default function LicenseSettings() {
   const verify = useVerifyLicense();
 
   const license = status?.license;
-  const system = status?.system;
-  const orgFeatures = user?.features ?? [];
-  const installFeatures = system?.entitlement?.features ?? [];
-  const showIntegrationsLink = orgFeatures.includes("integrations");
-  const showSsoLink = orgFeatures.includes("saml");
+  const system = status?.system as
+    | {
+        edition?: string;
+        org_count?: number;
+        single_org_mode?: boolean;
+        observability_enabled?: boolean;
+        deployment_mode?: string;
+        entitlement?: { features?: string[] };
+      }
+    | undefined;
+  const session = user as {
+    features?: string[];
+    install_features?: string[];
+    plan?: string;
+    feature_overrides?: string[];
+  } | null;
+
+  const hosted = system?.deployment_mode === "hosted";
+  const orgFeatures = session?.features ?? [];
+  const installFeatures = system?.entitlement?.features ?? session?.install_features ?? [];
+  const overlay = session?.feature_overrides ?? [];
+  const plan = session?.plan;
+  const licenseStatus = license?.state?.status ?? "unknown";
   const busy = activate.isPending || verify.isPending;
 
   const onActivate = async () => {
@@ -81,71 +129,71 @@ export default function LicenseSettings() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <div className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-          Enterprise
-        </p>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold text-foreground">License & install</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Activate or verify the self-host enterprise entitlement. Effective org features come from whoami;
-              install ceiling is the entitlement catalog on this deployment.
-              {showSsoLink ? (
-                <>
-                  {" "}
-                  SAML identity providers live under{" "}
-                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/sso">
-                    Organisation → SSO
-                  </Link>
-                  .
-                </>
-              ) : null}
-              {showIntegrationsLink ? (
-                <>
-                  {" "}
-                  Provider connections live under{" "}
-                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/integrations">
-                    Organisation → Integrations
-                  </Link>
-                  .
-                </>
-              ) : null}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-foreground">{hosted ? "Plan" : "License"}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {hosted
+              ? "Hosted organizations are gated by plan and optional feature overlays. A license file is not used here."
+              : "Self-host Enterprise uses a license lease or certificate. Activate it to unlock the install catalog."}
+          </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+          <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
       {isError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error instanceof Error ? error.message : "Failed to load system status"}
         </div>
       )}
 
       {isLoading ? (
-        <div className="rounded-xl border border-border bg-card/50 p-8 text-sm text-muted-foreground">
-          Loading license state…
+        <div className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground">
+          Loading…
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="size-5 text-emerald-500" />
-              <h2 className="text-lg font-medium">License</h2>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center gap-2">
-                Status{" "}
-                <Badge variant="outline" className="font-mono">
-                  {license?.state?.status ?? "unknown"}
+          {hosted ? (
+            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <h2 className="text-lg font-medium">This organization</h2>
+              <dl className="grid gap-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Plan</dt>
+                  <dd className="font-medium">{plan ? (PLAN_LABELS[plan] ?? plan) : "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Deployment</dt>
+                  <dd className="font-medium">Hosted</dd>
+                </div>
+              </dl>
+              <FeatureList
+                label="Overlay (trial flags)"
+                features={overlay}
+                empty="No extra flags. Plan defaults only."
+              />
+            </article>
+          ) : (
+            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <KeyRound className="size-5 text-primary" />
+                <h2 className="text-lg font-medium">License</h2>
+              </div>
+              <p className="flex items-center gap-2 text-sm">
+                Status
+                <Badge variant={licenseStatus === "active" ? "default" : "outline"}>
+                  {LICENSE_STATUS_LABELS[licenseStatus] ?? licenseStatus}
                 </Badge>
               </p>
+              {licenseStatus === "unknown" && (
+                <p className="text-sm text-muted-foreground">
+                  No license is active on this install yet.
+                </p>
+              )}
               {license?.state?.lease_expires_at && (
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Lease expires{" "}
                   <strong className="text-foreground">
                     {new Date(license.state.lease_expires_at).toLocaleString()}
@@ -153,26 +201,28 @@ export default function LicenseSettings() {
                 </p>
               )}
               {license?.state?.last_error_message && (
-                <p className="text-amber-200/90 text-xs">{license.state.last_error_message}</p>
+                <p className="text-sm text-amber-600 dark:text-amber-200">{license.state.last_error_message}</p>
               )}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button onClick={() => void onActivate()} disabled={busy}>
-                <ShieldCheck className="size-4" />
-                Activate license
-              </Button>
-              <Button variant="outline" onClick={() => void onVerify()} disabled={busy}>
-                Verify lease
-              </Button>
-            </div>
-          </article>
+              {license?.required !== false && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button onClick={() => void onActivate()} disabled={busy}>
+                    <ShieldCheck className="size-4" />
+                    Activate license
+                  </Button>
+                  <Button variant="outline" onClick={() => void onVerify()} disabled={busy}>
+                    Verify lease
+                  </Button>
+                </div>
+              )}
+            </article>
+          )}
 
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4">
+          <article className="rounded-xl border border-border bg-card p-6 space-y-4">
             <h2 className="text-lg font-medium">Install</h2>
             <dl className="grid gap-2 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Edition</dt>
-                <dd className="font-medium">{system?.edition ?? "—"}</dd>
+                <dd className="font-medium capitalize">{system?.edition ?? "—"}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Organizations</dt>
@@ -189,11 +239,19 @@ export default function LicenseSettings() {
             </dl>
           </article>
 
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4 md:col-span-2">
+          <article className="rounded-xl border border-border bg-card p-6 space-y-6 md:col-span-2">
             <h2 className="text-lg font-medium">Features</h2>
             <div className="grid gap-6 md:grid-cols-2">
-              <FeatureList label="Organization (whoami)" features={orgFeatures} />
-              <FeatureList label="Install entitlement" features={installFeatures} />
+              <FeatureList
+                label="This organization"
+                features={orgFeatures}
+                empty="No extra features on this plan."
+              />
+              <FeatureList
+                label="Install catalog"
+                features={installFeatures}
+                empty={hosted ? "Hosted catalog follows the plan, not a license file." : "Fills in after a license is activated."}
+              />
             </div>
           </article>
         </div>
