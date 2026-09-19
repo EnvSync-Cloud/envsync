@@ -47,10 +47,16 @@ function hostedRuntimeConfigPlugin(): Plugin {
 
 // Load .env from monorepo root (single source of truth)
 const rootDir = path.resolve(__dirname, "../..");
+const appVersion = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"),
+).version as string;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   envDir: rootDir,
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   server: {
     host: "0.0.0.0",
     port: 8002,

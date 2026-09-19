@@ -2,8 +2,7 @@ import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
 import { runtimeConfig } from "@/utils/runtime-config";
 
-// Version synced from package.json — update manually on release.
-export const VERSION = "v0.11.0";
+export const VERSION = `v${__APP_VERSION__}`;
 
 const linkClasses =
   "rounded-sm text-sm text-muted-foreground transition-colors duration-200 " +
