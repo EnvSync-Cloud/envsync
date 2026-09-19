@@ -56,3 +56,17 @@ export function getEnterpriseSDK(): EnvSyncAPISDK {
   }
   return apiSdk;
 }
+
+export function getEnterpriseCmk() {
+  const sdk = getEnterpriseSDK();
+  if (!sdk.enterpriseCmk) {
+    throw new Error("Key management client is not loaded. Hard-refresh the dashboard after the SDK rebuild.");
+  }
+  return sdk.enterpriseCmk;
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    apiSdk = null;
+  });
+}
