@@ -19,6 +19,8 @@ interface PageShellProps {
   secondaryNav?: ReactNode;
   statusBanner?: ReactNode;
   stats?: PageShellStat[];
+  /** Dashboard overview only. List pages should omit stats or use inline. */
+  statLayout?: "inline" | "cards";
   stickyActions?: boolean;
   children: ReactNode;
   isLoading?: boolean;
@@ -39,6 +41,7 @@ export function PageShell({
   secondaryNav,
   statusBanner,
   stats,
+  statLayout = "inline",
   stickyActions = false,
   children,
   isLoading,
@@ -46,108 +49,71 @@ export function PageShell({
   if (isLoading) {
     return (
       <div className="animate-page-enter space-y-6">
-        <div className="space-y-4 rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-12 w-12 rounded-2xl" />
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-72" />
-              </div>
-            </div>
-            <Skeleton className="h-9 w-32" />
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 rounded-2xl" />
-            ))}
-          </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-9 w-28" />
         </div>
-        <div className="grid gap-4">
-          <Skeleton className="h-14 w-full rounded-2xl" />
-          <div className="space-y-2">
-            <Skeleton className="h-64 w-full rounded-3xl" />
-          </div>
-        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
       </div>
     );
   }
 
+  const showCards = statLayout === "cards" && stats && stats.length > 0;
+  const inlineStats = statLayout === "inline" ? stats?.filter((stat) => {
+    const value = stat.value;
+    if (typeof value === "number") return value > 0;
+    return value != null && value !== "" && value !== 0;
+  }) : undefined;
+
   return (
-    <div className="animate-page-enter space-y-6">
-      <section className="overflow-hidden rounded-[28px] border border-border bg-card shadow-2xl shadow-black/20">
-        <div className="relative">
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-r from-emerald-500/12 via-cyan-500/8 to-transparent pointer-events-none" />
-          <div className="relative space-y-5 p-6 md:p-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-4">
-                {Icon && (
-                  <div className="flex size-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10">
-                    <Icon className="size-5 text-emerald-300" />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-medium tracking-tight text-foreground md:text-[1.9rem]">
-                    {title}
-                  </h1>
-                  {description && (
-                    <p className="max-w-2xl text-sm leading-6 text-muted-foreground md:text-[15px]">
-                      {description}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {actions && (
-                <div
-                  className={cn(
-                    "flex flex-wrap items-center gap-2",
-                    stickyActions &&
-                      "lg:sticky lg:top-0 lg:justify-end"
-                  )}
-                >
-                  {actions}
-                </div>
+    <div className="animate-page-enter space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          {Icon && <Icon className="size-5 shrink-0 text-muted-foreground" />}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+              {inlineStats && inlineStats.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {inlineStats.map((stat) => `${stat.value} ${stat.label.toLowerCase()}`).join(" · ")}
+                </p>
               )}
             </div>
-
-            {stats && stats.length > 0 && (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className={cn(
-                      "rounded-2xl border p-4 backdrop-blur-sm",
-                      toneClasses[stat.tone ?? "default"]
-                    )}
-                  >
-                    <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-                      {stat.label}
-                    </p>
-                    <div className="mt-2 text-2xl font-medium tracking-tight">
-                      {stat.value}
-                    </div>
-                    {stat.hint && (
-                      <p className="mt-2 text-sm text-muted-foreground">{stat.hint}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {statusBanner && (
-              <div className="rounded-2xl border border-border bg-muted/50 p-4 text-sm text-foreground">
-                {statusBanner}
-              </div>
-            )}
-
-            {secondaryNav && (
-              <div className="rounded-2xl border border-border bg-muted/30 p-2">
-                {secondaryNav}
-              </div>
-            )}
+            {description ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+            ) : null}
           </div>
         </div>
-      </section>
+        {actions && (
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-2",
+              stickyActions && "lg:sticky lg:top-0 lg:justify-end",
+            )}
+          >
+            {actions}
+          </div>
+        )}
+      </div>
+
+      {showCards && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {stats!.map((stat) => (
+            <div
+              key={stat.label}
+              className={cn("rounded-xl border p-4", toneClasses[stat.tone ?? "default"])}
+            >
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{stat.label}</p>
+              <div className="mt-1 text-2xl font-medium tracking-tight">{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {statusBanner}
+
+      {secondaryNav && <div className="border-b border-border pb-px">{secondaryNav}</div>}
+
       {children}
     </div>
   );

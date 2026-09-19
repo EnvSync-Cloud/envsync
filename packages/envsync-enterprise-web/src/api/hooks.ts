@@ -10,7 +10,7 @@ import type {
 } from "@envsync-cloud/envsync-ts-sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { enterpriseErrorMessage, getEnterpriseSDK, isEnterpriseUiEnabled } from "./client";
+import { enterpriseErrorMessage, getEnterpriseCmk, getEnterpriseSDK, isEnterpriseUiEnabled } from "./client";
 import type {
   EnterpriseProvider,
   EnvTypeMapping,
@@ -544,7 +544,7 @@ const kmsAppsKey = ["enterprise", "kms", "apps"] as const;
 
 export async function getOrgKmsConfig() {
   try {
-    return await getEnterpriseSDK().enterpriseCmk.getOrgKmsConfig();
+    return await getEnterpriseCmk().getOrgKmsConfig();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -552,7 +552,7 @@ export async function getOrgKmsConfig() {
 
 export async function getOrgKmsJob(id: string) {
   try {
-    return await getEnterpriseSDK().enterpriseCmk.getOrgKmsJob(id);
+    return await getEnterpriseCmk().getOrgKmsJob(id);
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -560,7 +560,7 @@ export async function getOrgKmsJob(id: string) {
 
 export async function listOrgKmsApps() {
   try {
-    return await getEnterpriseSDK().enterpriseCmk.listOrgKmsApps();
+    return await getEnterpriseCmk().listOrgKmsApps();
   } catch (error) {
     throw new Error(enterpriseErrorMessage(error));
   }
@@ -603,7 +603,7 @@ export function useUpdateOrgKmsConfig() {
   return useMutation({
     mutationFn: async (payload: UpdateOrgKmsConfigRequest) => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.updateOrgKmsConfig(payload);
+        return await getEnterpriseCmk().updateOrgKmsConfig(payload);
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -619,7 +619,7 @@ export function useCreateOrgKmsCredential() {
   return useMutation({
     mutationFn: async (payload: CreateOrgKmsCredentialRequest) => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.createOrgKmsCredential(payload);
+        return await getEnterpriseCmk().createOrgKmsCredential(payload);
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -635,7 +635,7 @@ export function useVerifyOrgKms() {
   return useMutation({
     mutationFn: async () => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.verifyOrgKms();
+        return await getEnterpriseCmk().verifyOrgKms();
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -651,7 +651,7 @@ export function useRotateOrgKmsKek() {
   return useMutation({
     mutationFn: async () => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.rotateOrgKmsKek();
+        return await getEnterpriseCmk().rotateOrgKmsKek();
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -667,7 +667,7 @@ export function useAttachOrgKms() {
   return useMutation({
     mutationFn: async () => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.attachOrgKms();
+        return await getEnterpriseCmk().attachOrgKms();
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }
@@ -683,7 +683,7 @@ export function useDetachOrgKms() {
   return useMutation({
     mutationFn: async () => {
       try {
-        return await getEnterpriseSDK().enterpriseCmk.detachOrgKms();
+        return await getEnterpriseCmk().detachOrgKms();
       } catch (error) {
         throw new Error(enterpriseErrorMessage(error));
       }

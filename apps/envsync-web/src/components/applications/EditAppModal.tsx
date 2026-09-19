@@ -254,7 +254,6 @@ export const EditAppModal = ({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
             disabled={isSaving || !hasUnsavedChanges}
           >
             {isSaving ? (

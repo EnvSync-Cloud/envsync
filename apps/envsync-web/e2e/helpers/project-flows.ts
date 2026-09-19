@@ -396,7 +396,16 @@ export async function updateVariable(page: Page, appId: string, envTypeId: strin
 	const dialog = page.getByRole("dialog");
 	await expect(dialog).toBeVisible();
 	await expect(dialog.locator("#edit-var-key")).toBeDisabled();
-
+	const clickToEditButton = dialog.getByRole("button", { name: "Click to edit" });
+	if (await clickToEditButton.isVisible().catch(() => false)) {
+		await clickToEditButton.click();
+	} else {
+		const revealButton = dialog.getByRole("button", { name: "Reveal" });
+		if (await revealButton.isVisible().catch(() => false)) {
+			await revealButton.click();
+		}
+	}
+	await expect(dialog.locator("#edit-var-value")).toBeVisible();
 	await dialog.locator("#edit-var-value").fill(nextValue);
 	const updateResponse = waitForTrackedResponse(page, {
 		method: "PATCH",
@@ -413,7 +422,8 @@ export async function updateVariable(page: Page, appId: string, envTypeId: strin
 	expect(trackedResponse.requestBody.value).toBe(nextValue);
 	expect(trackedResponse.requestBody.key).toBeUndefined();
 	await page.goto(getVariablesPath(appId, envTypeId), { waitUntil: "domcontentloaded" });
-	await expect(page.locator("tr").filter({ hasText: nextValue }).first()).toBeVisible();
+	await expect(page.locator("tr").filter({ hasText: key }).first()).toBeVisible();
+	await expect(page.locator("tr").filter({ hasText: nextValue })).toHaveCount(0);
 }
 
 export async function deleteVariable(page: Page, appId: string, envTypeId: string, key: string) {

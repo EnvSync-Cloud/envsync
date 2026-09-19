@@ -51,6 +51,7 @@ describe("shell context", () => {
     expect(getShellContext("/projects/app-1").product).toBe("secrets");
     expect(getShellContext("/dashboard").product).toBe("secrets");
     expect(getShellContext("/org/certificates").product).toBe("certificates");
+    expect(getShellContext("/gpgkeys").product).toBe("certificates");
     expect(getShellContext("/org/users").product).toBe("organization");
     expect(getShellContext("/organisation/license").product).toBe("organization");
     expect(getShellContext("/organisation").product).toBe("organization");

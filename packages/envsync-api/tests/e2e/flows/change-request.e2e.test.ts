@@ -101,6 +101,31 @@ describe("Change Request E2E", () => {
 		});
 		expect(selfApproveRes.status).toBe(403);
 
+		const adminCreateRes = await testRequest("/api/change_request/direct", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				target_env_type_id: productionEnvTypeId,
+				title: "Admin self-approve",
+				message: "Org admin can approve their own CR",
+				envs: [
+					{
+						key: "ADMIN_SELF_HOST",
+						operation: "CREATE",
+						proposed_value: "https://admin.envsync.local",
+					},
+				],
+			},
+		});
+		expect(adminCreateRes.status).toBe(201);
+		const adminCreated = await adminCreateRes.json<{ id: string }>();
+		const adminSelfApproveRes = await testRequest(`/api/change_request/${adminCreated.id}/approve`, {
+			method: "POST",
+			token: seed.masterUser.token,
+		});
+		expect(adminSelfApproveRes.status).toBe(200);
+
 		const approveRes = await testRequest(`/api/change_request/${created.id}/approve`, {
 			method: "POST",
 			token: seed.masterUser.token,

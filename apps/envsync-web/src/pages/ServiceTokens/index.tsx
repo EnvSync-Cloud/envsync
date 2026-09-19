@@ -9,6 +9,16 @@ import { ApiRequestError, sdk } from "@/api/base";
 import type { ServiceToken } from "@/api/service-tokens.api";
 import { PageShell } from "@/components/PageShell";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Count } from "@/components/ui/count";
@@ -48,6 +58,8 @@ export const ServiceTokens = () => {
   const authEnabled = !isAuthLoading && isAuthenticated && Boolean(appId);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [pendingRotate, setPendingRotate] = useState<ServiceToken | null>(null);
+  const [pendingRevoke, setPendingRevoke] = useState<ServiceToken | null>(null);
   const [form, setForm] = useState<ServiceTokenFormState>(INITIAL_SERVICE_TOKEN_FORM);
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
   const [revealMode, setRevealMode] = useState<"created" | "rotated">("created");
@@ -137,14 +149,7 @@ export const ServiceTokens = () => {
   const handleRotate = useCallback(
     (token: ServiceToken) => {
       if (!canManage || actionLoading[token.id] || rotateToken.isPending || token.grace_until) return;
-      if (
-        !window.confirm(
-          "Rotate this service token? The previous value stays valid for 24 hours.",
-        )
-      ) {
-        return;
-      }
-      rotateToken.mutate({ id: token.id, grace_hours: 24 });
+      setPendingRotate(token);
     },
     [actionLoading, canManage, rotateToken],
   );
@@ -152,14 +157,7 @@ export const ServiceTokens = () => {
   const handleRevoke = useCallback(
     (token: ServiceToken) => {
       if (!canManage || actionLoading[token.id] || deleteToken.isPending) return;
-      if (
-        !window.confirm(
-          "Revoke this service token? Clients using it will lose access immediately.",
-        )
-      ) {
-        return;
-      }
-      deleteToken.mutate(token.id);
+      setPendingRevoke(token);
     },
     [actionLoading, canManage, deleteToken],
   );
@@ -379,6 +377,50 @@ export const ServiceTokens = () => {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={Boolean(pendingRotate)} onOpenChange={(open) => !open && setPendingRotate(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Rotate service token?</AlertDialogTitle>
+              <AlertDialogDescription>
+                The previous value stays valid for 24 hours. You will see the new token once.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingRotate) rotateToken.mutate({ id: pendingRotate.id, grace_hours: 24 });
+                  setPendingRotate(null);
+                }}
+              >
+                Rotate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={Boolean(pendingRevoke)} onOpenChange={(open) => !open && setPendingRevoke(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Revoke service token?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Clients using this token lose access immediately.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingRevoke) deleteToken.mutate(pendingRevoke.id);
+                  setPendingRevoke(null);
+                }}
+              >
+                Revoke
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageShell>
     </div>
   );

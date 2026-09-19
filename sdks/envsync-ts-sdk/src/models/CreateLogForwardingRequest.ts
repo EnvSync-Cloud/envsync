@@ -13,6 +13,9 @@ export namespace CreateLogForwardingRequest {
         DATADOG = 'datadog',
         SPLUNK = 'splunk',
         SUMO_LOGIC = 'sumo-logic',
+        LOGSTASH = 'logstash',
+        FLUENTD = 'fluentd',
+        OTLP = 'otlp',
     }
 }
 

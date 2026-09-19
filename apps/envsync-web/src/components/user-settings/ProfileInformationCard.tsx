@@ -45,7 +45,7 @@ export const ProfileInformationCard = ({
   isLoading,
 }: ProfileInformationCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+    <Card className="border-border bg-card text-card-foreground rounded-xl">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

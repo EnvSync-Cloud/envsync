@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { createHash } from "node:crypto";
 
 import { DB } from "@/libs/db";
+import infoLogs, { LogTypes } from "@/libs/logger";
 import { WebhookService } from "./webhook.service";
 import { LogForwardingService } from "./log-forwarding.service";
 import { z } from "zod";
@@ -154,7 +155,13 @@ export class AuditLogService {
 			user_id,
 			details,
 			message,
-		}).catch(() => {});
+		}).catch(error => {
+			infoLogs(
+				`Log forwarding rejected: ${error instanceof Error ? error.message : String(error)}`,
+				LogTypes.ERROR,
+				"AuditLogService",
+			);
+		});
 
 		void import("@/libs/posthog")
 			.then(({ captureAuditAnalytics }) => {
@@ -223,6 +230,15 @@ export class AuditLogService {
 					eb("message", "ilike", searchPattern),
 				]),
 			);
+		}
+
+		const { PlanService } = await import("@/services/plan.service");
+		const plan = await PlanService.resolve(org_id);
+		if (plan.limits.audit_retention_days !== null) {
+			const retentionStart = new Date();
+			retentionStart.setDate(retentionStart.getDate() - plan.limits.audit_retention_days);
+			auditLogsQuery = auditLogsQuery.where("created_at", ">=", retentionStart);
+			totalCountQuery = totalCountQuery.where("created_at", ">=", retentionStart);
 		}
 
 		if (filter_by_past_time) {

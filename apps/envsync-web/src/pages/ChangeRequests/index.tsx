@@ -216,41 +216,17 @@ const ChangeRequests = () => {
   const pendingRequests = requestRows.filter(
     (request) => request.status === "pending"
   ).length;
-  const awaitingReview = requestRows.filter(
-    (request) =>
-      request.status === "pending" &&
-      request.requested_by_user_id !== user?.user.id
-  ).length;
 
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
         title={isProjectScoped ? "Approvals" : "Change Requests"}
-        description={
-          isProjectScoped
-            ? "Review and request protected changes for this project."
-            : "Route protected environment changes through a reviewable, auditable workflow."
-        }
         icon={GitPullRequest}
-        stats={[
-          {
-            label: "Requests",
-            value: requestRows.length,
-            hint: "Open and recent change requests",
-          },
-          {
-            label: "Pending",
-            value: pendingRequests,
-            hint: "Waiting on action",
-            tone: pendingRequests > 0 ? "warning" : "default",
-          },
-          {
-            label: "Need Review",
-            value: awaitingReview,
-            hint: "Requests others submitted",
-            tone: awaitingReview > 0 ? "danger" : "default",
-          },
-        ]}
+        stats={
+          pendingRequests > 0
+            ? [{ label: "Pending", value: pendingRequests }]
+            : undefined
+        }
         secondaryNav={
           <Tabs
             value={activeView}
@@ -458,7 +434,7 @@ const ChangeRequests = () => {
                 )}
 
                 <div className="rounded-lg border border-border bg-card/60 p-4 text-sm text-muted-foreground">
-                  Requesters can propose the change. Reviewers with protected-environment authority approve or reject it.
+                  Requesters can propose the change. Org admins can approve or reject, including their own requests.
                 </div>
 
                 <Button
@@ -474,10 +450,10 @@ const ChangeRequests = () => {
 
           <TabsContent value="requests" className="mt-0">
             <Card data-testid="change-requests-list" className="border-border bg-card/70">
-              <CardHeader>
-                <CardTitle className="text-foreground">Open and Recent Requests</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
+                {requestRows.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">No requests yet.</p>
+                ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
@@ -516,8 +492,7 @@ const ChangeRequests = () => {
                               View
                             </Button>
                             {request.status === "pending" &&
-                              canReview &&
-                              request.requested_by_user_id !== user?.user.id && (
+                              canReview && (
                                 <Button
                                   variant="ghost"
                                   className="text-green-300 hover:bg-green-950 hover:text-green-200"
@@ -535,8 +510,7 @@ const ChangeRequests = () => {
                                 </Button>
                               )}
                             {request.status === "failed" &&
-                              canReview &&
-                              request.requested_by_user_id !== user?.user.id && (
+                              canReview && (
                                 <Button
                                   variant="ghost"
                                   className="text-amber-300 hover:bg-amber-950 hover:text-amber-200"
@@ -576,6 +550,7 @@ const ChangeRequests = () => {
                     ))}
                   </TableBody>
                 </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -674,8 +649,7 @@ const ChangeRequests = () => {
               </div>
 
               {selectedRequest.status === "failed" &&
-                canReview &&
-                selectedRequest.requested_by_user_id !== user?.user.id && (
+                canReview && (
                   <div className="flex justify-end">
                     <Button
                       data-testid="change-request-retry-button"
@@ -693,8 +667,7 @@ const ChangeRequests = () => {
                 )}
 
               {selectedRequest.status === "pending" &&
-                canReview &&
-                selectedRequest.requested_by_user_id !== user?.user.id && (
+                canReview && (
                   <div className="rounded-lg border border-yellow-800/40 bg-yellow-950/30 p-4">
                     <div className="mb-3 flex items-center gap-2 text-yellow-300">
                       <ShieldAlert className="size-4" />

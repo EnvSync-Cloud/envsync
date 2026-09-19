@@ -191,6 +191,7 @@ describe("buildRuntimeEnv", () => {
 		expect(runtimeEnv.ENVSYNC_INSTALL_FINGERPRINT).toBe("envsync-b3bb411825372842f0fbdfacde54b5d8");
 		expect(runtimeEnv.ENVSYNC_LICENSE_LEASE_TTL_SECONDS).toBe("300");
 		expect(runtimeEnv.ENVSYNC_STACK_NAME).toBe("envsync");
+		expect(runtimeEnv.ENVSYNC_PLAN).toBe("plus");
 		expect(runtimeEnv.ENVSYNC_LICENSE_BUNDLE_PATH).toBe("/etc/envsync/license/enterprise-license-bundle.json");
 		expect(runtimeEnv.ENVSYNC_LICENSE_CERT_PATH).toBe("/etc/envsync/license/enterprise-cert.pem");
 		expect(runtimeEnv.ENVSYNC_LICENSE_KEY_PATH).toBe("/etc/envsync/license/enterprise-key.pem");

@@ -11,9 +11,14 @@ import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 import type { WebNavGroup, WebNavItem } from "@/modules/types";
 
-import { buildProjectNavItems, hasRequiredPermission } from "./context-nav";
+import {
+  CERTIFICATE_NAV_IDS,
+  buildProjectNavItems,
+  filterCertificateNavGroups,
+  hasRequiredPermission,
+  isItemActive,
+} from "./context-nav";
 
-const CERTIFICATE_NAV_IDS = new Set(["certificates"]);
 const SECRETS_ORG_NAV_IDS = new Set(["dashboard", "applications"]);
 
 interface ContextNavProps {
@@ -21,19 +26,6 @@ interface ContextNavProps {
   product: ProductId;
   appId: string | null;
   allowedScopes: string[];
-}
-
-function isItemActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/" || pathname === "/dashboard";
-  if (href === "/projects") {
-    return pathname === "/projects" || pathname.startsWith("/projects/create");
-  }
-  if (href.endsWith("/environments") && pathname.endsWith("/manage-environments")) {
-    return true;
-  }
-  if (pathname === href) return true;
-  if (/^\/projects\/[^/]+$/.test(href)) return false;
-  return pathname.startsWith(`${href}/`);
 }
 
 function NavLink({
@@ -143,7 +135,9 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
   });
   const groups = useMemo(() => {
     if (product === "certificates") {
-      return filterGroups(navGroups, allowedScopes, (item) => CERTIFICATE_NAV_IDS.has(item.id), permissions);
+      // Product switcher already entered Certificates. Do not hide GPG/CA behind
+      // planAllows or the empty-nav fallback would show Secrets (Dashboard/Projects).
+      return filterCertificateNavGroups(navGroups, permissions);
     }
 
     if (product === "organization") {

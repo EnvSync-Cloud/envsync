@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Copy, Download, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { Copy, Download, Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/api";
@@ -93,11 +93,12 @@ export const MyCertificatesCard = () => {
                 <div className="text-sm text-muted-foreground">{getSerialPreview(data.member_certificate.serial_hex)}</div>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   data-testid="my-certs-copy-bundle"
                   variant="outline"
-                  className="justify-start border-border text-foreground hover:bg-muted"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-muted"
                   onClick={() => copyToClipboard(bundleText, "Certificate bundle")}
                 >
                   <Copy className="mr-2 size-4" />
@@ -106,35 +107,13 @@ export const MyCertificatesCard = () => {
                 <Button
                   data-testid="my-certs-download-bundle"
                   variant="outline"
-                  className="justify-start border-border text-foreground hover:bg-muted"
+                  size="sm"
+                  className="border-border text-foreground hover:bg-muted"
                   onClick={() => downloadText("envsync-certificate-bundle.pem", bundleText)}
                 >
                   <Download className="mr-2 size-4" />
                   Download bundle
                 </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start border-border text-foreground hover:bg-muted"
-                  onClick={() => copyToClipboard(data.member_certificate.cert_pem ?? "", "Member certificate")}
-                >
-                  <Copy className="mr-2 size-4" />
-                  Copy cert
-                </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start border-border text-foreground hover:bg-muted"
-                  onClick={() => downloadText("envsync-root-ca.pem", data.root_ca_pem)}
-                >
-                  <Download className="mr-2 size-4" />
-                  Download CA
-                </Button>
-              </div>
-
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-100">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-amber-600 dark:text-amber-300" />
-                  <span>Private key stays hidden until revealed.</span>
-                </div>
               </div>
             </div>
 

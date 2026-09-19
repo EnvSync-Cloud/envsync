@@ -212,7 +212,7 @@ const GpgKeys = () => {
                 <PenLine className="w-4 h-4 mr-2" /> Sign
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-muted border-border max-w-lg">
+            <DialogContent className="border-border max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-foreground">Sign Data</DialogTitle>
                 <DialogDescription className="text-muted-foreground">Sign data using a GPG key</DialogDescription>
@@ -221,10 +221,10 @@ const GpgKeys = () => {
                 <div>
                   <Label className="text-muted-foreground">Key *</Label>
                   <Select value={signKeyId} onValueChange={setSignKeyId}>
-                    <SelectTrigger className="bg-muted border-border text-foreground">
+                    <SelectTrigger className="border-border text-foreground">
                       <SelectValue placeholder="Select a key" />
                     </SelectTrigger>
-                    <SelectContent className="bg-muted border-border">
+                    <SelectContent className="border-border">
                       {gpgKeys?.filter((k) => !k.revoked_at).map((k) => (
                         <SelectItem key={k.id} value={k.id} className="text-foreground">{k.name}</SelectItem>
                       ))}
@@ -236,7 +236,7 @@ const GpgKeys = () => {
                   <Textarea
                     value={signData}
                     onChange={(e) => setSignData(e.target.value)}
-                    className="bg-muted border-border text-foreground min-h-[100px]"
+                    className="border-border text-foreground min-h-[100px]"
                     placeholder="Enter data to sign..."
                   />
                 </div>
@@ -244,10 +244,10 @@ const GpgKeys = () => {
                   <div className="flex-1">
                     <Label className="text-muted-foreground">Mode</Label>
                     <Select value={signMode} onValueChange={(v) => setSignMode(v as SignDataRequest.mode)}>
-                      <SelectTrigger className="bg-muted border-border text-foreground">
+                      <SelectTrigger className="border-border text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-muted border-border">
+                      <SelectContent className="border-border">
                         <SelectItem value="text" className="text-foreground">Text</SelectItem>
                         <SelectItem value="binary" className="text-foreground">Binary</SelectItem>
                         <SelectItem value="clearsign" className="text-foreground">Clearsign</SelectItem>
@@ -275,7 +275,10 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleSign} disabled={signMutation.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                <Button variant="outline" onClick={() => setIsSignOpen(false)} disabled={signMutation.isPending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSign} disabled={signMutation.isPending}>
                   {signMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Sign
                 </Button>
@@ -290,7 +293,7 @@ const GpgKeys = () => {
                 <CheckCircle className="w-4 h-4 mr-2" /> Verify
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-muted border-border max-w-lg">
+            <DialogContent className="border-border max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-foreground">Verify Signature</DialogTitle>
                 <DialogDescription className="text-muted-foreground">Verify a GPG signature against data</DialogDescription>
@@ -301,7 +304,7 @@ const GpgKeys = () => {
                   <Textarea
                     value={verifyData}
                     onChange={(e) => setVerifyData(e.target.value)}
-                    className="bg-muted border-border text-foreground min-h-[80px]"
+                    className="border-border text-foreground min-h-[80px]"
                     placeholder="Original data..."
                   />
                 </div>
@@ -310,17 +313,17 @@ const GpgKeys = () => {
                   <Textarea
                     value={verifySignature}
                     onChange={(e) => setVerifySignature(e.target.value)}
-                    className="bg-muted border-border text-foreground min-h-[80px] font-mono text-xs"
+                    className="border-border text-foreground min-h-[80px] font-mono text-xs"
                     placeholder="-----BEGIN PGP SIGNATURE-----..."
                   />
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Key (optional)</Label>
                   <Select value={verifyKeyId} onValueChange={setVerifyKeyId}>
-                    <SelectTrigger className="bg-muted border-border text-foreground">
+                    <SelectTrigger className="border-border text-foreground">
                       <SelectValue placeholder="Auto-detect" />
                     </SelectTrigger>
-                    <SelectContent className="bg-muted border-border">
+                    <SelectContent className="border-border">
                       {gpgKeys?.map((k) => (
                         <SelectItem key={k.id} value={k.id} className="text-foreground">{k.name}</SelectItem>
                       ))}
@@ -343,7 +346,10 @@ const GpgKeys = () => {
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleVerify} disabled={verifyMutation.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                <Button variant="outline" onClick={() => setIsVerifyOpen(false)} disabled={verifyMutation.isPending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleVerify} disabled={verifyMutation.isPending}>
                   {verifyMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Verify
                 </Button>
@@ -358,7 +364,7 @@ const GpgKeys = () => {
                 <Upload className="w-4 h-4 mr-2" /> Import
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-muted border-border max-w-lg">
+            <DialogContent className="border-border max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-foreground">Import GPG Key</DialogTitle>
                 <DialogDescription className="text-muted-foreground">Import an existing GPG key</DialogDescription>
@@ -366,25 +372,28 @@ const GpgKeys = () => {
               <div className="space-y-4">
                 <div>
                   <Label className="text-muted-foreground">Name *</Label>
-                  <Input value={importName} onChange={(e) => setImportName(e.target.value)} className="bg-muted border-border text-foreground" placeholder="Key name" />
+                  <Input value={importName} onChange={(e) => setImportName(e.target.value)} className="border-border text-foreground" placeholder="Key name" />
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Public Key (armored) *</Label>
-                  <Textarea value={importPublicKey} onChange={(e) => setImportPublicKey(e.target.value)} className="bg-muted border-border text-foreground min-h-[100px] font-mono text-xs" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----..." />
+                  <Textarea value={importPublicKey} onChange={(e) => setImportPublicKey(e.target.value)} className="border-border text-foreground min-h-[100px] font-mono text-xs" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----..." />
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Private Key (optional, armored)</Label>
-                  <Textarea value={importPrivateKey} onChange={(e) => setImportPrivateKey(e.target.value)} className="bg-muted border-border text-foreground min-h-[80px] font-mono text-xs" placeholder="-----BEGIN PGP PRIVATE KEY BLOCK-----..." />
+                  <Textarea value={importPrivateKey} onChange={(e) => setImportPrivateKey(e.target.value)} className="border-border text-foreground min-h-[80px] font-mono text-xs" placeholder="-----BEGIN PGP PRIVATE KEY BLOCK-----..." />
                 </div>
                 {importPrivateKey && (
                   <div>
                     <Label className="text-muted-foreground">Passphrase (if key is encrypted)</Label>
-                    <Input type="password" value={importPassphrase} onChange={(e) => setImportPassphrase(e.target.value)} className="bg-muted border-border text-foreground" />
+                    <Input type="password" value={importPassphrase} onChange={(e) => setImportPassphrase(e.target.value)} className="border-border text-foreground" />
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button onClick={handleImport} disabled={importKey.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                <Button variant="outline" onClick={() => setIsImportOpen(false)} disabled={importKey.isPending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleImport} disabled={importKey.isPending}>
                   {importKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Import
                 </Button>
@@ -399,7 +408,7 @@ const GpgKeys = () => {
                 <Plus className="w-4 h-4 mr-2" /> Generate Key
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-muted border-border">
+            <DialogContent className="border-border">
               <DialogHeader>
                 <DialogTitle className="text-foreground">Generate GPG Key</DialogTitle>
                 <DialogDescription className="text-muted-foreground">Generate a new GPG key pair</DialogDescription>
@@ -407,19 +416,19 @@ const GpgKeys = () => {
               <div className="space-y-4">
                 <div>
                   <Label className="text-muted-foreground">Name *</Label>
-                  <Input value={genForm.name} onChange={(e) => setGenForm((f) => ({ ...f, name: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="My Signing Key" />
+                  <Input value={genForm.name} onChange={(e) => setGenForm((f) => ({ ...f, name: e.target.value }))} className="border-border text-foreground" placeholder="My Signing Key" />
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Email *</Label>
-                  <Input value={genForm.email} onChange={(e) => setGenForm((f) => ({ ...f, email: e.target.value }))} className="bg-muted border-border text-foreground" placeholder="dev@example.com" />
+                  <Input value={genForm.email} onChange={(e) => setGenForm((f) => ({ ...f, email: e.target.value }))} className="border-border text-foreground" placeholder="dev@example.com" />
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Algorithm *</Label>
                   <Select value={genForm.algorithm} onValueChange={(v) => setGenForm((f) => ({ ...f, algorithm: v as GenerateGpgKeyRequest.algorithm }))}>
-                    <SelectTrigger className="bg-muted border-border text-foreground">
+                    <SelectTrigger className="border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-muted border-border">
+                    <SelectContent className="border-border">
                       <SelectItem value="ecc-curve25519" className="text-foreground">ECC Curve25519</SelectItem>
                       <SelectItem value="ecc-p256" className="text-foreground">ECC P-256</SelectItem>
                       <SelectItem value="ecc-p384" className="text-foreground">ECC P-384</SelectItem>
@@ -429,11 +438,14 @@ const GpgKeys = () => {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Expires in (days)</Label>
-                  <Input type="number" value={genForm.expires_in_days || ""} onChange={(e) => setGenForm((f) => ({ ...f, expires_in_days: parseInt(e.target.value) || undefined }))} className="bg-muted border-border text-foreground" placeholder="365" />
+                  <Input type="number" value={genForm.expires_in_days || ""} onChange={(e) => setGenForm((f) => ({ ...f, expires_in_days: parseInt(e.target.value) || undefined }))} className="border-border text-foreground" placeholder="365" />
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleGenerate} disabled={generateKey.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                <Button variant="outline" onClick={() => setIsGenerateOpen(false)} disabled={generateKey.isPending}>
+                  Cancel
+                </Button>
+                <Button onClick={handleGenerate} disabled={generateKey.isPending}>
                   {generateKey.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Generate
                 </Button>

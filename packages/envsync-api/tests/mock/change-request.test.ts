@@ -112,6 +112,25 @@ describe("change request compare-and-swap", () => {
 		).rejects.toThrow("Requesters cannot approve");
 	});
 
+	test("org admin can approve their own request", async () => {
+		const created = await ChangeRequestService.createDirect({
+			org_id: seed.org.id,
+			app_id: appId,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: reviewer.id,
+			title: "admin-self-approve",
+			message: "admin-self-approve",
+			envs: [{ key: "API_HOST_ADMIN_SELF", operation: "CREATE", proposed_value: "https://example.test" }],
+		});
+		const approved = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: reviewer.id,
+		});
+		expect(approved.status).toBe("approved");
+		expect(approved.reviewed_by_user_id).toBe(reviewer.id);
+	});
+
 	test("concurrent approve allows only one winner", async () => {
 		const created = await createDirect("concurrent-approve");
 		const results = await Promise.allSettled([

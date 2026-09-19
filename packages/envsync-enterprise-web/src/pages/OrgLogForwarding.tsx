@@ -48,6 +48,15 @@ export default function OrgLogForwarding() {
   const [token, setToken] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [sumoUrl, setSumoUrl] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [fluentTag, setFluentTag] = useState("envsync.audit");
+  const [authorization, setAuthorization] = useState("");
+  const [headersText, setHeadersText] = useState("");
+  const [fluentProtocol, setFluentProtocol] = useState<"forward" | "http">("forward");
+  const [fluentHost, setFluentHost] = useState("127.0.0.1");
+  const [fluentPort, setFluentPort] = useState("24224");
+  const [jsonBatch, setJsonBatch] = useState(true);
 
   const resetForm = () => {
     setName("");
@@ -57,6 +66,27 @@ export default function OrgLogForwarding() {
     setToken("");
     setEndpoint("");
     setSumoUrl("");
+    setUsername("");
+    setPassword("");
+    setFluentTag("envsync.audit");
+    setAuthorization("");
+    setHeadersText("");
+    setFluentProtocol("forward");
+    setFluentHost("127.0.0.1");
+    setFluentPort("24224");
+    setJsonBatch(true);
+  };
+
+  const parsedHeaders = () => {
+    const headers: Record<string, string> = {};
+    for (const line of headersText.split("\n")) {
+      const index = line.indexOf(":");
+      if (index <= 0) continue;
+      const key = line.slice(0, index).trim();
+      const value = line.slice(index + 1).trim();
+      if (key && value) headers[key] = value;
+    }
+    return headers;
   };
 
   const onCreate = async () => {
@@ -69,7 +99,33 @@ export default function OrgLogForwarding() {
         ? { api_key: apiKey, site }
         : providerType === CreateLogForwardingRequest.provider_type.SPLUNK
           ? { token, endpoint }
-          : { url: sumoUrl };
+          : providerType === CreateLogForwardingRequest.provider_type.SUMO_LOGIC
+            ? { url: sumoUrl }
+            : providerType === CreateLogForwardingRequest.provider_type.LOGSTASH
+              ? {
+                  endpoint,
+                  json_batch: jsonBatch,
+                  ...(username ? { username } : {}),
+                  ...(password ? { password } : {}),
+                  ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                }
+              : providerType === CreateLogForwardingRequest.provider_type.FLUENTD
+                ? fluentProtocol === "forward"
+                  ? { protocol: "forward", host: fluentHost, port: Number(fluentPort), tag: fluentTag }
+                  : {
+                      protocol: "http",
+                      endpoint,
+                      tag: fluentTag,
+                      json_array: jsonBatch,
+                      ...(username ? { username } : {}),
+                      ...(password ? { password } : {}),
+                      ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                    }
+                : {
+                    endpoint,
+                    ...(authorization ? { authorization } : {}),
+                    ...(Object.keys(parsedHeaders()).length > 0 ? { headers: parsedHeaders() } : {}),
+                  };
     try {
       await createConfig.mutateAsync({
         name: name.trim(),
@@ -88,7 +144,7 @@ export default function OrgLogForwarding() {
   return (
     <EnterprisePageFrame
       title="Log forwarding"
-      description="Send audit events to Datadog, Splunk, or Sumo Logic. Values are stored on the API and never shown again after create."
+      description="Send audit events to Datadog, Splunk, Sumo Logic, Logstash, Fluentd, or OTLP. Credentials are write-only after create."
       icon={<ScrollText className="size-7" />}
       enabled={enabled}
       isError={isError}
@@ -154,6 +210,9 @@ export default function OrgLogForwarding() {
                 <option value="datadog">Datadog</option>
                 <option value="splunk">Splunk</option>
                 <option value="sumo-logic">Sumo Logic</option>
+                <option value="logstash">Logstash</option>
+                <option value="fluentd">Fluentd</option>
+                <option value="otlp">OTLP</option>
               </select>
             </div>
             {providerType === CreateLogForwardingRequest.provider_type.DATADOG && (
@@ -186,8 +245,156 @@ export default function OrgLogForwarding() {
                 <Input id="lf-url" value={sumoUrl} onChange={(event) => setSumoUrl(event.target.value)} />
               </div>
             )}
+            {providerType === CreateLogForwardingRequest.provider_type.LOGSTASH && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-endpoint">HTTP URL</Label>
+                  <Input
+                    id="lf-logstash-endpoint"
+                    value={endpoint}
+                    onChange={(event) => setEndpoint(event.target.value)}
+                    placeholder="http://logstash.example.com:8080"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-user">Username (optional)</Label>
+                  <Input id="lf-logstash-user" value={username} onChange={(event) => setUsername(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-pass">Password (optional)</Label>
+                  <Input
+                    id="lf-logstash-pass"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-logstash-headers">Headers (optional, one per line: Name: value)</Label>
+                  <textarea
+                    id="lf-logstash-headers"
+                    className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                    value={headersText}
+                    onChange={(event) => setHeadersText(event.target.value)}
+                    placeholder={"Authorization: Basic …\nContent-Type: application/json"}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
+                  Send a JSON array of events
+                </label>
+              </>
+            )}
+            {providerType === CreateLogForwardingRequest.provider_type.FLUENTD && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-fluentd-protocol">Fluentd input</Label>
+                  <select
+                    id="lf-fluentd-protocol"
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={fluentProtocol}
+                    onChange={(event) => setFluentProtocol(event.target.value as "forward" | "http")}
+                  >
+                    <option value="forward">forward (port 24224)</option>
+                    <option value="http">HTTP</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-fluentd-tag">Tag</Label>
+                  <Input id="lf-fluentd-tag" value={fluentTag} onChange={(event) => setFluentTag(event.target.value)} />
+                </div>
+                {fluentProtocol === "forward" ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-host">Host</Label>
+                      <Input id="lf-fluentd-host" value={fluentHost} onChange={(event) => setFluentHost(event.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-port">Port</Label>
+                      <Input id="lf-fluentd-port" value={fluentPort} onChange={(event) => setFluentPort(event.target.value)} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-endpoint">HTTP URL</Label>
+                      <Input
+                        id="lf-fluentd-endpoint"
+                        value={endpoint}
+                        onChange={(event) => setEndpoint(event.target.value)}
+                        placeholder="http://fluentd.example.com:8888"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-user">Username (optional)</Label>
+                      <Input id="lf-fluentd-user" value={username} onChange={(event) => setUsername(event.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-pass">Password (optional)</Label>
+                      <Input
+                        id="lf-fluentd-pass"
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lf-fluentd-headers">Headers (optional)</Label>
+                      <textarea
+                        id="lf-fluentd-headers"
+                        className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        value={headersText}
+                        onChange={(event) => setHeadersText(event.target.value)}
+                        placeholder="Authorization: Basic …"
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={jsonBatch} onChange={(event) => setJsonBatch(event.target.checked)} />
+                      Send a JSON array of events
+                    </label>
+                  </>
+                )}
+              </>
+            )}
+            {providerType === CreateLogForwardingRequest.provider_type.OTLP && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-endpoint">OTLP HTTP endpoint</Label>
+                  <Input
+                    id="lf-otlp-endpoint"
+                    value={endpoint}
+                    onChange={(event) => setEndpoint(event.target.value)}
+                    placeholder="http://localhost:5080/api/default"
+                  />
+                  <p className="text-xs text-muted-foreground">/v1/logs is appended if missing.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-auth">Authorization (optional)</Label>
+                  <Input
+                    id="lf-otlp-auth"
+                    type="password"
+                    value={authorization}
+                    onChange={(event) => setAuthorization(event.target.value)}
+                    placeholder="Basic …"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lf-otlp-headers">Extra headers (one per line)</Label>
+                  <textarea
+                    id="lf-otlp-headers"
+                    className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                    value={headersText}
+                    onChange={(event) => setHeadersText(event.target.value)}
+                    placeholder="stream-name: default"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <SheetFooter>
+            <Button variant="outline" onClick={() => setSheetOpen(false)} disabled={createConfig.isPending}>
+              Cancel
+            </Button>
             <Button onClick={() => void onCreate()} disabled={createConfig.isPending}>
               Create destination
             </Button>

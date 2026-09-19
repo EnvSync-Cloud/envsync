@@ -141,16 +141,6 @@ export const Users = () => {
     if (!user?.role) return false;
     return user.role.is_master || user.role.is_admin;
   }, [user]);
-  const activeMembers = useMemo(
-    () => users.filter((member) => member.status === "active").length,
-    [users]
-  );
-  const adminMembers = useMemo(
-    () =>
-      users.filter((member) => member.role.toLowerCase().includes("admin") || member.role.toLowerCase().includes("master")).length,
-    [users]
-  );
-
   if (usersError) {
     return (
       <PageError
@@ -165,27 +155,20 @@ export const Users = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Users"
-        description="Manage members, invitations, and access posture from one operational surface."
         icon={User}
         stickyActions
         actions={
           canManageUsers ? (
             <Button
-              className="bg-emerald-500 hover:bg-emerald-600 text-white"
               onClick={() => setShowInviteUserModalOpen(true)}
               disabled={inviteUserMutation.isPending}
               data-testid="users-invite-member"
             >
               <UserPlus2 className="size-4 mr-2" />
-              Invite Member
+              Invite
             </Button>
           ) : null
         }
-        stats={[
-          { label: "Members", value: users.length, hint: "Current organization members" },
-          { label: "Active", value: activeMembers, hint: "Members active in the organization", tone: activeMembers > 0 ? "success" : "default" },
-          { label: "Privileged", value: adminMembers, hint: "Admin or master-level access", tone: adminMembers > 0 ? "warning" : "default" },
-        ]}
         secondaryNav={
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="h-auto bg-transparent p-0">

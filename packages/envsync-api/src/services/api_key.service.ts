@@ -5,6 +5,7 @@ import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
 import { orNotFound } from "@/libs/errors";
 import { SecretKeyGenerator } from "sk-keygen";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class ApiKeyService {
 	public static createKey = async ({
@@ -17,6 +18,7 @@ export class ApiKeyService {
 		description?: string;
 	}) => {
 		const db = await DB.getInstance();
+		await PlanLimitService.assertCount(org_id, "api_keys");
 
 		const key = await db
 			.insertInto("api_keys")

@@ -1,7 +1,7 @@
 import z from "zod";
 import "zod-openapi/extend";
 
-const providerType = z.enum(["datadog", "splunk", "sumo-logic"]);
+const providerType = z.enum(["datadog", "splunk", "sumo-logic", "logstash", "fluentd", "otlp"]);
 
 const datadogConfigSchema = z.object({
     api_key: z.string().min(1).openapi({ example: "abc123" }),
@@ -21,10 +21,47 @@ const sumoLogicConfigSchema = z.object({
     url: z.string().url().openapi({ example: "https://collectors.sumologic.com/receiver/v1/http/..." }),
 });
 
+const headerMap = z.record(z.string()).optional().openapi({
+    example: { Authorization: "Basic …", "stream-name": "default" },
+});
+
+const logstashConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "http://logstash.example.com:8080" }),
+    username: z.string().optional(),
+    password: z.string().optional(),
+    headers: headerMap,
+    json_batch: z.boolean().optional().openapi({ example: true }),
+});
+
+const fluentdConfigSchema = z
+    .object({
+        protocol: z.enum(["forward", "http"]).optional().openapi({ example: "forward" }),
+        host: z.string().optional().openapi({ example: "127.0.0.1" }),
+        port: z.coerce.number().int().positive().optional().openapi({ example: 24224 }),
+        tag: z.string().optional().openapi({ example: "envsync.audit" }),
+        endpoint: z.string().url().optional().openapi({ example: "http://fluentd.example.com:8888" }),
+        username: z.string().optional(),
+        password: z.string().optional(),
+        headers: headerMap,
+        json_array: z.boolean().optional(),
+    })
+    .refine(config => Boolean(config.host) || Boolean(config.endpoint), {
+        message: "Fluentd requires host (forward protocol) or endpoint (HTTP)",
+    });
+
+const otlpConfigSchema = z.object({
+    endpoint: z.string().url().openapi({ example: "http://collector.example.com:4318/api/default" }),
+    authorization: z.string().optional(),
+    headers: headerMap,
+});
+
 const providerConfigSchema = z.discriminatedUnion("provider_type", [
     z.object({ provider_type: z.literal("datadog"), config: datadogConfigSchema }),
     z.object({ provider_type: z.literal("splunk"), config: splunkConfigSchema }),
     z.object({ provider_type: z.literal("sumo-logic"), config: sumoLogicConfigSchema }),
+    z.object({ provider_type: z.literal("logstash"), config: logstashConfigSchema }),
+    z.object({ provider_type: z.literal("fluentd"), config: fluentdConfigSchema }),
+    z.object({ provider_type: z.literal("otlp"), config: otlpConfigSchema }),
 ]);
 
 export const createLogForwardingRequestSchema = z

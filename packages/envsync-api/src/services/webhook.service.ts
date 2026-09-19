@@ -8,6 +8,7 @@ import { WebhookHandler } from "@/libs/webhooks";
 import { config } from "@/utils/env";
 import { JsonValue } from "@/libs/db";
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 export type WebhookType = "DISCORD" | "SLACK" | "CUSTOM"
     | "GITHUB_ACTIONS" | "GITLAB_PIPELINE" | "AWS_CODEPIPELINE"
@@ -48,6 +49,7 @@ export class WebhookService {
     }): Promise<string> => {
         const id = uuidv4();
         const db = await DB.getInstance();
+        await PlanLimitService.assertCount(org_id, "webhooks");
 
         await db
             .insertInto("webhook_store")

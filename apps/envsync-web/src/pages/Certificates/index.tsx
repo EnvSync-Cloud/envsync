@@ -13,7 +13,9 @@ import {
 import { toast } from "sonner";
 
 import { api } from "@/api";
+import { useCopy } from "@/hooks/useClipboard";
 import { PageShell } from "@/components/PageShell";
+import { runtimeConfig } from "@/utils/runtime-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -33,7 +35,10 @@ import { Badge } from "@/components/ui/badge";
 const Certificates = () => {
   const { data: certificates, isLoading } = api.certificates.getCertificates();
   const { data: orgCA } = api.certificates.getOrgCA();
+  const { data: rootCA } = api.certificates.getRootCA();
   const { data: users = [] } = api.users.getAllUsers();
+  const copy = useCopy({ onSuccess: () => toast.success("Copied") });
+  const crlUrl = `${runtimeConfig.apiBaseUrl.replace(/\/$/, "")}/api/certificate/crl`;
 
   // Init CA dialog
   const [isInitCAOpen, setIsInitCAOpen] = useState(false);
@@ -135,6 +140,25 @@ const Certificates = () => {
     }
   };
 
+  const daysUntil = (iso?: string | null) => {
+    if (!iso) return null;
+    return Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  };
+
+  const downloadChain = () => {
+    const parts = [orgCA && "cert_pem" in orgCA ? orgCA.cert_pem : "", rootCA?.cert_pem]
+      .filter(Boolean)
+      .join("\n");
+    if (!parts) return;
+    const blob = new Blob([parts], { type: "application/x-pem-file" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "envsync-ca-chain.pem";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getTypeBadge = (type: string) => {
     return type === "org_ca"
       ? <Badge className="bg-blue-600">CA</Badge>
@@ -151,21 +175,12 @@ const Certificates = () => {
 
   const hasCA = orgCA && !("error" in orgCA);
   const certificateRows = certificates || [];
-  const activeCertificates = certificateRows.filter((cert) => cert.status === "active").length;
-  const revokedCertificates = certificateRows.filter((cert) => cert.status === "revoked").length;
-  const memberCertificates = certificateRows.filter((cert) => cert.cert_type !== "org_ca").length;
 
   return (
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Certificates"
-        description="Operate the organization CA and member certificate lifecycle from a clearer, trust-focused surface."
         icon={ShieldCheck}
-        stats={[
-          { label: "Active", value: activeCertificates, hint: "Currently valid certificates", tone: activeCertificates > 0 ? "success" : "default" },
-          { label: "Revoked", value: revokedCertificates, hint: "Certificates taken out of service", tone: revokedCertificates > 0 ? "warning" : "default" },
-          { label: "Member Certs", value: memberCertificates, hint: "User-scoped certificates issued" },
-        ]}
         actions={<div className="flex gap-2">
           {hasCA && (
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
@@ -174,7 +189,7 @@ const Certificates = () => {
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-muted border-border">
+              <DialogContent>
                 <DialogHeader>
                   <DialogTitle className="text-foreground">Issue Member Certificate</DialogTitle>
                   <DialogDescription className="text-muted-foreground">Issue a new certificate signed by the org CA</DialogDescription>
@@ -283,12 +298,17 @@ const Certificates = () => {
                 )}
                 <DialogFooter>
                   {!issuedCert ? (
-                    <Button onClick={handleIssue} disabled={issueCert.isPending} className="bg-emerald-500 hover:bg-emerald-600">
-                      {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Issue
-                    </Button>
+                    <>
+                      <Button variant="outline" onClick={() => setIsIssueOpen(false)} disabled={issueCert.isPending}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleIssue} disabled={issueCert.isPending}>
+                        {issueCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        {issueCert.isPending ? "Issuing..." : "Issue"}
+                      </Button>
+                    </>
                   ) : (
-                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline" className="border-border text-muted-foreground">
+                    <Button onClick={() => { setIsIssueOpen(false); setIssuedCert(null); setIssueEmail(""); setIssueDescription(""); setIssueMetadata([]); }} variant="outline">
                       Done
                     </Button>
                   )}
@@ -309,18 +329,26 @@ const Certificates = () => {
         </CardHeader>
         <CardContent>
           {hasCA ? (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
                   <span className="text-foreground font-medium">{orgCA.subject_cn}</span>
                   {getStatusBadge(orgCA.status)}
                 </div>
-                <p className="text-tertiary text-sm mt-1">
-                  Serial: <code className="text-muted-foreground font-mono">{orgCA.serial_hex}</code>
-                  {" | "}
-                  Created: {new Date(orgCA.created_at).toLocaleDateString()}
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Serial {orgCA.serial_hex.slice(0, 12)}
+                  {orgCA.not_after ? ` · expires ${new Date(orgCA.not_after).toLocaleDateString()}` : ""}
                 </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => copy.mutate(crlUrl)}>
+                  <Copy className="mr-2 size-3.5" />
+                  Copy CRL URL
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadChain}>
+                  Download chain
+                </Button>
               </div>
             </div>
           ) : (
@@ -333,7 +361,7 @@ const Certificates = () => {
                     Initialize CA
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-muted border-border">
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle className="text-foreground">Initialize Organization CA</DialogTitle>
                     <DialogDescription className="text-muted-foreground">Create an intermediate CA for your organization</DialogDescription>
@@ -349,9 +377,12 @@ const Certificates = () => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleInitCA} disabled={initCA.isPending} className="bg-emerald-500 hover:bg-emerald-600">
+                    <Button variant="outline" onClick={() => setIsInitCAOpen(false)} disabled={initCA.isPending}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleInitCA} disabled={initCA.isPending}>
                       {initCA.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Initialize
+                      {initCA.isPending ? "Initializing..." : "Initialize"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -370,19 +401,12 @@ const Certificates = () => {
               <Badge variant="secondary" className="ml-2">{certificates.length}</Badge>
             )}
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            System-generated EnvSync certificates are not listed here. Use Account Settings → My Certificates to view your managed bundle.
-          </p>
         </CardHeader>
         <CardContent>
           {!certificates || certificates.length === 0 ? (
-            <div className="text-center py-12">
-              <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No certificates issued yet</p>
-              <p className="text-tertiary text-sm mt-1">
-                {hasCA ? "Issue a member certificate to get started" : "Initialize the org CA first"}
-              </p>
-            </div>
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {hasCA ? "No certificates issued yet." : "Initialize the org CA first."}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -392,7 +416,7 @@ const Certificates = () => {
                     <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Type</th>
                     <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Serial</th>
                     <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Status</th>
-                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Issued</th>
+                    <th className="text-left text-muted-foreground text-sm font-medium py-3 px-4">Expires</th>
                     <th className="text-right text-muted-foreground text-sm font-medium py-3 px-4">Actions</th>
                   </tr>
                 </thead>
@@ -408,12 +432,19 @@ const Certificates = () => {
                       <td className="py-3 px-4">{getTypeBadge(cert.cert_type)}</td>
                       <td className="py-3 px-4">
                         <code className="text-muted-foreground text-xs bg-card px-2 py-1 rounded font-mono">
-                          {cert.serial_hex}
+                          {cert.serial_hex.slice(0, 12)}
                         </code>
                       </td>
                       <td className="py-3 px-4">{getStatusBadge(cert.status)}</td>
-                      <td className="py-3 px-4 text-muted-foreground text-sm">
-                        {new Date(cert.created_at).toLocaleDateString()}
+                      <td className="py-3 px-4 text-sm">
+                        {(() => {
+                          const days = daysUntil(cert.not_after);
+                          if (days == null) return <span className="text-muted-foreground">—</span>;
+                          const label = new Date(cert.not_after as string).toLocaleDateString();
+                          if (days < 0) return <span className="text-destructive">{label}</span>;
+                          if (days <= 30) return <span className="text-amber-400">{label} ({days}d)</span>;
+                          return <span className="text-muted-foreground">{label}</span>;
+                        })()}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex justify-end gap-1">
@@ -469,7 +500,7 @@ const Certificates = () => {
 
       {/* Revoke Dialog */}
       <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>
-        <DialogContent className="bg-muted border-border">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-foreground">Revoke Certificate</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -491,7 +522,7 @@ const Certificates = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRevokeOpen(false)} className="border-border text-muted-foreground">Cancel</Button>
+            <Button variant="outline" onClick={() => setIsRevokeOpen(false)}>Cancel</Button>
             <Button onClick={handleRevoke} disabled={revokeCert.isPending} variant="destructive">
               {revokeCert.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Revoke

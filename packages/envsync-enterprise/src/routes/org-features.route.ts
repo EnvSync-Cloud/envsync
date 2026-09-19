@@ -58,7 +58,8 @@ app.put(
 	describeRoute({
 		operationId: "putOrgFeatureGrant",
 		summary: "Replace Organization Feature Grant",
-		description: "Full replace. Empty features[] denies every EE feature. Unknown catalog keys are dropped.",
+		description:
+			"Patch plan and/or overlay_features. Omitted fields stay. Overlay is additive on the plan defaults and does not change numeric caps. Unknown catalog keys are dropped.",
 		tags: ["Org Features"],
 		parameters: [platformTokenParam],
 		responses: {
@@ -90,7 +91,7 @@ app.delete(
 	describeRoute({
 		operationId: "deleteOrgFeatureGrant",
 		summary: "Delete Organization Feature Grant",
-		description: "Drops the grant row so the organization is unrestricted.",
+		description: "Resets the organization to the Developer plan with an empty overlay.",
 		tags: ["Org Features"],
 		parameters: [platformTokenParam],
 		responses: {

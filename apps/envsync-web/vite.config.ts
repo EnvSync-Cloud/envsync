@@ -85,7 +85,8 @@ export default defineConfig(({ mode }) => ({
     },
   },
   optimizeDeps: {
-    include: ["@envsync-cloud/envsync-ts-sdk"],
+    // Workspace SDK is rebuilt independently; prebundling it leaves enterpriseCmk undefined.
+    exclude: ["@envsync-cloud/envsync-ts-sdk"],
   },
   build: {
     chunkSizeWarningLimit: 1000,

@@ -53,9 +53,13 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 			: [currentMembership];
 
 	const policy = EditionPolicyService.getPolicySnapshot();
-	const [features, install_features] = await Promise.all([
+	const [features, install_features, resolvedPlan, usage] = await Promise.all([
 		EntitlementService.getOrgFeatures(user.org_id),
 		EntitlementService.getInstallFeatures(),
+		import("@/services/plan.service").then(({ PlanService }) => PlanService.resolve(user.org_id)),
+		import("@/services/plan_limit.service").then(({ PlanLimitService }) =>
+			PlanLimitService.usage(user.org_id).catch(() => null),
+		),
 	]);
 
 	return {
@@ -77,6 +81,10 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 		can_create_organization: policy.can_create_organization,
 		features,
 		install_features,
+		plan: resolvedPlan.plan,
+		plan_limits: resolvedPlan.limits,
+		plan_usage: usage,
+		feature_overrides: resolvedPlan.overlay_features,
 		auth_type: options?.authType ?? "jwt",
 	};
 }

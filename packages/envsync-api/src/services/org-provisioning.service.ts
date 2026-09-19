@@ -31,6 +31,13 @@ export interface ProvisionOrganizationInput {
 }
 
 export class OrgProvisioningService {
+	public static shouldAssignHostedDeveloperPlan(source: string): boolean {
+		return (
+			EditionPolicyService.isHosted() &&
+			EditionPolicyService.normalizeProvisionSource(source) === "hosted_signup"
+		);
+	}
+
 	public static async assertProvisioningAllowed(source?: string) {
 		// Populate entitlement cache so getMaxOrgs can read verified claims (Phase 4).
 		await EntitlementService.resolve().catch(() => null);
@@ -150,6 +157,21 @@ export class OrgProvisioningService {
 							member_serial_hex: cert.serial_hex,
 							is_system_generated: true,
 						};
+					},
+				},
+				{
+					name: "assign-developer-plan",
+					execute: async (ctx) => {
+						// Public Hosted signup only. CLI / UI harness / operator bootstrap
+						// must not inherit Developer or seed (BYOK, CR, EE routes) 403s.
+						if (!this.shouldAssignHostedDeveloperPlan(input.source)) return;
+						const { OrgFeatureGrantService } = await import("@/services/org-feature-grant.service");
+						await OrgFeatureGrantService.replaceGrant({
+							orgId: ctx.org_id,
+							plan: "developer",
+							source: "signup",
+							updatedBy: "signup",
+						});
 					},
 				},
 				{

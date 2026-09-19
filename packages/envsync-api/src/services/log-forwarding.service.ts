@@ -2,6 +2,7 @@
  * OSS-safe loader. Forwarding lives in envsync-enterprise.
  * Audit logging must not statically import the proprietary package.
  */
+import infoLogs, { LogTypes } from "@/libs/logger";
 type AuditLogPayload = {
 	action: string;
 	org_id: string;
@@ -23,8 +24,12 @@ export class LogForwardingService {
 				"../../../envsync-enterprise/src/services/log-forwarding.service.ts"
 			)) as EnterpriseLogForwarding;
 			return EnterpriseForwarding.forwardAuditLog(payload);
-		} catch {
-			// OSS / EE package absent — audit is already persisted.
+		} catch (error) {
+			infoLogs(
+				`Log forwarding skipped: ${error instanceof Error ? error.message : String(error)}`,
+				LogTypes.ERROR,
+				"LogForwardingService",
+			);
 		}
 	};
 }

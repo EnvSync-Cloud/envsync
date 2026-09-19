@@ -11,6 +11,16 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useCallback } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { api } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
 import { toast } from "sonner";
@@ -44,6 +54,7 @@ export const WebHooks = () => {
   const authEnabled = !isAuthLoading && isAuthenticated;
   const copy = useCopy();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [newWebhookData, setNewWebhookData] = useState<WebhookFormData>({
     name: "",
     event_types: [],
@@ -168,14 +179,7 @@ export const WebHooks = () => {
   const handleDeleteWebhook = useCallback(
     (webhookId: string) => {
       if (actionLoadingStates[webhookId] || deleteWebhook.isPending) return;
-
-      if (
-        window.confirm(
-          "Are you sure you want to delete this webhook? This action cannot be undone."
-        )
-      ) {
-        deleteWebhook.mutate(webhookId);
-      }
+      setPendingDeleteId(webhookId);
     },
     [actionLoadingStates, deleteWebhook]
   );
@@ -601,6 +605,28 @@ export const WebHooks = () => {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={Boolean(pendingDeleteId)} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete webhook?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone. Delivery to this URL will stop.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteId) deleteWebhook.mutate(pendingDeleteId);
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -112,6 +112,21 @@ describe("OrgProvisioningService.assertProvisioningAllowed", () => {
 	});
 });
 
+describe("OrgProvisioningService.shouldAssignHostedDeveloperPlan", () => {
+	test("only public Hosted signup gets Developer, not CLI bootstrap", () => {
+		EditionPolicyService.setTestOverrides({ edition: "enterprise", deployment_mode: "hosted" });
+		expect(OrgProvisioningService.shouldAssignHostedDeveloperPlan("hosted_signup")).toBe(true);
+		expect(OrgProvisioningService.shouldAssignHostedDeveloperPlan("org_invite_accept")).toBe(true);
+		expect(OrgProvisioningService.shouldAssignHostedDeveloperPlan("cli_bootstrap")).toBe(false);
+		expect(OrgProvisioningService.shouldAssignHostedDeveloperPlan("bootstrap-ui-harness")).toBe(false);
+	});
+
+	test("self-host never assigns a Hosted Developer grant", () => {
+		EditionPolicyService.setTestOverrides({ edition: "enterprise", deployment_mode: "selfhosted" });
+		expect(OrgProvisioningService.shouldAssignHostedDeveloperPlan("hosted_signup")).toBe(false);
+	});
+});
+
 describe("EditionPolicyService public signup", () => {
 	test("is enabled only on hosted", () => {
 		EditionPolicyService.setTestOverrides({ deployment_mode: "hosted", edition: "enterprise" });

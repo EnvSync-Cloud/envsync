@@ -98,6 +98,8 @@ export class SecretStorePiTService {
 		from_created_at?: Date;
 		to_created_at?: Date;
 	}) => {
+		const { PlanLimitService } = await import("@/services/plan_limit.service");
+		await PlanLimitService.assertFeature(org_id, "point_in_time");
 		const db = await DB.getInstance();
 
 		let historyQuery = db

@@ -4,6 +4,7 @@ import { runSaga } from "@/helpers/saga";
 import { AuditLogService } from "@/services/audit_log.service";
 import { CertificateRoleMapper } from "@/services/certificate-role.mapper";
 import { CertificateService } from "@/services/certificate.service";
+import { EditionPolicyService } from "@/services/edition-policy.service";
 import { OrgProvisioningService } from "@/services/org-provisioning.service";
 import { OrgService } from "@/services/org.service";
 import { RoleService } from "@/services/role.service";
@@ -53,6 +54,10 @@ export class OrganizationProvisioningService {
 		await OrgProvisioningService.assertProvisioningAllowed(source);
 
 		const currentUser = await UserService.getUser(input.currentUserId);
+		if (currentUser.auth_service_id) {
+			const { PlanLimitService } = await import("@/services/plan_limit.service");
+			await PlanLimitService.assertOrgCreate(currentUser.org_id, currentUser.auth_service_id);
+		}
 		const slug = await generateUniqueOrganizationSlug(input.organizationName);
 		const sagaCtx = { org_id: "", admin_role_id: "", user_id: "" };
 
@@ -133,6 +138,21 @@ export class OrganizationProvisioningService {
 							role_name: role.name,
 							issued_source: input.source ?? "hosted_dashboard",
 						},
+					});
+				},
+			},
+			{
+				name: "assign-plan",
+				execute: async (ctx) => {
+					if (!EditionPolicyService.isHosted()) return;
+					const { PlanService } = await import("@/services/plan.service");
+					const { OrgFeatureGrantService } = await import("@/services/org-feature-grant.service");
+					const current = await PlanService.resolve(currentUser.org_id);
+					await OrgFeatureGrantService.replaceGrant({
+						orgId: ctx.org_id,
+						plan: current.plan === "developer" ? "developer" : current.plan,
+						source: "hosted_dashboard",
+						updatedBy: currentUser.id,
 					});
 				},
 			},

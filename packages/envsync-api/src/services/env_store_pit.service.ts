@@ -7,6 +7,11 @@ function createExclusiveUpperBound(timestamp: Date) {
 }
 
 export class EnvStorePiTService {
+	public static async assertPlanAllowsHistory(org_id: string) {
+		const { PlanLimitService } = await import("@/services/plan_limit.service");
+		await PlanLimitService.assertFeature(org_id, "point_in_time");
+	}
+
 	public static createEnvStorePiT = async ({
 		org_id,
 		app_id,
@@ -95,6 +100,7 @@ export class EnvStorePiTService {
 		from_created_at?: Date;
 		to_created_at?: Date;
 	}) => {
+		await this.assertPlanAllowsHistory(org_id);
 		const db = await DB.getInstance();
 
 		let historyQuery = db
@@ -258,6 +264,7 @@ export class EnvStorePiTService {
 		env_type_id: string;
 		env_store_pit_id: string;
 	}) => {
+		await this.assertPlanAllowsHistory(org_id);
 		const db = await DB.getInstance();
 
 		// Get the timestamp of the target PiT
@@ -327,6 +334,7 @@ export class EnvStorePiTService {
 		env_type_id: string;
 		timestamp: Date;
 	}) => {
+		await this.assertPlanAllowsHistory(org_id);
 		const db = await DB.getInstance();
 
 		// Get all PiT changes up to the target timestamp

@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import type { EffectivePermissions } from "@/api/permissions.api";
 
-import { buildProjectNavItems, hasRequiredPermission } from "./context-nav";
+import { KeyRound, ShieldCheck } from "lucide-react";
+
+import type { WebNavGroup } from "@/modules/types";
+
+import { buildProjectNavItems, filterCertificateNavGroups, hasRequiredPermission, isItemActive } from "./context-nav";
 
 const viewerPermissions = {
   can_manage_api_keys: false,
@@ -11,6 +15,42 @@ const viewerPermissions = {
 const adminPermissions = {
   can_manage_api_keys: true,
 } as EffectivePermissions;
+
+describe("isItemActive", () => {
+  test("does not mark Organization selected on Change Requests", () => {
+    expect(isItemActive("/org/change-requests", "/org")).toBe(false);
+    expect(isItemActive("/org/change-requests", "/org/change-requests")).toBe(true);
+    expect(isItemActive("/org/access/users", "/org")).toBe(false);
+    expect(isItemActive("/org/access/users", "/org/access")).toBe(true);
+    expect(isItemActive("/org", "/org")).toBe(true);
+  });
+});
+
+describe("filterCertificateNavGroups", () => {
+  const groups: WebNavGroup[] = [
+    {
+      label: "Overview",
+      items: [{ id: "dashboard", name: "Dashboard", href: "/", icon: ShieldCheck }],
+    },
+    {
+      label: "Certificates",
+      items: [
+        { id: "certificates", name: "Certificates", href: "/org/certificates", icon: ShieldCheck },
+        { id: "gpgkeys", name: "GPG Keys", href: "/gpgkeys", icon: KeyRound },
+      ],
+    },
+    {
+      label: "Security",
+      items: [{ id: "apikeys", name: "API Keys", href: "/apikeys", icon: KeyRound }],
+    },
+  ];
+
+  test("keeps Certificates and GPG Keys even when those scopes are not allowed", () => {
+    const result = filterCertificateNavGroups(groups);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.items.map(item => item.id)).toEqual(["certificates", "gpgkeys"]);
+  });
+});
 
 describe("buildProjectNavItems", () => {
   test("drops Settings when can_manage_api_keys is missing", () => {

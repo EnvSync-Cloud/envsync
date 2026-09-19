@@ -1,5 +1,4 @@
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 import { KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
 
 import {
@@ -12,27 +11,48 @@ import { Badge } from "@shell/components/ui/badge";
 import { Button } from "@shell/components/ui/button";
 import { useAuthContext } from "@shell/contexts/auth";
 
-/**
- * Enterprise license + install status (absorbed from envsync-management-web).
- * Route: /organisation/license
- */
-function FeatureList({ label, features }: { label: string; features: string[] }) {
-  return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">{label}</h3>
-      {features.length === 0 ? (
-        <p className="text-sm text-muted-foreground">None</p>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {features.map((feature) => (
-            <Badge key={feature} variant="outline" className="font-mono">
-              {feature}
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+const FEATURE_CATALOG: Array<{ id: string; label: string; limitKey?: string }> = [
+  { id: "change_requests", label: "Change requests", limitKey: "change_requests" },
+  { id: "point_in_time", label: "Point in time", limitKey: "point_in_time" },
+  { id: "byok_secrets", label: "BYOK secrets", limitKey: "byok_secrets" },
+  { id: "certificates", label: "Certificates", limitKey: "certificates" },
+  { id: "oidc", label: "OIDC SSO" },
+  { id: "saml", label: "SAML SSO" },
+  { id: "rotation", label: "Secret rotation", limitKey: "rotation" },
+  { id: "dynamic_secrets", label: "Dynamic secrets" },
+  { id: "log_forwarding", label: "Log forwarding" },
+  { id: "integrations", label: "Integrations", limitKey: "integrations" },
+  { id: "kms", label: "Key management" },
+];
+
+const LICENSE_STATUS_LABELS: Record<string, string> = {
+  unknown: "Not activated",
+  active: "Active",
+  inactive: "Inactive",
+  expired: "Expired",
+  error: "Error",
+  locked: "Locked",
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  developer: "Developer",
+  plus: "Plus+",
+  enterprise: "Enterprise",
+};
+
+type FeatureSource = "plan" | "preview" | "off";
+
+function resolveFeatureSource(
+  id: string,
+  limitKey: string | undefined,
+  overlay: string[],
+  features: string[],
+  limits: Record<string, unknown> | undefined,
+): FeatureSource {
+  if (overlay.includes(id)) return "preview";
+  if (features.includes(id)) return "plan";
+  if (limitKey && limits?.[limitKey] === true) return "plan";
+  return "off";
 }
 
 export default function LicenseSettings() {
@@ -43,11 +63,24 @@ export default function LicenseSettings() {
   const verify = useVerifyLicense();
 
   const license = status?.license;
-  const system = status?.system;
-  const orgFeatures = user?.features ?? [];
-  const installFeatures = system?.entitlement?.features ?? [];
-  const showIntegrationsLink = orgFeatures.includes("integrations");
-  const showSsoLink = orgFeatures.includes("saml");
+  const system = status?.system as { deployment_mode?: string } | undefined;
+  const session = user as {
+    features?: string[];
+    plan?: string;
+    plan_limits?: Record<string, unknown>;
+    feature_overrides?: string[];
+  } | null;
+
+  const hosted = system?.deployment_mode === "hosted";
+  const orgFeatures = session?.features ?? [];
+  const overlay = session?.feature_overrides ?? [];
+  const plan = session?.plan;
+  const featureRows = FEATURE_CATALOG.map(item => ({
+    ...item,
+    source: resolveFeatureSource(item.id, item.limitKey, overlay, orgFeatures, session?.plan_limits),
+  }));
+  const enabledRows = featureRows.filter(row => row.source !== "off");
+  const licenseStatus = license?.state?.status ?? "unknown";
   const busy = activate.isPending || verify.isPending;
 
   const onActivate = async () => {
@@ -81,71 +114,76 @@ export default function LicenseSettings() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
-      <div className="space-y-3">
-        <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-          Enterprise
-        </p>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold text-foreground">License & install</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Activate or verify the self-host enterprise entitlement. Effective org features come from whoami;
-              install ceiling is the entitlement catalog on this deployment.
-              {showSsoLink ? (
-                <>
-                  {" "}
-                  SAML identity providers live under{" "}
-                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/sso">
-                    Organisation → SSO
-                  </Link>
-                  .
-                </>
-              ) : null}
-              {showIntegrationsLink ? (
-                <>
-                  {" "}
-                  Provider connections live under{" "}
-                  <Link className="text-emerald-600 underline-offset-2 hover:underline" to="/organisation/integrations">
-                    Organisation → Integrations
-                  </Link>
-                  .
-                </>
-              ) : null}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold text-foreground">{hosted ? "Plan" : "License"}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            {hosted
+              ? "Hosted organizations are gated by plan and optional feature overlays. A license file is not used here."
+              : "Self-host Enterprise uses a license lease or certificate. Activate it to unlock the install catalog."}
+          </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
+          <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
       {isError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error instanceof Error ? error.message : "Failed to load system status"}
         </div>
       )}
 
       {isLoading ? (
-        <div className="rounded-xl border border-border bg-card/50 p-8 text-sm text-muted-foreground">
-          Loading license state…
+        <div className="rounded-xl border border-border bg-card p-8 text-sm text-muted-foreground">
+          Loading…
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="size-5 text-emerald-500" />
-              <h2 className="text-lg font-medium">License</h2>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center gap-2">
-                Status{" "}
-                <Badge variant="outline" className="font-mono">
-                  {license?.state?.status ?? "unknown"}
+        <div className="grid gap-4">
+          {hosted ? (
+            <article className="rounded-xl border border-border bg-card p-6 space-y-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="text-lg font-medium">This organization</h2>
+                <p className="text-sm text-muted-foreground">
+                  Plan <span className="font-medium text-foreground">{plan ? (PLAN_LABELS[plan] ?? plan) : "—"}</span>
+                </p>
+              </div>
+              {enabledRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No extra features on this plan.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {enabledRows.map(row => (
+                    <li key={row.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                      <span>{row.label}</span>
+                      <Badge variant={row.source === "preview" ? "default" : "outline"}>
+                        {row.source === "preview" ? "Preview" : "On plan"}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ) : (
+            <>
+            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <KeyRound className="size-5 text-primary" />
+                <h2 className="text-lg font-medium">License</h2>
+              </div>
+              <p className="flex items-center gap-2 text-sm">
+                Status
+                <Badge variant={licenseStatus === "active" ? "default" : "outline"}>
+                  {LICENSE_STATUS_LABELS[licenseStatus] ?? licenseStatus}
                 </Badge>
               </p>
+              {licenseStatus === "unknown" && (
+                <p className="text-sm text-muted-foreground">
+                  No license is active on this install yet.
+                </p>
+              )}
               {license?.state?.lease_expires_at && (
-                <p className="text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Lease expires{" "}
                   <strong className="text-foreground">
                     {new Date(license.state.lease_expires_at).toLocaleString()}
@@ -153,49 +191,37 @@ export default function LicenseSettings() {
                 </p>
               )}
               {license?.state?.last_error_message && (
-                <p className="text-amber-200/90 text-xs">{license.state.last_error_message}</p>
+                <p className="text-sm text-amber-600 dark:text-amber-200">{license.state.last_error_message}</p>
               )}
-            </div>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button onClick={() => void onActivate()} disabled={busy}>
-                <ShieldCheck className="size-4" />
-                Activate license
-              </Button>
-              <Button variant="outline" onClick={() => void onVerify()} disabled={busy}>
-                Verify lease
-              </Button>
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4">
-            <h2 className="text-lg font-medium">Install</h2>
-            <dl className="grid gap-2 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Edition</dt>
-                <dd className="font-medium">{system?.edition ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Organizations</dt>
-                <dd className="font-medium">{system?.org_count ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Single-org mode</dt>
-                <dd className="font-medium">{system?.single_org_mode ? "yes" : "no"}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">Observability</dt>
-                <dd className="font-medium">{system?.observability_enabled ? "enabled" : "disabled"}</dd>
-              </div>
-            </dl>
-          </article>
-
-          <article className="rounded-xl border border-border bg-card/50 p-6 space-y-4 md:col-span-2">
-            <h2 className="text-lg font-medium">Features</h2>
-            <div className="grid gap-6 md:grid-cols-2">
-              <FeatureList label="Organization (whoami)" features={orgFeatures} />
-              <FeatureList label="Install entitlement" features={installFeatures} />
-            </div>
-          </article>
+              {license?.required !== false && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button onClick={() => void onActivate()} disabled={busy}>
+                    <ShieldCheck className="size-4" />
+                    Activate license
+                  </Button>
+                  <Button variant="outline" onClick={() => void onVerify()} disabled={busy}>
+                    Verify lease
+                  </Button>
+                </div>
+              )}
+            </article>
+            <article className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <h2 className="text-lg font-medium">Features</h2>
+              {enabledRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No extra features on this plan.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {enabledRows.map(row => (
+                    <li key={row.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                      <span>{row.label}</span>
+                      <Badge variant="outline">Included</Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          </>
+          )}
         </div>
       )}
     </div>

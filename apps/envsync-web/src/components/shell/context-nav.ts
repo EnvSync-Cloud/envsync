@@ -20,7 +20,40 @@ import {
   appSecretsPath,
   appSettingsPath,
 } from "@/lib/app-routes";
-import type { WebNavItem } from "@/modules/types";
+import type { WebNavGroup, WebNavItem } from "@/modules/types";
+
+export const CERTIFICATE_NAV_IDS = new Set(["certificates", "gpgkeys"]);
+
+/** `/org` is the Organization settings page, not a prefix for Access/CRs/webhooks. */
+export function isItemActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/" || pathname === "/dashboard";
+  if (href === "/projects") {
+    return pathname === "/projects" || pathname.startsWith("/projects/create");
+  }
+  if (href === "/org") {
+    return pathname === "/org" || pathname === "/org/";
+  }
+  if (href.endsWith("/environments") && pathname.endsWith("/manage-environments")) {
+    return true;
+  }
+  if (pathname === href) return true;
+  if (/^\/projects\/[^/]+$/.test(href)) return false;
+  return pathname.startsWith(`${href}/`);
+}
+
+export function filterCertificateNavGroups(
+  groups: WebNavGroup[],
+  permissions?: EffectivePermissions,
+): WebNavGroup[] {
+  return groups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(
+        item => CERTIFICATE_NAV_IDS.has(item.id) && hasRequiredPermission(item, permissions),
+      ),
+    }))
+    .filter(group => group.items.length > 0);
+}
 
 export function hasRequiredPermission(
   item: Pick<WebNavItem, "requiredPermission">,

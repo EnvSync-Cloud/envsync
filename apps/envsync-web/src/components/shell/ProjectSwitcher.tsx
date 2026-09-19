@@ -63,7 +63,16 @@ export function ProjectSwitcher({ expanded, appId, projects }: ProjectSwitcherPr
       </PopoverTrigger>
       <PopoverContent align="start" side="right" className="w-[300px] border-border bg-popover p-0">
         <Command className="bg-transparent text-foreground">
-          <CommandInput placeholder="Search projects..." />
+          <CommandInput
+            placeholder="Search projects..."
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            data-1p-ignore
+            data-lpignore="true"
+            name="project-switcher-filter"
+            className="h-9 border-0 shadow-none outline-none ring-0 focus:ring-0"
+          />
           <CommandList className="max-h-[320px]">
             <CommandEmpty>No projects found.</CommandEmpty>
             <CommandGroup heading="Projects">

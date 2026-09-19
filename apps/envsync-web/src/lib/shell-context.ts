@@ -51,6 +51,8 @@ function isCertificatesPath(pathname: string) {
     || pathname.startsWith("/certificates/")
     || pathname === "/org/certificates"
     || pathname.startsWith("/org/certificates/")
+    || pathname === "/gpgkeys"
+    || pathname.startsWith("/gpgkeys/")
   );
 }
 
@@ -74,8 +76,6 @@ function isOrganizationPath(pathname: string) {
     || pathname.startsWith("/audit/")
     || pathname === "/apikeys"
     || pathname.startsWith("/apikeys/")
-    || pathname === "/gpgkeys"
-    || pathname.startsWith("/gpgkeys/")
     || pathname === "/settings"
     || pathname.startsWith("/settings/")
   );

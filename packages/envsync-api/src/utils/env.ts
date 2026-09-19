@@ -75,6 +75,10 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_SETUP_TOKEN: z.string().optional(),
 	// Hosted platform/billing token for org feature grants (and later break-glass).
 	ENVSYNC_PLATFORM_ADMIN_TOKEN: z.string().optional(),
+	// Install-level plan for OSS self-host (developer | plus). Hosted uses org_feature_grant.plan.
+	ENVSYNC_PLAN: z.enum(["developer", "plus", "enterprise"]).optional(),
+	// Hosted orgs with no grant row: grandfather enterprise until backfill, then set developer.
+	ENVSYNC_HOSTED_DEFAULT_PLAN: z.enum(["developer", "plus", "enterprise"]).optional(),
 	ENVSYNC_OBSERVABILITY_ENABLED: z.string().default("true"),
 	ENVSYNC_MANAGEMENT_ENABLED: z.string().optional(),
 	ENVSYNC_SINGLE_ORG_MODE: z.string().default("false"),

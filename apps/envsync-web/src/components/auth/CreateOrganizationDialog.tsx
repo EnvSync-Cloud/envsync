@@ -115,7 +115,6 @@ export const CreateOrganizationDialog = ({
               type="submit"
               data-testid="create-organization-submit"
               disabled={isCreatingOrganization}
-              className="bg-emerald-500 text-black hover:bg-emerald-400"
             >
               {isCreatingOrganization ? "Creating..." : "Create organization"}
             </Button>

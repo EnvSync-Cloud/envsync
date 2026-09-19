@@ -15,7 +15,6 @@ import {
 	type VerifiedEntitlement,
 } from "@/services/entitlement.types";
 import { EditionPolicyService } from "@/services/edition-policy.service";
-import { OrgFeatureGrantService } from "@/services/org-feature-grant.service";
 
 const ENTITLEMENT_ISS = "envsync-license-server";
 const DEFAULT_GRACE_SECONDS = 72 * 60 * 60; // 72h grace after exp (Coder-like)
@@ -281,14 +280,15 @@ export class EntitlementService {
 
 	public static async getOrgFeatures(orgId: string): Promise<EnterpriseFeature[]> {
 		const ceiling = await this.getInstallFeatures();
-		if (!EditionPolicyService.isHosted() || !orgId) {
+		if (!orgId) {
 			return ceiling;
 		}
-		const grant = await OrgFeatureGrantService.getGrant(orgId);
-		if (!grant) {
+		if (!EditionPolicyService.isHosted()) {
 			return ceiling;
 		}
-		const granted = new Set(grant.features);
+		const { PlanService } = await import("@/services/plan.service");
+		const resolved = await PlanService.resolve(orgId);
+		const granted = new Set(resolved.features);
 		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
 	}
 
@@ -338,15 +338,13 @@ export class EntitlementService {
 		if (!EditionPolicyService.isHosted()) {
 			return;
 		}
-
-		const grant = await OrgFeatureGrantService.getGrant(orgId);
-		if (!grant) {
-			return;
-		}
 		if (feature === "multi_org") {
 			return;
 		}
-		if (!grant.features.includes(feature)) {
+
+		const { PlanService } = await import("@/services/plan.service");
+		const resolved = await PlanService.resolve(orgId);
+		if (!resolved.features.includes(feature)) {
 			throw new ForbiddenError(
 				`This organization is not entitled for this feature (${feature}).`,
 				"ORG_FEATURE_MISSING",

@@ -25,6 +25,10 @@ export type EntitledAuthSession = AuthSession & {
   features: string[];
   install_features: string[];
   auth_type: AuthSessionAuthType;
+  plan?: string;
+  plan_limits?: Record<string, unknown>;
+  plan_usage?: Record<string, number> | null;
+  feature_overrides?: string[];
 };
 
 const AUTH_TYPES = new Set<AuthSessionAuthType>(["jwt", "saml", "oidc", "api_key"]);
@@ -85,6 +89,7 @@ export function normalizeAuthSession(session: WhoAmIResponse | AuthSession): Ent
     active_membership_user_id: authSession.active_membership_user_id ?? authSession.user.id,
     features: asStringList(authSession.features),
     install_features: asStringList(authSession.install_features),
+    feature_overrides: asStringList(authSession.feature_overrides),
     auth_type: asAuthType(authSession.auth_type),
   };
 }
