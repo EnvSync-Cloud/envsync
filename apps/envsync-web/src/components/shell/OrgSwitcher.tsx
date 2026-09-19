@@ -17,10 +17,11 @@ import { cn } from "@/lib/utils";
 import { canCreateOrganizationInUi, runtimeConfig } from "@/utils/runtime-config";
 
 interface OrgSwitcherProps {
-  expanded: boolean;
+  expanded?: boolean;
+  variant?: "sidebar" | "header";
 }
 
-export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
+export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitcherProps) {
   const {
     user,
     memberships,
@@ -48,13 +49,16 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
     return (
       <div
         className={cn(
-          "flex items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary",
+          "flex items-center border border-primary/20 bg-primary/10 text-primary",
+          variant === "header" ? "gap-2 rounded-xl px-3 py-1.5" : "rounded-2xl",
           expanded ? "gap-2 px-3 py-2" : "justify-center p-2",
         )}
         title={activeOrgName}
       >
         <Sparkles className="size-3.5 shrink-0" />
-        {expanded && <span className="truncate text-sm font-medium">{activeOrgName}</span>}
+        {(expanded || variant === "header") && (
+          <span className="truncate text-sm font-medium">{activeOrgName}</span>
+        )}
       </div>
     );
   }
@@ -66,8 +70,11 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
           <button
             data-testid="organization-switcher-trigger"
             className={cn(
-              "flex w-full items-center rounded-2xl border border-primary/20 bg-primary/10 text-left text-primary transition-colors hover:border-primary/30 hover:bg-primary/14",
-              expanded ? "gap-2 px-3 py-2" : "justify-center p-2",
+              "flex items-center border border-primary/20 bg-primary/10 text-left text-primary transition-colors hover:border-primary/30 hover:bg-primary/14",
+              variant === "header"
+                ? "max-w-[240px] gap-2 rounded-xl px-3 py-1.5"
+                : "w-full rounded-2xl",
+              variant !== "header" && (expanded ? "gap-2 px-3 py-2" : "justify-center p-2"),
             )}
             title={activeOrgName}
           >
@@ -78,7 +85,7 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
                 <Sparkles className="size-3" />
               )}
             </span>
-            {expanded && (
+            {(expanded || variant === "header") && (
               <>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{activeOrgName}</span>
                 <ChevronsUpDown className="size-3.5 shrink-0 text-primary/70" />
@@ -86,7 +93,11 @@ export function OrgSwitcher({ expanded }: OrgSwitcherProps) {
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" side="right" className="w-[320px] border-border bg-popover p-0">
+        <PopoverContent
+          align="start"
+          side={variant === "header" ? "bottom" : "right"}
+          className="w-[320px] border-border bg-popover p-0"
+        >
           <Command className="bg-transparent text-foreground">
             <div className="border-b border-border px-4 py-3">
               <p className="text-[11px] uppercase tracking-[0.22em] text-tertiary">Active organization</p>

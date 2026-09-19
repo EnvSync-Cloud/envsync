@@ -1,15 +1,7 @@
 import { Search, Bell, LogOut, Settings, Globe } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/auth";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { OrgSwitcher } from "@/components/shell/OrgSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Fragment } from "react";
 import { logoutWebSession } from "@/api";
 import { runtimeConfig } from "@/utils/runtime-config";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -25,7 +16,6 @@ import { orgSettingsPath } from "@/lib/app-routes";
 
 export const Header = () => {
   const { user } = useAuthContext();
-  const breadcrumbs = useBreadcrumbs();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -40,38 +30,10 @@ export const Header = () => {
 
   return (
     <header className="border-b border-border bg-background/70 px-6 py-3 backdrop-blur-xl">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="min-w-0">
-          <Breadcrumb>
-            <BreadcrumbList>
-              {breadcrumbs.map((crumb, index) => (
-                <Fragment key={`${crumb.href}-${crumb.label}`}>
-                  {index > 0 && (
-                    <BreadcrumbSeparator className="text-muted-foreground/60" />
-                  )}
-                  <BreadcrumbItem>
-                    {index === breadcrumbs.length - 1 ? (
-                      <BreadcrumbPage className="text-sm font-medium text-foreground">
-                        {crumb.label}
-                      </BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        <Link
-                          to={crumb.href}
-                          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          {crumb.label}
-                        </Link>
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <OrgSwitcher variant="header" />
 
-        <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() =>
               window.dispatchEvent(new CustomEvent("open-command-palette"))

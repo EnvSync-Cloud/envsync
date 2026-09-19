@@ -5,7 +5,6 @@ import { ChevronLeft, Keyboard, Menu } from "lucide-react";
 
 import { sdk } from "@/api/base";
 import { ContextNav } from "@/components/shell/ContextNav";
-import { OrgSwitcher } from "@/components/shell/OrgSwitcher";
 import { ProductSwitcher } from "@/components/shell/ProductSwitcher";
 import { ProjectSwitcher } from "@/components/shell/ProjectSwitcher";
 import { API_KEYS } from "@/constants";
@@ -77,7 +76,6 @@ export const Sidebar = ({
       </div>
 
       <div className="flex-shrink-0 space-y-2 border-b border-border px-2 py-3">
-        <OrgSwitcher expanded={expanded} />
         <ProductSwitcher
           expanded={expanded}
           product={product}
