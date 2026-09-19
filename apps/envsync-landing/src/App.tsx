@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import AcceptOrgInvite from "./pages/AcceptOrgInvite";
 import AcceptUserInvite from "./pages/AcceptUserInvite";
 import Showcase from "./pages/Showcase";
+import MarketingDoc from "./pages/MarketingDoc";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,16 @@ const router = createBrowserRouter(
       <Route path="/onboarding/accept-org-invite/:invite_code" element={<AcceptOrgInvite />} />
       <Route path="/onboarding/accept-user-invite/:invite_code" element={<AcceptUserInvite />} />
       <Route path="/integrations" element={<Integrations />} />
+      <Route path="/companies/startups" element={<MarketingDoc />} />
+      <Route path="/companies/msme" element={<MarketingDoc />} />
+      <Route path="/companies/enterprise" element={<MarketingDoc />} />
+      <Route path="/product/secrets" element={<MarketingDoc />} />
+      <Route path="/product/certificates" element={<MarketingDoc />} />
+      <Route path="/product/access" element={<MarketingDoc />} />
+      <Route path="/product/security" element={<MarketingDoc />} />
+      <Route path="/oss" element={<MarketingDoc />} />
+      <Route path="/oss/minikms" element={<MarketingDoc />} />
+      <Route path="/oss/encryption" element={<MarketingDoc />} />
       {import.meta.env.DEV && <Route path="/__showcase" element={<Showcase />} />}
       <Route path="*" element={<NotFound />} />
     </Route>
