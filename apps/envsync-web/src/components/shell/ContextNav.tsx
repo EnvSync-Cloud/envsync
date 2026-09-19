@@ -16,6 +16,7 @@ import {
   buildProjectNavItems,
   filterCertificateNavGroups,
   hasRequiredPermission,
+  isItemActive,
 } from "./context-nav";
 
 const SECRETS_ORG_NAV_IDS = new Set(["dashboard", "applications"]);
@@ -25,19 +26,6 @@ interface ContextNavProps {
   product: ProductId;
   appId: string | null;
   allowedScopes: string[];
-}
-
-function isItemActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/" || pathname === "/dashboard";
-  if (href === "/projects") {
-    return pathname === "/projects" || pathname.startsWith("/projects/create");
-  }
-  if (href.endsWith("/environments") && pathname.endsWith("/manage-environments")) {
-    return true;
-  }
-  if (pathname === href) return true;
-  if (/^\/projects\/[^/]+$/.test(href)) return false;
-  return pathname.startsWith(`${href}/`);
 }
 
 function NavLink({

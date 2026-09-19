@@ -6,7 +6,7 @@ import { KeyRound, ShieldCheck } from "lucide-react";
 
 import type { WebNavGroup } from "@/modules/types";
 
-import { buildProjectNavItems, filterCertificateNavGroups, hasRequiredPermission } from "./context-nav";
+import { buildProjectNavItems, filterCertificateNavGroups, hasRequiredPermission, isItemActive } from "./context-nav";
 
 const viewerPermissions = {
   can_manage_api_keys: false,
@@ -15,6 +15,16 @@ const viewerPermissions = {
 const adminPermissions = {
   can_manage_api_keys: true,
 } as EffectivePermissions;
+
+describe("isItemActive", () => {
+  test("does not mark Organization selected on Change Requests", () => {
+    expect(isItemActive("/org/change-requests", "/org")).toBe(false);
+    expect(isItemActive("/org/change-requests", "/org/change-requests")).toBe(true);
+    expect(isItemActive("/org/access/users", "/org")).toBe(false);
+    expect(isItemActive("/org/access/users", "/org/access")).toBe(true);
+    expect(isItemActive("/org", "/org")).toBe(true);
+  });
+});
 
 describe("filterCertificateNavGroups", () => {
   const groups: WebNavGroup[] = [
