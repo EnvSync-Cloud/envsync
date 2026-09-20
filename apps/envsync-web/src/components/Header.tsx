@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logoutWebSession } from "@/api";
 import { runtimeConfig } from "@/utils/runtime-config";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { orgSettingsPath } from "@/lib/app-routes";
 
 export const Header = () => {
@@ -58,8 +57,6 @@ export const Header = () => {
           >
             <Bell className="size-4" />
           </button>
-
-          <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

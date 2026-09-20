@@ -43,12 +43,12 @@ describe("core web routes", () => {
     ).toBe(true);
   });
 
-  test("exposes org access as the combined collaboration entry", () => {
+  test("exposes Users, Teams, and Roles as organization Access items", () => {
     const items = getWebNavItems(coreWebModules);
-    expect(items.some((item) => item.id === "access" && item.href === "/org/access")).toBe(true);
-    expect(items.some((item) => item.id === "users")).toBe(false);
-    expect(items.some((item) => item.id === "teams")).toBe(false);
-    expect(items.some((item) => item.id === "roles")).toBe(false);
+    expect(items.some((item) => item.id === "users" && item.href === "/org/access/users")).toBe(true);
+    expect(items.some((item) => item.id === "teams" && item.href === "/org/access/teams")).toBe(true);
+    expect(items.some((item) => item.id === "roles" && item.href === "/org/access/roles")).toBe(true);
+    expect(items.some((item) => item.id === "access")).toBe(false);
     expect(items.every((item) => !item.href.startsWith("/applications"))).toBe(true);
     expect(items.every((item) => item.href !== "/org/users" && item.href !== "/users")).toBe(true);
   });
