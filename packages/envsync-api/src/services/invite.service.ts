@@ -6,6 +6,18 @@ import { ConflictError } from "@/libs/errors";
 import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class InviteService {
+	public static normalizeEmail(email: string) {
+		return email.trim().toLowerCase();
+	}
+
+	public static async findUsersByEmail(email: string) {
+		const db = await DB.getInstance();
+		return db
+			.selectFrom("users")
+			.selectAll()
+			.where("email", "ilike", this.normalizeEmail(email))
+			.execute();
+	}
 	public static createOrgInvite = async (email: string) => {
 		const db = await DB.getInstance();
 		const [existingInvite, existingUser] = await Promise.all([
@@ -49,22 +61,21 @@ export class InviteService {
 
 	public static createUserInvite = async (email: string, org_id: string, role_id: string) => {
 		const db = await DB.getInstance();
+		const normalized = this.normalizeEmail(email);
 		await PlanLimitService.assertCount(org_id, "members");
 
-		const existingUser = await db
-			.selectFrom("users")
-			.select("id")
-			.where("email", "=", email)
-			.executeTakeFirst();
-
-		if (existingUser) {
-			throw new ConflictError("An account already exists for this email.", "ACCOUNT_ALREADY_EXISTS");
+		const existingUsers = await this.findUsersByEmail(normalized);
+		if (existingUsers.some(user => user.org_id === org_id)) {
+			throw new ConflictError(
+				"This person is already a member of this organization.",
+				"ALREADY_A_MEMBER",
+			);
 		}
 
 		const existingInvite = await db
 			.selectFrom("invite_user")
 			.select("id")
-			.where("email", "=", email)
+			.where("email", "ilike", normalized)
 			.where("org_id", "=", org_id)
 			.where("is_accepted", "=", false)
 			.executeTakeFirst();
@@ -77,7 +88,7 @@ export class InviteService {
 			.insertInto("invite_user")
 			.values({
 				id: uuidv4(),
-				email,
+				email: normalized,
 				invite_token: SecretKeyGenerator.generateKey(),
 				is_accepted: false,
 				org_id,
@@ -88,7 +99,7 @@ export class InviteService {
 			.returningAll()
 			.executeTakeFirstOrThrow();
 
-		return { invite_token, id };
+		return { invite_token, id, account_exists: existingUsers.length > 0 };
 	};
 
 	public static getOrgInviteByCode = async (invite_code: string) => {

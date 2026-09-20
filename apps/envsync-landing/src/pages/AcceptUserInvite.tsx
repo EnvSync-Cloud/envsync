@@ -91,10 +91,11 @@ const AcceptUserInvite = () => {
       member_key_pem: string;
     };
   } | undefined)?.generated_certificate_bundle;
+  const accountExists = Boolean(inviteData?.invite?.account_exists);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (invite_code && fullName && password && !acceptUserInviteMutation.isPending) {
+    if (invite_code && (accountExists || (fullName && password)) && !acceptUserInviteMutation.isPending) {
       trackAction("user_invite_accept_started", {
         "envsync.event_name": "user_invite_accept_started",
         "envsync.event_category": "onboarding",
@@ -104,8 +105,8 @@ const AcceptUserInvite = () => {
       });
       acceptUserInviteMutation.mutate({
         invite_code,
-        full_name: fullName,
-        password
+        full_name: accountExists ? undefined : fullName,
+        password: accountExists ? undefined : password,
       });
     }
   };
@@ -150,11 +151,15 @@ const AcceptUserInvite = () => {
                   </div>
                   <CardTitle className="text-white text-2xl">Join the Team</CardTitle>
                   <CardDescription className="text-slate-300">
-                    Complete your account setup to join your organization
+                    {accountExists
+                      ? "You already have an EnvSync account. Join this organization with the same login."
+                      : "Complete your account setup to join your organization"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
+                    {!accountExists ? (
+                      <>
                     <div>
                       <Label htmlFor="fullName" className="text-slate-300">Full Name *</Label>
                       <Input
@@ -195,7 +200,9 @@ const AcceptUserInvite = () => {
                         </button>
                       </div>
                     </div>
-                    
+                      </>
+                    ) : null}
+
                     {acceptUserInviteMutation.isError && (
                       <div className="flex items-center gap-2 text-red-400 text-sm">
                         <AlertCircle className="h-4 w-4" />
@@ -207,7 +214,7 @@ const AcceptUserInvite = () => {
                       type="submit" 
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                       size="lg"
-                      disabled={acceptUserInviteMutation.isPending || !fullName || !password}
+                      disabled={acceptUserInviteMutation.isPending || (!accountExists && (!fullName || !password))}
                     >
                       {acceptUserInviteMutation.isPending ? (
                         <>
@@ -223,7 +230,9 @@ const AcceptUserInvite = () => {
                     </Button>
                   </form>
                   <p className="text-sm text-slate-400 text-center mt-4">
-                    You're joining an existing organization
+                    {accountExists
+                      ? "After joining, sign in with your existing EnvSync credentials."
+                      : "You're joining an existing organization"}
                   </p>
                 </CardContent>
               </Card>

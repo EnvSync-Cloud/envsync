@@ -118,4 +118,10 @@ export const coreApiModules: ApiModule[] = [
 		mountPath: "/setup",
 		createRouter: async () => (await import("@/routes/setup.route")).default,
 	},
+	{
+		// Hosted SuperAdmin / billing. Auth: X-EnvSync-Platform-Token only.
+		name: "platform",
+		mountPath: "/platform",
+		createRouter: async () => (await import("@/routes/platform.route")).default,
+	},
 ];

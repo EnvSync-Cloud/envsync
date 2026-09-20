@@ -54,7 +54,10 @@ export class OrganizationProvisioningService {
 		await OrgProvisioningService.assertProvisioningAllowed(source);
 
 		const currentUser = await UserService.getUser(input.currentUserId);
-		if (currentUser.auth_service_id) {
+		if (!currentUser.auth_service_id) {
+			throw new AppError("Active session is not backed by an identity provider", 400, "AUTH_NO_IDP");
+		}
+		if (source !== "hosted_ops") {
 			const { PlanLimitService } = await import("@/services/plan_limit.service");
 			await PlanLimitService.assertOrgCreate(currentUser.org_id, currentUser.auth_service_id);
 		}

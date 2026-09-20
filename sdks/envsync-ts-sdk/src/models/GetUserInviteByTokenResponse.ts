@@ -10,6 +10,7 @@ export type GetUserInviteByTokenResponse = {
         role_id: string;
         org_id: string;
         is_accepted: boolean;
+        account_exists?: boolean;
         created_at: string;
         updated_at: string;
     };

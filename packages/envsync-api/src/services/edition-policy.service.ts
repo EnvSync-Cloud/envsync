@@ -8,6 +8,7 @@ export type EnvSyncDeploymentMode = "hosted" | "selfhosted";
 export type OrgProvisionSource =
 	| "hosted_signup"
 	| "hosted_dashboard"
+	| "hosted_ops"
 	| "selfhost_bootstrap"
 	| "selfhost_cli"
 	| "dev";
@@ -213,6 +214,10 @@ export class EditionPolicyService {
 			case "workspace_switcher":
 			case "create_workspace":
 				return "hosted_dashboard";
+			case "hosted_ops":
+			case "superadmin":
+			case "support":
+				return "hosted_ops";
 			case "selfhost_bootstrap":
 				return "selfhost_bootstrap";
 			case "selfhost_cli":
@@ -359,6 +364,7 @@ export class EditionPolicyService {
 		if (mode === "hosted") {
 			return channel === "hosted_signup"
 				|| channel === "hosted_dashboard"
+				|| channel === "hosted_ops"
 				|| channel === "dev";
 		}
 		// selfhosted
@@ -378,7 +384,7 @@ export class EditionPolicyService {
 		if (this.isHosted() && !this.isSingleOrgMode()) {
 			return null;
 		}
-		if (channel === "hosted_signup" || channel === "hosted_dashboard") {
+		if (channel === "hosted_signup" || channel === "hosted_dashboard" || channel === "hosted_ops") {
 			return this.getMaxOrgs() ?? 1;
 		}
 		if (channel === "selfhost_cli" || channel === "selfhost_bootstrap" || channel === "dev") {

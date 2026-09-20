@@ -115,7 +115,7 @@ export class OnboardingController {
 		const invite = await InviteService.createUserInvite(email, org_id, role_id);
 		const org = await OrgService.getOrg(org_id);
 
-		await onUserOnboardingInvite(email, {
+		await onUserOnboardingInvite(invite.email ?? email, {
 			accept_link: userInviteAcceptLink(invite.invite_token),
 			org_name: org.name,
 		});
@@ -133,26 +133,25 @@ export class OnboardingController {
 			},
 		});
 
-		return c.json({ message: "User invite created successfully." }, 201);
+		return c.json(
+			{
+				message: "User invite created successfully.",
+				account_exists: invite.account_exists,
+			},
+			201,
+		);
 	};
 
 	public static readonly acceptUserInvite = async (c: Context) => {
 		const { invite_code } = c.req.param();
 
-		const { full_name, password } = await c.req.json();
+		const { full_name, password } = await c.req.json<{
+			full_name?: string;
+			password?: string;
+		}>();
 
-		if (!invite_code || !full_name || !password) {
-			return c.json({ error: "All fields are required." }, 400);
-		}
-
-		if (!isPasswordStrong(password)) {
-			return c.json(
-				{
-					error:
-						"Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
-				},
-				400,
-			);
+		if (!invite_code) {
+			return c.json({ error: "Invite code is required." }, 400);
 		}
 
 		// Check if the invite code is valid and not already accepted
@@ -164,14 +163,43 @@ export class OnboardingController {
 			return c.json({ error: "Invite already accepted." }, 400);
 		}
 
-		// create user
-		const user = await UserService.createUser({
-			email: invite.email,
-			full_name,
-			password,
-			org_id: invite.org_id,
-			role_id: invite.role_id,
-		});
+		const existingUsers = await InviteService.findUsersByEmail(invite.email);
+		if (existingUsers.some(user => user.org_id === invite.org_id)) {
+			throw new AppError("This person is already a member of this organization.", 409, "ALREADY_A_MEMBER");
+		}
+		const existingIdentity = existingUsers.find(user => Boolean(user.auth_service_id));
+
+		let user: { id: string };
+		if (existingIdentity?.auth_service_id) {
+			user = await UserService.createMembershipForExistingIdentity({
+				email: InviteService.normalizeEmail(invite.email),
+				full_name: full_name?.trim() || existingIdentity.full_name || invite.email,
+				profile_picture_url: existingIdentity.profile_picture_url,
+				auth_service_id: existingIdentity.auth_service_id,
+				org_id: invite.org_id,
+				role_id: invite.role_id,
+			});
+		} else {
+			if (!full_name?.trim() || !password) {
+				return c.json({ error: "All fields are required." }, 400);
+			}
+			if (!isPasswordStrong(password)) {
+				return c.json(
+					{
+						error:
+							"Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character.",
+					},
+					400,
+				);
+			}
+			user = await UserService.createUser({
+				email: InviteService.normalizeEmail(invite.email),
+				full_name: full_name.trim(),
+				password,
+				org_id: invite.org_id,
+				role_id: invite.role_id,
+			});
+		}
 
 		const [orgCA, role] = await Promise.all([
 			CertificateService.getOrgCA(invite.org_id),
@@ -245,8 +273,17 @@ export class OnboardingController {
 		}
 
 		const invite = await InviteService.getUserInviteByCode(invite_code);
+		const existingUsers = await InviteService.findUsersByEmail(invite.email);
 
-		return c.json({ invite }, 200);
+		return c.json(
+			{
+				invite: {
+					...invite,
+					account_exists: existingUsers.length > 0,
+				},
+			},
+			200,
+		);
 	};
 
 	// update user invite

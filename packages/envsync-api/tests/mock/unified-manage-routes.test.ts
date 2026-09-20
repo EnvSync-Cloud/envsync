@@ -134,4 +134,20 @@ describe("unified manage surface /api/v1/manage/{module}/...", () => {
 		const metadata = await coreApp.request("http://localhost/api/saml/metadata/org-1");
 		expect(metadata.status).not.toBe(423);
 	});
+
+	test("createApiApp remounts manage after the registry is cleared", async () => {
+		clearManagementModulesForTests();
+		const remounted = await createApiApp("core");
+		const health = await remounted.request("http://localhost/health");
+		expect(health.status).toBe(200);
+		expect(await health.json()).toMatchObject({
+			surface: "core",
+			manage_api_prefix: MANAGE_API_PREFIX,
+		});
+
+		const status = await remounted.request(
+			`http://localhost${MANAGE_API_PREFIX}/system/status`,
+		);
+		expect(status.status).toBe(200);
+	});
 });

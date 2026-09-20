@@ -4,5 +4,6 @@
 /* eslint-disable */
 export type CreateUserInviteResponse = {
     message: string;
+    account_exists?: boolean;
 };
 

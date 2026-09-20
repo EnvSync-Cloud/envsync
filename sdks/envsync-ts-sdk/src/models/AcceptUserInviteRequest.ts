@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type AcceptUserInviteRequest = {
-    full_name: string;
-    password: string;
+    full_name?: string;
+    password?: string;
 };
 

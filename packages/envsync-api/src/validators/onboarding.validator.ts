@@ -68,13 +68,14 @@ export const createUserInviteRequestBodySchema = z
 export const createUserInviteResponseSchema = z
 	.object({
 		message: z.string().openapi({ example: "User invite created successfully." }),
+		account_exists: z.boolean().optional().openapi({ example: false }),
 	})
 	.openapi({ ref: "CreateUserInviteResponse" });
 
 export const acceptUserInviteRequestBodySchema = z
 	.object({
-		full_name: z.string().min(1, "Full name is required").openapi({ example: "John Doe" }),
-		password: z.string().openapi({ example: "securepassword123" }),
+		full_name: z.string().min(1).optional().openapi({ example: "John Doe" }),
+		password: z.string().optional().openapi({ example: "securepassword123" }),
 	})
 	.openapi({ ref: "AcceptUserInviteRequest" });
 
@@ -94,6 +95,7 @@ export const getUserInviteByTokenResponseSchema = z
 			role_id: z.string().openapi({ example: "ROLE_ID" }),
 			org_id: z.string().openapi({ example: "ORG_ID" }),
 			is_accepted: z.boolean().openapi({ example: false }),
+			account_exists: z.boolean().optional().openapi({ example: false }),
 			created_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
 			updated_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
 		}),
