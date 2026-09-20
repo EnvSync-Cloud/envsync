@@ -2017,6 +2017,8 @@ function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toV
 	run("docker", [
 		"run",
 		"--rm",
+		"--hostname",
+		"envsync-upgrade-dump",
 		"--network",
 		stackNetworkName(config),
 		"-e",
@@ -2026,7 +2028,7 @@ function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toV
 		"postgres:17",
 		"sh",
 		"-lc",
-		`pg_dump -h postgres -U postgres -d envsync -Fc -f /backup/${fileName}`,
+		`pg_dump -h ${serviceStackName(config, "postgres")} -U postgres -d envsync -Fc -f /backup/${fileName}`,
 	]);
 	logSuccess(`API DB upgrade snapshot created at ${hostPath}`);
 	return hostPath;
@@ -2042,6 +2044,8 @@ function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
 	run("docker", [
 		"run",
 		"--rm",
+		"--hostname",
+		"envsync-upgrade-restore",
 		"--network",
 		stackNetworkName(config),
 		"-e",
@@ -2051,7 +2055,7 @@ function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
 		"postgres:17",
 		"sh",
 		"-lc",
-		`pg_restore --clean --if-exists --no-owner --no-privileges -h postgres -U postgres -d envsync /backup/${fileName}`,
+		`pg_restore --clean --if-exists --no-owner --no-privileges -h ${serviceStackName(config, "postgres")} -U postgres -d envsync /backup/${fileName}`,
 	]);
 	logSuccess(`API DB upgrade snapshot restored from ${backupPath}`);
 }
