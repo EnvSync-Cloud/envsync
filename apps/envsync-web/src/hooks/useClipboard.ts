@@ -12,15 +12,42 @@ interface CopyOptions {
   suffix?: string;
 }
 
+/** Clipboard API is unavailable on http://app.lvh.me (not a secure context). */
+export async function copyTextToClipboard(text: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through to execCommand for http hosts and denied permissions.
+    }
+  }
+
+  if (typeof document === "undefined") {
+    throw new Error("Clipboard is not available");
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "0";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!copied) {
+    throw new Error("Failed to copy to clipboard");
+  }
+}
+
 export const useCopy = (options: CopyOptions = {}) => {
   return useMutation({
     mutationFn: async (text: string) => {
-      if (!navigator.clipboard) {
-        throw new Error("Clipboard API is not supported in your browser");
-      }
-
       const content = `${options.prefix || ""}${text}${options.suffix || ""}`;
-      await navigator.clipboard.writeText(content);
+      await copyTextToClipboard(content);
     },
     onSuccess: (_data, text) => options.onSuccess?.(text),
     onError: (error) => options.onError?.(error),
