@@ -233,6 +233,7 @@ export async function createApiApp(surface: ApiSurface) {
 				"X-CSRF-Token",
 				"X-EnvSync-Org-Id",
 				"X-EnvSync-Client",
+				"X-EnvSync-Platform-Token",
 			],
 			allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 			credentials: true,
@@ -261,7 +262,12 @@ export async function createApiApp(surface: ApiSurface) {
 		: [];
 	const coreAllow = isManagement
 		? []
-		: ["/api/system/status", "/api/setup/status", "/api/setup/org"];
+		: [
+				"/api/system/status",
+				"/api/setup/status",
+				"/api/setup/org",
+				"/api/platform/organizations",
+			];
 	const publicSamlAllow = manageMounted
 		? ["/api/saml/metadata", "/api/saml/acs", "/api/saml/sso"]
 		: [];

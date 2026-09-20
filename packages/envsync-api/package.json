@@ -17,7 +17,8 @@
   "scripts": {
     "build": "bun run builder.ts",
     "db": "bun run scripts/migrate.ts",
-    "dev": "bun run --hot src/entrypoint.ts",
+    "dev": "bun run --hot src/entrypoint.enterprise.ts",
+    "dev:oss": "bun run --hot src/entrypoint.ts",
     "format": "prettier --write .",
     "start": "bun run src/entrypoint.ts",
     "test": "bun test tests/mock",

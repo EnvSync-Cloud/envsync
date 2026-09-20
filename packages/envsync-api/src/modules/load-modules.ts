@@ -81,6 +81,28 @@ export async function registerApiBackgroundHandlers(
 }
 
 /**
+ * Load EE module bag without pulling the envsync-enterprise barrel (SAML/ACME
+ * services). Barrel imports can fail under bun --hot circular reloads; the
+ * `/modules` export and sibling path only evaluate management-modules.ts.
+ */
+async function importEnterpriseManagementModules() {
+	try {
+		return (await import("envsync-enterprise/modules")).enterpriseManagementModules;
+	} catch (packageError) {
+		try {
+			return (await import("envsync-enterprise")).enterpriseManagementModules;
+		} catch {
+			try {
+				return (await import("../../../envsync-enterprise/src/management-modules.ts"))
+					.enterpriseManagementModules;
+			} catch {
+				throw packageError;
+			}
+		}
+	}
+}
+
+/**
  * Unified API: load proprietary manage modules when the surface is enabled and
  * the package is present. Never a hard production dependency of OSS graphs.
  */
@@ -93,11 +115,16 @@ export async function tryRegisterEnterpriseManageModules(): Promise<boolean> {
 		if (!EditionPolicyService.isManagementEnabled()) {
 			return false;
 		}
-		const { enterpriseManagementModules } = await import("envsync-enterprise");
+		const enterpriseManagementModules = await importEnterpriseManagementModules();
+		if (!enterpriseManagementModules?.length) {
+			return false;
+		}
 		registerManagementModules(enterpriseManagementModules);
 		return true;
-	} catch {
+	} catch (error) {
 		// Package missing or edition gate — OSS / incomplete install.
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn(`[load-modules] enterprise manage modules not registered: ${message}`);
 		return false;
 	}
 }

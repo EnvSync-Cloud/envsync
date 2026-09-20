@@ -18,8 +18,8 @@ Backend API for the EnvSync platform.
 
 ```
 src/
-  entrypoint.ts              # OSS / local entry
-  entrypoint.enterprise.ts   # EE image entry (registers enterprise modules first)
+  entrypoint.ts              # OSS image / `dev:oss`
+  entrypoint.enterprise.ts   # EE image + local `dev` (registers enterprise modules first)
   app/factory.ts             # createApiApp — core + optional manage mount
   modules/load-modules.ts    # ModuleRegistry bags; tryRegisterEnterpriseManageModules
   routes/                    # core product routers

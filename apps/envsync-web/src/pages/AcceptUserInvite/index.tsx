@@ -50,13 +50,19 @@ const AcceptUserInvitePage = () => {
     enabled: Boolean(invite_code),
     retry: false,
   });
+  const accountExists = Boolean(inviteQuery.data?.invite?.account_exists);
 
   const acceptMutation = useMutation({
     mutationFn: async () => {
-      return sdk.onboarding.acceptUserInvite(invite_code!, {
-        full_name: fullName,
-        password,
-      });
+      return sdk.onboarding.acceptUserInvite(
+        invite_code!,
+        accountExists
+          ? {}
+          : {
+              full_name: fullName,
+              password,
+            },
+      );
     },
   });
 
@@ -123,11 +129,17 @@ const AcceptUserInvitePage = () => {
               </div>
               <CardTitle className="text-2xl">Join the team</CardTitle>
               <CardDescription>
+                {accountExists
+                  ? "You already have an EnvSync account. Join this organization with the same login."
+                  : (
+                    <>
                 Complete your account setup to join{" "}
                 <span className="font-medium text-foreground">
                   {inviteQuery.data.invite.email}
                 </span>
                 .
+                    </>
+                  )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -135,10 +147,13 @@ const AcceptUserInvitePage = () => {
                 className="space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!fullName || !password || acceptMutation.isPending) return;
+                  if (acceptMutation.isPending) return;
+                  if (!accountExists && (!fullName || !password)) return;
                   acceptMutation.mutate();
                 }}
               >
+                {!accountExists ? (
+                  <>
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full name *</Label>
                   <Input
@@ -172,6 +187,12 @@ const AcceptUserInvitePage = () => {
                     </button>
                   </div>
                 </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    After joining, sign in with your existing EnvSync credentials.
+                  </p>
+                )}
 
                 {acceptMutation.isError && (
                   <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -183,7 +204,7 @@ const AcceptUserInvitePage = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={acceptMutation.isPending || !fullName || !password}
+                  disabled={acceptMutation.isPending || (!accountExists && (!fullName || !password))}
                 >
                   {acceptMutation.isPending ? (
                     <>

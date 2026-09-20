@@ -19,6 +19,7 @@ import AcceptOrgInvite from "./pages/AcceptOrgInvite";
 import AcceptUserInvite from "./pages/AcceptUserInvite";
 import Showcase from "./pages/Showcase";
 import MarketingDoc from "./pages/MarketingDoc";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<TelemetryLayout />}>
       <Route path="/" element={<Index />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/about" element={<About />} />
       <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/onboarding/accept-org-invite/:invite_code" element={<AcceptOrgInvite />} />
