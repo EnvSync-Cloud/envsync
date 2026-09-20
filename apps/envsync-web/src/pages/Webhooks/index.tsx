@@ -617,6 +617,7 @@ export const WebHooks = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              data-testid="confirm-delete-webhook"
               onClick={() => {
                 if (pendingDeleteId) deleteWebhook.mutate(pendingDeleteId);
                 setPendingDeleteId(null);

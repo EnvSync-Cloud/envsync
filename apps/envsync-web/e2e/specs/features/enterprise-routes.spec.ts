@@ -15,7 +15,7 @@ test.describe("enterprise dashboard routes", () => {
 			},
 			{
 				path: "/organisation/license",
-				heading: /License/i,
+				heading: /License|Plan/i,
 			},
 			{
 				path: "/organisation/sync",

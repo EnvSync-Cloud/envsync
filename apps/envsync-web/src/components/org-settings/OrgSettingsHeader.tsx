@@ -11,7 +11,9 @@ export const OrgSettingsHeader = ({ orgName }: OrgSettingsHeaderProps) => {
         <Building2 className="size-5 text-emerald-400" />
       </div>
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Organization</h1>
+        <h1 data-testid="org-settings-heading" className="text-xl font-semibold tracking-tight text-foreground">
+          Organization
+        </h1>
         {orgName ? <p className="text-sm text-muted-foreground">{orgName}</p> : null}
       </div>
     </div>
