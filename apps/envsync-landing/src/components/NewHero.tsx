@@ -57,6 +57,15 @@ const NewHero = () => {
                 Start for free
               </Button>
             </Link>
+            <Link to="/pricing" onClick={() => trackAction("landing_pricing_clicked", { placement: "hero" })}>
+              <Button
+                variant="hero"
+                size="lg"
+                className="border-hero-text bg-transparent text-hero-text hover:opacity-95"
+              >
+                See Pricing
+              </Button>
+            </Link>
             <a href="https://github.com/EnvSync-Cloud/envsync" onClick={() => trackAction("landing_github_clicked", { placement: "hero" })}>
               <Button
                 variant="hero"

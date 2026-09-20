@@ -39,6 +39,7 @@ const linkGroups = [
   {
     heading: "Company",
     links: [
+      { label: "Pricing", href: "/pricing", external: false },
       { label: "About", href: "/about", external: false },
       { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
       { label: "Get Started", href: "/onboarding", external: false },

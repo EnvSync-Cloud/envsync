@@ -47,6 +47,7 @@ export const ossNav: NavGroup = {
 export const navGroups: NavGroup[] = [productNav, companiesNav, ossNav];
 
 export const standaloneNav: NavLink[] = [
+  { label: "Pricing", href: "/pricing" },
   { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
   { label: "GitHub", href: "https://github.com/EnvSync-Cloud/envsync", external: true },
 ];
