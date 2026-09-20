@@ -12,7 +12,7 @@ import App from './App.tsx'
 import './index.css'
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider attribute="class" defaultTheme="light" enableSystem storageKey="envsync-theme">
+  <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false} storageKey="envsync-theme">
     <App />
   </ThemeProvider>
 );

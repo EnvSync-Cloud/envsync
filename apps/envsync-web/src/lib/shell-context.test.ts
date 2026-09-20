@@ -50,8 +50,8 @@ describe("shell context", () => {
   test("maps routes onto products", () => {
     expect(getShellContext("/projects/app-1").product).toBe("secrets");
     expect(getShellContext("/dashboard").product).toBe("secrets");
-    expect(getShellContext("/org/certificates").product).toBe("certificates");
-    expect(getShellContext("/gpgkeys").product).toBe("certificates");
+    expect(getShellContext("/org/certificates").product).toBe("organization");
+    expect(getShellContext("/gpgkeys").product).toBe("organization");
     expect(getShellContext("/org/users").product).toBe("organization");
     expect(getShellContext("/organisation/license").product).toBe("organization");
     expect(getShellContext("/organisation").product).toBe("organization");
@@ -71,7 +71,6 @@ describe("shell context", () => {
 
   test("keeps organization and certificate product homes stable", () => {
     expect(productHomeHref("organization")).toBe("/org/access");
-    expect(productHomeHref("certificates")).toBe("/org/certificates");
   });
 
   test("only reuses a last project when it belongs to the current org allowlist", () => {

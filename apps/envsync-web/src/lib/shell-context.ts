@@ -1,4 +1,4 @@
-export type ProductId = "secrets" | "certificates" | "organization";
+export type ProductId = "secrets" | "organization";
 
 export interface ProductDefinition {
   id: ProductId;
@@ -14,7 +14,6 @@ export interface ShellContext {
 
 export const PRODUCTS: ProductDefinition[] = [
   { id: "secrets", name: "Secret Management", homeHref: "/projects" },
-  { id: "certificates", name: "Certificates", homeHref: "/org/certificates" },
   { id: "organization", name: "Organization", homeHref: "/org/access" },
 ];
 
@@ -45,23 +44,16 @@ export function getAppIdFromPath(pathname: string): string | null {
   return null;
 }
 
-function isCertificatesPath(pathname: string) {
-  return (
-    pathname === "/certificates"
-    || pathname.startsWith("/certificates/")
-    || pathname === "/org/certificates"
-    || pathname.startsWith("/org/certificates/")
-    || pathname === "/gpgkeys"
-    || pathname.startsWith("/gpgkeys/")
-  );
-}
-
 function isOrganizationPath(pathname: string) {
   return (
     pathname === "/org"
     || pathname.startsWith("/org/")
     || pathname === "/organisation"
     || pathname.startsWith("/organisation/")
+    || pathname === "/certificates"
+    || pathname.startsWith("/certificates/")
+    || pathname === "/gpgkeys"
+    || pathname.startsWith("/gpgkeys/")
     || pathname === "/users"
     || pathname.startsWith("/users/")
     || pathname === "/teams"
@@ -83,10 +75,6 @@ function isOrganizationPath(pathname: string) {
 
 export function getShellContext(pathname: string): ShellContext {
   const appId = getAppIdFromPath(pathname);
-
-  if (isCertificatesPath(pathname)) {
-    return { product: "certificates", appId, isProjectRoute: appId !== null };
-  }
 
   if (isOrganizationPath(pathname)) {
     return { product: "organization", appId, isProjectRoute: appId !== null };

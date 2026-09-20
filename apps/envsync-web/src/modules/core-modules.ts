@@ -7,15 +7,19 @@ import {
   KeyRound,
   LayoutDashboard,
   Settings,
+  ShieldAlert,
   ShieldCheck,
+  User,
   Users,
 } from "lucide-react";
 
 import {
   apiKeysPath,
   LEGACY_REDIRECTS,
-  orgAccessPath,
   orgCertificatesPath,
+  orgRolesPath,
+  orgTeamsPath,
+  orgUsersPath,
   orgChangeRequestsPath,
   orgSettingsPath,
   orgWebhooksPath,
@@ -248,9 +252,16 @@ export const coreWebModules: WebModule[] = [
         ],
       },
       {
+        label: "Access",
+        items: [
+          { id: "users", name: "Users", href: orgUsersPath(), icon: User },
+          { id: "teams", name: "Teams", href: orgTeamsPath(), icon: Users },
+          { id: "roles", name: "Roles", href: orgRolesPath(), icon: ShieldAlert },
+        ],
+      },
+      {
         label: "Collaboration",
         items: [
-          { id: "access", name: "Access", href: orgAccessPath(), icon: Users },
           { id: "change-requests", name: "Change Requests", href: orgChangeRequestsPath(), icon: ShieldCheck },
           { id: "webhooks", name: "Webhooks", href: orgWebhooksPath(), icon: Anchor },
         ],

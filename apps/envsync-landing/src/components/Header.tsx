@@ -1,4 +1,4 @@
-import { Button, ThemeToggle } from "@/components/primitives";
+import { Button } from "@/components/primitives";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -75,7 +75,6 @@ const Header = () => {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <ThemeToggle />
           <a href={runtimeConfig.appBaseUrl}>
             <Button variant="outline" size="sm">
               Sign In
@@ -144,9 +143,6 @@ const Header = () => {
                 Get Started
               </Button>
             </Link>
-            <div className="flex justify-center pt-2">
-              <ThemeToggle />
-            </div>
           </div>
         </div>
       )}

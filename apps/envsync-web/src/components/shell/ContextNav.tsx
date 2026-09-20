@@ -12,9 +12,7 @@ import { cn } from "@/lib/utils";
 import type { WebNavGroup, WebNavItem } from "@/modules/types";
 
 import {
-  CERTIFICATE_NAV_IDS,
   buildProjectNavItems,
-  filterCertificateNavGroups,
   hasRequiredPermission,
   isItemActive,
 } from "./context-nav";
@@ -134,17 +132,11 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
     enabled: !isAuthLoading && isAuthenticated,
   });
   const groups = useMemo(() => {
-    if (product === "certificates") {
-      // Product switcher already entered Certificates. Do not hide GPG/CA behind
-      // planAllows or the empty-nav fallback would show Secrets (Dashboard/Projects).
-      return filterCertificateNavGroups(navGroups, permissions);
-    }
-
     if (product === "organization") {
       return filterGroups(
         navGroups,
         allowedScopes,
-        (item) => !SECRETS_ORG_NAV_IDS.has(item.id) && !CERTIFICATE_NAV_IDS.has(item.id),
+        (item) => !SECRETS_ORG_NAV_IDS.has(item.id),
         permissions,
       );
     }
