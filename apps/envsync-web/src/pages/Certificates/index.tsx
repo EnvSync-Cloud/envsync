@@ -39,7 +39,10 @@ const Certificates = () => {
   const { data: rootCA } = api.certificates.getRootCA();
   const { data: users = [] } = api.users.getAllUsers();
   const { data: apps = [] } = api.applications.allApplications();
-  const copy = useCopy({ onSuccess: () => toast.success("Copied") });
+  const copy = useCopy({
+    onSuccess: () => toast.success("Copied"),
+    onError: () => toast.error("Could not copy CRL URL"),
+  });
   const crlUrl = `${runtimeConfig.apiBaseUrl.replace(/\/$/, "")}/api/certificate/crl`;
 
   // Init CA dialog
