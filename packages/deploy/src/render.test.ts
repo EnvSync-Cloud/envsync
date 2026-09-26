@@ -333,6 +333,21 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(merged.env.API_URL).toBe(template.API_URL);
 	});
 
+	test("forces generated miniKMS TLS keys over local deploy.env", () => {
+		const template = buildRuntimeEnv(config, generated);
+		const local = {
+			...template,
+			MINIKMS_TLS_ENABLED: "false",
+			MINIKMS_TLS_CA_CERT_FILE: "/old/ca.pem",
+		};
+		const merged = mergeRuntimeEnvLocalFirst(template, local);
+		expect(merged.env.MINIKMS_TLS_ENABLED).toBe("true");
+		expect(merged.env.MINIKMS_TLS_CA_CERT_FILE).toBe(template.MINIKMS_TLS_CA_CERT_FILE);
+		expect(merged.forced).toContain("MINIKMS_TLS_ENABLED");
+		expect(merged.forced).toContain("MINIKMS_TLS_CA_CERT_FILE");
+		expect(merged.kept).not.toContain("MINIKMS_TLS_ENABLED");
+	});
+
 	test("keeps SAML_SESSION_SECRET stable across rerenders", () => {
 		const first = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;
 		const second = buildRuntimeEnv(config, generated).SAML_SESSION_SECRET;

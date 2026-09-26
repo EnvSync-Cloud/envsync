@@ -363,14 +363,24 @@ export function buildRuntimeEnv(
 	};
 }
 
+/** Keys that must follow the generated template (stack/API TLS must stay in lockstep). */
+export const RUNTIME_ENV_FORCE_FROM_TEMPLATE = new Set([
+	"MINIKMS_TLS_ENABLED",
+	"MINIKMS_TLS_CA_CERT_FILE",
+	"MINIKMS_TLS_CLIENT_CERT_FILE",
+	"MINIKMS_TLS_CLIENT_KEY_FILE",
+]);
+
 export function mergeRuntimeEnvLocalFirst(generated: RuntimeEnv, local: RuntimeEnv): {
 	env: RuntimeEnv;
 	kept: string[];
 	added: string[];
+	forced: string[];
 } {
 	const env = { ...generated };
 	const kept: string[] = [];
 	const added: string[] = [];
+	const forced: string[] = [];
 	for (const [key, localValue] of Object.entries(local)) {
 		if (!(key in generated)) {
 			env[key] = localValue;
@@ -378,10 +388,14 @@ export function mergeRuntimeEnvLocalFirst(generated: RuntimeEnv, local: RuntimeE
 			continue;
 		}
 		if (generated[key] === localValue) continue;
+		if (RUNTIME_ENV_FORCE_FROM_TEMPLATE.has(key)) {
+			forced.push(key);
+			continue;
+		}
 		env[key] = localValue;
 		kept.push(key);
 	}
-	return { env, kept, added };
+	return { env, kept, added, forced };
 }
 
 function encodeEnvValue(value: string) {

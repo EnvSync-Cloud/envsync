@@ -9,6 +9,7 @@ import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud
 import * as renderHelpers from "./render";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
+import { generateMinikmsGrpcTlsPemSet } from "./minikms-tls";
 
 // Edition is forced by package entrypoints:
 // - packages/deploy/src/index.ts → oss
@@ -718,14 +719,6 @@ function writeMinikmsRootCaIfMissing() {
 	writeFileMaybe(MINIKMS_ROOT_CA_CERT_FILE, cert.stdout, 0o644);
 }
 
-function opensslOrThrow(args: string[], input?: string) {
-	const result = spawnSync("openssl", args, { encoding: "utf8", input });
-	if (result.status !== 0) {
-		throw new Error(`openssl ${args[0]} failed: ${result.stderr}`);
-	}
-	return result.stdout;
-}
-
 function writeMinikmsGrpcTlsIfMissing() {
 	if (
 		exists(MINIKMS_GRPC_CA_CERT_FILE)
@@ -738,67 +731,13 @@ function writeMinikmsGrpcTlsIfMissing() {
 		return;
 	}
 	logInfo("Generating missing miniKMS gRPC mTLS certificates under /opt/envsync/deploy/");
-	const caKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
-	writeFileMaybe(MINIKMS_GRPC_CA_KEY_FILE, caKey, 0o644);
-	const caCert = spawnSync(
-		"openssl",
-		[
-			"req", "-new", "-x509", "-key", MINIKMS_GRPC_CA_KEY_FILE, "-sha256", "-days", "3650",
-			"-subj", "/CN=EnvSync miniKMS gRPC CA",
-		],
-		{ encoding: "utf8" },
-	);
-	if (caCert.status !== 0) {
-		throw new Error(`openssl failed to generate gRPC CA: ${caCert.stderr}`);
-	}
-	writeFileMaybe(MINIKMS_GRPC_CA_CERT_FILE, caCert.stdout, 0o644);
-
-	const serverKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
-	writeFileMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, serverKey, 0o644);
-	const serverCsr = spawnSync(
-		"openssl",
-		["req", "-new", "-key", MINIKMS_GRPC_SERVER_KEY_FILE, "-subj", "/CN=minikms"],
-		{ encoding: "utf8" },
-	);
-	if (serverCsr.status !== 0) {
-		throw new Error(`openssl failed to CSR server: ${serverCsr.stderr}`);
-	}
-	const ext = "subjectAltName=DNS:minikms,DNS:localhost,IP:127.0.0.1";
-	const serverCert = spawnSync(
-		"openssl",
-		[
-			"x509", "-req", "-in", "/dev/stdin", "-CA", MINIKMS_GRPC_CA_CERT_FILE, "-CAkey", MINIKMS_GRPC_CA_KEY_FILE,
-			"-CAcreateserial", "-days", "3650", "-sha256", "-addext", ext,
-		],
-		{ encoding: "utf8", input: serverCsr.stdout },
-	);
-	if (serverCert.status !== 0) {
-		throw new Error(`openssl failed to sign server cert: ${serverCert.stderr}`);
-	}
-	writeFileMaybe(MINIKMS_GRPC_SERVER_CERT_FILE, serverCert.stdout, 0o644);
-
-	const clientKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
-	writeFileMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, clientKey, 0o644);
-	const clientCsr = spawnSync(
-		"openssl",
-		["req", "-new", "-key", MINIKMS_GRPC_CLIENT_KEY_FILE, "-subj", "/CN=envsync-api"],
-		{ encoding: "utf8" },
-	);
-	if (clientCsr.status !== 0) {
-		throw new Error(`openssl failed to CSR client: ${clientCsr.stderr}`);
-	}
-	const clientCert = spawnSync(
-		"openssl",
-		[
-			"x509", "-req", "-in", "/dev/stdin", "-CA", MINIKMS_GRPC_CA_CERT_FILE, "-CAkey", MINIKMS_GRPC_CA_KEY_FILE,
-			"-CAcreateserial", "-days", "3650", "-sha256",
-		],
-		{ encoding: "utf8", input: clientCsr.stdout },
-	);
-	if (clientCert.status !== 0) {
-		throw new Error(`openssl failed to sign client cert: ${clientCert.stderr}`);
-	}
-	writeFileMaybe(MINIKMS_GRPC_CLIENT_CERT_FILE, clientCert.stdout, 0o644);
+	const pems = generateMinikmsGrpcTlsPemSet();
+	writeFileMaybe(MINIKMS_GRPC_CA_KEY_FILE, pems.caKey, 0o644);
+	writeFileMaybe(MINIKMS_GRPC_CA_CERT_FILE, pems.caCert, 0o644);
+	writeFileMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, pems.serverKey, 0o644);
+	writeFileMaybe(MINIKMS_GRPC_SERVER_CERT_FILE, pems.serverCert, 0o644);
+	writeFileMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, pems.clientKey, 0o644);
+	writeFileMaybe(MINIKMS_GRPC_CLIENT_CERT_FILE, pems.clientCert, 0o644);
 }
 
 function deterministicInstallFingerprint(rootDomain: string, stackName: string) {
@@ -1905,6 +1844,9 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	const generatedEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
 	const merged = renderHelpers.mergeRuntimeEnvLocalFirst(generatedEnv, existingEnv);
 	const runtimeEnv = merged.env;
+	for (const key of merged.forced) {
+		logInfo(`Applying generated ${key} (overriding ${DEPLOY_ENV})`);
+	}
 	for (const key of merged.kept) {
 		logWarn(
 			`Keeping local ${key} from ${DEPLOY_ENV} (template differs). Use \`${cliBin()} set-env ${key} <value> --force\` to replace.`,
