@@ -10,6 +10,7 @@ import { appsCreated } from "@/libs/telemetry/metrics";
 import { KMSClient } from "@/libs/kms/client";
 import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
+import { wrapManagedPrivateKey, unwrapManagedPrivateKey } from "@/helpers/key-store";
 import { AuthorizationService } from "@/services/authorization.service";
 import { PlanLimitService } from "@/services/plan_limit.service";
 
@@ -105,6 +106,12 @@ export class AppService {
 			await PlanLimitService.assertFeature(org_id, "byok_secrets");
 		}
 
+		const appId = uuidv4();
+		let storedPrivateKey = private_key ?? null;
+		if (is_managed_secret && storedPrivateKey) {
+			storedPrivateKey = await wrapManagedPrivateKey(org_id, appId, storedPrivateKey);
+		}
+
 		const ctx: { app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date } } = {};
 		await runSaga("createApp", ctx, [
 			{
@@ -114,7 +121,7 @@ export class AppService {
 					c.app = await db
 						.insertInto("app")
 						.values({
-							id: uuidv4(),
+							id: appId,
 							name,
 							org_id,
 							description,
@@ -124,7 +131,7 @@ export class AppService {
 							enable_secrets,
 							is_managed_secret,
 							public_key,
-							private_key,
+							private_key: storedPrivateKey,
 						})
 						.returning([
 							"id",
@@ -415,17 +422,17 @@ export class AppService {
 	public static getManagedAppPrivateKey = async (app_id: string) => {
 		const db = await DB.getInstance();
 
-		const secret = await db
+		const app = await db
 			.selectFrom("app")
-			.select("private_key")
+			.select(["private_key", "org_id"])
 			.where("is_managed_secret", "=", true)
 			.where("id", "=", app_id)
 			.executeTakeFirst();
 
-		if (!secret) {
+		if (!app?.private_key) {
 			throw new NotFoundError("Managed app private key", app_id);
 		}
 
-		return secret.private_key;
+		return unwrapManagedPrivateKey(app.org_id, app_id, app.private_key);
 	};
 }

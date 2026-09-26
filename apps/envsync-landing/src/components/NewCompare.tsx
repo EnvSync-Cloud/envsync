@@ -8,7 +8,7 @@ const features = [
   { name: "Version history", envsync: true, doppler: true, vault: true },
   { name: "CLI-first workflow", envsync: true, doppler: true, vault: true },
   { name: "Self-host option", envsync: true, doppler: false, vault: true },
-  { name: "Zero-knowledge encryption", envsync: true, doppler: false, vault: true },
+  { name: "Per-tenant encryption at rest", envsync: true, doppler: true, vault: true },
 ]
 
 function StatusGlyph({ value }: { value: boolean | "partial" }) {
