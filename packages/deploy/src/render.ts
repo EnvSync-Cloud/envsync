@@ -1050,7 +1050,7 @@ ${renderEnvList({
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
+    image: ghcr.io/envsync-cloud/minikms:sha-7640ffc
     entrypoint: ["/bin/sh", "-c"]
     command:
       - cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-ca-key && exec minikms
