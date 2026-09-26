@@ -1050,6 +1050,10 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, path = "") {
 	return publicHttpsOriginVariants(config, host).map(origin => `${origin}${path}`);
 }
 
+function cliBin() {
+	return getForcedDeployEdition() === "oss" ? "envsync-deploy" : "envsync-deploy-enterprise";
+}
+
 function getDeployCliVersion() {
 	try {
 		const packageJsonPath = new URL("../package.json", import.meta.url);
@@ -1104,6 +1108,8 @@ function renderHelpBlock() {
 		"  validate-topology    Validate edition topology rules",
 		"  upgrade [version]    Pin a target release and deploy it",
 		"  upgrade-deps         Refresh dependency images and redeploy",
+		"  get-env [NAME]       Print a value from /etc/envsync/deploy.env (or list keys)",
+		"  set-env NAME VALUE   Set a local deploy.env key (prompts before overwrite)",
 		"  vpn pubkey           Generate or print WireGuard server public key",
 		"  vpn whitelist <key>  Add a client public key to allowed peers",
 		"  vpn status           Show WireGuard server/peer status",
@@ -1807,15 +1813,17 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
 		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
 	const existingEnv = loadGeneratedEnv();
-	const runtimeEnv = {
-		...renderHelpers.buildRuntimeEnv(config, generated, { setupToken }),
-		...(existingEnv.ENVSYNC_PLAN ? { ENVSYNC_PLAN: existingEnv.ENVSYNC_PLAN } : {}),
-		...(existingEnv.ENVSYNC_DEPLOYMENT_MODE === "hosted" || existingEnv.ENVSYNC_DEPLOYMENT_MODE === "selfhosted"
-			? { ENVSYNC_DEPLOYMENT_MODE: existingEnv.ENVSYNC_DEPLOYMENT_MODE }
-			: {}),
-		...(existingEnv.ENVSYNC_LANDING_ENABLED ? { ENVSYNC_LANDING_ENABLED: existingEnv.ENVSYNC_LANDING_ENABLED } : {}),
-		...(existingEnv.ENVSYNC_SINGLE_ORG_MODE ? { ENVSYNC_SINGLE_ORG_MODE: existingEnv.ENVSYNC_SINGLE_ORG_MODE } : {}),
-	};
+	const generatedEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
+	const merged = renderHelpers.mergeRuntimeEnvLocalFirst(generatedEnv, existingEnv);
+	const runtimeEnv = merged.env;
+	for (const key of merged.kept) {
+		logWarn(
+			`Keeping local ${key} from ${DEPLOY_ENV} (template differs). Use \`${cliBin()} set-env ${key} <value> --force\` to replace.`,
+		);
+	}
+	if (merged.added.length > 0) {
+		logInfo(`Preserving ${merged.added.length} extra key(s) from ${DEPLOY_ENV}`);
+	}
 	logStep("Rendering deploy artifacts");
 	if (!currentOptions.dryRun) {
 		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
@@ -3972,6 +3980,67 @@ async function cmdHealth(asJson: boolean) {
 	printHealthSummary(checks);
 }
 
+function assertEnvName(name: string) {
+	if (!/^[A-Z_][A-Z0-9_]*$/.test(name)) {
+		throw new Error("Environment variable name must match [A-Z_][A-Z0-9_]*.");
+	}
+}
+
+function cmdGetEnv(name?: string) {
+	if (!exists(DEPLOY_ENV)) {
+		throw new Error(`Missing ${DEPLOY_ENV}. Run setup/bootstrap first.`);
+	}
+	const env = loadGeneratedEnv();
+	if (!name) {
+		for (const key of Object.keys(env).sort()) {
+			console.log(key);
+		}
+		return;
+	}
+	assertEnvName(name);
+	if (!(name in env)) {
+		throw new Error(`${name} is not set in ${DEPLOY_ENV}`);
+	}
+	console.log(env[name]);
+}
+
+async function cmdSetEnv(name: string | undefined, value: string) {
+	if (!name) {
+		throw new Error(`Usage: ${cliBin()} set-env NAME VALUE`);
+	}
+	assertEnvName(name);
+	if (!value) {
+		throw new Error(`Usage: ${cliBin()} set-env ${name} VALUE`);
+	}
+	if (!exists(DEPLOY_ENV)) {
+		throw new Error(`Missing ${DEPLOY_ENV}. Run setup/bootstrap first.`);
+	}
+	const env = loadGeneratedEnv();
+	const previous = env[name];
+	if (previous !== undefined && previous !== value) {
+		logWarn(`${name} is already set in ${DEPLOY_ENV}. Local values are kept on deploy/upgrade.`);
+		if (currentOptions.force) {
+			logWarn("Replacing because --force was provided.");
+		} else {
+			const response = await askRequired(chalk.bold(`Overwrite ${name}? [y/N]`), "set-env");
+			if (!asBool(response)) {
+				logInfo(`Kept existing ${name}`);
+				return;
+			}
+		}
+	} else if (previous === undefined) {
+		logInfo(`Adding ${name} to ${DEPLOY_ENV}`);
+	}
+	env[name] = value;
+	if (currentOptions.dryRun) {
+		logDryRun(`Would write ${name} to ${DEPLOY_ENV}`);
+		return;
+	}
+	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(env), 0o600);
+	logSuccess(`Wrote ${name} to ${DEPLOY_ENV}`);
+	logInfo(`Redeploy to apply: ${cliBin()} deploy`);
+}
+
 async function cmdUpgrade(targetVersion?: string) {
 	logSection("Upgrade");
 	const { config } = loadState();
@@ -4667,6 +4736,12 @@ async function main() {
 			break;
 		case "upgrade-deps":
 			await cmdUpgradeDeps();
+			break;
+		case "get-env":
+			cmdGetEnv(positionals[0]);
+			break;
+		case "set-env":
+			await cmdSetEnv(positionals[0], positionals.slice(1).join(" "));
 			break;
 		case "vpn":
 			await cmdVpn(positionals);
