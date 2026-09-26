@@ -82,7 +82,7 @@ export const acceptUserInviteRequestBodySchema = z
 export const acceptUserInviteResponseSchema = z
 	.object({
 		message: z.string().openapi({ example: "User invite accepted successfully." }),
-		generated_certificate_bundle: generatedCertificateBundleSchema,
+		generated_certificate_bundle: generatedCertificateBundleSchema.nullable(),
 	})
 	.openapi({ ref: "AcceptUserInviteResponse" });
 

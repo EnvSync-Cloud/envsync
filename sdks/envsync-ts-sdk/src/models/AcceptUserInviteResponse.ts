@@ -11,6 +11,6 @@ export type AcceptUserInviteResponse = {
         member_certificate_id: string;
         member_serial_hex: string;
         is_system_generated: boolean;
-    };
+    } | null;
 };
 
