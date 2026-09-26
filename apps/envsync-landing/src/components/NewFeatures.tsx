@@ -40,9 +40,9 @@ const switchFeatures = [
   },
   {
     icon: Lock,
-    title: "End-to-end encryption",
+    title: "Encryption at rest",
     description:
-      "AES-256 encryption at rest and in transit. Zero-knowledge architecture keeps secrets safe.",
+      "AES-256 in miniKMS, isolated per organization. Managed secrets EnvSync can serve; BYOK keeps the private key on your side.",
   },
 ]
 
