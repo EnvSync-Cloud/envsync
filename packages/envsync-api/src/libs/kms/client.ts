@@ -180,6 +180,18 @@ export interface CreateSessionManagedRequest {
 	scopes?: string[];
 }
 
+export interface CreateSessionByCertRequest {
+	certPem: string;
+	signedNonce: Buffer;
+	nonce: Buffer;
+	scopes?: string[];
+}
+
+export interface SessionChallenge {
+	nonce: Buffer;
+	expiresAt: string;
+}
+
 export interface CreateSessionResult {
 	sessionToken: string;
 	expiresAt: string;
@@ -1055,6 +1067,46 @@ export class KMSClient {
 	}
 
 	// ─── Session service methods ──────────────────────────────────────
+
+	public async issueSessionChallenge(certSerial: string): Promise<SessionChallenge> {
+		try {
+			const response = await this.rpcCall<{ nonce: Buffer | string; expires_at?: { seconds: string } }>(
+				this.sessionStub,
+				"IssueSessionChallenge",
+				{ cert_serial: certSerial },
+			);
+			const nonce = Buffer.isBuffer(response.nonce) ? response.nonce : Buffer.from(response.nonce ?? "");
+			return { nonce, expiresAt: response.expires_at?.seconds || "" };
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`Session IssueSessionChallenge error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async createSessionByCert(req: CreateSessionByCertRequest): Promise<CreateSessionResult> {
+		try {
+			const response = await this.rpcCall<GrpcCreateSessionResponse>(this.sessionStub, "CreateSession", {
+				cert_auth: {
+					cert_pem: req.certPem,
+					signed_nonce: req.signedNonce,
+					nonce: req.nonce,
+				},
+				scopes: req.scopes || [],
+			});
+			return {
+				sessionToken: response.session_token,
+				expiresAt: response.expires_at?.seconds || "",
+				scopes: response.scopes,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`Session CreateSessionByCert error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
 
 	/**
 	 * Create a managed session (for web/OIDC-authenticated members).

@@ -2,16 +2,20 @@ syntax = "proto3";
 
 package minikms.v1;
 
-option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
+option go_package = "github.com/envsync-cloud/minikms/api/proto/minikms/v1;minikmsv1";
 
 import "google/protobuf/timestamp.proto";
 
 // SessionService manages time-based session tokens tied to member certificates.
 // Sessions are required for vault read/write operations and provide zero-trust access control.
 service SessionService {
+  // IssueSessionChallenge returns a single-use nonce bound to cert_serial.
+  // CreateSessionByCert must sign this nonce; client-chosen nonces are rejected.
+  rpc IssueSessionChallenge(IssueSessionChallengeRequest) returns (IssueSessionChallengeResponse);
+
   // CreateSession authenticates a member and issues a session token.
-  // BYOK/CLI: member signs a nonce with their cert private key.
-  // Web/managed: envsync-api provides member cert serial after OIDC auth.
+  // Preferred: cert_auth (member signs a server-issued nonce).
+  // managed_auth is a serial-only shortcut; disable with MINIKMS_ALLOW_MANAGED_SESSIONS=false.
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
 
   // ValidateSession checks if a session token is still valid.
@@ -25,6 +29,15 @@ service SessionService {
 
   // ListSessions returns active sessions for a member.
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+}
+
+message IssueSessionChallengeRequest {
+  string cert_serial = 1;
+}
+
+message IssueSessionChallengeResponse {
+  bytes nonce = 1;
+  google.protobuf.Timestamp expires_at = 2;
 }
 
 message CreateSessionRequest {
