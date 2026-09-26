@@ -1,8 +1,10 @@
-import { DB } from "@/libs/db";
+import { createPrivateKey, sign as cryptoSign } from "node:crypto";
+
 import { BusinessRuleError } from "@/libs/errors";
 import { KMSClient } from "@/libs/kms/client";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { AuthorizationService } from "@/services/authorization.service";
+import { CertificateService } from "@/services/certificate.service";
 
 interface CachedSession {
 	token: string;
@@ -28,20 +30,32 @@ function isActiveSessionLimitError(error: unknown) {
 	return error instanceof Error && error.message.includes("maximum number of active sessions");
 }
 
-async function createManagedSessionWithRecovery(
+function signMemberNonce(keyPem: string, nonce: Buffer) {
+	const key = createPrivateKey(keyPem);
+	return cryptoSign("sha256", nonce, { key, dsaEncoding: "der" });
+}
+
+async function createCertSessionWithRecovery(
 	kms: KMSClient,
 	memberId: string,
 	orgId: string,
+	certPem: string,
+	keyPem: string,
 	certSerial: string,
 	scopes: string[],
 ) {
-	try {
-		return await kms.createSessionManaged({
-			memberId,
-			orgId,
-			certSerial,
+	const mint = async () => {
+		const challenge = await kms.issueSessionChallenge(certSerial);
+		const signedNonce = signMemberNonce(keyPem, challenge.nonce);
+		return kms.createSessionByCert({
+			certPem,
+			signedNonce,
+			nonce: challenge.nonce,
 			scopes,
 		});
+	};
+	try {
+		return await mint();
 	} catch (error) {
 		if (!isActiveSessionLimitError(error)) {
 			throw error;
@@ -54,12 +68,7 @@ async function createManagedSessionWithRecovery(
 			"SessionManager",
 		);
 
-		return await kms.createSessionManaged({
-			memberId,
-			orgId,
-			certSerial,
-			scopes,
-		});
+		return await mint();
 	}
 }
 
@@ -87,23 +96,17 @@ function getRequiredScopes(permissions: Awaited<ReturnType<typeof AuthorizationS
  * Caches tokens and refreshes when <60s TTL remains.
  */
 export async function getVaultSessionToken(memberId: string, orgId: string): Promise<string> {
-	const db = await DB.getInstance();
-	const [cert, permissions] = await Promise.all([
-		db
-		.selectFrom("org_certificates")
-		.select("serial_hex")
-		.where("user_id", "=", memberId)
-		.where("org_id", "=", orgId)
-		.where("cert_type", "=", "member")
-		.where("is_system_generated", "=", true)
-		.where("status", "=", "active")
-		.orderBy("created_at", "desc")
-		.executeTakeFirst(),
+	const [proof, permissions] = await Promise.all([
+		CertificateService.loadSystemMemberProof(orgId, memberId),
 		AuthorizationService.getUserOrgPermissions(memberId, orgId),
 	]);
 
-	if (!cert) {
-		throw new Error(`No active member certificate found for user ${memberId} in org ${orgId}`);
+	if (!proof) {
+		throw new BusinessRuleError(
+			"No system member certificate with a durable private key is available for vault access.",
+			409,
+			"MEMBER_KEY_UNAVAILABLE",
+		);
 	}
 
 	const scopes = getRequiredScopes(permissions);
@@ -115,7 +118,7 @@ export async function getVaultSessionToken(memberId: string, orgId: string): Pro
 		);
 	}
 
-	const key = cacheKey(memberId, orgId, cert.serial_hex, scopes);
+	const key = cacheKey(memberId, orgId, proof.serialHex, scopes);
 	const cached = sessionCache.get(key);
 	if (cached && isSessionNearExpiry(cached)) {
 		return cached.token;
@@ -131,11 +134,13 @@ export async function getVaultSessionToken(memberId: string, orgId: string): Pro
 
 	const kms = await KMSClient.getInstance();
 	const createPromise = (async () => {
-		const result = await createManagedSessionWithRecovery(
+		const result = await createCertSessionWithRecovery(
 			kms,
 			memberId,
 			orgId,
-			cert.serial_hex,
+			proof.certPem,
+			proof.keyPem,
+			proof.serialHex,
 			scopes,
 		);
 

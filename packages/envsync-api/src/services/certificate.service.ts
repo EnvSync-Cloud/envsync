@@ -651,6 +651,25 @@ export class CertificateService {
 
 	public static getOrgCA = async (org_id: string) => this.getActiveOrgCARecord(org_id);
 
+	public static loadSystemMemberProof = async (org_id: string, user_id: string) => {
+		const db = await DB.getInstance();
+		const cert = await db
+			.selectFrom("org_certificates")
+			.select(["id", "org_id", "serial_hex", "cert_pem", "encrypted_key_pem"])
+			.where("user_id", "=", user_id)
+			.where("org_id", "=", org_id)
+			.where("cert_type", "=", "member")
+			.where("is_system_generated", "=", true)
+			.where("status", "=", "active")
+			.orderBy("created_at", "desc")
+			.executeTakeFirst();
+		if (!cert?.cert_pem || !cert.encrypted_key_pem) {
+			return null;
+		}
+		const keyPem = await this.decryptSystemPrivateKey(cert);
+		return { certPem: cert.cert_pem, keyPem, serialHex: cert.serial_hex };
+	};
+
 	public static getChain = async (org_id: string) => {
 		const [orgCA, rootCA, imported] = await Promise.all([
 			this.getActiveOrgCARecord(org_id),
