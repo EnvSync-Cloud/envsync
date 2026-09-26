@@ -102,7 +102,16 @@ Object.assign(process.env, {
 	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",
 	OPENFGA_MODEL_ID: process.env.OPENFGA_MODEL_ID ?? "",
 	MINIKMS_GRPC_ADDR: process.env.MINIKMS_GRPC_ADDR ?? "localhost:50051",
-	MINIKMS_TLS_ENABLED: "false",
+	MINIKMS_TLS_ENABLED: process.env.MINIKMS_TLS_ENABLED ?? "true",
+	MINIKMS_TLS_CA_CERT_FILE:
+		process.env.MINIKMS_TLS_CA_CERT_FILE
+		?? path.resolve(import.meta.dir, "../../../docker/minikms/grpc-ca-cert.dev.pem"),
+	MINIKMS_TLS_CLIENT_CERT_FILE:
+		process.env.MINIKMS_TLS_CLIENT_CERT_FILE
+		?? path.resolve(import.meta.dir, "../../../docker/minikms/grpc-client-cert.dev.pem"),
+	MINIKMS_TLS_CLIENT_KEY_FILE:
+		process.env.MINIKMS_TLS_CLIENT_KEY_FILE
+		?? path.resolve(import.meta.dir, "../../../docker/minikms/grpc-client-key.dev.pem"),
 	LANDING_PAGE_URL: process.env.LANDING_PAGE_URL ?? "http://localhost:8002",
 	DASHBOARD_URL: process.env.DASHBOARD_URL ?? "http://app.lvh.me:8001",
 });

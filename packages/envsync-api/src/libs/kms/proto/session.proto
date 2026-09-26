@@ -2,16 +2,19 @@ syntax = "proto3";
 
 package minikms.v1;
 
-option go_package = "github.com/envsync/minikms/api/proto/minikms/v1;minikmsv1";
+option go_package = "github.com/envsync-cloud/minikms/api/proto/minikms/v1;minikmsv1";
 
 import "google/protobuf/timestamp.proto";
 
 // SessionService manages time-based session tokens tied to member certificates.
 // Sessions are required for vault read/write operations and provide zero-trust access control.
 service SessionService {
+  // IssueSessionChallenge returns a single-use nonce bound to cert_serial.
+  // CreateSessionByCert must sign this nonce; client-chosen nonces are rejected.
+  rpc IssueSessionChallenge(IssueSessionChallengeRequest) returns (IssueSessionChallengeResponse);
+
   // CreateSession authenticates a member and issues a session token.
-  // BYOK/CLI: member signs a nonce with their cert private key.
-  // Web/managed: envsync-api provides member cert serial after OIDC auth.
+  // CreateSession requires cert_auth: the member must sign a server-issued nonce.
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
 
   // ValidateSession checks if a session token is still valid.
@@ -27,29 +30,25 @@ service SessionService {
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
 }
 
-message CreateSessionRequest {
-  // Authentication method
-  oneof auth {
-    CertAuth cert_auth = 1;     // BYOK/CLI: certificate-based auth
-    ManagedAuth managed_auth = 2; // Web: pre-authenticated via OIDC
-  }
+message IssueSessionChallengeRequest {
+  string cert_serial = 1;
+}
 
-  // Requested scopes (optional, defaults to role-based defaults)
+message IssueSessionChallengeResponse {
+  bytes nonce = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}
+
+message CreateSessionRequest {
+  CertAuth cert_auth = 1;
   repeated string scopes = 3;
 }
 
-// Certificate-based authentication for BYOK/CLI members.
+// Certificate-based authentication: sign a nonce from IssueSessionChallenge.
 message CertAuth {
-  string cert_pem = 1;       // Member certificate in PEM format
-  bytes signed_nonce = 2;     // Nonce signed with member's private key
-  bytes nonce = 3;            // Original nonce value
-}
-
-// Pre-authenticated via OIDC for web/managed members.
-message ManagedAuth {
-  string member_id = 1;
-  string org_id = 2;
-  string cert_serial = 3;     // Member cert serial (looked up by envsync-api)
+  string cert_pem = 1;
+  bytes signed_nonce = 2;
+  bytes nonce = 3;
 }
 
 message CreateSessionResponse {

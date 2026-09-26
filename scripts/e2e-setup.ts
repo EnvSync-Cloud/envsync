@@ -367,7 +367,10 @@ async function init(): Promise<void> {
 	const e2eEnv: Record<string, string> = {
 		MINIKMS_ROOT_KEY: process.env.MINIKMS_ROOT_KEY,
 		MINIKMS_GRPC_ADDR: `localhost:${process.env.MINIKMS_GRPC_PORT ?? "50051"}`,
-		MINIKMS_TLS_ENABLED: "false",
+		MINIKMS_TLS_ENABLED: "true",
+		MINIKMS_TLS_CA_CERT_FILE: path.join(rootDir, "docker/minikms/grpc-ca-cert.dev.pem"),
+		MINIKMS_TLS_CLIENT_CERT_FILE: path.join(rootDir, "docker/minikms/grpc-client-cert.dev.pem"),
+		MINIKMS_TLS_CLIENT_KEY_FILE: path.join(rootDir, "docker/minikms/grpc-client-key.dev.pem"),
 		OPENFGA_API_URL: openfgaUrl,
 		OPENFGA_STORE_ID: openfga.storeId,
 		OPENFGA_MODEL_ID: openfga.modelId,
