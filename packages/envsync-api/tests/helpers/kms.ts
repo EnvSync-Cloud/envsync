@@ -21,7 +21,9 @@ import type {
 	VaultListEntry,
 	VaultVersionEntry,
 	CreateSessionManagedRequest,
+	CreateSessionByCertRequest,
 	CreateSessionResult,
+	SessionChallenge,
 	ValidateSessionResult,
 	TenantWrappingProvider,
 	RewrapTarget,
@@ -580,6 +582,18 @@ export const MockKMSClient = {
 	},
 
 	// ─── Session service mock methods ───────────────────────────────
+
+	async issueSessionChallenge(certSerial: string): Promise<SessionChallenge> {
+		return { nonce: randomBytes(32), expiresAt: String(Math.floor(Date.now() / 1000) + 60) };
+	},
+
+	async createSessionByCert(req: CreateSessionByCertRequest): Promise<CreateSessionResult> {
+		return {
+			sessionToken: `mock-session-cert-${req.certPem.length}`,
+			expiresAt: String(Math.floor(Date.now() / 1000) + 3600),
+			scopes: req.scopes ?? [],
+		};
+	},
 
 	async createSessionManaged(req: CreateSessionManagedRequest): Promise<CreateSessionResult> {
 		await beforeTenantOp(req.orgId, "");

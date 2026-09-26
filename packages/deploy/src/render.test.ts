@@ -196,6 +196,10 @@ describe("buildRuntimeEnv", () => {
 		expect(runtimeEnv.ENVSYNC_LICENSE_CERT_PATH).toBe("/etc/envsync/license/enterprise-cert.pem");
 		expect(runtimeEnv.ENVSYNC_LICENSE_KEY_PATH).toBe("/etc/envsync/license/enterprise-key.pem");
 		expect(runtimeEnv.ENVSYNC_LICENSE_ROOT_CA_CERT_PATH).toBe("/etc/envsync/license/root-ca.pem");
+		expect(runtimeEnv.MINIKMS_TLS_ENABLED).toBe("true");
+		expect(runtimeEnv.MINIKMS_TLS_CA_CERT_FILE).toBe("/run/secrets/minikms-grpc-ca-cert");
+		expect(runtimeEnv.MINIKMS_TLS_CLIENT_CERT_FILE).toBe("/run/secrets/minikms-grpc-client-cert");
+		expect(runtimeEnv.MINIKMS_TLS_CLIENT_KEY_FILE).toBe("/run/secrets/minikms-grpc-client-key");
 	});
 });
 
@@ -241,6 +245,9 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-60e2feb");
 		expect(stackFull).toContain("MINIKMS_SESSION_SIGNING_KEY_FILE=/run/secrets/minikms-session-signing-key");
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_CERT_FILE=/run/secrets/minikms-root-ca-cert");
+		expect(stackFull).toContain("MINIKMS_TLS_ENABLED=true");
+		expect(stackFull).toContain("minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro");
+		expect(stackFull).toContain("minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro");
 		expect(stackFull).not.toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");

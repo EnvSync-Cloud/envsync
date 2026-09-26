@@ -341,7 +341,10 @@ export function buildRuntimeEnv(
 		CLICKSTACK_ACCESS_KEY: generated.clickstack.access_key,
 		CLICKSTACK_BROWSER_API_KEY: generated.clickstack.browser_api_key,
 		MINIKMS_GRPC_ADDR: "minikms:50051",
-		MINIKMS_TLS_ENABLED: "false",
+		MINIKMS_TLS_ENABLED: "true",
+		MINIKMS_TLS_CA_CERT_FILE: "/run/secrets/minikms-grpc-ca-cert",
+		MINIKMS_TLS_CLIENT_CERT_FILE: "/run/secrets/minikms-grpc-client-cert",
+		MINIKMS_TLS_CLIENT_KEY_FILE: "/run/secrets/minikms-grpc-client-key",
 		MINIKMS_ROOT_KEY: generated.secrets.minikms_root_key,
 		MINIKMS_DB_USER: "postgres",
 		MINIKMS_DB_PASSWORD: generated.secrets.minikms_db_password,
@@ -871,7 +874,13 @@ export function renderStack(
 	const landingEnabled = false;
 	const managementEnabled = !isOssConfig(config);
 	// License mount is enterprise (management), not tied to landing.
-	const apiLicenseVolume = managementEnabled ? "\n    volumes:\n      - /etc/envsync/license:/etc/envsync/license:ro" : "";
+	const apiVolumeLines = [
+		managementEnabled ? "      - /etc/envsync/license:/etc/envsync/license:ro" : "",
+		`      - ${paths.deployRoot}/minikms-grpc-ca-cert.pem:/run/secrets/minikms-grpc-ca-cert:ro`,
+		`      - ${paths.deployRoot}/minikms-grpc-client-cert.pem:/run/secrets/minikms-grpc-client-cert:ro`,
+		`      - ${paths.deployRoot}/minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro`,
+	].filter(Boolean);
+	const apiLicenseVolume = `\n    volumes:\n${apiVolumeLines.join("\n")}`;
 	const deployment = createSteadyApiDeploymentState(config, generated);
 	const stackName = config.services.stack_name;
 	const configName = (logical: string, filePath: string) =>
@@ -1063,12 +1072,20 @@ ${renderEnvList({
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
-		MINIKMS_TLS_ENABLED: "false",
+		MINIKMS_TLS_ENABLED: "true",
+		MINIKMS_TLS_CERT: "/run/secrets/minikms-grpc-server-cert",
+		MINIKMS_TLS_KEY: "/run/secrets/minikms-grpc-server-key",
+		MINIKMS_TLS_CA_FILE: "/run/secrets/minikms-grpc-ca-cert",
 	})}
     volumes:
       - ${paths.deployRoot}/minikms-session-signing-key.pem:/run/secrets/minikms-session-signing-key:ro
       - ${paths.deployRoot}/minikms-root-ca-cert.pem:/run/secrets/minikms-root-ca-cert:ro
       - ${paths.deployRoot}/minikms-root-ca-key.pem:/run/secrets/minikms-root-ca-key:ro
+      - ${paths.deployRoot}/minikms-grpc-ca-cert.pem:/run/secrets/minikms-grpc-ca-cert:ro
+      - ${paths.deployRoot}/minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro
+      - ${paths.deployRoot}/minikms-grpc-server-key.pem:/run/secrets/minikms-grpc-server-key:ro
+      - ${paths.deployRoot}/minikms-grpc-client-cert.pem:/run/secrets/minikms-grpc-client-cert:ro
+      - ${paths.deployRoot}/minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro
     networks: [envsync]` : ""}
 
   clickstack:

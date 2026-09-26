@@ -195,11 +195,17 @@ services:
       MINIKMS_ROOT_CA_KEY_FILE: /tmp/minikms-root-ca-key
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
-      MINIKMS_TLS_ENABLED: ${MINIKMS_TLS_ENABLED:-false}
+      MINIKMS_TLS_ENABLED: "true"
+      MINIKMS_TLS_CERT: /run/secrets/minikms-grpc-server-cert
+      MINIKMS_TLS_KEY: /run/secrets/minikms-grpc-server-key
+      MINIKMS_TLS_CA_FILE: /run/secrets/minikms-grpc-ca-cert
     volumes:
       - ./docker/minikms/session-signing-key.dev.pem:/run/secrets/minikms-session-signing-key:ro
       - ./docker/minikms/root-ca-cert.dev.pem:/run/secrets/minikms-root-ca-cert:ro
       - ./docker/minikms/root-ca-key.dev.pem:/run/secrets/minikms-root-ca-key:ro
+      - ./docker/minikms/grpc-ca-cert.dev.pem:/run/secrets/minikms-grpc-ca-cert:ro
+      - ./docker/minikms/grpc-server-cert.dev.pem:/run/secrets/minikms-grpc-server-cert:ro
+      - ./docker/minikms/grpc-server-key.dev.pem:/run/secrets/minikms-grpc-server-key:ro
     depends_on:
       - minikms_migrate
       - redis

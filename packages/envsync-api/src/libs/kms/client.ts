@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { SpanKind } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
@@ -180,6 +181,18 @@ export interface CreateSessionManagedRequest {
 	scopes?: string[];
 }
 
+export interface CreateSessionByCertRequest {
+	certPem: string;
+	signedNonce: Buffer;
+	nonce: Buffer;
+	scopes?: string[];
+}
+
+export interface SessionChallenge {
+	nonce: Buffer;
+	expiresAt: string;
+}
+
 export interface CreateSessionResult {
 	sessionToken: string;
 	expiresAt: string;
@@ -194,6 +207,26 @@ export interface ValidateSessionResult {
 	certSerial: string;
 	scopes: string[];
 	expiresAt: string;
+}
+
+function readOptionalPem(inline?: string, filePath?: string): Buffer | undefined {
+	if (inline && inline.trim()) {
+		return Buffer.from(inline);
+	}
+	if (filePath && filePath.trim()) {
+		return fs.readFileSync(filePath);
+	}
+	return undefined;
+}
+
+function loadMinikmsGrpcCredentials(): grpc.ChannelCredentials {
+	if (config.MINIKMS_TLS_ENABLED !== "true") {
+		return grpc.credentials.createInsecure();
+	}
+	const rootCerts = readOptionalPem(config.MINIKMS_TLS_CA_CERT, config.MINIKMS_TLS_CA_CERT_FILE);
+	const clientCert = readOptionalPem(config.MINIKMS_TLS_CLIENT_CERT, config.MINIKMS_TLS_CLIENT_CERT_FILE);
+	const clientKey = readOptionalPem(config.MINIKMS_TLS_CLIENT_KEY, config.MINIKMS_TLS_CLIENT_KEY_FILE);
+	return grpc.credentials.createSsl(rootCerts, clientKey, clientCert);
 }
 
 function protoPath(fileName: string): string {
@@ -346,14 +379,7 @@ export class KMSClient {
 
 	private constructor() {
 		this.grpcAddr = config.MINIKMS_GRPC_ADDR;
-		const tlsEnabled = config.MINIKMS_TLS_ENABLED === "true";
-		const tlsCaCert = config.MINIKMS_TLS_CA_CERT;
-
-		const credentials = tlsEnabled
-			? grpc.credentials.createSsl(
-					tlsCaCert ? Buffer.from(tlsCaCert) : undefined,
-				)
-			: grpc.credentials.createInsecure();
+		const credentials = loadMinikmsGrpcCredentials();
 
 		// Load KMS service proto
 		const kmsPackageDef = protoLoader.loadSync(protoPath("kms.proto"), PROTO_LOADER_OPTIONS);
@@ -1055,6 +1081,46 @@ export class KMSClient {
 	}
 
 	// ─── Session service methods ──────────────────────────────────────
+
+	public async issueSessionChallenge(certSerial: string): Promise<SessionChallenge> {
+		try {
+			const response = await this.rpcCall<{ nonce: Buffer | string; expires_at?: { seconds: string } }>(
+				this.sessionStub,
+				"IssueSessionChallenge",
+				{ cert_serial: certSerial },
+			);
+			const nonce = Buffer.isBuffer(response.nonce) ? response.nonce : Buffer.from(response.nonce ?? "");
+			return { nonce, expiresAt: response.expires_at?.seconds || "" };
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`Session IssueSessionChallenge error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
+
+	public async createSessionByCert(req: CreateSessionByCertRequest): Promise<CreateSessionResult> {
+		try {
+			const response = await this.rpcCall<GrpcCreateSessionResponse>(this.sessionStub, "CreateSession", {
+				cert_auth: {
+					cert_pem: req.certPem,
+					signed_nonce: req.signedNonce,
+					nonce: req.nonce,
+				},
+				scopes: req.scopes || [],
+			});
+			return {
+				sessionToken: response.session_token,
+				expiresAt: response.expires_at?.seconds || "",
+				scopes: response.scopes,
+			};
+		} catch (error) {
+			if (error instanceof Error) {
+				infoLogs(`Session CreateSessionByCert error: ${error.message}`, LogTypes.ERROR, "KMSClient");
+			}
+			throw error;
+		}
+	}
 
 	/**
 	 * Create a managed session (for web/OIDC-authenticated members).
