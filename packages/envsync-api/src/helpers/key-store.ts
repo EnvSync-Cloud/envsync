@@ -168,6 +168,24 @@ export const smartEncrypt = (data: string, publicKey: string): string => {
  * Returns the inner plaintext (which may itself be RSA:/HYB: encrypted for secrets).
  * AAD must match the value used during encryption.
  */
+function managedPrivateKeyAad(orgId: string, appId: string) {
+	return `app:${orgId}:${appId}:managed-private-key`;
+}
+
+/** Envelope the managed RSA private key so a Postgres dump is not enough to decrypt secrets. */
+export const wrapManagedPrivateKey = async (orgId: string, appId: string, pem: string): Promise<string> => {
+	const kms = await KMSClient.getInstance();
+	const result = await kms.encrypt(orgId, appId, pem, managedPrivateKeyAad(orgId, appId));
+	return `KMS:v1:${result.keyVersionId}:${result.ciphertext}`;
+};
+
+export const unwrapManagedPrivateKey = async (orgId: string, appId: string, stored: string): Promise<string> => {
+	if (!stored.startsWith("KMS:v1:")) {
+		return stored;
+	}
+	return kmsDecrypt(orgId, appId, stored, managedPrivateKeyAad(orgId, appId));
+};
+
 export const kmsDecrypt = async (
 	orgId: string,
 	appId: string,

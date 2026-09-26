@@ -440,10 +440,10 @@ export default function Showcase() {
             rightSlot={
               <>
                 <Shield className="w-8 h-8" />
-                <h4 className="text-h3 font-medium">Zero-trust by default</h4>
+                <h4 className="text-h3 font-medium">Encrypted at rest</h4>
                 <p className="text-sm opacity-90">
-                  End-to-end encryption. AES-256 at rest, TLS in transit. Your
-                  keys never touch our servers unencrypted.
+                  AES-256 in miniKMS, per organization. TLS in transit. Managed
+                  secrets the API can serve; BYOK the operator cannot unwrap.
                 </p>
               </>
             }
