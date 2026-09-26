@@ -110,6 +110,11 @@ export const BaseEnvSchema = z.object({
 	MINIKMS_GRPC_ADDR: z.string().default("localhost:50051"),
 	MINIKMS_TLS_ENABLED: z.string().default("false"),
 	MINIKMS_TLS_CA_CERT: z.string().optional(),
+	MINIKMS_TLS_CA_CERT_FILE: z.string().optional(),
+	MINIKMS_TLS_CLIENT_CERT: z.string().optional(),
+	MINIKMS_TLS_CLIENT_CERT_FILE: z.string().optional(),
+	MINIKMS_TLS_CLIENT_KEY: z.string().optional(),
+	MINIKMS_TLS_CLIENT_KEY_FILE: z.string().optional(),
 	// OpenTelemetry configuration
 	OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default("http://localhost:14318"),
 	OTEL_SERVICE_NAME: z.string().default("envsync-api"),

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { SpanKind } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
@@ -208,6 +209,26 @@ export interface ValidateSessionResult {
 	expiresAt: string;
 }
 
+function readOptionalPem(inline?: string, filePath?: string): Buffer | undefined {
+	if (inline && inline.trim()) {
+		return Buffer.from(inline);
+	}
+	if (filePath && filePath.trim()) {
+		return fs.readFileSync(filePath);
+	}
+	return undefined;
+}
+
+function loadMinikmsGrpcCredentials(): grpc.ChannelCredentials {
+	if (config.MINIKMS_TLS_ENABLED !== "true") {
+		return grpc.credentials.createInsecure();
+	}
+	const rootCerts = readOptionalPem(config.MINIKMS_TLS_CA_CERT, config.MINIKMS_TLS_CA_CERT_FILE);
+	const clientCert = readOptionalPem(config.MINIKMS_TLS_CLIENT_CERT, config.MINIKMS_TLS_CLIENT_CERT_FILE);
+	const clientKey = readOptionalPem(config.MINIKMS_TLS_CLIENT_KEY, config.MINIKMS_TLS_CLIENT_KEY_FILE);
+	return grpc.credentials.createSsl(rootCerts, clientKey, clientCert);
+}
+
 function protoPath(fileName: string): string {
 	return path.join(resolveKmsProtoDir(import.meta.dir), fileName);
 }
@@ -358,14 +379,7 @@ export class KMSClient {
 
 	private constructor() {
 		this.grpcAddr = config.MINIKMS_GRPC_ADDR;
-		const tlsEnabled = config.MINIKMS_TLS_ENABLED === "true";
-		const tlsCaCert = config.MINIKMS_TLS_CA_CERT;
-
-		const credentials = tlsEnabled
-			? grpc.credentials.createSsl(
-					tlsCaCert ? Buffer.from(tlsCaCert) : undefined,
-				)
-			: grpc.credentials.createInsecure();
+		const credentials = loadMinikmsGrpcCredentials();
 
 		// Load KMS service proto
 		const kmsPackageDef = protoLoader.loadSync(protoPath("kms.proto"), PROTO_LOADER_OPTIONS);

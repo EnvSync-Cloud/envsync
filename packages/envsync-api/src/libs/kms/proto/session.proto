@@ -14,8 +14,7 @@ service SessionService {
   rpc IssueSessionChallenge(IssueSessionChallengeRequest) returns (IssueSessionChallengeResponse);
 
   // CreateSession authenticates a member and issues a session token.
-  // Preferred: cert_auth (member signs a server-issued nonce).
-  // managed_auth is a serial-only shortcut; disable with MINIKMS_ALLOW_MANAGED_SESSIONS=false.
+  // CreateSession requires cert_auth: the member must sign a server-issued nonce.
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
 
   // ValidateSession checks if a session token is still valid.
@@ -41,28 +40,15 @@ message IssueSessionChallengeResponse {
 }
 
 message CreateSessionRequest {
-  // Authentication method
-  oneof auth {
-    CertAuth cert_auth = 1;     // BYOK/CLI: certificate-based auth
-    ManagedAuth managed_auth = 2; // Web: pre-authenticated via OIDC
-  }
-
-  // Requested scopes (optional, defaults to role-based defaults)
+  CertAuth cert_auth = 1;
   repeated string scopes = 3;
 }
 
-// Certificate-based authentication for BYOK/CLI members.
+// Certificate-based authentication: sign a nonce from IssueSessionChallenge.
 message CertAuth {
-  string cert_pem = 1;       // Member certificate in PEM format
-  bytes signed_nonce = 2;     // Nonce signed with member's private key
-  bytes nonce = 3;            // Original nonce value
-}
-
-// Pre-authenticated via OIDC for web/managed members.
-message ManagedAuth {
-  string member_id = 1;
-  string org_id = 2;
-  string cert_serial = 3;     // Member cert serial (looked up by envsync-api)
+  string cert_pem = 1;
+  bytes signed_nonce = 2;
+  bytes nonce = 3;
 }
 
 message CreateSessionResponse {

@@ -289,6 +289,12 @@ const INTERNAL_CONFIG_JSON = path.join(DEPLOY_ROOT, "config.json");
 const MINIKMS_SESSION_SIGNING_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-session-signing-key.pem");
 const MINIKMS_ROOT_CA_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-cert.pem");
 const MINIKMS_ROOT_CA_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-key.pem");
+const MINIKMS_GRPC_CA_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-ca-cert.pem");
+const MINIKMS_GRPC_CA_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-ca-key.pem");
+const MINIKMS_GRPC_SERVER_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-server-cert.pem");
+const MINIKMS_GRPC_SERVER_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-server-key.pem");
+const MINIKMS_GRPC_CLIENT_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-client-cert.pem");
+const MINIKMS_GRPC_CLIENT_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-client-key.pem");
 const UPGRADE_BACKUPS_ROOT = path.join(BACKUPS_ROOT, "upgrade");
 const WIREGUARD_STATE_FILE = path.join(WIREGUARD_ROOT, "state.json");
 const WIREGUARD_PRIVATE_KEY_FILE = path.join(WIREGUARD_ROOT, "server-private.key");
@@ -710,6 +716,85 @@ function writeMinikmsRootCaIfMissing() {
 		throw new Error(`openssl failed to generate miniKMS root CA cert: ${cert.stderr}`);
 	}
 	writeFileMaybe(MINIKMS_ROOT_CA_CERT_FILE, cert.stdout, 0o644);
+}
+
+function opensslOrThrow(args: string[], input?: string) {
+	const result = spawnSync("openssl", args, { encoding: "utf8", input });
+	if (result.status !== 0) {
+		throw new Error(`openssl ${args[0]} failed: ${result.stderr}`);
+	}
+	return result.stdout;
+}
+
+function writeMinikmsGrpcTlsIfMissing() {
+	if (
+		exists(MINIKMS_GRPC_CA_CERT_FILE)
+		&& exists(MINIKMS_GRPC_SERVER_CERT_FILE)
+		&& exists(MINIKMS_GRPC_CLIENT_CERT_FILE)
+	) {
+		return;
+	}
+	const caKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
+	writeFileMaybe(MINIKMS_GRPC_CA_KEY_FILE, caKey, 0o644);
+	const caCert = spawnSync(
+		"openssl",
+		[
+			"req", "-new", "-x509", "-key", MINIKMS_GRPC_CA_KEY_FILE, "-sha256", "-days", "3650",
+			"-subj", "/CN=EnvSync miniKMS gRPC CA",
+		],
+		{ encoding: "utf8" },
+	);
+	if (caCert.status !== 0) {
+		throw new Error(`openssl failed to generate gRPC CA: ${caCert.stderr}`);
+	}
+	writeFileMaybe(MINIKMS_GRPC_CA_CERT_FILE, caCert.stdout, 0o644);
+
+	const serverKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
+	writeFileMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, serverKey, 0o644);
+	const serverCsr = spawnSync(
+		"openssl",
+		["req", "-new", "-key", MINIKMS_GRPC_SERVER_KEY_FILE, "-subj", "/CN=minikms"],
+		{ encoding: "utf8" },
+	);
+	if (serverCsr.status !== 0) {
+		throw new Error(`openssl failed to CSR server: ${serverCsr.stderr}`);
+	}
+	const ext = "subjectAltName=DNS:minikms,DNS:localhost,IP:127.0.0.1";
+	const serverCert = spawnSync(
+		"openssl",
+		[
+			"x509", "-req", "-in", "/dev/stdin", "-CA", MINIKMS_GRPC_CA_CERT_FILE, "-CAkey", MINIKMS_GRPC_CA_KEY_FILE,
+			"-CAcreateserial", "-days", "3650", "-sha256", "-addext", ext,
+		],
+		{ encoding: "utf8", input: serverCsr.stdout },
+	);
+	if (serverCert.status !== 0) {
+		throw new Error(`openssl failed to sign server cert: ${serverCert.stderr}`);
+	}
+	writeFileMaybe(MINIKMS_GRPC_SERVER_CERT_FILE, serverCert.stdout, 0o644);
+
+	const clientKey = opensslOrThrow(["ecparam", "-name", "prime256v1", "-genkey", "-noout"]);
+	writeFileMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, clientKey, 0o644);
+	const clientCsr = spawnSync(
+		"openssl",
+		["req", "-new", "-key", MINIKMS_GRPC_CLIENT_KEY_FILE, "-subj", "/CN=envsync-api"],
+		{ encoding: "utf8" },
+	);
+	if (clientCsr.status !== 0) {
+		throw new Error(`openssl failed to CSR client: ${clientCsr.stderr}`);
+	}
+	const clientCert = spawnSync(
+		"openssl",
+		[
+			"x509", "-req", "-in", "/dev/stdin", "-CA", MINIKMS_GRPC_CA_CERT_FILE, "-CAkey", MINIKMS_GRPC_CA_KEY_FILE,
+			"-CAcreateserial", "-days", "3650", "-sha256",
+		],
+		{ encoding: "utf8", input: clientCsr.stdout },
+	);
+	if (clientCert.status !== 0) {
+		throw new Error(`openssl failed to sign client cert: ${clientCert.stderr}`);
+	}
+	writeFileMaybe(MINIKMS_GRPC_CLIENT_CERT_FILE, clientCert.stdout, 0o644);
 }
 
 function deterministicInstallFingerprint(rootDomain: string, stackName: string) {
@@ -1827,6 +1912,7 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	// 0644: Swarm bind-mounts keep host uid; miniKMS does not run as root.
 	writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o644);
 	writeMinikmsRootCaIfMissing();
+	writeMinikmsGrpcTlsIfMissing();
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
 	writeFileMaybe(
 		INTERNAL_CONFIG_JSON,
