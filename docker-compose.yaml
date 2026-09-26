@@ -159,7 +159,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
+    image: ghcr.io/envsync-cloud/minikms:sha-7640ffc
     ports:
       - "${MINIKMS_GRPC_PORT:-50051}:50051"
     restart: unless-stopped

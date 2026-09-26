@@ -238,7 +238,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
-		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-e4fdb24");
+		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-7640ffc");
 		expect(stackFull).toContain("MINIKMS_SESSION_SIGNING_KEY_FILE=/run/secrets/minikms-session-signing-key");
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_CERT_FILE=/run/secrets/minikms-root-ca-cert");
 		expect(stackFull).not.toContain("envsync-management-api");

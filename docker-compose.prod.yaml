@@ -183,7 +183,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-e4fdb24
+    image: ghcr.io/envsync-cloud/minikms:sha-7640ffc
     restart: unless-stopped
     entrypoint: ["/bin/sh", "-c"]
     command:
