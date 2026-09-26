@@ -8,6 +8,7 @@ import {
 	setWebAuthCookies,
 } from "@/helpers/web-auth";
 import { AppError } from "@/libs/errors";
+import infoLogs, { LogTypes } from "@/libs/logger";
 import { config } from "@/utils/env";
 import { getActiveSpan } from "@/libs/telemetry";
 import { OrgService } from "@/services/org.service";
@@ -177,11 +178,19 @@ export const authMiddleware = (): MiddlewareHandler => {
 				);
 			}
 
-			await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(
-				user.id,
-				user.org_id,
-				user.role_id,
-			);
+			try {
+				await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(
+					user.id,
+					user.org_id,
+					user.role_id,
+				);
+			} catch (error) {
+				infoLogs(
+					`System member cert not provisioned for ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
+					LogTypes.ERROR,
+					"AuthMiddleware",
+				);
+			}
 
 			const span = getActiveSpan();
 			if (span) {

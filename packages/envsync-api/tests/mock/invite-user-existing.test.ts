@@ -42,4 +42,32 @@ describe("InviteService.createUserInvite existing email", () => {
 		const invite = await InviteService.createUserInvite("new@x.y", tenantB.org.id, tenantB.roles.viewer.id);
 		expect(invite.account_exists).toBe(false);
 	});
+
+	test("reconciles a pending invite when the email already has a membership", async () => {
+		const tenantA = await seedOrg({ orgName: "Tenant A", orgSlug: "tenant-a", masterEmail: "a@x.y" });
+		const tenantB = await seedOrg({ orgName: "Tenant B", orgSlug: "tenant-b", masterEmail: "b@x.y" });
+		const invite = await InviteService.createUserInvite("a@x.y", tenantB.org.id, tenantB.roles.developer.id);
+
+		const { DB } = await import("@/libs/db");
+		const db = await DB.getInstance();
+		await db
+			.insertInto("users")
+			.values({
+				id: crypto.randomUUID(),
+				email: "a@x.y",
+				org_id: tenantB.org.id,
+				role_id: tenantB.roles.developer.id,
+				auth_service_id: tenantA.masterUser.authServiceId,
+				full_name: "A",
+				is_active: true,
+				created_at: new Date(),
+				updated_at: new Date(),
+			})
+			.execute();
+
+		const healed = await InviteService.reconcileAcceptedInvites(tenantB.org.id);
+		expect(healed).toBe(1);
+		const row = await InviteService.getUserInviteByCode(invite.invite_token);
+		expect(row.is_accepted).toBe(true);
+	});
 });

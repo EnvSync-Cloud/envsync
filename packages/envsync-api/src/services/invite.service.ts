@@ -135,6 +135,7 @@ export class InviteService {
 	};
 
 	public static getAllUserInvites = async (org_id: string) => {
+		await this.reconcileAcceptedInvites(org_id);
 		const db = await DB.getInstance();
 		const invites = await db
 			.selectFrom("invite_user")
@@ -143,6 +144,46 @@ export class InviteService {
 			.execute();
 
 		return invites;
+	};
+
+	/**
+	 * If a pending invite's email already has a membership in this org, mark
+	 * the invite accepted. Accept used to create the membership first and
+	 * only then flip is_accepted, so a later PKI failure left split-brain rows.
+	 */
+	public static reconcileAcceptedInvites = async (org_id: string) => {
+		const db = await DB.getInstance();
+		const pending = await db
+			.selectFrom("invite_user")
+			.select(["id", "email"])
+			.where("org_id", "=", org_id)
+			.where("is_accepted", "=", false)
+			.execute();
+		if (pending.length === 0) {
+			return 0;
+		}
+
+		const members = await db
+			.selectFrom("users")
+			.select("email")
+			.where("org_id", "=", org_id)
+			.execute();
+		const memberEmails = new Set(members.map(row => this.normalizeEmail(row.email)));
+		const matched = pending.filter(invite => memberEmails.has(this.normalizeEmail(invite.email)));
+		if (matched.length === 0) {
+			return 0;
+		}
+
+		await db
+			.updateTable("invite_user")
+			.set({ is_accepted: true, updated_at: new Date() })
+			.where(
+				"id",
+				"in",
+				matched.map(invite => invite.id),
+			)
+			.execute();
+		return matched.length;
 	};
 
 	public static updateOrgInvite = async (

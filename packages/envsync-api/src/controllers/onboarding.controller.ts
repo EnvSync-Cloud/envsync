@@ -1,6 +1,7 @@
 import { type Context } from "hono";
 
 import { AppError } from "@/libs/errors";
+import infoLogs, { LogTypes } from "@/libs/logger";
 import { InviteService } from "@/services/invite.service";
 import { onOrgOnboardingInvite, onUserOnboardingInvite } from "@/libs/mail";
 import { AuditLogService } from "@/services/audit_log.service";
@@ -164,8 +165,16 @@ export class OnboardingController {
 		}
 
 		const existingUsers = await InviteService.findUsersByEmail(invite.email);
-		if (existingUsers.some(user => user.org_id === invite.org_id)) {
-			throw new AppError("This person is already a member of this organization.", 409, "ALREADY_A_MEMBER");
+		const existingMembership = existingUsers.find(user => user.org_id === invite.org_id);
+		if (existingMembership) {
+			await InviteService.updateUserInvite(invite.id, { is_accepted: true });
+			return c.json(
+				{
+					message: "User is already a member of this organization.",
+					generated_certificate_bundle: null,
+				},
+				200,
+			);
 		}
 		const existingIdentity = existingUsers.find(user => Boolean(user.auth_service_id));
 
@@ -201,42 +210,10 @@ export class OnboardingController {
 			});
 		}
 
-		const [orgCA, role] = await Promise.all([
-			CertificateService.getOrgCA(invite.org_id),
-			RoleService.getRole(invite.role_id),
-		]);
-
-		if (!orgCA) {
-			throw new AppError(
-				"Organization CA not initialized. Ask an org admin to re-provision system certificates.",
-				409,
-				"ORG_CA_REQUIRED_FOR_SYSTEM_CERT",
-			);
-		}
-
-		const cert = await CertificateService.issueMemberCert({
-			org_id: invite.org_id,
-			target_user_id: user.id,
-			target_email: invite.email,
-			issued_by_user_id: user.id,
-			envsync_pki_role: CertificateRoleMapper.toPkiRole(role),
-			is_system_generated: true,
-			persist_private_key: true,
-			description: "System-generated member certificate",
-			metadata: {
-				role_id: role.id,
-				role_name: role.name,
-				issued_source: "user_invite_accept",
-			},
-		});
-		const rootCA = await CertificateService.getRootCA();
-
-		// update invite
 		await InviteService.updateUserInvite(invite.id, {
 			is_accepted: true,
 		});
 
-		// Log the user invite acceptance
 		await AuditLogService.notifyAuditSystem({
 			action: "user_invite_accepted",
 			org_id: invite.org_id,
@@ -249,17 +226,58 @@ export class OnboardingController {
 			},
 		});
 
-		return c.json(
-			{
-				message: "User invite accepted successfully.",
-				generated_certificate_bundle: {
+		let generatedCertificateBundle: {
+			root_ca_pem: string;
+			member_cert_pem: string;
+			member_key_pem: string;
+			member_certificate_id: string;
+			member_serial_hex: string;
+			is_system_generated: true;
+		} | null = null;
+
+		try {
+			const [orgCA, role] = await Promise.all([
+				CertificateService.getOrgCA(invite.org_id),
+				RoleService.getRole(invite.role_id),
+			]);
+			if (orgCA) {
+				const cert = await CertificateService.issueMemberCert({
+					org_id: invite.org_id,
+					target_user_id: user.id,
+					target_email: invite.email,
+					issued_by_user_id: user.id,
+					envsync_pki_role: CertificateRoleMapper.toPkiRole(role),
+					is_system_generated: true,
+					persist_private_key: true,
+					description: "System-generated member certificate",
+					metadata: {
+						role_id: role.id,
+						role_name: role.name,
+						issued_source: "user_invite_accept",
+					},
+				});
+				const rootCA = await CertificateService.getRootCA();
+				generatedCertificateBundle = {
 					root_ca_pem: rootCA.cert_pem,
 					member_cert_pem: cert.cert_pem ?? "",
 					member_key_pem: cert.key_pem,
 					member_certificate_id: cert.id,
 					member_serial_hex: cert.serial_hex,
 					is_system_generated: true,
-				},
+				};
+			}
+		} catch (error) {
+			infoLogs(
+				`Invite accepted without member cert (${invite.email}): ${error instanceof Error ? error.message : String(error)}`,
+				LogTypes.ERROR,
+				"OnboardingController",
+			);
+		}
+
+		return c.json(
+			{
+				message: "User invite accepted successfully.",
+				generated_certificate_bundle: generatedCertificateBundle,
 			},
 			200,
 		);
