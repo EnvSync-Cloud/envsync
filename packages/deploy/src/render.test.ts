@@ -13,6 +13,7 @@ import {
 	renderNginxConf,
 	renderNginxVpnConf,
 	renderEnvFile,
+	mergeRuntimeEnvLocalFirst,
 	renderOtelAgentConfig,
 	renderStack,
 	swarmConfigObjectName,
@@ -308,6 +309,21 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(envFile).toContain("KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS=3600");
 		expect(envFile).toContain("KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS=604800");
 		expect(envFile).toContain(`SAML_SESSION_SECRET=${"a".repeat(64)}`);
+	});
+
+	test("keeps local deploy.env keys over generated template values", () => {
+		const template = buildRuntimeEnv(config, generated);
+		const local = {
+			...template,
+			ENVSYNC_PLAN: "enterprise",
+			CUSTOM_OPERATOR_FLAG: "1",
+		};
+		const merged = mergeRuntimeEnvLocalFirst(template, local);
+		expect(merged.env.ENVSYNC_PLAN).toBe("enterprise");
+		expect(merged.env.CUSTOM_OPERATOR_FLAG).toBe("1");
+		expect(merged.kept).toContain("ENVSYNC_PLAN");
+		expect(merged.added).toContain("CUSTOM_OPERATOR_FLAG");
+		expect(merged.env.API_URL).toBe(template.API_URL);
 	});
 
 	test("keeps SAML_SESSION_SECRET stable across rerenders", () => {

@@ -360,10 +360,38 @@ export function buildRuntimeEnv(
 	};
 }
 
+export function mergeRuntimeEnvLocalFirst(generated: RuntimeEnv, local: RuntimeEnv): {
+	env: RuntimeEnv;
+	kept: string[];
+	added: string[];
+} {
+	const env = { ...generated };
+	const kept: string[] = [];
+	const added: string[] = [];
+	for (const [key, localValue] of Object.entries(local)) {
+		if (!(key in generated)) {
+			env[key] = localValue;
+			added.push(key);
+			continue;
+		}
+		if (generated[key] === localValue) continue;
+		env[key] = localValue;
+		kept.push(key);
+	}
+	return { env, kept, added };
+}
+
+function encodeEnvValue(value: string) {
+	if (/[\s#"']/.test(value) || value.includes("\n")) {
+		return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+	}
+	return value;
+}
+
 export function renderEnvFile(env: RuntimeEnv) {
 	return Object.entries(env)
 		.sort(([a], [b]) => a.localeCompare(b))
-		.map(([key, value]) => `${key}=${value}`)
+		.map(([key, value]) => `${key}=${encodeEnvValue(value)}`)
 		.join("\n") + "\n";
 }
 
