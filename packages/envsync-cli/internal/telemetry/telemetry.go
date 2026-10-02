@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 )
 
 var version = "dev"
@@ -26,17 +27,14 @@ const tracerName = "envsync-cli"
 func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog.LoggerProvider, err error) {
 	noop := func(context.Context) error { return nil }
 
-	if os.Getenv("OTEL_SDK_DISABLED") == "true" {
+	if os.Getenv(constants.EnvOTELDisabled) == "true" {
 		return noop, nil, nil
 	}
 
-	endpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-	if endpoint == "" {
-		endpoint = os.Getenv("ENVSYNC_TELEMETRY_ENDPOINT")
-	}
+	endpoint := os.Getenv(constants.EnvOTELURL)
 	if endpoint == "" {
 		cfg := config.New()
-		endpoint = cfg.TelemetryURL
+		endpoint = cfg.OTELConfig.Endpoint
 	}
 	if endpoint == "" {
 		return noop, nil, nil

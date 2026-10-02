@@ -37,8 +37,8 @@ func createSDKClient() *sdkclient.Client {
 
 	if hasAPIKey && apiKey != "" {
 		opts = append(opts, option.WithApiKey(apiKey))
-	} else if cfg.AccessToken != "" {
-		opts = append(opts, option.WithToken(cfg.AccessToken))
+	} else if cfg.AuthConfig.AccessToken != "" {
+		opts = append(opts, option.WithToken(cfg.AuthConfig.AccessToken))
 	}
 
 	return sdkclient.NewClient(opts...)
@@ -67,8 +67,8 @@ func createHTTPClient() *resty.Client {
 
 	if hasAPIKey && apiKey != "" {
 		client.SetHeader("X-API-Key", apiKey)
-	} else if cfg.AccessToken != "" {
-		client.SetHeader("Authorization", "Bearer "+cfg.AccessToken)
+	} else if cfg.AuthConfig.AccessToken != "" {
+		client.SetHeader("Authorization", "Bearer "+cfg.AuthConfig.AccessToken)
 	}
 
 	return client

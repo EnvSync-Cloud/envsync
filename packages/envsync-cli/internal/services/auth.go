@@ -80,7 +80,7 @@ func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCreden
 // SaveToken persists the access token to configuration
 func (s *auth) SaveToken(token *domain.AccessToken) error {
 	cfg := config.New()
-	cfg.AccessToken = token.Token
+	cfg.AuthConfig.AccessToken = token.Token
 
 	if err := cfg.WriteConfigFile(); err != nil {
 		return fmt.Errorf("failed to save access token: %w", err)
@@ -106,7 +106,7 @@ func (s *auth) Logout() error {
 	// which hits logout endpoint
 
 	cfg := config.New()
-	cfg.AccessToken = ""
+	cfg.AuthConfig.AccessToken = ""
 
 	if err := cfg.WriteConfigFile(); err != nil {
 		return fmt.Errorf("failed to clear access token: %w", err)

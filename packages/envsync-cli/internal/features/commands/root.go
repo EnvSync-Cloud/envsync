@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/logger"
@@ -24,26 +25,26 @@ const (
 )
 
 type CommandRegistry struct {
-	appHandler            *handlers.AppHandler
-	authHandler           *handlers.AuthHandler
-	configHandler         *handlers.ConfigHandler
-	environmentHandler    *handlers.EnvironmentHandler
-	syncHandler           *handlers.SyncHandler
-	exportHandler         *handlers.ExportHandler
-	initHandler           *handlers.InitHandler
-	runHandler            *handlers.RunHandler
-	genPEMKeyHandler      *handlers.GenPEMKeyHandler
-	gpgKeyHandler         *handlers.GpgKeyHandler
-	certificateHandler    *handlers.CertificateHandler
-	teamHandler           *handlers.TeamHandler
-	accessHandler         *handlers.AccessHandler
-	requestHandler        *handlers.RequestHandler
-	serviceTokenHandler   *handlers.ServiceTokenHandler
-	oidcHandler           *handlers.OidcHandler
-	samlHandler           *handlers.SamlHandler
-	rotationHandler       *handlers.RotationHandler
-	dynamicSecretHandler  *handlers.DynamicSecretHandler
-	logForwardingHandler  *handlers.LogForwardingHandler
+	appHandler           *handlers.AppHandler
+	authHandler          *handlers.AuthHandler
+	configHandler        *handlers.ConfigHandler
+	environmentHandler   *handlers.EnvironmentHandler
+	syncHandler          *handlers.SyncHandler
+	exportHandler        *handlers.ExportHandler
+	initHandler          *handlers.InitHandler
+	runHandler           *handlers.RunHandler
+	genPEMKeyHandler     *handlers.GenPEMKeyHandler
+	gpgKeyHandler        *handlers.GpgKeyHandler
+	certificateHandler   *handlers.CertificateHandler
+	teamHandler          *handlers.TeamHandler
+	accessHandler        *handlers.AccessHandler
+	requestHandler       *handlers.RequestHandler
+	serviceTokenHandler  *handlers.ServiceTokenHandler
+	oidcHandler          *handlers.OidcHandler
+	samlHandler          *handlers.SamlHandler
+	rotationHandler      *handlers.RotationHandler
+	dynamicSecretHandler *handlers.DynamicSecretHandler
+	logForwardingHandler *handlers.LogForwardingHandler
 }
 
 func NewCommandRegistry(
@@ -69,26 +70,26 @@ func NewCommandRegistry(
 	logForwardingHandler *handlers.LogForwardingHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
-		appHandler:            appHandler,
-		authHandler:           authHandler,
-		configHandler:         configHandler,
-		environmentHandler:    environmentHandler,
-		syncHandler:           syncHandler,
-		exportHandler:         exportHandler,
-		initHandler:           initHandler,
-		runHandler:            runHandler,
-		genPEMKeyHandler:      genPEMKeyHandler,
-		gpgKeyHandler:         gpgKeyHandler,
-		certificateHandler:    certificateHandler,
-		teamHandler:           teamHandler,
-		accessHandler:         accessHandler,
-		requestHandler:        requestHandler,
-		serviceTokenHandler:   serviceTokenHandler,
-		oidcHandler:           oidcHandler,
-		samlHandler:           samlHandler,
-		rotationHandler:       rotationHandler,
-		dynamicSecretHandler:  dynamicSecretHandler,
-		logForwardingHandler:  logForwardingHandler,
+		appHandler:           appHandler,
+		authHandler:          authHandler,
+		configHandler:        configHandler,
+		environmentHandler:   environmentHandler,
+		syncHandler:          syncHandler,
+		exportHandler:        exportHandler,
+		initHandler:          initHandler,
+		runHandler:           runHandler,
+		genPEMKeyHandler:     genPEMKeyHandler,
+		gpgKeyHandler:        gpgKeyHandler,
+		certificateHandler:   certificateHandler,
+		teamHandler:          teamHandler,
+		accessHandler:        accessHandler,
+		requestHandler:       requestHandler,
+		serviceTokenHandler:  serviceTokenHandler,
+		oidcHandler:          oidcHandler,
+		samlHandler:          samlHandler,
+		rotationHandler:      rotationHandler,
+		dynamicSecretHandler: dynamicSecretHandler,
+		logForwardingHandler: logForwardingHandler,
 	}
 }
 
@@ -139,6 +140,9 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 }
 
 func (r *CommandRegistry) beforeHook(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+	// Initialise app config
+	_ = config.New()
+
 	// Initialise OpenTelemetry (graceful degradation on failure)
 	shutdown, lp, _ := telemetry.Init(ctx)
 	ctx = context.WithValue(ctx, constants.TelemetryShutdownKey, shutdown)

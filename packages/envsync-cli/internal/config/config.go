@@ -6,21 +6,41 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 )
 
 type AppConfig struct {
-	AccessToken    string `json:"access_token"`
-	BackendURL     string `json:"backend_url"`
-	TelemetryURL   string `json:"telemetry_url,omitempty"`
-	TelemetryToken string `json:"telemetry_token,omitempty"`
+	BackendURL string     `json:"backend_url"`
+	AuthConfig AuthConfig `json:"auth_config"`
+	OTELConfig OTELConfig `json:"otel_config"`
+}
+
+type AuthConfig struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    int    `json:"expires_at"`
+}
+
+type OTELConfig struct {
+	OtelDisabled bool   `json:"disabled"`
+	Endpoint     string `json:"endpoint"`
+	ServiceName  string `json:"service_name"`
+}
+
+// configFilePath resolves the single on-disk location of config.json.
+func configFilePath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user config directory: %w", err)
+	}
+	return filepath.Join(configDir, "envsync", "config.json"), nil
 }
 
 var (
-	cfg       AppConfig
-	once      sync.Once
-	initErr   error
-	backendURL string = "https://api.envsync.cloud"
-	telemetryURL string
+	cfg     AppConfig
+	once    sync.Once
+	initErr error
 )
 
 func New() AppConfig {
@@ -34,49 +54,28 @@ func New() AppConfig {
 
 func NewWithError() (AppConfig, error) {
 	once.Do(func() {
-		configDir, err := os.UserConfigDir()
+		filePath, err := configFilePath()
 		if err != nil {
-			initErr = fmt.Errorf("failed to get user config directory: %w", err)
+			initErr = err
 			return
 		}
 
-		filePath := filepath.Join(configDir, "envsync", "config.json")
-
-		// Ensure directory exists
-		dirPath := filepath.Dir(filePath)
-		if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-			initErr = fmt.Errorf("failed to create config directory: %w", err)
-			return
-		}
-
-		// Create a file if it doesn't exist
+		// Create the file with defaults if it doesn't exist yet.
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			file, err := os.Create(filePath)
-			if err != nil {
+			defaults := DefaultConfig()
+			if err := defaults.WriteConfigFile(); err != nil {
 				initErr = fmt.Errorf("failed to create config file: %w", err)
 				return
 			}
-			file.Close()
 		}
 
+		// Read config from file
 		cfg, initErr = ReadConfigFile()
 		if initErr != nil {
 			return
 		}
 
-		if envBackendURL := os.Getenv("ENVSYNC_API_URL"); envBackendURL != "" {
-			cfg.BackendURL = envBackendURL
-		} else if cfg.BackendURL == "" {
-			cfg.BackendURL = backendURL
-		}
-
-		if envTelemetryURL := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); envTelemetryURL != "" {
-			cfg.TelemetryURL = envTelemetryURL
-		} else if envTelemetryURL := os.Getenv("ENVSYNC_TELEMETRY_ENDPOINT"); envTelemetryURL != "" {
-			cfg.TelemetryURL = envTelemetryURL
-		} else if cfg.TelemetryURL == "" {
-			cfg.TelemetryURL = telemetryURL
-		}
+		cfg = overrideConfigWithEnv(cfg)
 	})
 
 	return cfg, initErr
@@ -85,41 +84,79 @@ func NewWithError() (AppConfig, error) {
 func (c *AppConfig) WriteConfigFile() error {
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	filePath, err := configFilePath()
+	if err != nil {
 		return err
 	}
 
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return fmt.Errorf("failed to get user config directory: %w", err)
+	// The config directory may not exist yet on a fresh machine; the caller
+	// should never have to bootstrap it before persisting.
+	if err := os.MkdirAll(filepath.Dir(filePath), 0o755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	filePath := filepath.Join(configDir, "envsync", "config.json")
-
-	return os.WriteFile(filePath, data, 0644)
+	return os.WriteFile(filePath, data, 0o644)
 }
 
 func ReadConfigFile() (AppConfig, error) {
-	configDir, err := os.UserConfigDir()
+	filePath, err := configFilePath()
 	if err != nil {
-		return AppConfig{}, fmt.Errorf("failed to get user config directory: %w", err)
+		return AppConfig{}, err
 	}
-
-	filePath := filepath.Join(configDir, "envsync", "config.json")
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return AppConfig{}, err
 	}
 
+	// A file that exists but holds nothing is a partially written config;
+	// fall back to defaults rather than handing back a zeroed AppConfig.
 	if len(data) == 0 {
-		return AppConfig{}, nil
+		return DefaultConfig(), nil
 	}
 
 	var config AppConfig
-	err = json.Unmarshal(data, &config)
-	if err != nil {
+	if err := json.Unmarshal(data, &config); err != nil {
 		return AppConfig{}, err
 	}
 
 	return config, nil
+}
+
+// defaultConfig returns the default configuration for the application.
+func DefaultConfig() AppConfig {
+	return AppConfig{
+		BackendURL: constants.BackendURL,
+		AuthConfig: AuthConfig{
+			AccessToken:  "",
+			RefreshToken: "",
+			ExpiresAt:    0,
+		},
+		OTELConfig: OTELConfig{
+			Endpoint:     constants.OTELEndpoint,
+			ServiceName:  constants.OTELService,
+			OtelDisabled: constants.OTELDisabled,
+		},
+	}
+}
+
+// overrideConfigWithEnv overrides the configuration with environment variables.
+func overrideConfigWithEnv(cfg AppConfig) AppConfig {
+	if envBackendURL := os.Getenv(constants.EnvBackendURL); envBackendURL != "" {
+		cfg.BackendURL = envBackendURL
+	}
+	if envTelemetryURL := os.Getenv(constants.EnvOTELURL); envTelemetryURL != "" {
+		cfg.OTELConfig.Endpoint = envTelemetryURL
+	}
+	if envOTELService := os.Getenv(constants.EnvOTELService); envOTELService != "" {
+		cfg.OTELConfig.ServiceName = envOTELService
+	}
+	if envOTELDisabled := os.Getenv(constants.EnvOTELDisabled); envOTELDisabled != "" {
+		cfg.OTELConfig.OtelDisabled = envOTELDisabled == "true"
+	}
+
+	return cfg
 }

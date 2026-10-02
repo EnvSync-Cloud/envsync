@@ -17,7 +17,13 @@ type Application struct {
 	UpdatedAt       time.Time
 }
 
-func NewApplication(name, description, publicKey string, enableSecrets bool, metadata map[string]any) *Application {
+func NewApplication(
+	name,
+	description,
+	publicKey string,
+	enableSecrets bool,
+	metadata map[string]any,
+) *Application {
 	return &Application{
 		Name:          name,
 		Description:   description,
