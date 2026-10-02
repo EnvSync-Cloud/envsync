@@ -146,23 +146,23 @@ func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *app.AppError:
 		switch e.Code {
 		case app.AppErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Application not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Application not found: "+e.Message)
 		case app.AppErrorCodeAlreadyExists:
-			return h.formatter.FormatError(cmd.Writer, "Application already exists: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Application already exists: "+e.Message)
 		case app.AppErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case app.AppErrorCodeAccessDenied:
-			return h.formatter.FormatError(cmd.Writer, "Access denied: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Access denied: "+e.Message)
 		case app.AppErrorCodeInUse:
 			return h.formatter.FormatWarning(cmd.Writer, "Cannot complete operation: "+e.Message)
 		case app.AppErrorCodeCancelled:
 			return h.formatter.FormatWarning(cmd.Writer, "Operation cancelled: "+e.Message)
 		case app.AppErrorTUI:
-			return h.formatter.FormatError(cmd.Writer, "TUI error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "TUI error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

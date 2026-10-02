@@ -112,21 +112,21 @@ func (h *EnvironmentHandler) formatUseCaseError(cmd *cli.Command, err error) err
 	case *environment.EnvError:
 		switch e.Code {
 		case environment.EnvErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case environment.EnvErrorCodeServiceError:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		case environment.EnvErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Environment not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Environment not found: "+e.Message)
 		case environment.EnvErrorCodeCorrupted:
-			return h.formatter.FormatError(cmd.Writer, "Environment data is corrupted: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Environment data is corrupted: "+e.Message)
 		case environment.EnvErrorCodePermission:
-			return h.formatter.FormatError(cmd.Writer, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
 		case environment.EnvErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.Writer, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

@@ -28,7 +28,7 @@ func (f *AppFormatter) FormatCreateSuccessMessage(writer io.Writer, app domain.A
 		successMsg += fmt.Sprintf("📝 Description: %s\n", app.Description)
 	}
 
-	successMsg = style.BoxStyle.Render(successMsg)
+	successMsg = style.Render(style.BoxStyle, successMsg)
 
 	_, err := writer.Write([]byte(successMsg))
 

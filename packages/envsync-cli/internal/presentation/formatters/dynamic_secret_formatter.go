@@ -48,7 +48,7 @@ func (f *DynamicSecretFormatter) FormatEngineDetail(writer io.Writer, engine *sd
 		enabled = "Yes"
 	}
 
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"🔐 Dynamic Secret Engine\n\n"+
 			"🆔 ID: %s\n"+
 			"📛 Name: %s\n"+
@@ -69,7 +69,7 @@ func (f *DynamicSecretFormatter) FormatEngineDetail(writer io.Writer, engine *sd
 }
 
 func (f *DynamicSecretFormatter) FormatCreateEngineSuccess(writer io.Writer, engine *sdk.DynamicSecretEngineResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Dynamic secret engine created successfully!\n\n"+
 			"🆔 ID: %s\n"+
 			"📛 Name: %s\n"+
@@ -84,7 +84,7 @@ func (f *DynamicSecretFormatter) FormatCreateEngineSuccess(writer io.Writer, eng
 }
 
 func (f *DynamicSecretFormatter) FormatUpdateEngineSuccess(writer io.Writer, engine *sdk.DynamicSecretEngineResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Dynamic secret engine updated successfully!\n\n"+
 			"🆔 ID: %s\n"+
 			"📛 Name: %s\n"+
@@ -130,7 +130,7 @@ func (f *DynamicSecretFormatter) FormatLeaseDetail(writer io.Writer, lease *sdk.
 		status = "revoked"
 	}
 
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"🔑 Dynamic Secret Lease\n\n"+
 			"🆔 ID: %s\n"+
 			"🔧 Engine ID: %s\n"+
@@ -153,7 +153,7 @@ func (f *DynamicSecretFormatter) FormatLeaseDetail(writer io.Writer, lease *sdk.
 }
 
 func (f *DynamicSecretFormatter) FormatCreateLeaseSuccess(writer io.Writer, lease *sdk.DynamicSecretLeaseResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Dynamic secret lease created successfully!\n\n"+
 			"🆔 ID: %s\n"+
 			"🔧 Engine ID: %s\n"+
@@ -170,7 +170,7 @@ func (f *DynamicSecretFormatter) FormatCreateLeaseSuccess(writer io.Writer, leas
 }
 
 func (f *DynamicSecretFormatter) FormatRevokeLeaseSuccess(writer io.Writer, result *sdk.RevokeLeaseResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Dynamic secret lease revoked successfully!\n\n"+
 			"💬 Message: %s\n"+
 			"🆔 ID: %s\n",
@@ -183,7 +183,7 @@ func (f *DynamicSecretFormatter) FormatRevokeLeaseSuccess(writer io.Writer, resu
 }
 
 func (f *DynamicSecretFormatter) FormatCleanupSuccess(writer io.Writer, result *sdk.CleanupResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Expired leases cleanup completed!\n\n"+
 			"🧹 Cleaned: %d lease(s)\n",
 		result.Cleaned,

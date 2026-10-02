@@ -21,10 +21,10 @@ func TestBaseFormatter_FormatJSON(t *testing.T) {
 	f := NewBaseFormatter()
 
 	tests := []struct {
-		name      string
-		data      any
-		wantKey   string
-		wantErr   bool
+		name    string
+		data    any
+		wantKey string
+		wantErr bool
 	}{
 		{
 			name:    "map data",
@@ -338,13 +338,13 @@ func TestServiceTokenFormatter_FormatGetSuccessMessage(t *testing.T) {
 		{
 			name: "full token details",
 			token: &sdk.ServiceTokenResponse{
-				Id:         "tok-100",
-				Name:       "detail-token",
-				AppId:      &appID,
+				Id:          "tok-100",
+				Name:        "detail-token",
+				AppId:       &appID,
 				Permissions: &sdk.ServiceTokenPermissions{Read: true, Write: true},
-				ExpiresAt:  "2025-12-31T00:00:00Z",
-				LastUsedAt: &lastUsed,
-				CreatedAt:  "2025-01-01T00:00:00Z",
+				ExpiresAt:   "2025-12-31T00:00:00Z",
+				LastUsedAt:  &lastUsed,
+				CreatedAt:   "2025-01-01T00:00:00Z",
 			},
 			wantText: []string{"detail-token", "tok-100", "app-789", "true", "2025-06-01T12:00:00Z"},
 		},
@@ -386,18 +386,18 @@ func TestServiceTokenFormatter_FormatListTable(t *testing.T) {
 		wantText []string
 	}{
 		{
-			name:   "empty list",
-			tokens: sdk.ServiceTokensResponse{},
+			name:     "empty list",
+			tokens:   sdk.ServiceTokensResponse{},
 			wantText: []string{"ID", "NAME", "EXPIRES AT"},
 		},
 		{
 			name: "single token",
 			tokens: sdk.ServiceTokensResponse{
 				&sdk.ServiceTokenResponse{
-					Id:        "tok-1",
-					Name:      "token-one",
-					ExpiresAt: "2025-12-31",
-					CreatedAt: "2025-01-01",
+					Id:          "tok-1",
+					Name:        "token-one",
+					ExpiresAt:   "2025-12-31",
+					CreatedAt:   "2025-01-01",
 					Permissions: &sdk.ServiceTokenPermissions{Read: true, Write: false},
 				},
 			},
@@ -566,7 +566,7 @@ func TestOidcFormatter_FormatDetail(t *testing.T) {
 			provider: domain.OidcProvider{
 				ID: "oidc-d1", OrgID: "org-1", ProviderType: "github_actions",
 				IssuerURL: "https://token.actions.githubusercontent.com",
-				Audience: "envsync", Enabled: true,
+				Audience:  "envsync", Enabled: true,
 				AllowedSubjects: []string{"repo:a/b", "repo:c/d"},
 				MachineUserID:   "mu-001",
 				CreatedAt:       "2025-01-01", UpdatedAt: "2025-06-01",
@@ -734,9 +734,9 @@ func TestSamlFormatter_FormatDetail(t *testing.T) {
 			provider: domain.SamlProvider{
 				ID: "saml-d2", OrgID: "org-2", ProviderType: "onelogin",
 				Name: "OneLogin", EntityID: "https://onelogin.com",
-				SsoURL: "https://onelogin.com/sso",
+				SsoURL:      "https://onelogin.com/sso",
 				Certificate: strings.Repeat("A", 100),
-				Enabled: false, CreatedAt: "2025-02-01", UpdatedAt: "2025-02-01",
+				Enabled:     false, CreatedAt: "2025-02-01", UpdatedAt: "2025-02-01",
 			},
 			wantText: []string{"saml-d2", "..."},
 		},
@@ -1442,7 +1442,7 @@ func TestLogForwardingFormatter_FormatGetDetail(t *testing.T) {
 			config: &managementsdk.LogForwardingResponse{
 				Id: "lf-d1", OrgId: "org-1", Name: "Sumo Logic",
 				ProviderType: managementsdk.LogForwardingResponseProviderTypeSumoLogic,
-				Enabled: true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
+				Enabled:      true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
 				Config: map[string]interface{}{"endpoint": "https://sumologic.com/collect"},
 			},
 			wantText: []string{"lf-d1", "org-1", "Sumo Logic", "sumo-logic", "endpoint"},
@@ -1452,7 +1452,7 @@ func TestLogForwardingFormatter_FormatGetDetail(t *testing.T) {
 			config: &managementsdk.LogForwardingResponse{
 				Id: "lf-d2", OrgId: "org-1", Name: "Datadog",
 				ProviderType: managementsdk.LogForwardingResponseProviderTypeDatadog,
-				Enabled: true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
+				Enabled:      true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
 				Config: map[string]interface{}{"api_key": "secret-key-123", "site": "datadoghq.com"},
 			},
 			wantText: []string{"lf-d2", "Datadog", "api_key", "****", "site"},
@@ -1462,7 +1462,7 @@ func TestLogForwardingFormatter_FormatGetDetail(t *testing.T) {
 			config: &managementsdk.LogForwardingResponse{
 				Id: "lf-d3", OrgId: "org-1", Name: "No Config",
 				ProviderType: managementsdk.LogForwardingResponseProviderTypeSplunk,
-				Enabled: false, CreatedAt: "2025-01-01", UpdatedAt: "2025-01-01",
+				Enabled:      false, CreatedAt: "2025-01-01", UpdatedAt: "2025-01-01",
 			},
 			wantText: []string{"lf-d3", "No Config"},
 		},
@@ -1491,7 +1491,7 @@ func TestLogForwardingFormatter_FormatGetDetail_ApiKeyMasking(t *testing.T) {
 	config := &managementsdk.LogForwardingResponse{
 		Id: "lf-mask", OrgId: "org-1", Name: "DD",
 		ProviderType: managementsdk.LogForwardingResponseProviderTypeDatadog,
-		Enabled: true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
+		Enabled:      true, CreatedAt: "2025-01-01", UpdatedAt: "2025-06-01",
 		Config: map[string]interface{}{"api_key": "super-secret-key-do-not-leak"},
 	}
 

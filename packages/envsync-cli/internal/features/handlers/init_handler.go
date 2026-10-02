@@ -42,29 +42,29 @@ func (h *InitHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *inituc.InitError:
 		switch e.Code {
 		case inituc.InitErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case inituc.InitErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.Writer, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
 		case inituc.InitErrorCodePermission:
-			return h.formatter.FormatError(cmd.Writer, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
 		case inituc.InitErrorCodeAlreadyExists:
-			return h.formatter.FormatError(cmd.Writer, "Configuration already exists: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Configuration already exists: "+e.Message)
 		case inituc.InitErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Not found error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Not found error: "+e.Message)
 		case inituc.InitErrorCodeServiceError:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		case inituc.InitErrorCodeNetworkError:
-			return h.formatter.FormatError(cmd.Writer, "Network error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Network error: "+e.Message)
 		case inituc.InitErrorCodeTUIError:
-			return h.formatter.FormatError(cmd.Writer, "TUI error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "TUI error: "+e.Message)
 		case inituc.InitErrorCodeCancelled:
-			return h.formatter.FormatError(cmd.Writer, "Operation cancelled: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Operation cancelled: "+e.Message)
 		case inituc.InitErrorCodeTimeout:
-			return h.formatter.FormatError(cmd.Writer, "Operation timed out: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Operation timed out: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

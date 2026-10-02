@@ -134,7 +134,7 @@ func (h *OidcHandler) formatError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
-	return h.formatter.FormatError(cmd.Writer, err.Error())
+	return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 }
 
 func parseCommaSeparated(s string) []string {

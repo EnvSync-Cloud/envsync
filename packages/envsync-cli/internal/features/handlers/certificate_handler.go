@@ -127,12 +127,12 @@ func (h *CertificateHandler) IssueCert(ctx context.Context, cmd *cli.Command) er
 
 	if certPath != "" && cert.CertPEM != "" {
 		if err := os.WriteFile(certPath, []byte(cert.CertPEM+"\n"), 0644); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write certificate: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write certificate: "+err.Error())
 		}
 	}
 	if keyPath != "" && cert.KeyPEM != "" {
 		if err := os.WriteFile(keyPath, []byte(cert.KeyPEM+"\n"), 0600); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write key: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write key: "+err.Error())
 		}
 	}
 
@@ -216,7 +216,7 @@ func (h *CertificateHandler) GetCRL(ctx context.Context, cmd *cli.Command) error
 	outputPath := cmd.String("output")
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, []byte(result.CRLPEM+"\n"), 0644); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write CRL: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write CRL: "+err.Error())
 		}
 		return h.formatter.FormatSuccess(cmd.Writer, "CRL written to "+outputPath)
 	}
@@ -238,7 +238,7 @@ func (h *CertificateHandler) GetRootCA(ctx context.Context, cmd *cli.Command) er
 	outputPath := cmd.String("output")
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, []byte(certPEM+"\n"), 0644); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write root CA: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write root CA: "+err.Error())
 		}
 		return h.formatter.FormatSuccess(cmd.Writer, "Root CA written to "+outputPath)
 	}
@@ -292,13 +292,13 @@ func (h *CertificateHandler) formatError(cmd *cli.Command, err error) error {
 	case *certUC.CertError:
 		switch e.Code {
 		case certUC.CertErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Certificate not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Certificate not found: "+e.Message)
 		case certUC.CertErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

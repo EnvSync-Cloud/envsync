@@ -116,7 +116,7 @@ func (h *GpgKeyHandler) Sign(ctx context.Context, cmd *cli.Command) error {
 	outputPath := cmd.String("output")
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, []byte(result.Signature+"\n"), 0644); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write output: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write output: "+err.Error())
 		}
 		return h.formatter.FormatSuccess(cmd.Writer, "Signature written to "+outputPath)
 	}
@@ -157,7 +157,7 @@ func (h *GpgKeyHandler) Export(ctx context.Context, cmd *cli.Command) error {
 	outputPath := cmd.String("output")
 	if outputPath != "" {
 		if err := os.WriteFile(outputPath, []byte(publicKey+"\n"), 0644); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Failed to write output: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write output: "+err.Error())
 		}
 		return h.formatter.FormatSuccess(cmd.Writer, "Public key written to "+outputPath)
 	}
@@ -256,13 +256,13 @@ func (h *GpgKeyHandler) formatError(cmd *cli.Command, err error) error {
 	case *gpg_key.GpgKeyError:
 		switch e.Code {
 		case gpg_key.GpgKeyErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "GPG key not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "GPG key not found: "+e.Message)
 		case gpg_key.GpgKeyErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

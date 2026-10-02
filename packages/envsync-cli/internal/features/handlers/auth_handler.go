@@ -130,21 +130,21 @@ func (h *AuthHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 		case auth.AuthErrorCodeNotLoggedIn:
 			return h.formatter.FormatWarning(cmd.Writer, "Not logged in: "+e.Message)
 		case auth.AuthErrorCodeLoginFailed:
-			return h.formatter.FormatError(cmd.Writer, "Login failed: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Login failed: "+e.Message)
 		case auth.AuthErrorCodeTokenInvalid:
-			return h.formatter.FormatError(cmd.Writer, "Token invalid: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Token invalid: "+e.Message)
 		case auth.AuthErrorCodeTokenExpired:
-			return h.formatter.FormatError(cmd.Writer, "Token expired: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Token expired: "+e.Message)
 		case auth.AuthErrorCodeTimeout:
-			return h.formatter.FormatError(cmd.Writer, "Authentication timeout: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Authentication timeout: "+e.Message)
 		case auth.AuthErrorCodeCancelled:
 			return h.formatter.FormatWarning(cmd.Writer, "Authentication cancelled: "+e.Message)
 		case auth.AuthErrorCodeNetworkError:
-			return h.formatter.FormatError(cmd.Writer, "Network error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Network error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Authentication error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Authentication error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

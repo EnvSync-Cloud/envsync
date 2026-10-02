@@ -95,21 +95,21 @@ func (h *SyncHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *sync.SyncError:
 		switch e.Code {
 		case sync.SyncErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case sync.SyncErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.Writer, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
 		case sync.SyncErrorCodePermission:
-			return h.formatter.FormatError(cmd.Writer, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
 		case sync.SyncErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Not found error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Not found error: "+e.Message)
 		case sync.SyncErrorCodeCorrupted:
-			return h.formatter.FormatError(cmd.Writer, "Corrupted file error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Corrupted file error: "+e.Message)
 		case sync.SyncErrorCodeServiceError:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

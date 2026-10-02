@@ -25,7 +25,7 @@ func (f *SamlFormatter) FormatCreateSuccess(writer io.Writer, p domain.SamlProvi
 	msg += fmt.Sprintf("🔗 Entity ID: %s\n", p.EntityID)
 	msg += fmt.Sprintf("🌐 SSO URL: %s\n", p.SsoURL)
 	msg += fmt.Sprintf("✅ Enabled: %t\n", p.Enabled)
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 	_, err := writer.Write([]byte(msg))
 	return err
 }
@@ -61,7 +61,7 @@ func (f *SamlFormatter) FormatDetail(writer io.Writer, p domain.SamlProvider) er
 	msg += fmt.Sprintf("🕐 Created: %s\n", p.CreatedAt)
 	msg += fmt.Sprintf("🕐 Updated: %s\n", p.UpdatedAt)
 
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 	_, err := writer.Write([]byte(msg))
 	return err
 }
@@ -80,7 +80,7 @@ func (f *SamlFormatter) FormatSsoResult(writer io.Writer, result domain.SamlSsoR
 	msg += fmt.Sprintf("🆔 Request ID: %s\n", result.RequestID)
 	msg += "\nOpen the redirect URL in your browser to complete authentication.\n"
 
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 	_, err := writer.Write([]byte(msg))
 	return err
 }

@@ -13,15 +13,15 @@ import (
 )
 
 type RotationHandler struct {
-	listUseCase     rotation.ListPoliciesUseCase
-	createUseCase   rotation.CreatePolicyUseCase
-	getUseCase      rotation.GetPolicyUseCase
-	updateUseCase   rotation.UpdatePolicyUseCase
-	deleteUseCase   rotation.DeletePolicyUseCase
-	triggerUseCase  rotation.TriggerRotationUseCase
-	statesUseCase   rotation.GetRotationStatesUseCase
-	revokeUseCase   rotation.RevokeExpiredCredentialsUseCase
-	formatter       *formatters.RotationFormatter
+	listUseCase    rotation.ListPoliciesUseCase
+	createUseCase  rotation.CreatePolicyUseCase
+	getUseCase     rotation.GetPolicyUseCase
+	updateUseCase  rotation.UpdatePolicyUseCase
+	deleteUseCase  rotation.DeletePolicyUseCase
+	triggerUseCase rotation.TriggerRotationUseCase
+	statesUseCase  rotation.GetRotationStatesUseCase
+	revokeUseCase  rotation.RevokeExpiredCredentialsUseCase
+	formatter      *formatters.RotationFormatter
 }
 
 func NewRotationHandler() *RotationHandler {
@@ -56,7 +56,7 @@ func (h *RotationHandler) List(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) Create(ctx context.Context, cmd *cli.Command) error {
 	engineType, err := sdk.NewCreateRotationPolicyRequestEngineTypeFromString(cmd.String("engine"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, "Invalid engine type: "+cmd.String("engine"))
+		return h.formatter.FormatError(cmd.ErrWriter, "Invalid engine type: "+cmd.String("engine"))
 	}
 
 	req := &sdk.CreateRotationPolicyRequest{
@@ -76,7 +76,7 @@ func (h *RotationHandler) Create(ctx context.Context, cmd *cli.Command) error {
 	if cmd.IsSet("config") {
 		var configMap map[string]interface{}
 		if err := json.Unmarshal([]byte(cmd.String("config")), &configMap); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Invalid config JSON: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Invalid config JSON: "+err.Error())
 		}
 		req.ConnectionConfig = configMap
 	}
@@ -96,7 +96,7 @@ func (h *RotationHandler) Create(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) Get(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Rotation policy ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Rotation policy ID is required (--id)")
 	}
 
 	policy, err := h.getUseCase.Execute(ctx, id)
@@ -114,7 +114,7 @@ func (h *RotationHandler) Get(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) Update(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Rotation policy ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Rotation policy ID is required (--id)")
 	}
 
 	req := &sdk.UpdateRotationPolicyRequest{}
@@ -130,7 +130,7 @@ func (h *RotationHandler) Update(ctx context.Context, cmd *cli.Command) error {
 	if cmd.IsSet("config") {
 		var configMap map[string]interface{}
 		if err := json.Unmarshal([]byte(cmd.String("config")), &configMap); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Invalid config JSON: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Invalid config JSON: "+err.Error())
 		}
 		req.ConnectionConfig = configMap
 	}
@@ -150,7 +150,7 @@ func (h *RotationHandler) Update(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Rotation policy ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Rotation policy ID is required (--id)")
 	}
 
 	if err := h.deleteUseCase.Execute(ctx, id); err != nil {
@@ -167,7 +167,7 @@ func (h *RotationHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) Trigger(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Rotation policy ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Rotation policy ID is required (--id)")
 	}
 
 	result, err := h.triggerUseCase.Execute(ctx, id)
@@ -185,7 +185,7 @@ func (h *RotationHandler) Trigger(ctx context.Context, cmd *cli.Command) error {
 func (h *RotationHandler) States(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Rotation policy ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Rotation policy ID is required (--id)")
 	}
 
 	states, err := h.statesUseCase.Execute(ctx, id)
@@ -217,5 +217,5 @@ func (h *RotationHandler) formatError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
-	return h.formatter.FormatError(cmd.Writer, err.Error())
+	return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 }

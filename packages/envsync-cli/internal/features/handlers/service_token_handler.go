@@ -135,15 +135,15 @@ func (h *ServiceTokenHandler) formatUseCaseError(cmd *cli.Command, err error) er
 	if errors.As(err, &stErr) {
 		switch stErr.Code {
 		case service_token.ServiceTokenErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+stErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+stErr.Message)
 		case service_token.ServiceTokenErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Service token not found: "+stErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service token not found: "+stErr.Message)
 		case service_token.ServiceTokenErrorCodeAccessDenied:
-			return h.formatter.FormatError(cmd.Writer, "Access denied: "+stErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Access denied: "+stErr.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+stErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+stErr.Message)
 		}
 	}
 
-	return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+	return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 }

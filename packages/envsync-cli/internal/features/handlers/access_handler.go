@@ -24,14 +24,14 @@ func NewAccessHandler() *AccessHandler {
 
 func (h *AccessHandler) GrantApp(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.GrantAppAccess(ctx, cmd.String("app-id"), cmd.String("subject-id"), cmd.String("subject-type"), cmd.String("relation")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "App access granted")
 }
 
 func (h *AccessHandler) RevokeApp(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.RevokeAppAccess(ctx, cmd.String("app-id"), cmd.String("subject-id"), cmd.String("subject-type"), cmd.String("relation")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "App access revoked")
 }
@@ -39,7 +39,7 @@ func (h *AccessHandler) RevokeApp(ctx context.Context, cmd *cli.Command) error {
 func (h *AccessHandler) GrantsApp(ctx context.Context, cmd *cli.Command) error {
 	grants, err := h.repo.ListAppGrants(ctx, cmd.String("app-id"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, grants)
@@ -53,7 +53,7 @@ func (h *AccessHandler) GrantsApp(ctx context.Context, cmd *cli.Command) error {
 func (h *AccessHandler) EffectiveApp(ctx context.Context, cmd *cli.Command) error {
 	entries, err := h.repo.EffectiveAppAccess(ctx, cmd.String("app-id"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, entries)

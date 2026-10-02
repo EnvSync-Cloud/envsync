@@ -27,7 +27,7 @@ func (f *OidcFormatter) FormatCreateSuccess(writer io.Writer, p domain.OidcProvi
 	if len(p.AllowedSubjects) > 0 {
 		msg += fmt.Sprintf("👤 Allowed Subjects: %s\n", strings.Join(p.AllowedSubjects, ", "))
 	}
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 	_, err := writer.Write([]byte(msg))
 	return err
 }
@@ -69,7 +69,7 @@ func (f *OidcFormatter) FormatDetail(writer io.Writer, p domain.OidcProvider) er
 	msg += fmt.Sprintf("🕐 Created: %s\n", p.CreatedAt)
 	msg += fmt.Sprintf("🕐 Updated: %s\n", p.UpdatedAt)
 
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 	_, err := writer.Write([]byte(msg))
 	return err
 }

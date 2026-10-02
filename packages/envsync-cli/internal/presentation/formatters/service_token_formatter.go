@@ -39,7 +39,7 @@ func (f *ServiceTokenFormatter) FormatCreateSuccessMessage(writer io.Writer, tok
 	successMsg += fmt.Sprintf("📅 Expires At: %s\n", token.ExpiresAt)
 	successMsg += fmt.Sprintf("🕐 Created At: %s\n", token.CreatedAt)
 
-	successMsg = style.BoxStyle.Render(successMsg)
+	successMsg = style.Render(style.BoxStyle, successMsg)
 
 	_, err := writer.Write([]byte(successMsg))
 	return err
@@ -65,7 +65,7 @@ func (f *ServiceTokenFormatter) FormatGetSuccessMessage(writer io.Writer, token 
 	}
 	msg += fmt.Sprintf("🕐 Created At: %s\n", token.CreatedAt)
 
-	msg = style.BoxStyle.Render(msg)
+	msg = style.Render(style.BoxStyle, msg)
 
 	_, err := writer.Write([]byte(msg))
 	return err
@@ -111,7 +111,7 @@ func (f *ServiceTokenFormatter) FormatListTable(writer io.Writer, tokens sdk.Ser
 
 func (f *ServiceTokenFormatter) FormatDeleteSuccessMessage(writer io.Writer, id string) error {
 	successMsg := fmt.Sprintf("✅ Service token deleted successfully! (ID: %s)\n", id)
-	successMsg = style.BoxStyle.Render(successMsg)
+	successMsg = style.Render(style.BoxStyle, successMsg)
 
 	_, err := writer.Write([]byte(successMsg))
 	return err

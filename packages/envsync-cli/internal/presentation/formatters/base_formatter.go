@@ -45,21 +45,22 @@ func (f *BaseFormatter) FormatWarningJSON(writer io.Writer, message string) erro
 }
 
 func (f *BaseFormatter) FormatSuccess(writer io.Writer, message string) error {
-	output := style.BoxStyle.Render(style.SuccessStyle.Render(fmt.Sprintf("✅ %s\n", message)))
+	output := style.Render(style.BoxStyle, style.SuccessStyle.Render("✅ "+message))
 	_, err := writer.Write([]byte(output))
 	return err
 }
 
-// FormatError formats error messages
+// FormatError formats error messages. Callers pass the error stream (stderr)
+// so error text never pollutes machine-readable stdout.
 func (f *BaseFormatter) FormatError(writer io.Writer, message string) error {
-	output := style.ErrorStyle.Render(fmt.Sprintf("❎ %s\n", message))
+	output := style.Render(style.ErrorStyle, "❎ "+message)
 	_, err := writer.Write([]byte(output))
 	return err
 }
 
 // FormatWarning formats warning messages
 func (f *BaseFormatter) FormatWarning(writer io.Writer, message string) error {
-	output := style.WarningStyle.Render(fmt.Sprintf("⚠️  %s\n", message))
+	output := style.Render(style.WarningStyle, "⚠️  "+message)
 	_, err := writer.Write([]byte(output))
 	return err
 }

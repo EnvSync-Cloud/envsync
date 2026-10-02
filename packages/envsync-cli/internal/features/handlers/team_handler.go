@@ -25,7 +25,7 @@ func NewTeamHandler() *TeamHandler {
 func (h *TeamHandler) List(ctx context.Context, cmd *cli.Command) error {
 	teams, err := h.repo.List(ctx)
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, teams)
@@ -47,7 +47,7 @@ func (h *TeamHandler) Create(ctx context.Context, cmd *cli.Command) error {
 		"color":       cmd.String("color"),
 	})
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, team)
@@ -67,42 +67,42 @@ func (h *TeamHandler) Update(ctx context.Context, cmd *cli.Command) error {
 		payload["color"] = cmd.String("color")
 	}
 	if err := h.repo.Update(ctx, cmd.String("id"), payload); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Team updated: "+cmd.String("id"))
 }
 
 func (h *TeamHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.Delete(ctx, cmd.String("id")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Team deleted: "+cmd.String("id"))
 }
 
 func (h *TeamHandler) AddMember(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.AddMember(ctx, cmd.String("id"), cmd.String("user-id")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Member added to team")
 }
 
 func (h *TeamHandler) RemoveMember(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.RemoveMember(ctx, cmd.String("id"), cmd.String("user-id")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Member removed from team")
 }
 
 func (h *TeamHandler) AssignRole(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.AssignRole(ctx, cmd.String("id"), cmd.String("role-id")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Role assigned to team")
 }
 
 func (h *TeamHandler) UnassignRole(ctx context.Context, cmd *cli.Command) error {
 	if err := h.repo.UnassignRole(ctx, cmd.String("id")); err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	return h.formatter.FormatSuccess(cmd.Writer, "Role removed from team")
 }

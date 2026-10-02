@@ -117,15 +117,15 @@ func (h *LogForwardingHandler) formatUseCaseError(cmd *cli.Command, err error) e
 	if errors.As(err, &lfErr) {
 		switch lfErr.Code {
 		case lf.ErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Config not found: "+lfErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Config not found: "+lfErr.Message)
 		case lf.ErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+lfErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+lfErr.Message)
 		case lf.ErrorCodeAccessDenied:
-			return h.formatter.FormatError(cmd.Writer, "Access denied: "+lfErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Access denied: "+lfErr.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+lfErr.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+lfErr.Message)
 		}
 	}
 
-	return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+	return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 }

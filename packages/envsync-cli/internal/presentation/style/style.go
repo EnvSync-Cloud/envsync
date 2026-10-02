@@ -1,6 +1,10 @@
 package style
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Color palette
 var (
@@ -89,6 +93,7 @@ var (
 			Bold(true)
 
 	ErrorStyle = lipgloss.NewStyle().
+			Margin(1).
 			Foreground(ErrorColor)
 
 	WarningStyle = lipgloss.NewStyle().
@@ -214,6 +219,22 @@ var (
 )
 
 // Utility functions
+
+// Render styles text and guarantees the result ends with a newline.
+//
+// lipgloss pads every line of a multi-line block to the block's display width.
+// A trailing "\n" in the input therefore becomes a padded empty line rather
+// than a terminator, so the output ends with spaces and no newline — the shell
+// prompt then appears glued to the last line. Keep the newline outside the
+// styled block instead.
+func Render(s lipgloss.Style, text string) string {
+	out := s.Render(strings.TrimRight(text, "\n"))
+	if !strings.HasSuffix(out, "\n") {
+		out += "\n"
+	}
+	return out
+}
+
 func WithEmoji(emoji, text string) string {
 	return emoji + " " + text
 }
