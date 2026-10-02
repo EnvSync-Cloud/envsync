@@ -52,8 +52,14 @@ func (uc *setConfigUseCase) setConfigValue(cfg *config.AppConfig, key, value str
 	normalizedKey := strings.ToLower(key)
 
 	switch normalizedKey {
-	case "backend_url", "backendurl":
+	case "backend_url":
 		cfg.BackendURL = value
+	case "otel_config.disabled":
+		cfg.OTELConfig.OtelDisabled = value == "true"
+	case "otel_config.endpoint":
+		cfg.OTELConfig.Endpoint = value
+	case "otel_config.service_name":
+		cfg.OTELConfig.ServiceName = value
 	default:
 		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url", key)
 	}

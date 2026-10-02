@@ -167,20 +167,20 @@ func (h *ConfigHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *configUseCase.ConfigError:
 		switch e.Code {
 		case configUseCase.ConfigErrorCodeValidation:
-			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error \n"+e.Error())
 		case configUseCase.ConfigErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error \n"+e.Error())
 		case configUseCase.ConfigErrorCodePermission:
-			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error \n"+e.Error())
 		case configUseCase.ConfigErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.ErrWriter, "Configuration not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Configuration not found \n"+e.Error())
 		case configUseCase.ConfigErrorCodeCorrupted:
-			return h.formatter.FormatError(cmd.ErrWriter, "Configuration corrupted: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Configuration corrupted \n"+e.Error())
 		default:
-			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error \n"+e.Error())
 		}
 	default:
-		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error\n "+err.Error())
 	}
 }
 

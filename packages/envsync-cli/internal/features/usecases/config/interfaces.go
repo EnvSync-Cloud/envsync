@@ -122,13 +122,23 @@ func isValidConfigKey(key string) bool {
 
 func validateConfigValue(key, value string) error {
 	switch key {
-	case "backend_url", "backendurl":
+	case "backend_url":
 		if value == "" {
 			return ErrEmptyBackendURL
 		}
 		if !isValidURL(value) {
 			return ErrInvalidBackendURL
 		}
+	case "otel_config.disabled":
+		if value != "true" && value != "false" {
+			return ErrInvalidDisabledValue
+		}
+	case "otel_config.endpoint":
+		if !isValidURL(value) {
+			return ErrInvalidEndpoint
+		}
+	default:
+		return nil
 	}
 
 	return nil
