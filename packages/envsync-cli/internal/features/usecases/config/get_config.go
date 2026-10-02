@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
@@ -33,14 +34,13 @@ func (uc *getConfigUseCase) Execute(ctx context.Context, req GetConfigRequest) (
 		Warnings: []string{},
 	}
 
-	// If specific keys were requested, extract only those values
+	// If specific keys were requested, extract only those values. A key that is
+	// known resolves even when its value is empty, so callers can tell "unset"
+	// (present, "") apart from "unknown" (absent).
 	if len(req.Keys) > 0 {
 		for _, key := range req.Keys {
-			value, exists := uc.getConfigValue(cfg, key)
-			if exists {
+			if value, known := uc.getConfigValue(cfg, key); known {
 				response.Values[key] = value
-			} else {
-				response.Warnings = append(response.Warnings, "Key '"+key+"' not found in configuration")
 			}
 		}
 	} else {
@@ -55,13 +55,19 @@ func (uc *getConfigUseCase) Execute(ctx context.Context, req GetConfigRequest) (
 	return response, nil
 }
 
+// getConfigValue resolves a key against the configuration. The second result
+// reports whether the key is known at all — it must not depend on the value,
+// or a false boolean or an unset string is indistinguishable from a typo.
 func (uc *getConfigUseCase) getConfigValue(cfg config.AppConfig, key string) (string, bool) {
-	// Normalize key to lowercase for comparison
-	normalizedKey := strings.ToLower(key)
-
-	switch normalizedKey {
-	case "backend_url", "backendurl":
-		return cfg.BackendURL, cfg.BackendURL != ""
+	switch key {
+	case "backend_url":
+		return cfg.BackendURL, true
+	case "otel_config.endpoint":
+		return cfg.OTELConfig.Endpoint, true
+	case "otel_config.service_name":
+		return cfg.OTELConfig.ServiceName, true
+	case "otel_config.disabled":
+		return strconv.FormatBool(cfg.OTELConfig.OtelDisabled), true
 	default:
 		return "", false
 	}
@@ -70,9 +76,10 @@ func (uc *getConfigUseCase) getConfigValue(cfg config.AppConfig, key string) (st
 func (uc *getConfigUseCase) getAllConfigValues(cfg config.AppConfig) map[string]string {
 	values := make(map[string]string)
 
-	if cfg.BackendURL != "" {
-		values["backend_url"] = cfg.BackendURL
-	}
+	values["backend_url"] = cfg.BackendURL
+	values["otel_config.endpoint"] = cfg.OTELConfig.Endpoint
+	values["otel_config.service_name"] = cfg.OTELConfig.ServiceName
+	values["otel_config.disabled"] = strconv.FormatBool(cfg.OTELConfig.OtelDisabled)
 
 	return values
 }

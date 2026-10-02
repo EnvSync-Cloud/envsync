@@ -18,7 +18,7 @@ const (
 const (
 	BackendURL = "https://api.envsync.cloud"
 
-	OTELEndpoint = "https://t.envsync.cloud/obs"
+	OTELEndpoint = "https://t.envsync.cloud/obs/v1/traces"
 	OTELService  = "envsync-cli"
 	OTELDisabled = false
 )

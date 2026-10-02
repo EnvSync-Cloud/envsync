@@ -2,8 +2,10 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -55,15 +57,19 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 		return noop, nil, err
 	}
 
-	host, useHTTP := parseEndpoint(endpoint)
+	// WithEndpointURL consumes the path exactly as given and never appends the
+	// signal path, so the configured base endpoint must be completed here.
+	traceURL, err := signalURL(endpoint, "/v1/traces")
+	if err != nil {
+		return noop, nil, err
+	}
+	logURL, err := signalURL(endpoint, "/v1/logs")
+	if err != nil {
+		return noop, nil, err
+	}
 
-	traceOpts := []otlptracehttp.Option{
-		otlptracehttp.WithEndpoint(host),
-	}
-	if useHTTP {
-		traceOpts = append(traceOpts, otlptracehttp.WithInsecure())
-	}
-	traceExp, err := otlptracehttp.New(ctx, traceOpts...)
+	// The URL scheme selects TLS vs. plain HTTP, so WithInsecure is not needed.
+	traceExp, err := otlptracehttp.New(ctx, otlptracehttp.WithEndpointURL(traceURL))
 	if err != nil {
 		return noop, nil, err
 	}
@@ -78,13 +84,7 @@ func Init(ctx context.Context) (shutdown func(context.Context) error, lp *sdklog
 		propagation.Baggage{},
 	))
 
-	logOpts := []otlploghttp.Option{
-		otlploghttp.WithEndpoint(host),
-	}
-	if useHTTP {
-		logOpts = append(logOpts, otlploghttp.WithInsecure())
-	}
-	logExp, err := otlploghttp.New(ctx, logOpts...)
+	logExp, err := otlploghttp.New(ctx, otlploghttp.WithEndpointURL(logURL))
 	if err != nil {
 		return tp.Shutdown, nil, nil
 	}
@@ -115,34 +115,46 @@ func RecordError(ctx context.Context, err error) {
 	span.SetStatus(codes.Error, err.Error())
 }
 
-func parseEndpoint(endpoint string) (host string, insecure bool) {
-	if endpoint == "" {
-		return "", true
+// signalURL joins a configured OTLP endpoint with a signal path such as
+// "/v1/traces". WithEndpointURL consumes the path exactly as given and never
+// appends the signal path, so the base must be completed here — otherwise
+// telemetry is posted to the collector root and any collector mounted under a
+// prefix answers 404.
+//
+// The endpoint is shared by the traces and logs exporters, so it is treated as
+// a collector base URL. A trailing signal path is tolerated and stripped
+// because both forms appear in config files and in ENVSYNC_TELEMETRY_URL, and
+// there is no CLI command to correct the value once it is stored.
+func signalURL(base, signal string) (string, error) {
+	raw := strings.TrimSpace(base)
+	if raw == "" {
+		return "", fmt.Errorf("telemetry endpoint is empty")
+	}
+	// A bare host:port is accepted as plain HTTP, matching WithEndpoint's format.
+	if !strings.Contains(raw, "://") {
+		raw = "http://" + raw
 	}
 
-	if len(endpoint) > 8 && endpoint[:8] == "https://" {
-		u, err := url.Parse(endpoint)
-		if err != nil {
-			return endpoint, false
-		}
-		h := u.Host
-		if u.Port() == "" {
-			h = h + ":443"
-		}
-		return h, false
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid telemetry endpoint %q: %w", base, err)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("invalid telemetry endpoint %q: missing host", base)
 	}
 
-	if len(endpoint) > 7 && endpoint[:7] == "http://" {
-		u, err := url.Parse(endpoint)
-		if err != nil {
-			return endpoint, true
-		}
-		h := u.Host
-		if u.Port() == "" {
-			h = h + ":80"
-		}
-		return h, true
-	}
+	u.Path = strings.TrimSuffix(trimSignalPath(u.Path), "/") + signal
+	u.RawQuery, u.Fragment = "", ""
+	return u.String(), nil
+}
 
-	return endpoint, true
+// trimSignalPath drops a trailing OTLP signal path so an endpoint may be given
+// either as a collector base URL or as a concrete signal URL.
+func trimSignalPath(p string) string {
+	for _, s := range []string{"/v1/traces", "/v1/logs", "/v1/metrics"} {
+		if strings.HasSuffix(p, s) {
+			return strings.TrimSuffix(p, s)
+		}
+	}
+	return p
 }

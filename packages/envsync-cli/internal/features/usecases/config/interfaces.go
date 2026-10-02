@@ -111,14 +111,10 @@ func (r ResetConfigRequest) Validate() error {
 // Helper functions for validation
 func isValidConfigKey(key string) bool {
 	validKeys := map[string]bool{
-		"backend_url":     true,
-		"backendurl":      true,
-		"telemetry_url":   true,
-		"telemetryurl":    true,
-		"access_token":    true,
-		"accesstoken":     true,
-		"telemetry_token": true,
-		"telemetrytoken":  true,
+		"backend_url":              true,
+		"otel_config.service_name": true,
+		"otel_config.disabled":     true,
+		"otel_config.endpoint":     true,
 	}
 
 	return validKeys[key]

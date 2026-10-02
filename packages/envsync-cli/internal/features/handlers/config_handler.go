@@ -86,37 +86,27 @@ func (h *ConfigHandler) Get(ctx context.Context, cmd *cli.Command) error {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	// Format output based on requested format
-	if cmd.Bool("json") {
-		return h.formatter.FormatJSON(cmd.Writer, response.Config)
+	jsonOut := cmd.Bool("json")
+
+	// No keys requested: report the whole configuration.
+	if len(keys) == 0 {
+		if jsonOut {
+			return h.formatter.FormatJSON(cmd.Writer, response.Config)
+		}
+		return h.formatter.FormatKeyValueList(cmd.Writer, "Config", response.Values)
 	}
 
-	// If specific keys were requested, show only those
-	if len(keys) > 0 {
-		for _, key := range keys {
-			if value, exists := response.Values[key]; exists {
-				if cmd.Bool("json") {
-					jsonOutput := map[string]any{
-						"key":   key,
-						"value": value,
-					}
-					if err := h.formatter.FormatJSON(cmd.Writer, jsonOutput); err != nil {
-						return err
-					}
-				}
+	// Exactly one JSON document per invocation. Calling FormatJSON inside the
+	// per-key loop emitted a separate object per key, which is not parseable as
+	// a single JSON value. Keys are emitted like the human-readable output.
+	if jsonOut {
+		return h.formatter.FormatJSON(cmd.Writer, response.Values)
+	}
 
-				if err := h.formatter.FormatSingleValue(cmd.Writer, key, value); err != nil {
-					return err
-				}
-			} else {
-				if !cmd.Bool("json") {
-					if err := h.formatter.FormatWarning(cmd.Writer, "Key '"+key+"' not found"); err != nil {
-						return err
-					}
-				}
-			}
+	for _, key := range keys {
+		if err := h.formatter.FormatSingleValue(cmd.Writer, key, response.Values[key]); err != nil {
+			return err
 		}
-		return nil
 	}
 
 	return nil

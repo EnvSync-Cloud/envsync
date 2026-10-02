@@ -23,11 +23,26 @@ func (f *ConfigFormatter) FormatSingleValue(writer io.Writer, key, value string)
 	var output string
 
 	switch strings.ToLower(key) {
-	case "backend_url", "backendurl":
+	case "backend_url":
 		if value == "" {
 			value = "<not set>"
 		}
 		output = fmt.Sprintf("🌐 backend_url: %s\n", value)
+	case "otel_config.endpoint":
+		if value == "" {
+			value = "<not set>"
+		}
+		output = fmt.Sprintf("📡 otel_config.endpoint: %s\n", value)
+	case "otel_config.service_name":
+		if value == "" {
+			value = "<not set>"
+		}
+		output = fmt.Sprintf("📝 otel_config.service_name: %s\n", value)
+	case "otel_config.disabled":
+		if value == "" {
+			value = "<not set>"
+		}
+		output = fmt.Sprintf("🔌 otel_config.disabled: %s\n", value)
 	default:
 		output = fmt.Sprintf("❓ %s: %s\n", key, value)
 	}
