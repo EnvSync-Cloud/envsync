@@ -37,7 +37,11 @@ func (h *AuthHandler) Login(ctx context.Context, cmd *cli.Command) error {
 	noWait := cmd.Bool("no-wait")
 	jsonOutput := cmd.Bool("json")
 
-	response, err := h.loginUseCase.ExecuteWithOptions(ctx, noBrowser, noWait)
+	response, err := h.loginUseCase.ExecuteWithOptions(ctx, auth.LoginOptions{
+		NoBrowser: noBrowser,
+		NoWait:    noWait,
+		JSON:      jsonOutput,
+	})
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
