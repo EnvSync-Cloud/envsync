@@ -235,35 +235,45 @@ func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
 	return nil
 }
 
+// selectRow runs a selectable table and returns the row the user submits. ok is
+// false when they quit without choosing.
+func selectRow(cfg component.TableConfig) (table.Row, bool, error) {
+	cfg.Selectable = true
+	model := component.NewTableModel(cfg)
+
+	final, err := tea.NewProgram(model).Run()
+	if err != nil {
+		return nil, false, fmt.Errorf("error running selection table: %w", err)
+	}
+
+	picked, ok := final.(*component.TableModel)
+	if !ok || !picked.Submitted() {
+		return nil, false, nil
+	}
+
+	row := picked.SelectedRow()
+	if row == nil {
+		return nil, false, nil
+	}
+	return row, true, nil
+}
+
 // PickApp shows the applications in a table and returns the one the user
 // submits. ok is false when they quit without choosing.
 func (f *AppFactory) PickApp(apps []domain.Application) (domain.Application, bool, error) {
-	model := component.NewTableModel(component.TableConfig{
-		Title:      "Select the application to delete",
-		Columns:    appTableColumns(),
-		Rows:       appTableRows(apps),
-		Width:      108,
-		Height:     24,
-		Selectable: true,
+	row, ok, err := selectRow(component.TableConfig{
+		Title:   "Select the application to delete",
+		Columns: appTableColumns(),
+		Rows:    appTableRows(apps),
+		Width:   108,
+		Height:  24,
 		Confirm: func(row table.Row) string {
 			return fmt.Sprintf("Delete '%s'?", row[0])
 		},
 		Help: "↑/k up • ↓/j down • enter select • q cancel",
 	})
-
-	final, err := tea.NewProgram(model).Run()
-	if err != nil {
-		return domain.Application{}, false, fmt.Errorf("error running application picker: %w", err)
-	}
-
-	picked, ok := final.(*component.TableModel)
-	if !ok || !picked.Submitted() {
-		return domain.Application{}, false, nil
-	}
-
-	row := picked.SelectedRow()
-	if row == nil {
-		return domain.Application{}, false, nil
+	if !ok || err != nil {
+		return domain.Application{}, ok, err
 	}
 
 	// Match on the ID cell rather than the cursor position so a reordered or

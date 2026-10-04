@@ -122,7 +122,8 @@ func buildDependencyContainer() *Container {
 	pushUseCase := syncUseCase.NewPushUseCase()
 	exportUseCase := exportUseCases.NewExportUseCase()
 
-	initUC := inituc.NewInitUseCase()
+	initFactory := factory.NewInitFactory()
+	initUC := inituc.NewInitUseCase(initFactory)
 
 	injectUseCase := run.NewInjectEnv()
 	injectSecretUseCase := run.NewInjectSecretUseCase()

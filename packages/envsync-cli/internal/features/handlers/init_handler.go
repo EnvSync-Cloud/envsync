@@ -24,10 +24,27 @@ func (h *InitHandler) Init(ctx context.Context, cmd *cli.Command) error {
 	appID := cmd.String("app-id")
 	envTypeID := cmd.String("env-type-id")
 
-	if err := h.initUseCase.ExecuteWithOptions(ctx, cmd.String("config"), appID, envTypeID); err != nil {
+	if cmd.Bool("json") {
+		if appID == "" || envTypeID == "" {
+			return h.formatter.FormatError(cmd.Writer, "app-id and env-type-id are required when using JSON output")
+		}
+	}
+
+	if cmd.Bool("json") {
+		jsonOutput := map[string]any{
+			"path":        "envsyncrc.toml",
+			"app-id":      appID,
+			"env-type-id": envTypeID,
+		}
+		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+	}
+
+	result, err := h.initUseCase.ExecuteWithOptions(ctx, cmd.String("config"), appID, envTypeID)
+	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
-	return nil
+
+	return h.formatter.FormatSuccess(cmd.Writer, "Configuration written to "+result.Path)
 }
 
 func (h *InitHandler) formatUseCaseError(cmd *cli.Command, err error) error {
