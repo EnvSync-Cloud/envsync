@@ -291,7 +291,7 @@ func (r *certRepo) Renew(ctx context.Context, id string, description string, rev
 	if err != nil {
 		return responses.MemberCertResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return responses.MemberCertResponse{}, fmt.Errorf("renew certificate failed: %s", resp.String())
 	}
 	return result, nil
@@ -315,7 +315,7 @@ func (r *certRepo) Rotate(ctx context.Context, id string, description string, re
 	if err != nil {
 		return responses.MemberCertResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return responses.MemberCertResponse{}, fmt.Errorf("rotate certificate failed: %s", resp.String())
 	}
 	return result, nil

@@ -41,47 +41,54 @@ func (h *AppHandler) Create(ctx context.Context, cmd *cli.Command) error {
 	if cmd.IsSet("description") {
 		application.Description = cmd.String("description")
 	}
-	if cmd.IsSet("metadata") {
-		metadata := cmd.String("metadata")
-		if metadata != "" {
-			metadataMap := make(map[string]any)
-			application.Metadata = metadataMap
-		}
-	}
 
-	setDefaultEnv := cmd.Bool("default-types")
+	metadata, err := domain.ParseMetadata(cmd.StringSlice("metadata"))
+	if err != nil {
+		return h.formatter.FormatError(cmd.ErrWriter, "Invalid metadata: "+err.Error())
+	}
+	application.Metadata = metadata
+
 	enableSecret := cmd.Bool("enable-secret")
 	publicKey := cmd.String("public-key")
 
 	application.EnableSecrets = enableSecret
 	application.PublicKey = publicKey
+	application.IsManagedSecret = enableSecret && publicKey == ""
 
-	if publicKey == "" && enableSecret {
-		application.IsManagedSecret = true
-	} else {
-		application.IsManagedSecret = false
+	if cmd.Bool("default-types") {
+		application.EnvTypes = append(application.EnvTypes, domain.DefaultEnvTypes...)
 	}
-
-	ctx = context.WithValue(ctx, "setDefaultEnv", setDefaultEnv)
 
 	createdApp, err := h.createUseCase.Execute(ctx, application)
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
-		if application.EnableSecrets && createdApp.PublicKey == "" {
-			return h.formatter.FormatWarningJSON(cmd.Writer, "secrets are enabled but no public key was provided. A self managed key will be generated!!!")
-		}
+	// A key is only used when secrets are enabled, so say so rather than
+	// dropping it without a word.
+	if publicKey != "" && !enableSecret {
+		h.warn(cmd, "--public-key was ignored because --enable-secret is not set")
+	}
+	if application.IsManagedSecret {
+		h.warn(cmd, "secrets are enabled but no public key was provided. A self managed key will be generated!!!")
+	}
 
+	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, createdApp)
 	}
 
-	if application.EnableSecrets && application.PublicKey == "" {
-		h.formatter.FormatWarning(cmd.Writer, "Secrets are enabled but no public key was provided. A self managed key will be generated!!!")
-	}
-
 	return h.formatter.FormatCreateSuccessMessage(cmd.Writer, *createdApp)
+}
+
+// warn reports a non-fatal problem. Under --json it goes to stderr so stdout
+// stays a single parseable document. A failed warning must not fail the
+// command, so the write error is deliberately dropped.
+func (h *AppHandler) warn(cmd *cli.Command, message string) {
+	out := cmd.Writer
+	if cmd.Bool("json") {
+		out = cmd.ErrWriter
+	}
+	_ = h.formatter.FormatWarning(out, message)
 }
 
 func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {

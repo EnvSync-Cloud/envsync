@@ -50,8 +50,11 @@ func (a *appRepo) Create(ctx context.Context, app requests.ApplicationRequest) (
 	}
 
 	return responses.AppResponse{
-		ID:   resp.Id,
-		Name: app.Name,
+		ID:              resp.Id,
+		Name:            app.Name,
+		Description:     app.Description,
+		EnableSecrets:   app.EnableSecrets,
+		IsManagedSecret: app.IsManagedSecret,
 	}, nil
 }
 

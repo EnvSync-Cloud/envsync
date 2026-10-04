@@ -21,18 +21,40 @@ func NewAppFormatter() *AppFormatter {
 }
 
 func (f *AppFormatter) FormatCreateSuccessMessage(writer io.Writer, app domain.Application) error {
-	successMsg := fmt.Sprintf("✅ Application '%s' created successfully!\n\n", app.Name)
-	successMsg += fmt.Sprintf("📛 Name: %s\n", app.Name)
-	successMsg += fmt.Sprintf("🆔 ID: %s\n", app.ID)
+	var sb strings.Builder
+
+	sb.WriteString(style.SuccessStyle.Render("✅ Application created successfully!") + "\n\n")
+	sb.WriteString(fmt.Sprintf("📛 Name: %s\n", app.Name))
+	sb.WriteString(fmt.Sprintf("🆔 ID: %s\n", app.ID))
 	if app.Description != "" {
-		successMsg += fmt.Sprintf("📝 Description: %s\n", app.Description)
+		sb.WriteString(fmt.Sprintf("📝 Description: %s\n", app.Description))
+	}
+	sb.WriteString(fmt.Sprintf("🔐 Secrets: %s\n", secretsStatus(app)))
+
+	if len(app.EnvTypes) > 0 {
+		names := make([]string, 0, len(app.EnvTypes))
+		for _, t := range app.EnvTypes {
+			names = append(names, t.Name)
+		}
+		sb.WriteString(fmt.Sprintf("🌍 Environment types: %s\n", strings.Join(names, ", ")))
 	}
 
-	successMsg = style.Render(style.BoxStyle, successMsg)
+	sb.WriteString("\nNext: envsync env list --app-id " + app.ID + "\n")
 
-	_, err := writer.Write([]byte(successMsg))
-
+	_, err := writer.Write([]byte(style.Render(style.BoxStyle, sb.String())))
 	return err
+}
+
+// secretsStatus describes how the application's secret encryption is managed.
+func secretsStatus(app domain.Application) string {
+	switch {
+	case !app.EnableSecrets:
+		return "disabled"
+	case app.IsManagedSecret:
+		return "enabled — key generated and managed by EnvSync"
+	default:
+		return "enabled — using your public key"
+	}
 }
 
 func (f *AppFormatter) FormatListTable(writer io.Writer, apps []domain.Application) error {

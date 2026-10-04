@@ -1,6 +1,11 @@
 package styles
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"strings"
+
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Color palette
 var (
@@ -234,4 +239,97 @@ func Bold(text string) string {
 
 func Italic(text string) string {
 	return lipgloss.NewStyle().Italic(true).Render(text)
+}
+
+// Form chrome: the slash boundary header and footer that frame the interactive
+// forms.
+var (
+	FormHeaderStyle = lipgloss.NewStyle().
+			Foreground(PrimaryColor).
+			Bold(true).
+			Padding(0, 1)
+
+	FormFooterStyle = lipgloss.NewStyle().
+			Foreground(MutedColor).
+			Padding(0, 1)
+
+	FormBoundaryFillStyle = lipgloss.NewStyle().
+				Foreground(SecondaryColor)
+)
+
+// Boundary renders text left-aligned followed by a slash fill that pads the
+// line out to exactly width cells: "Create application ////…".
+func Boundary(width int, text string, textStyle, fillStyle lipgloss.Style) string {
+	head := textStyle.Render(text)
+	fill := width - lipgloss.Width(head)
+	if fill < 0 {
+		fill = 0
+	}
+	return head + fillStyle.Render(strings.Repeat("/", fill))
+}
+
+// FormTheme returns the huh theme used by the interactive forms.
+//
+// Every field is boxed in a rounded border. The focused field is accented in
+// the brand purple and the rest fall back to a muted border, so the active
+// field is always obvious without relying on colour alone.
+func FormTheme() *huh.Theme {
+	t := huh.ThemeBase()
+
+	box := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		Padding(0, 1)
+
+	t.Focused.Base = box.BorderForeground(SecondaryColor)
+	t.Blurred.Base = box.BorderForeground(DarkGrayColor)
+
+	t.Focused.Title = lipgloss.NewStyle().Foreground(PrimaryColor).Bold(true)
+	t.Blurred.Title = lipgloss.NewStyle().Foreground(MutedColor).Bold(true)
+
+	t.Focused.Description = lipgloss.NewStyle().Foreground(MutedColor)
+	t.Blurred.Description = lipgloss.NewStyle().Foreground(DarkGrayColor)
+
+	t.Focused.TextInput.Text = lipgloss.NewStyle().Foreground(LightGrayColor)
+	t.Blurred.TextInput.Text = lipgloss.NewStyle().Foreground(MutedColor)
+	t.Focused.TextInput.Placeholder = lipgloss.NewStyle().Foreground(DarkGrayColor).Italic(true)
+	t.Blurred.TextInput.Placeholder = lipgloss.NewStyle().Foreground(DarkGrayColor).Italic(true)
+	t.Focused.TextInput.Prompt = lipgloss.NewStyle().Foreground(SecondaryColor)
+	t.Blurred.TextInput.Prompt = lipgloss.NewStyle().Foreground(DarkGrayColor)
+	t.Focused.TextInput.Cursor = lipgloss.NewStyle().Background(PrimaryColor).Foreground(lipgloss.Color("#000000"))
+	t.Blurred.TextInput.Cursor = lipgloss.NewStyle()
+
+	t.Focused.SelectSelector = lipgloss.NewStyle().Foreground(SecondaryColor).Bold(true)
+	t.Blurred.SelectSelector = lipgloss.NewStyle().Foreground(DarkGrayColor)
+	t.Focused.SelectedOption = lipgloss.NewStyle().Foreground(PrimaryColor)
+	t.Focused.UnselectedOption = lipgloss.NewStyle().Foreground(LightGrayColor)
+	t.Blurred.SelectedOption = lipgloss.NewStyle().Foreground(MutedColor)
+	t.Blurred.UnselectedOption = lipgloss.NewStyle().Foreground(DarkGrayColor)
+
+	t.Focused.MultiSelectSelector = lipgloss.NewStyle().Foreground(SecondaryColor).Bold(true)
+	t.Blurred.MultiSelectSelector = lipgloss.NewStyle().Foreground(DarkGrayColor)
+	t.Focused.SelectedPrefix = lipgloss.NewStyle().Foreground(PrimaryColor)
+	t.Focused.UnselectedPrefix = lipgloss.NewStyle().Foreground(DarkGrayColor)
+	t.Blurred.SelectedPrefix = lipgloss.NewStyle().Foreground(MutedColor)
+	t.Blurred.UnselectedPrefix = lipgloss.NewStyle().Foreground(DarkGrayColor)
+
+	t.Focused.ErrorIndicator = lipgloss.NewStyle().Foreground(ErrorColor).Bold(true)
+	t.Focused.ErrorMessage = lipgloss.NewStyle().Foreground(ErrorColor)
+	t.Blurred.ErrorIndicator = lipgloss.NewStyle().Foreground(ErrorColor)
+
+	t.Focused.FocusedButton = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#000000")).
+		Background(PrimaryColor).
+		Bold(true).
+		Padding(0, 2).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(PrimaryColor)
+	t.Focused.BlurredButton = lipgloss.NewStyle().
+		Foreground(MutedColor).
+		Padding(0, 2).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(DarkGrayColor)
+	t.Blurred.FocusedButton = t.Focused.BlurredButton
+	t.Blurred.BlurredButton = t.Focused.BlurredButton
+
+	return t
 }

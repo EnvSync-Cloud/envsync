@@ -8,68 +8,184 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/component"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/styles"
 )
 
 type AppFactory struct{}
+
+// formModel wraps a huh form with the slash boundary header and footer that
+// frame the interactive flows.
+type formModel struct {
+	form  *huh.Form
+	title string
+	width int
+}
+
+func (m formModel) Init() tea.Cmd {
+	return m.form.Init()
+}
+
+func (m formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = size.Width
+	}
+
+	form, cmd := m.form.Update(msg)
+	if f, ok := form.(*huh.Form); ok {
+		m.form = f
+	}
+
+	if m.form.State == huh.StateCompleted || m.form.State == huh.StateAborted {
+		return m, tea.Quit
+	}
+
+	return m, cmd
+}
+
+func (m formModel) View() string {
+	// The chrome belongs to the form only. Once the form is submitted or
+	// aborted it is dropped, so the header is not left on screen above the
+	// loader and the success message.
+	if m.form.State != huh.StateNormal {
+		return m.form.View()
+	}
+
+	width := m.width
+	if width <= 0 {
+		width = 80
+	}
+
+	header := styles.Boundary(width, m.title, styles.FormHeaderStyle, styles.FormBoundaryFillStyle)
+	footer := styles.Boundary(width, m.form.Help().ShortHelpView(m.form.KeyBinds()), styles.FormFooterStyle, styles.FormBoundaryFillStyle)
+
+	return header + "\n\n" + m.form.View() + "\n" + footer
+}
 
 func NewAppFactory() *AppFactory {
 	return &AppFactory{}
 }
 
-// CreateAppTUI runs the interactive app creation flow
+// CreateAppTUI runs the interactive app creation flow.
+//
+// The fields mirror the `app create` flags. The public key is only offered when
+// secret encryption is enabled, and it is optional there.
 func (f *AppFactory) CreateAppTUI(ctx context.Context, app *domain.Application) (*domain.Application, error) {
-	var confirm bool
+	var (
+		metadataText  string
+		defaultTypes  bool
+		enableSecrets bool
+		publicKey     string
+	)
 
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Application Name").
-				Description("Enter a unique name for your application").
-				Placeholder("my-awesome-app").
-				Value(&app.Name).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return fmt.Errorf("application name is required")
-					}
-					if len(str) > 100 {
-						return fmt.Errorf("application name must be 100 characters or less")
-					}
-					return nil
-				}),
+	details := huh.NewGroup(
+		huh.NewInput().
+			Title("Application Name").
+			Description("Used across the CLI and the dashboard.").
+			Placeholder("my-awesome-app").
+			Value(&app.Name).
+			Validate(func(s string) error {
+				name := strings.TrimSpace(s)
+				if name == "" {
+					return fmt.Errorf("application name is required")
+				}
+				if len(name) > 100 {
+					return fmt.Errorf("application name must be 100 characters or less")
+				}
+				return nil
+			}),
 
-			huh.NewText().
-				Title("Description").
-				Description("Provide a description for your application").
-				Placeholder("A brief description of what this application does...").
-				Value(&app.Description).
-				Lines(3).
-				Validate(func(str string) error {
-					if strings.TrimSpace(str) == "" {
-						return fmt.Errorf("application description is required")
-					}
-					if len(str) > 500 {
-						return fmt.Errorf("description must be 500 characters or less")
-					}
-					return nil
-				}),
-			huh.NewConfirm().
-				Title("Are you sure?").
-				Affirmative("Yes!").
-				Negative("No.").
-				Value(&confirm),
-		),
-	).WithTheme(huh.ThemeCharm())
+		huh.NewText().
+			Title("Description").
+			Description("A brief description of what this application does.").
+			Placeholder("Customer-facing REST API.").
+			Value(&app.Description).
+			Lines(3).
+			Validate(func(s string) error {
+				if strings.TrimSpace(s) == "" {
+					return fmt.Errorf("application description is required")
+				}
+				if len(s) > 500 {
+					return fmt.Errorf("description must be 500 characters or less")
+				}
+				return nil
+			}),
 
-	err := form.Run()
-	if err != nil {
+		huh.NewText().
+			Title("Metadata (optional)").
+			Description("One key=value pair per line.").
+			Placeholder("team=core\nowner=platform").
+			Value(&metadataText).
+			Lines(3),
+	).Title("Application details")
+
+	options := huh.NewGroup(
+		huh.NewConfirm().
+			Title("Enable secret encryption?").
+			Description("Encrypts the secrets stored for this application.").
+			Affirmative("Yes").
+			Negative("No").
+			WithButtonAlignment(lipgloss.Left).
+			Value(&enableSecrets),
+
+		huh.NewConfirm().
+			Title("Create default environment types?").
+			Description("Creates the default environment types: Production, Development, and Staging.").
+			Affirmative("Yes").
+			Negative("No").
+			WithButtonAlignment(lipgloss.Left).
+			Value(&defaultTypes),
+	).Title("Options")
+
+	// huh can only hide whole groups, so the public key gets its own step and
+	// is skipped entirely when secret encryption is off.
+	encryption := huh.NewGroup(
+		huh.NewText().
+			Title("Public Key (optional)").
+			Description("PEM public key used to encrypt secrets. Leave blank and EnvSync will generate and manage one for you.").
+			Placeholder("-----BEGIN PUBLIC KEY-----").
+			Value(&publicKey).
+			Lines(4),
+	).Title("Encryption").
+		WithHideFunc(func() bool { return !enableSecrets })
+
+	form := huh.NewForm(details, options, encryption).
+		WithTheme(styles.FormTheme()).
+		WithShowHelp(false)
+
+	if _, err := tea.NewProgram(formModel{
+		form:  form,
+		title: "Create application",
+		width: 80,
+	}).Run(); err != nil {
 		return nil, err
 	}
 
-	if !confirm {
+	if form.State == huh.StateAborted {
 		return nil, errors.New("application creation cancelled by user")
+	}
+
+	// The textarea is free-form, so blank lines are simply ignored.
+	var entries []string
+	for _, line := range strings.Split(metadataText, "\n") {
+		if strings.TrimSpace(line) != "" {
+			entries = append(entries, line)
+		}
+	}
+	metadata, err := domain.ParseMetadata(entries)
+	if err != nil {
+		return nil, fmt.Errorf("invalid metadata: %w", err)
+	}
+
+	app.Metadata = metadata
+	app.EnableSecrets = enableSecrets
+	app.PublicKey = strings.TrimSpace(publicKey)
+	app.IsManagedSecret = enableSecrets && app.PublicKey == ""
+	if defaultTypes {
+		app.EnvTypes = append(app.EnvTypes, domain.DefaultEnvTypes...)
 	}
 
 	return app, nil

@@ -59,7 +59,7 @@ func createHTTPClient() *resty.Client {
 	}
 
 	client := resty.New().
-		SetDisableWarn(true).
+		SetLoggerWarnLevel(false).
 		SetBaseURL(cfg.BackendURL).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-CLI-CMD", cliCmd).

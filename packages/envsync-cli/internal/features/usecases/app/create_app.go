@@ -2,12 +2,15 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -34,25 +37,31 @@ func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application)
 	ctx, span := telemetry.Tracer().Start(ctx, "app.create")
 	defer span.End()
 
-	if app.Name != "" {
-		// Check if application with same name already exists
-		if exists, err := uc.checkApplicationExists(ctx, app.Name); err != nil {
-			return nil, NewServiceError("failed to check application existence", err)
-		} else if exists {
-			return nil, NewAlreadyExistsError(
-				fmt.Sprintf("application with name '%s' already exists", app.Name),
-				ErrAppAlreadyExists,
-			)
-		}
-	}
-
-	// var inputApp *domain.Application
+	// A missing name means the TUI supplies it, so duplicate detection has to
+	// wait until the name is final — otherwise apps created interactively were
+	// never checked at all.
 	if app.Name == "" {
 		a, err := uc.tui.CreateAppTUI(ctx, &app)
 		if err != nil {
 			return nil, NewServiceError("failed to create application via TUI", err)
 		}
 		app = *a
+	}
+
+	// The form is complete at this point. Keep a visible status while the
+	// request runs so the command does not look hung, and clear it on the way
+	// out so the caller's success output takes its place.
+	sp := spinner.New("Creating application…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	if exists, err := uc.checkApplicationExists(ctx, app.Name); err != nil {
+		return nil, NewServiceError("failed to check application existence", err)
+	} else if exists {
+		return nil, NewAlreadyExistsError(
+			fmt.Sprintf("application with name '%s' already exists", app.Name),
+			ErrAppAlreadyExists,
+		)
 	}
 
 	// Validate business validation
@@ -66,35 +75,40 @@ func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application)
 		return nil, NewServiceError("failed to create application", err)
 	}
 
-	setDefaultEnv := ctx.Value("setDefaultEnv")
-	if setDefaultEnv != nil && setDefaultEnv.(bool) {
+	// Create one environment type per requested entry, concurrently.
+	if len(app.EnvTypes) > 0 {
+		created := make([]domain.EnvType, len(app.EnvTypes))
+		errs := make([]error, len(app.EnvTypes))
+
 		var wg sync.WaitGroup
-		var prodErr, devErr error
+		wg.Add(len(app.EnvTypes))
 
-		wg.Add(2)
-
-		// Create PROD environment type
-		go func() {
-			defer wg.Done()
-			prodEnvType := domain.NewEnvType(createdApp.ID, "PROD", false, false, "")
-			_, prodErr = uc.envService.CreateEnvType(ctx, prodEnvType)
-		}()
-
-		// Create DEV environment type
-		go func() {
-			defer wg.Done()
-			devEnvType := domain.NewEnvType(createdApp.ID, "DEV", false, false, "")
-			_, devErr = uc.envService.CreateEnvType(ctx, devEnvType)
-		}()
+		for i, envType := range app.EnvTypes {
+			// Each goroutine owns exactly one index, so there is no sharing to
+			// synchronise; wg.Wait() below publishes the results.
+			go func(i int, envType domain.EnvType) {
+				defer wg.Done()
+				created[i], errs[i] = uc.envService.CreateEnvType(
+					ctx,
+					domain.NewEnvType(createdApp.ID, envType.Name, envType.IsDefault, envType.IsProtected, envType.Color),
+				)
+			}(i, envType)
+		}
 
 		wg.Wait()
 
-		if prodErr != nil {
-			return nil, NewServiceError("failed to create PROD environment type", prodErr)
+		// Report every failure, not just the first, and name the one that failed.
+		for i, err := range errs {
+			if err != nil {
+				errs[i] = fmt.Errorf("%s: %w", app.EnvTypes[i].Name, err)
+			}
 		}
-		if devErr != nil {
-			return nil, NewServiceError("failed to create DEV environment type", devErr)
+		if err := errors.Join(errs...); err != nil {
+			return nil, NewServiceError("failed to create environment types", err)
 		}
+
+		// Report what was actually created so the caller can show it.
+		createdApp.EnvTypes = append(createdApp.EnvTypes, created...)
 	}
 
 	return &createdApp, nil

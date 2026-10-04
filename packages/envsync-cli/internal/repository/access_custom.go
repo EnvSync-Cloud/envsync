@@ -45,7 +45,7 @@ func (r *accessRepo) GrantAppAccess(ctx context.Context, appID, subjectID, subje
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("grant app access failed: %s", resp.String())
 	}
 	return nil
@@ -64,7 +64,7 @@ func (r *accessRepo) RevokeAppAccess(ctx context.Context, appID, subjectID, subj
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("revoke app access failed: %s", resp.String())
 	}
 	return nil
@@ -77,7 +77,7 @@ func (r *accessRepo) ListAppGrants(ctx context.Context, appID string) ([]AppGran
 	if err != nil {
 		return nil, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return nil, fmt.Errorf("list app grants failed: %s", resp.String())
 	}
 	return result, nil
@@ -90,7 +90,7 @@ func (r *accessRepo) EffectiveAppAccess(ctx context.Context, appID string) ([]Ef
 	if err != nil {
 		return nil, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return nil, fmt.Errorf("list effective app access failed: %s", resp.String())
 	}
 	return result, nil

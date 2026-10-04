@@ -19,7 +19,7 @@ func GetPublicSamlMetadata(ctx context.Context, orgID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return "", fmt.Errorf("public SAML metadata failed: %s", resp.String())
 	}
 	return resp.String(), nil
@@ -41,7 +41,7 @@ func StartPublicSamlSso(ctx context.Context, orgSlug string, providerID string) 
 	if err != nil {
 		return nil, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return nil, fmt.Errorf("public SAML SSO start failed: %s", resp.String())
 	}
 	return &out, nil
