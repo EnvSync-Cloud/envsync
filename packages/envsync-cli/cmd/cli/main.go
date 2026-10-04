@@ -23,6 +23,7 @@ import (
 	serviceTokenUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/service_token"
 	syncUseCase "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/sync"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
@@ -65,26 +66,26 @@ func main() {
 
 // Container holds the handler dependencies
 type Container struct {
-	AppHandler            *handlers.AppHandler
-	AuthHandler           *handlers.AuthHandler
-	ConfigHandler         *handlers.ConfigHandler
-	EnvironmentHandler    *handlers.EnvironmentHandler
-	SyncHandler           *handlers.SyncHandler
-	ExportHandler         *handlers.ExportHandler
-	InitHandler           *handlers.InitHandler
-	RunHandler            *handlers.RunHandler
-	GenPEMKeyHandler      *handlers.GenPEMKeyHandler
-	GpgKeyHandler         *handlers.GpgKeyHandler
-	CertificateHandler    *handlers.CertificateHandler
-	TeamHandler           *handlers.TeamHandler
-	AccessHandler         *handlers.AccessHandler
-	RequestHandler        *handlers.RequestHandler
-	ServiceTokenHandler   *handlers.ServiceTokenHandler
-	OidcHandler           *handlers.OidcHandler
-	SamlHandler           *handlers.SamlHandler
-	RotationHandler       *handlers.RotationHandler
-	DynamicSecretHandler  *handlers.DynamicSecretHandler
-	LogForwardingHandler  *handlers.LogForwardingHandler
+	AppHandler           *handlers.AppHandler
+	AuthHandler          *handlers.AuthHandler
+	ConfigHandler        *handlers.ConfigHandler
+	EnvironmentHandler   *handlers.EnvironmentHandler
+	SyncHandler          *handlers.SyncHandler
+	ExportHandler        *handlers.ExportHandler
+	InitHandler          *handlers.InitHandler
+	RunHandler           *handlers.RunHandler
+	GenPEMKeyHandler     *handlers.GenPEMKeyHandler
+	GpgKeyHandler        *handlers.GpgKeyHandler
+	CertificateHandler   *handlers.CertificateHandler
+	TeamHandler          *handlers.TeamHandler
+	AccessHandler        *handlers.AccessHandler
+	RequestHandler       *handlers.RequestHandler
+	ServiceTokenHandler  *handlers.ServiceTokenHandler
+	OidcHandler          *handlers.OidcHandler
+	SamlHandler          *handlers.SamlHandler
+	RotationHandler      *handlers.RotationHandler
+	DynamicSecretHandler *handlers.DynamicSecretHandler
+	LogForwardingHandler *handlers.LogForwardingHandler
 }
 
 // buildDependencyContainer creates and wires all handler dependencies
@@ -151,12 +152,15 @@ func buildDependencyContainer() *Container {
 	certGetCRLUseCase := certUseCases.NewGetCRLUseCase()
 	certGetRootCAUseCase := certUseCases.NewGetRootCAUseCase()
 
+	tuiFactory := factory.NewAppFactory()
+
 	// Initialize handlers
 	c.AppHandler = handlers.NewAppHandler(
 		createAppUseCase,
 		deleteAppUseCase,
 		listAppsUseCase,
 		appFormatter,
+		tuiFactory,
 	)
 
 	c.AuthHandler = handlers.NewAuthHandler(

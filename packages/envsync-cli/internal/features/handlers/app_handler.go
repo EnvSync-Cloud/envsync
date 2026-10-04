@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/app"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 )
 
 type AppHandler struct {
@@ -17,6 +20,7 @@ type AppHandler struct {
 	deleteUseCase app.DeleteAppUseCase
 	listUseCase   app.ListAppsUseCase
 	formatter     *formatters.AppFormatter
+	tui           *factory.AppFactory
 }
 
 func NewAppHandler(
@@ -24,12 +28,14 @@ func NewAppHandler(
 	deleteUseCase app.DeleteAppUseCase,
 	listUseCase app.ListAppsUseCase,
 	formatter *formatters.AppFormatter,
+	tui *factory.AppFactory,
 ) *AppHandler {
 	return &AppHandler{
 		createUseCase: createUseCase,
 		deleteUseCase: deleteUseCase,
 		listUseCase:   listUseCase,
 		formatter:     formatter,
+		tui:           tui,
 	}
 }
 
@@ -128,9 +134,11 @@ func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
-	ctx = context.WithValue(ctx, "json", cmd.Bool("json"))
-
+	// Show progress while the apps load, then hand the screen over to the view.
+	sp := spinner.New("Fetching applications…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
 	apps, err := h.listUseCase.Execute(ctx)
+	sp.Stop()
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
@@ -139,9 +147,13 @@ func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
 		return h.formatter.FormatJSON(cmd.Writer, apps)
 	}
 
-	h.formatter.FormatListTable(cmd.Writer, apps)
+	// A terminal gets the interactive list. Pipes and scripts keep the plain
+	// table so existing pipelines are unaffected.
+	if len(apps) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListAppsInteractive(apps)
+	}
 
-	return nil
+	return h.formatter.FormatListTable(cmd.Writer, apps)
 }
 
 func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -228,28 +230,29 @@ func (f *AppFactory) DeleteAppsTUI(apps []domain.Application) ([]domain.Applicat
 
 // ListAppsInteractive runs the interactive app listing flow
 func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
-	// // Create the list model with loading capability
-	config := component.DefaultGenericListConfig(
-		apps,
-		"🚀 Applications List",
-		func(app domain.Application) string {
-			return fmt.Sprintf("📛 %s", app.Name)
+	rows := make([]table.Row, 0, len(apps))
+	for _, a := range apps {
+		envCount := strconv.Itoa(len(a.EnvTypes))
+		if a.EnvCount != "" {
+			envCount = a.EnvCount
+		}
+		rows = append(rows, table.Row{a.Name, a.ID, a.Description, envCount})
+	}
+
+	model := component.NewTableModel(component.TableConfig{
+		Title: "Applications",
+		Columns: []table.Column{
+			{Title: "NAME", Width: 24},
+			{Title: "ID", Width: 22},
+			{Title: "DESCRIPTION", Width: 48},
+			{Title: "ENVS", Width: 6},
 		},
-		func(app domain.Application) string {
-			return fmt.Sprintf("🆔 %s\n📝 %s", app.ID, app.Description)
-		},
-	)
+		Rows:   rows,
+		Width:  108,
+		Height: 24,
+	})
 
-	model := component.NewGenericListModel(config)
-
-	// Run the program
-	program := tea.NewProgram(
-		model,
-		tea.WithAltScreen(),
-	)
-
-	_, err := program.Run()
-	if err != nil {
+	if _, err := tea.NewProgram(model).Run(); err != nil {
 		return fmt.Errorf("error running app list TUI: %w", err)
 	}
 
