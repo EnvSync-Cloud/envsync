@@ -1,25 +1,25 @@
 package app
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"os"
-	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type deleteAppUseCase struct {
 	appService services.ApplicationService
+	tui        *factory.AppFactory
 }
 
-func NewDeleteAppUseCase() DeleteAppUseCase {
-	service := services.NewAppService()
+func NewDeleteAppUseCase(tui *factory.AppFactory) DeleteAppUseCase {
 	return &deleteAppUseCase{
-		appService: service,
+		appService: services.NewAppService(),
+		tui:        tui,
 	}
 }
 
@@ -59,44 +59,25 @@ func (uc *deleteAppUseCase) deleteAppsInteractive(ctx context.Context) ([]domain
 		return nil, NewNotFoundError("no applications found", nil)
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("\n🗑️  Available Applications:")
-	fmt.Println(strings.Repeat("-", 60))
-	for i, app := range apps {
-		fmt.Printf("  %d) %s (ID: %s)\n", i+1, app.Name, app.ID)
+	selected, ok, err := uc.tui.PickApp(apps)
+	if err != nil {
+		return nil, NewServiceError("failed to select application", err)
 	}
-	fmt.Println(strings.Repeat("-", 60))
-
-	fmt.Print("\nSelect application to delete (enter number or ID): ")
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	var selectedApp *domain.Application
-	for i, app := range apps {
-		if input == fmt.Sprintf("%d", i+1) || input == app.ID || strings.EqualFold(input, app.Name) {
-			selectedApp = &apps[i]
-			break
-		}
-	}
-
-	if selectedApp == nil {
-		return nil, NewNotFoundError("application not found: "+input, nil)
-	}
-
-	fmt.Printf("\n⚠️  Are you sure you want to delete '%s'? (y/N): ", selectedApp.Name)
-	confirm, _ := reader.ReadString('\n')
-	confirm = strings.TrimSpace(strings.ToLower(confirm))
-
-	if confirm != "y" && confirm != "yes" {
+	if !ok {
 		return nil, NewCancelledError("deletion cancelled by user", nil)
 	}
 
-	if err := uc.appService.DeleteApp(ctx, *selectedApp); err != nil {
+	// Deleting can take a moment; keep a visible status and clear it on the way
+	// out so the caller's success output takes its place.
+	sp := spinner.New("Deleting application…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	if err := uc.appService.DeleteApp(ctx, selected); err != nil {
 		return nil, NewServiceError("failed to delete application", err)
 	}
 
-	return []domain.Application{*selectedApp}, nil
+	return []domain.Application{selected}, nil
 }
 
 func (uc *deleteAppUseCase) deleteAppByID(ctx context.Context, appID string) ([]domain.Application, error) {

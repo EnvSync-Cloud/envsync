@@ -102,7 +102,8 @@ func buildDependencyContainer() *Container {
 
 	// Initialize use cases
 	createAppUseCase := appUseCases.NewCreateAppUseCase()
-	deleteAppUseCase := appUseCases.NewDeleteAppUseCase()
+	tuiFactory := factory.NewAppFactory()
+	deleteAppUseCase := appUseCases.NewDeleteAppUseCase(tuiFactory)
 	listAppsUseCase := appUseCases.NewListAppsUseCase()
 
 	loginUseCase := authUseCases.NewLoginUseCase()
@@ -151,8 +152,6 @@ func buildDependencyContainer() *Container {
 	certCheckOCSPUseCase := certUseCases.NewCheckOCSPUseCase()
 	certGetCRLUseCase := certUseCases.NewGetCRLUseCase()
 	certGetRootCAUseCase := certUseCases.NewGetRootCAUseCase()
-
-	tuiFactory := factory.NewAppFactory()
 
 	// Initialize handlers
 	c.AppHandler = handlers.NewAppHandler(

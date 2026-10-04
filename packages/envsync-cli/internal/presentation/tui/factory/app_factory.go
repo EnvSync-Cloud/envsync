@@ -193,43 +193,18 @@ func (f *AppFactory) CreateAppTUI(ctx context.Context, app *domain.Application) 
 	return app, nil
 }
 
-// DeleteAppTUI runs the interactive app deletion flow using Bubble Tea
-func (f *AppFactory) DeleteAppsTUI(apps []domain.Application) ([]domain.Application, error) {
-	adapter := func(item domain.Application, selected bool, multiSelect bool) component.GenericListItem[domain.Application] {
-		return component.GenericListItem[domain.Application]{
-			Item:        item,
-			TitleStr:    item.Name,
-			DescStr:     item.ID,
-			FilterStr:   item.Name,
-			Selected:    selected,
-			MultiSelect: multiSelect,
-		}
+// appTableColumns are the columns shared by every application table.
+func appTableColumns() []table.Column {
+	return []table.Column{
+		{Title: "NAME", Width: 24},
+		{Title: "ID", Width: 22},
+		{Title: "DESCRIPTION", Width: 48},
+		{Title: "ENVS", Width: 6},
 	}
-	keyFn := func(e domain.Application) string { return e.ID }
-
-	model := component.NewSelectableListModel(
-		apps,
-		adapter,
-		"🗑️ Select Environment",
-		80, 20,
-		true,
-		keyFn,
-	)
-
-	program := tea.NewProgram(model, tea.WithAltScreen())
-
-	finalModel, err := program.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	deleteModel := finalModel.(*component.SelectableListModel[domain.Application]).GetSelectedItems()
-
-	return deleteModel, nil
 }
 
-// ListAppsInteractive runs the interactive app listing flow
-func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
+// appTableRows projects applications onto those columns.
+func appTableRows(apps []domain.Application) []table.Row {
 	rows := make([]table.Row, 0, len(apps))
 	for _, a := range apps {
 		envCount := strconv.Itoa(len(a.EnvTypes))
@@ -238,23 +213,66 @@ func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
 		}
 		rows = append(rows, table.Row{a.Name, a.ID, a.Description, envCount})
 	}
+	return rows
+}
 
+// ListAppsInteractive runs the interactive app listing flow
+func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
 	model := component.NewTableModel(component.TableConfig{
-		Title: "Applications",
-		Columns: []table.Column{
-			{Title: "NAME", Width: 24},
-			{Title: "ID", Width: 22},
-			{Title: "DESCRIPTION", Width: 48},
-			{Title: "ENVS", Width: 6},
-		},
-		Rows:   rows,
-		Width:  108,
-		Height: 24,
+		Title:   "Applications",
+		Columns: appTableColumns(),
+		Rows:    appTableRows(apps),
+		Width:   108,
+		Height:  24,
 	})
 
+	// No alt screen: the table renders inline rather than taking over the
+	// terminal.
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		return fmt.Errorf("error running app list TUI: %w", err)
 	}
 
 	return nil
+}
+
+// PickApp shows the applications in a table and returns the one the user
+// submits. ok is false when they quit without choosing.
+func (f *AppFactory) PickApp(apps []domain.Application) (domain.Application, bool, error) {
+	model := component.NewTableModel(component.TableConfig{
+		Title:      "Select the application to delete",
+		Columns:    appTableColumns(),
+		Rows:       appTableRows(apps),
+		Width:      108,
+		Height:     24,
+		Selectable: true,
+		Confirm: func(row table.Row) string {
+			return fmt.Sprintf("Delete '%s'?", row[0])
+		},
+		Help: "↑/k up • ↓/j down • enter select • q cancel",
+	})
+
+	final, err := tea.NewProgram(model).Run()
+	if err != nil {
+		return domain.Application{}, false, fmt.Errorf("error running application picker: %w", err)
+	}
+
+	picked, ok := final.(*component.TableModel)
+	if !ok || !picked.Submitted() {
+		return domain.Application{}, false, nil
+	}
+
+	row := picked.SelectedRow()
+	if row == nil {
+		return domain.Application{}, false, nil
+	}
+
+	// Match on the ID cell rather than the cursor position so a reordered or
+	// filtered table can never select the wrong application.
+	for _, a := range apps {
+		if a.ID == row[1] {
+			return a, true, nil
+		}
+	}
+
+	return domain.Application{}, false, fmt.Errorf("selected application %q is no longer available", row[1])
 }

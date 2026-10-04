@@ -209,8 +209,7 @@ var (
 			BorderStyle(lipgloss.ThickBorder()).
 			BorderForeground(PrimaryColor).
 			Background(lipgloss.Color("#1F2937")).
-			Padding(2, 4).
-			Margin(2, 4)
+			Padding(1, 3)
 
 	OverlayStyle = lipgloss.NewStyle().
 			Background(lipgloss.Color("#00000080"))
