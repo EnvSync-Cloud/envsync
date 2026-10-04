@@ -40,16 +40,16 @@ func (f *InitFactory) PickApp(apps []domain.Application) (domain.Application, bo
 	return domain.Application{}, false, fmt.Errorf("selected application %q is no longer available", row[1])
 }
 
-// PickEnvType shows an application's environment types and returns the one the
-// user submits. ok is false when they quit without choosing.
-func (f *InitFactory) PickEnvType(envTypes []domain.EnvType, appName string) (domain.EnvType, bool, error) {
+// PickEnvType shows environment types in a table and returns the one the user
+// submits. ok is false when they quit without choosing.
+func PickEnvType(envTypes []domain.EnvType, title string) (domain.EnvType, bool, error) {
 	rows := make([]table.Row, 0, len(envTypes))
 	for _, e := range envTypes {
 		rows = append(rows, table.Row{e.Name, e.ID})
 	}
 
 	row, ok, err := selectRow(component.TableConfig{
-		Title: fmt.Sprintf("Select an environment for %s", appName),
+		Title: title,
 		Columns: []table.Column{
 			{Title: "NAME", Width: 28},
 			{Title: "ID", Width: 24},

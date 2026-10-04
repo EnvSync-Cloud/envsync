@@ -33,20 +33,29 @@ func NewEnvironmentHandler(
 }
 
 func (h *EnvironmentHandler) SwitchEnvironment(ctx context.Context, cmd *cli.Command) error {
-	if cmd.Bool("json") && (!cmd.IsSet("app-id") && cmd.IsSet("env-id")) {
-		return h.formatUseCaseError(cmd, errors.New("app-id or env-id must be provided with json flag"))
+	if cmd.Bool("json") && !cmd.IsSet("env-id") {
+		return h.formatUseCaseError(cmd, errors.New("env-id must be provided with json flag"))
 	}
 
 	env := domain.EnvType{
-		AppID: cmd.String("app-id"),
-		ID:    cmd.String("env-id"),
+		ID: cmd.String("env-id"),
 	}
 
-	if err := h.switchEnvUseCase.Execute(ctx, env); err != nil {
+	selected, err := h.switchEnvUseCase.Execute(ctx, env)
+	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	return nil
+	if cmd.Bool("json") {
+		return h.formatter.FormatJSON(cmd.Writer, map[string]any{
+			"message":     "Switched to " + selected.Name,
+			"app_id":      selected.AppID,
+			"env_type_id": selected.ID,
+			"name":        selected.Name,
+		})
+	}
+
+	return h.formatter.FormatSuccess(cmd.Writer, "Switched to "+selected.Name)
 }
 
 func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Command) error {
@@ -123,6 +132,11 @@ func (h *EnvironmentHandler) formatUseCaseError(cmd *cli.Command, err error) err
 			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
 		case environment.EnvErrorCodeFileSystem:
 			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
+		case environment.EnvErrorCodeTUIError:
+			return h.formatter.FormatError(cmd.ErrWriter, "TUI error: "+e.Message)
+		case environment.EnvErrorCodeCancelled:
+			// Backing out is a choice, not a failure.
+			return h.formatter.FormatWarning(cmd.ErrWriter, e.Message)
 		default:
 			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
