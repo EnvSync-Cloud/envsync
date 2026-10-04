@@ -122,7 +122,7 @@ func (uc *initCaseUse) selectAppAndEnv(ctx context.Context, apps []domain.Applic
 		return "", "", err
 	}
 	if len(envTypes) == 0 {
-		return selected.ID, "", nil
+		return selected.ID, "", NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
 	}
 
 	env, ok, err := uc.tui.PickEnvType(envTypes, selected.Name)
