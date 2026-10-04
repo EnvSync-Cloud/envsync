@@ -136,9 +136,13 @@ func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
 	// Show progress while the apps load, then hand the screen over to the view.
 	sp := spinner.New("Fetching applications…", spinner.IsTerminal(os.Stderr), os.Stderr)
-	sp.Start()
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
 	apps, err := h.listUseCase.Execute(ctx)
-	sp.Stop()
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
