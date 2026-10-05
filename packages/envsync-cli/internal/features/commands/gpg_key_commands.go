@@ -39,23 +39,17 @@ func gpgGenerateCommand(handler *handlers.GpgKeyHandler) *cli.Command {
 		Action: handler.Generate,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Key owner name",
-				Required: true,
+				Name:  "name",
+				Usage: "Key owner name (asked interactively when omitted)",
 			},
 			&cli.StringFlag{
-				Name:     "email",
-				Usage:    "Key owner email",
-				Required: true,
+				Name:  "email",
+				Usage: "Key owner email (asked interactively when omitted)",
 			},
 			&cli.StringFlag{
 				Name:  "algorithm",
-				Usage: "Key algorithm (ecc-curve25519, rsa, ecc-p256, ecc-p384)",
+				Usage: "Key algorithm (ECC Curve25519, ECC P-256, ECC P-384, RSA 4096)",
 				Value: "ecc-curve25519",
-			},
-			&cli.IntFlag{
-				Name:  "key-size",
-				Usage: "Key size in bits (for RSA algorithm)",
 			},
 			&cli.IntFlag{
 				Name:  "expires-in-days",

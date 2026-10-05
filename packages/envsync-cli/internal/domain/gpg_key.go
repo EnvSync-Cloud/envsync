@@ -1,6 +1,56 @@
 package domain
 
-import "time"
+import (
+	"strings"
+	"time"
+)
+
+// GpgAlgorithmOption is one selectable key algorithm for generation. The
+// label is what users see; the value is what the API expects.
+type GpgAlgorithmOption struct {
+	Label   string
+	Value   string
+	KeySize *int
+}
+
+// GpgAlgorithmOptions lists the algorithms `gpg generate` accepts. RSA is
+// pinned to 4096 bits; the ECC curves take no key size.
+func GpgAlgorithmOptions() []GpgAlgorithmOption {
+	rsaKeySize := 4096
+	return []GpgAlgorithmOption{
+		{Label: "ECC Curve25519", Value: "ecc-curve25519"},
+		{Label: "ECC P-256", Value: "ecc-p256"},
+		{Label: "ECC P-384", Value: "ecc-p384"},
+		{Label: "RSA 4096", Value: "rsa", KeySize: &rsaKeySize},
+	}
+}
+
+// ResolveGpgAlgorithm matches user input against the accepted algorithm list.
+// Input may be a label ("RSA 4096") or an API value ("rsa"); matching ignores
+// case and separator characters.
+func ResolveGpgAlgorithm(input string) (GpgAlgorithmOption, bool) {
+	want := normalizeGpgAlgorithm(input)
+	if want == "" {
+		return GpgAlgorithmOption{}, false
+	}
+	for _, o := range GpgAlgorithmOptions() {
+		if want == normalizeGpgAlgorithm(o.Label) || want == normalizeGpgAlgorithm(o.Value) {
+			return o, true
+		}
+	}
+	return GpgAlgorithmOption{}, false
+}
+
+func normalizeGpgAlgorithm(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case ' ', '-', '_':
+			return -1
+		}
+		return r
+	}, s)
+}
 
 type GpgKey struct {
 	ID                 string     `json:"id"`

@@ -17,12 +17,17 @@ func NewGenerateKeyUseCase() GenerateKeyUseCase {
 	return &generateKeyUseCase{service: service}
 }
 
-func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorithm string, keySize, expiresInDays *int, usageFlags []string, isDefault bool) (*domain.GpgKey, error) {
+func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorithm string, expiresInDays *int, usageFlags []string, isDefault bool) (*domain.GpgKey, error) {
 	if name == "" {
 		return nil, NewValidationError("name is required", ErrNameRequired)
 	}
 	if email == "" {
 		return nil, NewValidationError("email is required", ErrEmailRequired)
+	}
+
+	opt, ok := domain.ResolveGpgAlgorithm(algorithm)
+	if !ok {
+		return nil, NewValidationError("algorithm must be one of ECC Curve25519, ECC P-256, ECC P-384, RSA 4096", ErrInvalidAlgorithm)
 	}
 
 	if usageFlags == nil {
@@ -32,8 +37,8 @@ func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorith
 	req := requests.GenerateGpgKeyRequest{
 		Name:          name,
 		Email:         email,
-		Algorithm:     algorithm,
-		KeySize:       keySize,
+		Algorithm:     opt.Value,
+		KeySize:       opt.KeySize,
 		UsageFlags:    usageFlags,
 		ExpiresInDays: expiresInDays,
 		IsDefault:     isDefault,

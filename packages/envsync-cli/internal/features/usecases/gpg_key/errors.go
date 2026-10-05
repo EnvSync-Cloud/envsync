@@ -10,6 +10,7 @@ var (
 	ErrVerifyFailed     = errors.New("verification operation failed")
 	ErrNameRequired     = errors.New("name is required")
 	ErrEmailRequired    = errors.New("email is required")
+	ErrInvalidAlgorithm = errors.New("invalid algorithm")
 	ErrNoInputProvided  = errors.New("no input provided (use --file or pipe via stdin)")
 )
 

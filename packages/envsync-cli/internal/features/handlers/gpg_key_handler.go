@@ -6,6 +6,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	gpg_key "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
@@ -80,31 +81,69 @@ func (h *GpgKeyHandler) List(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (h *GpgKeyHandler) Generate(ctx context.Context, cmd *cli.Command) error {
+	jsonOutput := cmd.Bool("json")
+
+	if cmd.IsSet("algorithm") {
+		if _, ok := domain.ResolveGpgAlgorithm(cmd.String("algorithm")); !ok {
+			return h.formatError(cmd, gpg_key.NewValidationError("algorithm must be one of ECC Curve25519, ECC P-256, ECC P-384, RSA 4096", gpg_key.ErrInvalidAlgorithm))
+		}
+	}
+
 	name := cmd.String("name")
 	email := cmd.String("email")
 	algorithm := cmd.String("algorithm")
 
-	var keySize *int
-	if cmd.IsSet("key-size") {
-		ks := int(cmd.Int("key-size"))
-		keySize = &ks
-	}
-
 	var expiresInDays *int
 	if cmd.IsSet("expires-in-days") {
-		eid := int(cmd.Int("expires-in-days"))
-		expiresInDays = &eid
+		days := int(cmd.Int("expires-in-days"))
+		expiresInDays = &days
 	}
 
-	usageFlags := []string{"sign"}
-	isDefault := cmd.Bool("default")
+	// Flags alone can carry a run when they cover the required fields. The
+	// form picks up whatever is missing. JSON output is for scripts: it takes
+	// flag values only and never opens the form.
+	switch {
+	case jsonOutput:
+		if name == "" {
+			return h.formatError(cmd, gpg_key.NewValidationError("name must be provided with json flag", gpg_key.ErrNameRequired))
+		}
+		if email == "" {
+			return h.formatError(cmd, gpg_key.NewValidationError("email must be provided with json flag", gpg_key.ErrEmailRequired))
+		}
+	case !cmd.IsSet("name") || !cmd.IsSet("email") || !cmd.IsSet("algorithm"):
+		if !spinner.IsTerminal(os.Stdin) {
+			return h.formatError(cmd, gpg_key.NewValidationError("name, email and algorithm are required; provide --name, --email and --algorithm flags", gpg_key.ErrNameRequired))
+		}
 
-	key, err := h.generateUseCase.Execute(ctx, name, email, algorithm, keySize, expiresInDays, usageFlags, isDefault)
+		values, err := h.tui.GenerateKeyTUI(factory.GenerateKeyValues{
+			Name:          name,
+			Email:         email,
+			Algorithm:     algorithm,
+			ExpiresInDays: expiresInDays,
+		})
+		if err != nil {
+			return h.formatError(cmd, err)
+		}
+		name, email, algorithm, expiresInDays = values.Name, values.Email, values.Algorithm, values.ExpiresInDays
+	case name == "" || email == "":
+		return h.formatError(cmd, gpg_key.NewValidationError("name and email are required; provide --name and --email flags", gpg_key.ErrNameRequired))
+	}
+
+	// Show progress while the key generates, then hand the screen over to the
+	// success message.
+	sp := spinner.New("Generating GPG key…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !jsonOutput {
+		sp.Start()
+	}
+	key, err := h.generateUseCase.Execute(ctx, name, email, algorithm, expiresInDays, []string{"sign"}, cmd.Bool("default"))
+	if !jsonOutput {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
+	if jsonOutput {
 		return h.formatter.FormatJSON(cmd.Writer, key)
 	}
 
