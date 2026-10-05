@@ -42,9 +42,8 @@ func GetAllEnvironmentsCommand(handlers *handlers.EnvironmentHandler) *cli.Comma
 		Action:  handlers.GetAllEnvironments,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "app-id",
-				Usage:    "ID of the application to list environments for",
-				Required: true,
+				Name:  "app-id",
+				Usage: "ID of the application to list environments for (defaults to app_id in ./envsyncrc.toml)",
 			},
 		},
 	}

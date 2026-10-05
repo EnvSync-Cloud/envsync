@@ -182,6 +182,7 @@ func buildDependencyContainer() *Container {
 		switchEnvironmentUseCase,
 		deleteEnvironmentUseCase,
 		envFormatter,
+		factory.NewEnvFactory(),
 	)
 
 	c.SyncHandler = handlers.NewSyncHandler(

@@ -3,12 +3,15 @@ package handlers
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/environment"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 )
 
 type EnvironmentHandler struct {
@@ -16,6 +19,7 @@ type EnvironmentHandler struct {
 	switchEnvUseCase environment.SwitchEnvUseCase
 	deleteEnvUseCase environment.DeleteEnvUseCase
 	formatter        *formatters.EnvFormatter
+	tui              *factory.EnvFactory
 }
 
 func NewEnvironmentHandler(
@@ -23,12 +27,14 @@ func NewEnvironmentHandler(
 	switchEnvUseCase environment.SwitchEnvUseCase,
 	deleteEnvUseCase environment.DeleteEnvUseCase,
 	formatter *formatters.EnvFormatter,
+	tui *factory.EnvFactory,
 ) *EnvironmentHandler {
 	return &EnvironmentHandler{
 		getEnvUseCase:    getEnvUseCase,
 		switchEnvUseCase: switchEnvUseCase,
 		deleteEnvUseCase: deleteEnvUseCase,
 		formatter:        formatter,
+		tui:              tui,
 	}
 }
 
@@ -59,13 +65,18 @@ func (h *EnvironmentHandler) SwitchEnvironment(ctx context.Context, cmd *cli.Com
 }
 
 func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Command) error {
-	if cmd.Bool("json") && !cmd.IsSet("app-id") {
+	if cmd.Bool("json") && cmd.String("app-id") == "" {
 		return h.formatUseCaseError(cmd, errors.New("app-id must be provided with json flag"))
 	}
 
-	appID := cmd.String("app-id")
-
-	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, appID)
+	sp := spinner.New("Fetching environments…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
+	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, cmd.String("app-id"))
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
@@ -74,7 +85,13 @@ func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Co
 		return h.formatter.FormatJSON(cmd.Writer, envs)
 	}
 
-	return h.formatter.FormatEnvList(cmd.Writer, envs)
+	// A terminal gets the interactive table. Pipes and scripts keep the plain
+	// table so existing pipelines are unaffected.
+	if len(envs) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListEnvsInteractive(envs)
+	}
+
+	return h.formatter.FormatEnvTable(cmd.Writer, envs)
 }
 
 func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Command) error {
