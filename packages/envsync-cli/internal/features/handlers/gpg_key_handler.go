@@ -8,6 +8,8 @@ import (
 
 	gpg_key "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
@@ -21,6 +23,7 @@ type GpgKeyHandler struct {
 	deleteUseCase   gpg_key.DeleteKeyUseCase
 	service         services.GpgKeyService
 	formatter       *formatters.GpgKeyFormatter
+	tui             *factory.GpgKeyFactory
 }
 
 func NewGpgKeyHandler(
@@ -33,6 +36,7 @@ func NewGpgKeyHandler(
 	deleteUseCase gpg_key.DeleteKeyUseCase,
 	service services.GpgKeyService,
 	formatter *formatters.GpgKeyFormatter,
+	tui *factory.GpgKeyFactory,
 ) *GpgKeyHandler {
 	return &GpgKeyHandler{
 		listUseCase:     listUseCase,
@@ -44,11 +48,20 @@ func NewGpgKeyHandler(
 		deleteUseCase:   deleteUseCase,
 		service:         service,
 		formatter:       formatter,
+		tui:             tui,
 	}
 }
 
 func (h *GpgKeyHandler) List(ctx context.Context, cmd *cli.Command) error {
+	// Show progress while the keys load, then hand the screen over to the view.
+	sp := spinner.New("Fetching GPG keys…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
 	keys, err := h.listUseCase.Execute(ctx)
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatError(cmd, err)
 	}
@@ -57,7 +70,13 @@ func (h *GpgKeyHandler) List(ctx context.Context, cmd *cli.Command) error {
 		return h.formatter.FormatJSON(cmd.Writer, keys)
 	}
 
-	return h.formatter.FormatKeyList(cmd.Writer, keys)
+	// A terminal gets the interactive table. Pipes and scripts keep the plain
+	// table so existing pipelines are unaffected.
+	if len(keys) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListKeysInteractive(keys)
+	}
+
+	return h.formatter.FormatListTable(cmd.Writer, keys)
 }
 
 func (h *GpgKeyHandler) Generate(ctx context.Context, cmd *cli.Command) error {

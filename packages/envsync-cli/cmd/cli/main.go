@@ -223,6 +223,7 @@ func buildDependencyContainer() *Container {
 		gpgDeleteKeyUseCase,
 		gpgService,
 		gpgKeyFormatter,
+		factory.NewGpgKeyFactory(),
 	)
 
 	certFormatter := formatters.NewCertificateFormatter()
