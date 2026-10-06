@@ -12,7 +12,6 @@ import (
 	certUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/certificate"
 	configUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/config"
 	envUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/environment"
-	exportUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/export"
 	genpem "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gen_pem"
 	gpgUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
 	inituc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/init"
@@ -38,7 +37,6 @@ func main() {
 		container.ConfigHandler,
 		container.EnvironmentHandler,
 		container.SyncHandler,
-		container.ExportHandler,
 		container.InitHandler,
 		container.RunHandler,
 		container.GenPEMKeyHandler,
@@ -71,7 +69,6 @@ type Container struct {
 	ConfigHandler        *handlers.ConfigHandler
 	EnvironmentHandler   *handlers.EnvironmentHandler
 	SyncHandler          *handlers.SyncHandler
-	ExportHandler        *handlers.ExportHandler
 	InitHandler          *handlers.InitHandler
 	RunHandler           *handlers.RunHandler
 	GenPEMKeyHandler     *handlers.GenPEMKeyHandler
@@ -120,7 +117,6 @@ func buildDependencyContainer() *Container {
 
 	pullUseCase := syncUseCase.NewPullUseCase()
 	pushUseCase := syncUseCase.NewPushUseCase()
-	exportUseCase := exportUseCases.NewExportUseCase()
 
 	initFactory := factory.NewInitFactory()
 	initUC := inituc.NewInitUseCase(initFactory)
@@ -189,10 +185,6 @@ func buildDependencyContainer() *Container {
 		pullUseCase,
 		pushUseCase,
 		syncFormatter,
-	)
-
-	c.ExportHandler = handlers.NewExportHandler(
-		exportUseCase,
 	)
 
 	c.InitHandler = handlers.NewInitHandler(
