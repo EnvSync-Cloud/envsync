@@ -357,8 +357,32 @@ export class VaultEntryService {
 								LogTypes.LOGS,
 								"VaultEntryService",
 							);
+							return null;
 						}
-						return null;
+						// The vault row exists in point-in-time history but Read failed
+						// (gRPC 13). Keep the key visible from the PiT value. Env values
+						// are plaintext there; secret values are the same Layer 1 blob
+						// a successful vault read returns.
+						const message = error instanceof Error ? error.message : "unknown vault read error";
+						infoLogs(
+							`Vault read failed for ${entryType} ${candidate.key} in ${input.app_id}/${input.env_type_id}: ${message}; returning point-in-time value`,
+							LogTypes.ERROR,
+							"VaultEntryService",
+						);
+						const updated = candidate.last_updated instanceof Date
+							? candidate.last_updated
+							: new Date(candidate.last_updated);
+						const seconds = Number.isNaN(updated.getTime())
+							? ""
+							: String(Math.floor(updated.getTime() / 1000));
+						return toRecord(
+							input.org_id,
+							input.app_id,
+							input.env_type_id,
+							candidate.key,
+							candidate.value,
+							seconds,
+						);
 					}
 				}),
 			),

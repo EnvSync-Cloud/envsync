@@ -29,6 +29,7 @@ export class SecretStorePiTService {
 		const db = await DB.getInstance();
 
 		return await db.transaction().execute(async (trx) => {
+			const recordedAt = Date.now();
 			const { id } = await trx
 				.insertInto("secret_store_pit")
 				.values({
@@ -38,8 +39,8 @@ export class SecretStorePiTService {
 					env_type_id,
 					change_request_message,
 					user_id,
-					created_at: new Date(),
-					updated_at: new Date(),
+					created_at: new Date(recordedAt),
+					updated_at: new Date(recordedAt),
 				})
 				.returning("id")
 				.executeTakeFirstOrThrow();
@@ -47,14 +48,14 @@ export class SecretStorePiTService {
 			await trx
 				.insertInto("secret_store_pit_change_request")
 				.values(
-					envs.map(env => ({
+					envs.map((env, index) => ({
 						id: uuidv4(),
 						key: env.key,
 						value: env.value,
 						operation: env.operation || "UPDATE",
 						secret_store_pit_id: id,
-						created_at: new Date(),
-						updated_at: new Date(),
+						created_at: new Date(recordedAt + index),
+						updated_at: new Date(recordedAt + index),
 					})),
 				)
 				.execute();

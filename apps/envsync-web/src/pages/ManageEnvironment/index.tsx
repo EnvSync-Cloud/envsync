@@ -117,7 +117,7 @@ export const ManageEnvironment = () => {
     queryFn: async () => {
       const projectResponse = await sdk.applications.getApp(appId!);
       const environmentTypes = await Promise.all(
-        projectResponse.env_types.map(async (envType) => {
+        (projectResponse.env_types ?? []).map(async (envType) => {
           const variables = await sdk.environmentVariables.getEnvs({
             app_id: appId!,
             env_type_id: envType.id,

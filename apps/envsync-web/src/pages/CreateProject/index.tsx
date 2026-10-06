@@ -227,13 +227,19 @@ export const CreateProject = () => {
           "app.env_type_count": pendingEnvTypes.length,
         });
 
-        // Step 2: Create environment types sequentially
-        if (pendingEnvTypes.length > 0) {
+        // The API creates a default Development environment. Skip that name
+        // so an explicit Development entry does not create a duplicate.
+        const extraEnvTypes = pendingEnvTypes.filter(
+          (envType) => envType.name.trim().toLowerCase() !== "development"
+        );
+
+        // Step 2: Create any additional environment types sequentially
+        if (extraEnvTypes.length > 0) {
           let failedCount = 0;
-          for (let i = 0; i < pendingEnvTypes.length; i++) {
-            const envType = pendingEnvTypes[i];
+          for (let i = 0; i < extraEnvTypes.length; i++) {
+            const envType = extraEnvTypes[i];
             setCreationProgress(
-              `Creating environments (${i + 1}/${pendingEnvTypes.length})...`
+              `Creating environments (${i + 1}/${extraEnvTypes.length})...`
             );
             try {
               await sdk.environmentTypes.createEnvType({
@@ -250,19 +256,19 @@ export const CreateProject = () => {
             }
           }
 
-          if (failedCount > 0 && failedCount < pendingEnvTypes.length) {
+          if (failedCount > 0 && failedCount < extraEnvTypes.length) {
             toast.warning(
-              `Project created, but ${failedCount} environment type(s) failed to create.`
+              `Project created with a Development environment, but ${failedCount} other environment type(s) failed to create.`
             );
-          } else if (failedCount === pendingEnvTypes.length) {
+          } else if (failedCount === extraEnvTypes.length) {
             toast.warning(
-              "Project created, but all environment types failed to create."
+              "Project created with a Development environment, but the other environment types failed to create."
             );
           } else {
             toast.success("Project and environments created successfully!");
           }
         } else {
-          toast.success("Project created successfully!");
+          toast.success("Project created with a Development environment.");
         }
 
         setCreationProgress("Redirecting...");
@@ -490,8 +496,8 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Optionally define environment types (e.g. Development,
-                  Staging, Production) to organize your variables.
+                  Optional. A Development environment is created for you. Add
+                  Staging, Production, or others if you want them now.
                 </p>
 
                 {/* List of added env types */}

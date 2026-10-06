@@ -86,7 +86,7 @@ export const ServiceTokens = () => {
     queryFn: async () => {
       if (!appId) return [];
       const app = await sdk.applications.getApp(appId);
-      return app.env_types.map((envType) => ({ id: envType.id, name: envType.name }));
+      return (app.env_types ?? []).map((envType) => ({ id: envType.id, name: envType.name }));
     },
     enabled: authEnabled,
     staleTime: 5 * 60 * 1000,
