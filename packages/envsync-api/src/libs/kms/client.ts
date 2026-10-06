@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { SpanKind } from "@opentelemetry/api";
+import { SpanKind, type Span } from "@opentelemetry/api";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 
@@ -367,6 +367,60 @@ function normalizeVaultError(error: unknown): never {
 	throw error;
 }
 
+const GRPC_OPERATION_FIELDS = [
+	"tenant_id",
+	"org_id",
+	"scope_id",
+	"app_id",
+	"entry_type",
+	"key",
+	"env_type_id",
+	"member_id",
+	"serial_number",
+	"serial_hex",
+	"cert_type",
+	"version",
+	"client_side_decrypt",
+] as const;
+
+function grpcOperationAttributes(request: Record<string, unknown>): Record<string, string | number | boolean> {
+	const attributes: Record<string, string | number | boolean> = {};
+	for (const field of GRPC_OPERATION_FIELDS) {
+		const value = request[field];
+		if (typeof value === "string" && value.length > 0 && value.length <= 200) {
+			attributes[`minikms.${field}`] = value;
+		} else if (typeof value === "number" || typeof value === "boolean") {
+			attributes[`minikms.${field}`] = value;
+		}
+	}
+	return attributes;
+}
+
+function describeGrpcOperation(serviceName: string, method: string, request: Record<string, unknown>): string {
+	const parts = [`${serviceName}/${method}`];
+	for (const field of ["org_id", "tenant_id", "scope_id", "app_id", "entry_type", "env_type_id", "key"] as const) {
+		const value = request[field];
+		if (typeof value === "string" && value.length > 0) {
+			parts.push(`${field}=${value}`);
+		}
+	}
+	return parts.join(" ");
+}
+
+function recordGrpcFailure(span: Span, serviceName: string, method: string, request: Record<string, unknown>, error: unknown) {
+	const operation = describeGrpcOperation(serviceName, method, request);
+	span.setAttribute("minikms.operation", operation);
+	if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "number") {
+		span.setAttribute("rpc.grpc.status_code", error.code);
+	}
+	const message = error instanceof Error ? error.message : String(error);
+	span.addEvent("minikms.grpc.error", {
+		"minikms.operation": operation,
+		"exception.message": message.slice(0, 500),
+	});
+	infoLogs(`gRPC ${operation} failed: ${message}`, LogTypes.ERROR, "KMSClient");
+}
+
 export class KMSClient {
 	private static instance: Promise<KMSClient> | undefined;
 	static #provider: TenantWrappingProvider | null = null;
@@ -477,6 +531,7 @@ export class KMSClient {
 		const serviceName = serviceNameMap.get(stub) ?? "unknown";
 		const [host, portMaybe] = this.grpcAddr.split(":");
 		const port = Number(portMaybe || "50051");
+		const operation = grpcOperationAttributes(request);
 		return withSpan(
 			`grpc ${serviceName}/${method}`,
 			{
@@ -487,20 +542,28 @@ export class KMSClient {
 				"server.address": host,
 				"server.port": port,
 				"network.peer.address": host,
+				"minikms.operation": describeGrpcOperation(serviceName, method, request),
+				...operation,
 			},
-			async () => {
+			async (span) => {
 				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
-				return new Promise<TRes>((resolve, reject) => {
-					const deadline = new Date(Date.now() + timeoutMs);
-					(stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
-						request,
-						{ deadline },
-						(err: grpc.ServiceError | null, response: TRes) => {
-							if (err) reject(err);
-							else resolve(response);
-						},
-					);
-				});
+				span.addEvent("minikms.grpc.request", operation);
+				try {
+					return await new Promise<TRes>((resolve, reject) => {
+						const deadline = new Date(Date.now() + timeoutMs);
+						(stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
+							request,
+							{ deadline },
+							(err: grpc.ServiceError | null, response: TRes) => {
+								if (err) reject(err);
+								else resolve(response);
+							},
+						);
+					});
+				} catch (error) {
+					recordGrpcFailure(span, serviceName, method, request, error);
+					throw error;
+				}
 			},
 			SpanKind.CLIENT,
 		);
@@ -1385,6 +1448,7 @@ export class KMSClient {
 			[this.healthStub, "grpc.health.v1.Health"],
 		]);
 		const serviceName = serviceNameMap.get(stub) ?? "unknown";
+		const operation = grpcOperationAttributes(request);
 		return withSpan(
 			`grpc ${serviceName}/${method}`,
 			{
@@ -1392,23 +1456,31 @@ export class KMSClient {
 				"rpc.service": serviceName,
 				"rpc.method": method,
 				"peer.service": "minikms",
+				"minikms.operation": describeGrpcOperation(serviceName, method, request),
+				...operation,
 			},
-			async () => {
+			async (span) => {
 				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
-				return new Promise<TRes>((resolve, reject) => {
-					const deadline = new Date(Date.now() + 10_000);
-					const metadata = new grpc.Metadata();
-					metadata.set("authorization", `Bearer ${sessionToken}`);
-					(stub as unknown as Record<string, (req: Record<string, unknown>, md: grpc.Metadata, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
-						request,
-						metadata,
-						{ deadline },
-						(err: grpc.ServiceError | null, response: TRes) => {
-							if (err) reject(err);
-							else resolve(response);
-						},
-					);
-				});
+				span.addEvent("minikms.grpc.request", operation);
+				try {
+					return await new Promise<TRes>((resolve, reject) => {
+						const deadline = new Date(Date.now() + 10_000);
+						const metadata = new grpc.Metadata();
+						metadata.set("authorization", `Bearer ${sessionToken}`);
+						(stub as unknown as Record<string, (req: Record<string, unknown>, md: grpc.Metadata, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
+							request,
+							metadata,
+							{ deadline },
+							(err: grpc.ServiceError | null, response: TRes) => {
+								if (err) reject(err);
+								else resolve(response);
+							},
+						);
+					});
+				} catch (error) {
+					recordGrpcFailure(span, serviceName, method, request, error);
+					throw error;
+				}
 			},
 			SpanKind.CLIENT,
 		);

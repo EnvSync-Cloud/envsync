@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
 import { EnvironmentVariablesTable } from "@/components/env-vars/EnvironmentVariablesTable";
 import { VariableHistoryDrawer } from "@/components/env-vars/VariableHistoryDrawer";
 import { AddEnvVarModal } from "@/components/env-vars/AddEnvVarModal";

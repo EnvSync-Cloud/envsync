@@ -12,6 +12,7 @@ import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
 import { wrapManagedPrivateKey, unwrapManagedPrivateKey } from "@/helpers/key-store";
 import { AuthorizationService } from "@/services/authorization.service";
+import { EnvTypeService } from "@/services/env_type.service";
 import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class AppService {
@@ -112,7 +113,10 @@ export class AppService {
 			storedPrivateKey = await wrapManagedPrivateKey(org_id, appId, storedPrivateKey);
 		}
 
-		const ctx: { app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date } } = {};
+		const ctx: {
+			app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date };
+			defaultEnvTypeId?: string;
+		} = {};
 		await runSaga("createApp", ctx, [
 			{
 				name: "db-insert",
@@ -162,6 +166,25 @@ export class AppService {
 				compensate: async (c) => {
 					if (c.app) {
 						await AuthorizationService.deleteResourceTuples("app", c.app.id);
+					}
+				},
+			},
+			{
+				name: "default-env-type",
+				execute: async (c) => {
+					const envType = await EnvTypeService.createEnvType({
+						name: "Development",
+						org_id,
+						app_id: c.app!.id,
+						color: "#22c55e",
+						is_default: true,
+						is_protected: false,
+					});
+					c.defaultEnvTypeId = envType.id;
+				},
+				compensate: async (c) => {
+					if (c.defaultEnvTypeId) {
+						await EnvTypeService.deleteEnvType(c.defaultEnvTypeId);
 					}
 				},
 			},

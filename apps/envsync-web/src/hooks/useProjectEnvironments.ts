@@ -49,9 +49,10 @@ export const useProjectEnvironments = (appId?: string) => {
     queryFn: async () => {
       const projectResponse = await sdk.applications.getApp(appId);
       const usersList = await sdk.users.getUsers();
+      const envTypes = projectResponse.env_types ?? [];
 
       const envVarsResponse = await Promise.all(
-        projectResponse.env_types.map(async (envType) => {
+        envTypes.map(async (envType) => {
           const envVars = await sdk.environmentVariables.getEnvs({
             app_id: appId,
             env_type_id: envType.id,
@@ -63,7 +64,7 @@ export const useProjectEnvironments = (appId?: string) => {
       ).then((vars) => vars.flat());
 
       const secretsResponse = await Promise.all(
-        projectResponse.env_types.map(async (envType) => {
+        envTypes.map(async (envType) => {
           const envVars = await sdk.secrets.getSecrets({
             app_id: appId,
             env_type_id: envType.id,
@@ -74,7 +75,7 @@ export const useProjectEnvironments = (appId?: string) => {
         })
       ).then((vars) => vars.flat());
 
-      const environmentTypes: EnvironmentType[] = projectResponse.env_types.map(
+      const environmentTypes: EnvironmentType[] = envTypes.map(
         (envType) => ({
           id: envType.id,
           name: envType.name,

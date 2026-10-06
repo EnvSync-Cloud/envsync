@@ -34,6 +34,7 @@ export class EnvStorePiTService {
 		const db = await DB.getInstance();
 
 		return await db.transaction().execute(async (trx) => {
+			const recordedAt = Date.now();
 			const { id } = await trx
 				.insertInto("env_store_pit")
 				.values({
@@ -43,20 +44,22 @@ export class EnvStorePiTService {
 					env_type_id,
 					change_request_message,
 					user_id,
-					created_at: new Date(),
-					updated_at: new Date(),
+					created_at: new Date(recordedAt),
+					updated_at: new Date(recordedAt),
 				})
 				.returning("id")
 				.executeTakeFirstOrThrow();
 
-			const env_list = envs.map(env => ({
+			// Offset each change by 1ms so a DELETE and a later CREATE in the
+			// same batch replay in request order when timestamps would otherwise tie.
+			const env_list = envs.map((env, index) => ({
 				id: uuidv4(),
 				key: env.key,
 				value: env.value,
 				operation: env.operation || "UPDATE",
 				env_store_pit_id: id,
-				created_at: new Date(),
-				updated_at: new Date(),
+				created_at: new Date(recordedAt + index),
+				updated_at: new Date(recordedAt + index),
 			}));
 
 			await trx.insertInto("env_store_pit_change_request").values(env_list).execute();
