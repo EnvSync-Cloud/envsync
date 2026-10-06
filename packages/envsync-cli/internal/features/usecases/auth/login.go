@@ -85,7 +85,7 @@ func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, opts LoginOption
 		return nil, uc.handlePollingError(err)
 	}
 
-	if err := uc.authService.SaveToken(token); err != nil {
+	if err := uc.authService.SaveToken(token, credentials); err != nil {
 		return nil, NewServiceError("failed to save authentication token", err)
 	}
 

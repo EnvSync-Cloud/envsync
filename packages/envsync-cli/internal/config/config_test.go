@@ -59,6 +59,8 @@ func TestConfigJSONRoundTrip(t *testing.T) {
 			AccessToken:  "NEW",
 			RefreshToken: "REFRESH",
 			ExpiresAt:    1735689600,
+			ClientID:     "cli-client",
+			TokenURL:     "https://idp.example/token",
 		},
 		OTELConfig: OTELConfig{
 			OtelDisabled: true,

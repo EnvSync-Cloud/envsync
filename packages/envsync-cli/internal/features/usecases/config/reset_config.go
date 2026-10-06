@@ -80,8 +80,12 @@ func (uc *resetConfigUseCase) resetConfigKey(cfg *config.AppConfig, key string) 
 		cfg.AuthConfig.RefreshToken = ""
 	case "expires_at", "expiresat":
 		cfg.AuthConfig.ExpiresAt = 0
+	case "client_id", "clientid":
+		cfg.AuthConfig.ClientID = ""
+	case "token_url", "tokenurl":
+		cfg.AuthConfig.TokenURL = ""
 	default:
-		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url, telemetry_url, access_token, refresh_token, expires_at", key)
+		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url, telemetry_url, access_token, refresh_token, expires_at, client_id, token_url", key)
 	}
 
 	return nil

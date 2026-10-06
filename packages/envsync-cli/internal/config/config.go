@@ -20,6 +20,11 @@ type AuthConfig struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresAt    int    `json:"expires_at"`
+	// ClientID and TokenURL identify the authorization server endpoint that
+	// issues tokens. They arrive with the device-code response and are needed
+	// again for the refresh grant.
+	ClientID string `json:"client_id"`
+	TokenURL string `json:"token_url"`
 }
 
 type OTELConfig struct {

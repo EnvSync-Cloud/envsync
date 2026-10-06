@@ -39,10 +39,10 @@ func (uc *logoutUseCase) Execute(ctx context.Context) error {
 
 func (uc *logoutUseCase) cleanupLocalState() error {
 	cfg := config.New()
-	cfg.AuthConfig.AccessToken = ""
+	cfg.AuthConfig = config.AuthConfig{}
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to clear access token: %w", err)
+		return fmt.Errorf("failed to clear auth config: %w", err)
 	}
 
 	return nil

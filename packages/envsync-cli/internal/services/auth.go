@@ -15,7 +15,7 @@ type AuthService interface {
 	InitiateLogin(ctx context.Context) (*domain.LoginCredentials, error)
 	CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
 	PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
-	SaveToken(token *domain.AccessToken) error
+	SaveToken(token *domain.AccessToken, credentials *domain.LoginCredentials) error
 	Whoami(ctx context.Context) (*domain.UserInfo, error)
 	Logout() error
 }
@@ -77,13 +77,18 @@ func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCreden
 	return nil, fmt.Errorf("authentication timeout: user did not complete login within %d seconds", credentials.ExpiresIn)
 }
 
-// SaveToken persists the access token to configuration
-func (s *auth) SaveToken(token *domain.AccessToken) error {
+// SaveToken persists the access token and the token endpoint details needed
+// for later refresh grants to configuration
+func (s *auth) SaveToken(token *domain.AccessToken, credentials *domain.LoginCredentials) error {
 	cfg := config.New()
 	cfg.AuthConfig.AccessToken = token.Token
+	cfg.AuthConfig.RefreshToken = token.RefreshToken
+	cfg.AuthConfig.ExpiresAt = int(token.ExpiresAt.Unix())
+	cfg.AuthConfig.ClientID = credentials.ClientId
+	cfg.AuthConfig.TokenURL = credentials.TokenUrl
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to save access token: %w", err)
+		return fmt.Errorf("failed to save refresh/access token: %w", err)
 	}
 
 	return nil
@@ -100,16 +105,17 @@ func (s *auth) Whoami(ctx context.Context) (*domain.UserInfo, error) {
 	return userInfo, nil
 }
 
-// Logout clears the access token from configuration
+// Logout clears the stored credentials from configuration. The refresh token
+// goes too: leaving it behind would let a later refresh resurrect the session.
 func (s *auth) Logout() error {
 	// TODO: Refactor this implementation to use a dedicated logout repository
 	// which hits logout endpoint
 
 	cfg := config.New()
-	cfg.AuthConfig.AccessToken = ""
+	cfg.AuthConfig = config.AuthConfig{}
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to clear access token: %w", err)
+		return fmt.Errorf("failed to clear auth config: %w", err)
 	}
 
 	return nil
