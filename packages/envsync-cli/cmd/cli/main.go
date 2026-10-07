@@ -96,6 +96,7 @@ func buildDependencyContainer() *Container {
 	envFormatter := formatters.NewEnvFormatter()
 	initFormatter := formatters.NewInitFormatter()
 	syncFormatter := formatters.NewSyncFormatter()
+	runFormatter := formatters.NewRunFormatter()
 
 	// Initialize use cases
 	createAppUseCase := appUseCases.NewCreateAppUseCase()
@@ -198,6 +199,7 @@ func buildDependencyContainer() *Container {
 		injectSecretUseCase,
 		fetchAppUseCase,
 		readConfigUseCase,
+		runFormatter,
 	)
 
 	c.GenPEMKeyHandler = handlers.NewGenPEMKeyHandler(

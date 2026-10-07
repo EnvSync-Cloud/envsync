@@ -108,12 +108,10 @@ func (uc *redactUseCase) Execute(ctx context.Context, args []string, envData map
 		cancel()
 		return exitCode
 	case <-cancelCtx.Done():
-		// Wait for command to finish with timeout
 		select {
 		case exitCode := <-cmdDone:
 			return exitCode
 		case <-time.After(2 * time.Second):
-			// Force kill if still running
 			if cmd.Process != nil {
 				cmd.Process.Kill()
 			}
@@ -168,7 +166,6 @@ func (uc *redactUseCase) handleOutput(ctx context.Context, ptyMaster pty.Pty, do
 		done <- 0
 	}()
 
-	// Use a goroutine to handle PTY reading without blocking
 	outputChan := make(chan []byte, 1)
 	errorChan := make(chan error, 1)
 
@@ -176,7 +173,6 @@ func (uc *redactUseCase) handleOutput(ctx context.Context, ptyMaster pty.Pty, do
 		for {
 			n, err := ptyMaster.Read(buffer)
 			if n > 0 {
-				// Make a copy of the buffer to send through channel
 				data := make([]byte, n)
 				copy(data, buffer[:n])
 				select {
@@ -200,11 +196,9 @@ func (uc *redactUseCase) handleOutput(ctx context.Context, ptyMaster pty.Pty, do
 		case <-ctx.Done():
 			return
 		case data := <-outputChan:
-			// Process and redact the output
 			text := string(data)
 			redactedText := uc.processAndRedactText(text, envData)
 
-			// Write the redacted content to stdout
 			_, writeErr := os.Stdout.Write([]byte(redactedText))
 			if writeErr != nil {
 				fmt.Fprintf(os.Stderr, "Error writing output: %v\n", writeErr)
@@ -212,7 +206,6 @@ func (uc *redactUseCase) handleOutput(ctx context.Context, ptyMaster pty.Pty, do
 			}
 		case err := <-errorChan:
 			if err == io.EOF {
-				// Command finished
 				return
 			}
 			fmt.Fprintf(os.Stderr, "Error reading PTY: %v\n", err)
@@ -237,16 +230,13 @@ func (uc *redactUseCase) redactWithRegex(text string, envData map[string]string)
 
 	output := text
 
-	// Create redaction patterns for each env var (similar to JavaScript implementation)
 	for _, value := range envData {
 		if value == "" {
 			continue
 		}
 
-		// Escape special regex characters in the value
 		escapedValue := regexp.QuoteMeta(value)
 
-		// Create regex pattern
 		pattern, err := regexp.Compile(escapedValue)
 		if err != nil {
 			// If regex compilation fails, fall back to simple string replacement
@@ -254,7 +244,6 @@ func (uc *redactUseCase) redactWithRegex(text string, envData map[string]string)
 			continue
 		}
 
-		// Replace all occurrences with the redacted message
 		replacement := "[REDACTED]"
 		output = pattern.ReplaceAllString(output, replacement)
 	}
