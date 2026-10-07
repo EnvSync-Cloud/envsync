@@ -68,7 +68,7 @@ var (
 
 	SubHeaderStyle = lipgloss.NewStyle().
 			Foreground(SecondaryColor).
-			Bold(true).
+			Bold(false).
 			Margin(0, 0, 1, 0)
 
 	// Title styles
@@ -78,7 +78,7 @@ var (
 
 	SubtitleStyle = lipgloss.NewStyle().
 			Foreground(MutedColor).
-			Italic(true)
+			Italic(false)
 
 	// Content styles
 	ContentStyle = lipgloss.NewStyle().
@@ -90,7 +90,7 @@ var (
 	// Status styles
 	SuccessStyle = lipgloss.NewStyle().
 			Foreground(SuccessColor).
-			Bold(true)
+			Bold(false)
 
 	ErrorStyle = lipgloss.NewStyle().
 			Margin(1).
@@ -98,16 +98,16 @@ var (
 
 	WarningStyle = lipgloss.NewStyle().
 			Foreground(WarningColor).
-			Bold(true)
+			Bold(false)
 
 	InfoStyle = lipgloss.NewStyle().
 			Foreground(InfoColor).
-			Bold(true)
+			Bold(false)
 
 	// Interactive styles
 	FocusedStyle = lipgloss.NewStyle().
 			Foreground(PrimaryColor).
-			Bold(true)
+			Bold(false)
 
 	BlurredStyle = lipgloss.NewStyle().
 			Foreground(MutedColor)
@@ -120,7 +120,7 @@ var (
 	// Key bindings
 	KeyStyle = lipgloss.NewStyle().
 			Foreground(PrimaryColor).
-			Bold(true)
+			Bold(false)
 
 	KeyDescStyle = lipgloss.NewStyle().
 			Foreground(MutedColor)
