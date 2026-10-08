@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"os"
+	"slices"
 
 	"github.com/urfave/cli/v3"
 
@@ -151,10 +152,16 @@ func (h *GpgKeyHandler) Generate(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (h *GpgKeyHandler) Sign(ctx context.Context, cmd *cli.Command) error {
+	jsonOutput := cmd.Bool("json")
+
 	keyID := cmd.String("key-id")
 	filePath := cmd.String("file")
-	mode := cmd.String("mode")
+	mode, ok := domain.ResolveSignMode(cmd.String("mode"))
+	if !ok {
+		return h.formatError(cmd, gpg_key.NewValidationError("mode must be one of binary, text, clearsign", gpg_key.ErrInvalidSignMode))
+	}
 	detached := cmd.Bool("detached")
+	output := cmd.String("output")
 
 	// Check if stdin has data
 	useStdin := false
@@ -165,25 +172,105 @@ func (h *GpgKeyHandler) Sign(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
+	// Flags alone can carry a run when they cover the key and the input. The
+	// picker and form collect what is missing. JSON output is for scripts: it
+	// takes flag values only and never opens the picker or the form.
+	switch {
+	case jsonOutput:
+		if keyID == "" {
+			return h.formatError(cmd, gpg_key.NewValidationError("key-id must be provided with json flag", gpg_key.ErrKeyIDRequired))
+		}
+		if filePath == "" && !useStdin {
+			return h.formatError(cmd, gpg_key.NewValidationError("file must be provided with json flag (or pipe the data via stdin)", gpg_key.ErrNoInputProvided))
+		}
+	case keyID == "" || (filePath == "" && !useStdin):
+		if !spinner.IsTerminal(os.Stdin) {
+			return h.formatError(cmd, gpg_key.NewValidationError("key-id and file are required; provide --key-id and --file flags", gpg_key.ErrKeyIDRequired))
+		}
+
+		if keyID == "" {
+			keys, err := h.fetchKeys(ctx)
+			if err != nil {
+				return h.formatError(cmd, err)
+			}
+
+			// Filter out only active keys
+			activeKeys := slices.Collect(func(yield func(domain.GpgKey) bool) {
+				for _, key := range keys {
+					if formatters.GpgKeyStatus(key) != "active" {
+						continue
+					}
+					if !yield(key) {
+						return
+					}
+				}
+			})
+
+			key, ok, err := h.tui.PickGpgKey(activeKeys, "Select the key to sign with")
+			if err != nil {
+				return h.formatError(cmd, err)
+			}
+			if !ok {
+				return h.formatError(cmd, gpg_key.ErrSignCancelled)
+			}
+			keyID = key.ID
+		}
+
+		values, err := h.tui.SignKeyTUI(factory.SignKeyValues{
+			FilePath: filePath,
+			Mode:     mode,
+			Detached: detached,
+			Output:   output,
+		})
+		if err != nil {
+			return h.formatError(cmd, err)
+		}
+		filePath, mode, detached, output = values.FilePath, values.Mode, values.Detached, values.Output
+	}
+
+	// Show progress while the signature is produced, then hand the screen over
+	// to the result.
+	sp := spinner.New("Signing…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !jsonOutput {
+		sp.Start()
+	}
 	result, err := h.signUseCase.Execute(ctx, keyID, filePath, mode, detached, useStdin)
+	if !jsonOutput {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatError(cmd, err)
 	}
 
 	// Write to output file if specified
-	outputPath := cmd.String("output")
-	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(result.Signature+"\n"), 0644); err != nil {
+	if output != "" {
+		if err := os.WriteFile(output, []byte(result.Signature+"\n"), 0644); err != nil {
 			return h.formatter.FormatError(cmd.ErrWriter, "Failed to write output: "+err.Error())
 		}
-		return h.formatter.FormatSuccess(cmd.Writer, "Signature written to "+outputPath)
+		return h.formatter.FormatSuccess(cmd.Writer, "Signature written to "+output)
 	}
 
-	if cmd.Bool("json") {
+	if jsonOutput {
 		return h.formatter.FormatJSON(cmd.Writer, result)
 	}
 
 	return h.formatter.FormatSignResult(cmd.Writer, *result)
+}
+
+// fetchKeys loads the available GPG keys with the shared loader presentation.
+func (h *GpgKeyHandler) fetchKeys(ctx context.Context) ([]domain.GpgKey, error) {
+	sp := spinner.New("Fetching GPG keys…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	keys, err := h.listUseCase.Execute(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, gpg_key.NewNotFoundError("no GPG keys available; generate one with 'envsync gpg generate'", nil)
+	}
+	return keys, nil
 }
 
 func (h *GpgKeyHandler) Verify(ctx context.Context, cmd *cli.Command) error {

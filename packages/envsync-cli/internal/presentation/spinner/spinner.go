@@ -9,6 +9,7 @@ import (
 	"time"
 
 	charmspinner "github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/x/term"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
 )
@@ -51,18 +52,15 @@ func New(message string, enabled bool, out io.Writer) *Spinner {
 	}
 }
 
-// IsTerminal reports whether w is attached to a character device rather than a
-// pipe or a file.
+// IsTerminal reports whether w is attached to a terminal. Character devices
+// like /dev/null are not terminals, and treating them as one would push
+// interactive TUIs into places where they cannot run.
 func IsTerminal(w io.Writer) bool {
 	f, ok := w.(*os.File)
 	if !ok {
 		return false
 	}
-	info, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
+	return term.IsTerminal(f.Fd())
 }
 
 // Start begins animating. It is a no-op when disabled or already running.

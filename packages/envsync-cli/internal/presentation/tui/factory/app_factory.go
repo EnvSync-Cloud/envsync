@@ -34,6 +34,14 @@ func (m formModel) Init() tea.Cmd {
 func (m formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if size, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width = size.Width
+		// The form is wrapped in a header and a help footer it does not know
+		// about. Hand it the height that is left, or tall fields (like the file
+		// picker) grow past the help text and off the screen.
+		avail := size.Height - m.chromeHeight()
+		if avail < 1 {
+			avail = 1
+		}
+		msg = tea.WindowSizeMsg{Width: size.Width, Height: avail}
 	}
 
 	form, cmd := m.form.Update(msg)
@@ -48,6 +56,29 @@ func (m formModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// chromeHeight reports how many lines the header and footer add around the
+// form view.
+func (m formModel) chromeHeight() int {
+	return lipgloss.Height(m.header()) + 1 + lipgloss.Height(m.footer())
+}
+
+// header renders the slash boundary line above the form.
+func (m formModel) header() string {
+	return styles.Boundary(m.formWidth(), m.title, styles.FormHeaderStyle, styles.FormBoundaryFillStyle)
+}
+
+// footer renders the slash boundary line with the form's key help below it.
+func (m formModel) footer() string {
+	return styles.Boundary(m.formWidth(), m.form.Help().ShortHelpView(m.form.KeyBinds()), styles.FormFooterStyle, styles.FormBoundaryFillStyle)
+}
+
+func (m formModel) formWidth() int {
+	if m.width <= 0 {
+		return 80
+	}
+	return m.width
+}
+
 func (m formModel) View() string {
 	// The chrome belongs to the form only. Once the form is submitted or
 	// aborted it is dropped, so the header is not left on screen above the
@@ -56,15 +87,7 @@ func (m formModel) View() string {
 		return m.form.View()
 	}
 
-	width := m.width
-	if width <= 0 {
-		width = 80
-	}
-
-	header := styles.Boundary(width, m.title, styles.FormHeaderStyle, styles.FormBoundaryFillStyle)
-	footer := styles.Boundary(width, m.form.Help().ShortHelpView(m.form.KeyBinds()), styles.FormFooterStyle, styles.FormBoundaryFillStyle)
-
-	return header + "\n\n" + m.form.View() + "\n" + footer
+	return m.header() + "\n\n" + m.form.View() + "\n" + m.footer()
 }
 
 func NewAppFactory() *AppFactory {
@@ -236,12 +259,13 @@ func (f *AppFactory) ListAppsInteractive(apps []domain.Application) error {
 }
 
 // selectRow runs a selectable table and returns the row the user submits. ok is
-// false when they quit without choosing.
-func selectRow(cfg component.TableConfig) (table.Row, bool, error) {
+// false when they quit without choosing. Program options let a multi-step flow
+// run the table full screen so it cannot stack with the next step.
+func selectRow(cfg component.TableConfig, opts ...tea.ProgramOption) (table.Row, bool, error) {
 	cfg.Selectable = true
 	model := component.NewTableModel(cfg)
 
-	final, err := tea.NewProgram(model).Run()
+	final, err := tea.NewProgram(model, opts...).Run()
 	if err != nil {
 		return nil, false, fmt.Errorf("error running selection table: %w", err)
 	}

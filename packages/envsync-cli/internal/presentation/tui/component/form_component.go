@@ -152,7 +152,7 @@ func (fc *FormComponent) createFormField(config FormFieldConfig, key string) (hu
 			Key(key).
 			Title(config.Title).
 			Value(config.StringPtr).
-			Password(true)
+			EchoMode(huh.EchoModePassword)
 
 		if config.Description != "" {
 			passwordField = passwordField.Description(config.Description)

@@ -3,6 +3,7 @@ package factory
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -34,8 +35,7 @@ func gpgKeyTableColumns() []table.Column {
 	}
 }
 
-// gpgKeyTableRows projects GPG keys onto those columns. Cell values come from
-// the formatter so the interactive and plain tables always agree.
+// gpgKeyTableRows projects GPG keys onto those columns
 func gpgKeyTableRows(keys []domain.GpgKey) []table.Row {
 	rows := make([]table.Row, 0, len(keys))
 	for _, k := range keys {
@@ -59,8 +59,6 @@ func (f *GpgKeyFactory) ListKeysInteractive(keys []domain.GpgKey) error {
 		Height:  24,
 	})
 
-	// No alt screen: the table renders inline rather than taking over the
-	// terminal.
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		return fmt.Errorf("error running gpg key list TUI: %w", err)
 	}
@@ -77,9 +75,6 @@ type GenerateKeyValues struct {
 }
 
 // GenerateKeyTUI runs the interactive key generation flow.
-//
-// The fields mirror the `gpg generate` flags; values already set (from flags)
-// are offered as starting points and can be edited in the form.
 func (f *GpgKeyFactory) GenerateKeyTUI(preset GenerateKeyValues) (GenerateKeyValues, error) {
 	name := preset.Name
 	email := preset.Email
@@ -180,4 +175,165 @@ func (f *GpgKeyFactory) GenerateKeyTUI(preset GenerateKeyValues) (GenerateKeyVal
 	}
 
 	return GenerateKeyValues{Name: name, Email: email, Algorithm: algorithm, ExpiresInDays: expiresInDays}, nil
+}
+
+// SignKeyValues are the signing details the form collects.
+type SignKeyValues struct {
+	FilePath string
+	Mode     string
+	Detached bool
+	Output   string
+}
+
+// PickGpgKey shows the available keys in a table and returns the one the user
+// submits. ok is false when they quit without choosing.
+func (f *GpgKeyFactory) PickGpgKey(keys []domain.GpgKey, title string) (domain.GpgKey, bool, error) {
+	rows := make([]table.Row, 0, len(keys))
+	for _, k := range keys {
+		rows = append(rows, table.Row{
+			k.Name, k.Email, formatters.ShortFingerprint(k.Fingerprint), k.Algorithm, k.ID,
+		})
+	}
+
+	// Full screen so the picker cannot stack with the form that follows and
+	// drift below its help text on short terminals.
+	row, ok, err := selectRow(component.TableConfig{
+		Title: title,
+		Columns: []table.Column{
+			{Title: "NAME", Width: 24},
+			{Title: "EMAIL", Width: 28},
+			{Title: "FINGERPRINT", Width: 18},
+			{Title: "ALGORITHM", Width: 14},
+			{Title: "ID", Width: 36},
+		},
+		Rows:   rows,
+		Width:  130,
+		Height: 24,
+		Help:   "↑/k up • ↓/j down • enter select • q cancel",
+	})
+	if !ok || err != nil {
+		return domain.GpgKey{}, ok, err
+	}
+
+	// Match on the ID cell rather than the cursor position so a reordered or
+	// filtered table can never select the wrong key.
+	for _, k := range keys {
+		if k.ID == row[4] {
+			return k, true, nil
+		}
+	}
+
+	return domain.GpgKey{}, false, fmt.Errorf("selected GPG key %q is no longer available", row[4])
+}
+
+// boundedFilePicker keeps the file picker inside the form's viewport. The
+// group's zoom hands the field the full group height, but the field's box
+// renders taller than that (two border lines plus the list's trailing pad),
+// so the box is clipped at the bottom and its height drifts past the help
+// text. This caps the list and pays for the box chrome up front.
+type boundedFilePicker struct {
+	*huh.FilePicker
+	max int
+}
+
+func (b *boundedFilePicker) WithHeight(height int) huh.Field {
+	height -= 3 // top and bottom border + the list's trailing pad
+	if height > b.max {
+		height = b.max
+	}
+	if height < 4 {
+		height = 4
+	}
+	b.FilePicker.WithHeight(height)
+	return b
+}
+
+// Update keeps the wrapper in the group's field list: huh stores whatever
+// Update returns, so the bound must survive every round trip.
+func (b *boundedFilePicker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m, cmd := b.FilePicker.Update(msg)
+	if fp, ok := m.(*huh.FilePicker); ok {
+		b.FilePicker = fp
+	}
+	return b, cmd
+}
+
+// SignKeyTUI runs the interactive signing flow for the remaining details.
+func (f *GpgKeyFactory) SignKeyTUI(preset SignKeyValues) (SignKeyValues, error) {
+	filePath := preset.FilePath
+	mode := preset.Mode
+	if mode == "" {
+		mode = domain.SignModes()[0]
+	}
+	detached := preset.Detached
+	output := preset.Output
+
+	labels := make([]huh.Option[string], 0, len(domain.SignModes()))
+	for _, m := range domain.SignModes() {
+		labels = append(labels, huh.NewOption(m, m))
+	}
+
+	homeDir := "."
+	if d, err := os.UserHomeDir(); err == nil {
+		homeDir = d
+	}
+
+	picker := huh.NewFilePicker().
+		Title("File").
+		Description("Select the file to sign.").
+		ShowSize(true).
+		FileAllowed(true).
+		DirAllowed(false).
+		Value(&filePath).
+		ShowHidden(true).
+		CurrentDirectory(homeDir).
+		Validate(func(s string) error {
+			if strings.TrimSpace(s) == "" {
+				return fmt.Errorf("a file is required")
+			}
+			return nil
+		})
+
+	details := huh.NewGroup(
+		&boundedFilePicker{FilePicker: picker, max: 12},
+
+		huh.NewSelect[string]().
+			Title("Mode").
+			Description("How the data should be signed.").
+			Options(labels...).
+			Value(&mode),
+	).Title("Signing details")
+
+	options := huh.NewGroup(
+		huh.NewConfirm().
+			Title("Detached signature?").
+			Description("Write the signature separately instead of embedding it in the data.").
+			Affirmative("Yes").
+			Negative("No").
+			Value(&detached),
+
+		huh.NewInput().
+			Title("Output path").
+			Description("Leave empty to print the signature to stdout.").
+			Placeholder("signature.sig").
+			Value(&output),
+	).Title("Output")
+
+	form := huh.NewForm(details, options).
+		WithTheme(styles.FormTheme()).
+		WithShowHelp(false)
+
+	if _, err := tea.NewProgram(formModel{
+		form:  form.WithHeight(20),
+		title: "Sign with GPG key",
+		width: 80,
+	}).Run(); err != nil {
+		return SignKeyValues{}, err
+	}
+
+	if form.State == huh.StateAborted {
+		return SignKeyValues{}, errors.New("signing cancelled by user")
+	}
+
+	return SignKeyValues{FilePath: filePath, Mode: mode, Detached: detached, Output: output}, nil
 }

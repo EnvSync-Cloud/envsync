@@ -52,6 +52,23 @@ func normalizeGpgAlgorithm(s string) string {
 	}, s)
 }
 
+// SignModes lists the signing modes `gpg sign` accepts.
+func SignModes() []string {
+	return []string{"binary", "text", "clearsign"}
+}
+
+// ResolveSignMode matches user input against the accepted signing modes.
+// Matching ignores case and surrounding space.
+func ResolveSignMode(input string) (string, bool) {
+	got := strings.ToLower(strings.TrimSpace(input))
+	for _, mode := range SignModes() {
+		if got == mode {
+			return mode, true
+		}
+	}
+	return "", false
+}
+
 type GpgKey struct {
 	ID                 string     `json:"id"`
 	Name               string     `json:"name"`

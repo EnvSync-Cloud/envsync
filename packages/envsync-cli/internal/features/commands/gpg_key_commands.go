@@ -70,9 +70,8 @@ func gpgSignCommand(handler *handlers.GpgKeyHandler) *cli.Command {
 		Action: handler.Sign,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "key-id",
-				Usage:    "GPG key ID to sign with",
-				Required: true,
+				Name:  "key-id",
+				Usage: "GPG key ID to sign with (selected interactively when omitted)",
 			},
 			&cli.StringFlag{
 				Name:  "file",
