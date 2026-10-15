@@ -194,13 +194,27 @@ func (h *ServiceTokenHandler) fetchEnvs(ctx context.Context, appID string) ([]do
 }
 
 func (h *ServiceTokenHandler) List(ctx context.Context, cmd *cli.Command) error {
+	// Show progress while the tokens load, then hand the screen over to the view.
+	sp := spinner.New("Fetching service tokens…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
 	tokens, err := h.listUseCase.Execute(ctx)
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, tokens)
+	}
+
+	// A terminal gets the table TUI. Pipes and scripts keep the plain table so
+	// existing pipelines are unaffected.
+	if len(tokens) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListTokensInteractive(tokens)
 	}
 
 	return h.formatter.FormatListTable(cmd.Writer, tokens)

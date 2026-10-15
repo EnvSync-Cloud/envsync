@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
@@ -96,6 +97,79 @@ func (f *ServiceTokenFactory) PickEnvironment(envs []domain.EnvType, title strin
 	}
 
 	return domain.EnvType{}, false, fmt.Errorf("selected environment %q is no longer available", row[1])
+}
+
+// serviceTokenTableColumns are the columns every service token table shows.
+func serviceTokenTableColumns() []table.Column {
+	return []table.Column{
+		{Title: "NAME", Width: 22},
+		{Title: "APP ID", Width: 24},
+		{Title: "ENV TYPE ID", Width: 24},
+		{Title: "READ", Width: 5},
+		{Title: "WRITE", Width: 6},
+		{Title: "EXPIRES AT", Width: 20},
+	}
+}
+
+// serviceTokenTableRows projects tokens onto those columns.
+func serviceTokenTableRows(tokens []domain.ServiceToken) []table.Row {
+	rows := make([]table.Row, 0, len(tokens))
+	for _, t := range tokens {
+		appID, envTypeID := "-", "-"
+		if t.AppID != "" {
+			appID = t.AppID
+		}
+		if t.EnvTypeID != "" {
+			envTypeID = t.EnvTypeID
+		}
+		read, write := "-", "-"
+		if t.Permissions != nil {
+			read = strconv.FormatBool(t.Permissions.Read)
+			write = strconv.FormatBool(t.Permissions.Write)
+		}
+		rows = append(rows, table.Row{
+			t.Name,
+			appID,
+			envTypeID,
+			read,
+			write,
+			formatTokenTime(t.ExpiresAt),
+		})
+	}
+	return rows
+}
+
+// formatTokenTime renders timestamps in RFC3339; zero means "unknown".
+func formatTokenTime(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format(time.RFC3339)
+}
+
+// ListTokensInteractive renders the token list as a table TUI.
+func (f *ServiceTokenFactory) ListTokensInteractive(tokens []domain.ServiceToken) error {
+	cols := serviceTokenTableColumns()
+	width := 0
+	for _, c := range cols {
+		width += c.Width + 2 // cell padding(0, 1)
+	}
+
+	model := component.NewTableModel(component.TableConfig{
+		Title:   "Service tokens",
+		Columns: cols,
+		Rows:    serviceTokenTableRows(tokens),
+		Width:   width,
+		Height:  24,
+	})
+
+	// No alt screen: the table renders inline rather than taking over the
+	// terminal.
+	if _, err := tea.NewProgram(model).Run(); err != nil {
+		return fmt.Errorf("error running service token list TUI: %w", err)
+	}
+
+	return nil
 }
 
 // CreateTokenTUI runs the interactive form for the remaining details.
