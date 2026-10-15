@@ -221,18 +221,60 @@ func (h *ServiceTokenHandler) List(ctx context.Context, cmd *cli.Command) error 
 }
 
 func (h *ServiceTokenHandler) Get(ctx context.Context, cmd *cli.Command) error {
+	jsonOutput := cmd.Bool("json")
 	id := cmd.String("id")
+
+	// Without --id a terminal picks the token from a summary table. JSON is
+	// for scripts: it takes flag values only and never opens the TUI.
+	if id == "" {
+		if jsonOutput {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("id must be provided with json flag", service_token.ErrTokenIDRequired))
+		}
+		if !spinner.IsTerminal(os.Stdin) {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("id is required; provide --id flag", service_token.ErrTokenIDRequired))
+		}
+
+		tokens, err := h.fetchTokens(ctx)
+		if err != nil {
+			return h.formatUseCaseError(cmd, err)
+		}
+
+		token, ok, err := h.tui.PickToken(tokens, "Select the service token")
+		if err != nil {
+			return h.formatUseCaseError(cmd, err)
+		}
+		if !ok {
+			return h.formatUseCaseError(cmd, service_token.ErrTokenSelectionCancelled)
+		}
+		id = token.ID
+	}
 
 	token, err := h.getUseCase.Execute(ctx, id)
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
+	if jsonOutput {
 		return h.formatter.FormatJSON(cmd.Writer, token)
 	}
 
 	return h.formatter.FormatGetSuccessMessage(cmd.Writer, token)
+}
+
+// fetchTokens loads the service tokens with the shared loader presentation.
+func (h *ServiceTokenHandler) fetchTokens(ctx context.Context) ([]domain.ServiceToken, error) {
+	sp := spinner.New("Fetching service tokens…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	tokens, err := h.listUseCase.Execute(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(tokens) == 0 {
+		return nil, service_token.NewServiceTokenValidationError("no service tokens available; create one with 'envsync service-token create'", service_token.ErrNoTokens)
+	}
+	return tokens, nil
 }
 
 func (h *ServiceTokenHandler) Delete(ctx context.Context, cmd *cli.Command) error {

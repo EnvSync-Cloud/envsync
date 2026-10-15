@@ -70,9 +70,8 @@ func serviceTokenGetCommand(handler *handlers.ServiceTokenHandler) *cli.Command 
 		Action: handler.Get,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "id",
-				Usage:    "Service token ID",
-				Required: true,
+				Name:  "id",
+				Usage: "Service token ID (selected interactively when omitted)",
 			},
 		},
 	}

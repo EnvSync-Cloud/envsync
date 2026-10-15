@@ -9,9 +9,13 @@ var (
 
 	// ErrTokenCreateCancelled means the user backed out of the create wizard.
 	ErrTokenCreateCancelled = errors.New("service token creation cancelled by user")
-	// ErrNoApplications / ErrNoEnvironments mean the wizard has nothing to pick.
+	// ErrTokenSelectionCancelled means the user backed out of the get picker.
+	ErrTokenSelectionCancelled = errors.New("service token selection cancelled by user")
+	// ErrNoApplications / ErrNoEnvironments / ErrNoTokens mean a picker has
+	// nothing to show.
 	ErrNoApplications = errors.New("no applications available")
 	ErrNoEnvironments = errors.New("no environments available for this application")
+	ErrNoTokens       = errors.New("no service tokens available")
 )
 
 type ServiceTokenError struct {

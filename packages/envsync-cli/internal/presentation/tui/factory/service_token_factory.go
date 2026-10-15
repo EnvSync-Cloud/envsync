@@ -115,28 +115,74 @@ func serviceTokenTableColumns() []table.Column {
 func serviceTokenTableRows(tokens []domain.ServiceToken) []table.Row {
 	rows := make([]table.Row, 0, len(tokens))
 	for _, t := range tokens {
-		appID, envTypeID := "-", "-"
-		if t.AppID != "" {
-			appID = t.AppID
-		}
-		if t.EnvTypeID != "" {
-			envTypeID = t.EnvTypeID
-		}
-		read, write := "-", "-"
-		if t.Permissions != nil {
-			read = strconv.FormatBool(t.Permissions.Read)
-			write = strconv.FormatBool(t.Permissions.Write)
-		}
-		rows = append(rows, table.Row{
-			t.Name,
-			appID,
-			envTypeID,
-			read,
-			write,
-			formatTokenTime(t.ExpiresAt),
-		})
+		rows = append(rows, serviceTokenTableRow(t))
 	}
 	return rows
+}
+
+// serviceTokenTableRow renders one token's summary cells.
+func serviceTokenTableRow(t domain.ServiceToken) table.Row {
+	appID, envTypeID := "-", "-"
+	if t.AppID != "" {
+		appID = t.AppID
+	}
+	if t.EnvTypeID != "" {
+		envTypeID = t.EnvTypeID
+	}
+	read, write := "-", "-"
+	if t.Permissions != nil {
+		read = strconv.FormatBool(t.Permissions.Read)
+		write = strconv.FormatBool(t.Permissions.Write)
+	}
+	return table.Row{
+		t.Name,
+		appID,
+		envTypeID,
+		read,
+		write,
+		formatTokenTime(t.ExpiresAt),
+	}
+}
+
+// PickToken shows the tokens in a table and returns the one the user submits.
+// ok is false when they quit without choosing. The ID is carried in a
+// zero-width column: invisible in the table (the renderer skips zero-width
+// columns) but still the row's identity on submit, so a lookalike row can
+// never resolve to the wrong token.
+func (f *ServiceTokenFactory) PickToken(tokens []domain.ServiceToken, title string) (domain.ServiceToken, bool, error) {
+	cols := append(serviceTokenTableColumns(), table.Column{Title: "ID", Width: 0})
+	rows := make([]table.Row, 0, len(tokens))
+	for _, t := range tokens {
+		rows = append(rows, append(serviceTokenTableRow(t), t.ID))
+	}
+
+	// Width covers the visible columns only; the hidden one contributes no
+	// rendered cells.
+	width := 0
+	for _, c := range serviceTokenTableColumns() {
+		width += c.Width + 2 // cell padding(0, 1)
+	}
+
+	row, ok, err := selectRow(component.TableConfig{
+		Title:   title,
+		Columns: cols,
+		Rows:    rows,
+		Width:   width,
+		Height:  24,
+		Help:    "↑/k up • ↓/j down • enter select • q cancel",
+	})
+	if !ok || err != nil {
+		return domain.ServiceToken{}, ok, err
+	}
+
+	id := row[len(row)-1]
+	for _, t := range tokens {
+		if t.ID == id {
+			return t, true, nil
+		}
+	}
+
+	return domain.ServiceToken{}, false, fmt.Errorf("selected service token %q is no longer available", id)
 }
 
 // formatTokenTime renders timestamps in RFC3339; zero means "unknown".
