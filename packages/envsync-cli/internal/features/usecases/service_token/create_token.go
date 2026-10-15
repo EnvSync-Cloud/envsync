@@ -4,8 +4,7 @@ import (
 	"context"
 	"strings"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
-
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -20,18 +19,18 @@ func NewCreateServiceTokenUseCase() CreateServiceTokenUseCase {
 	}
 }
 
-func (uc *createServiceTokenUseCase) Execute(ctx context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error) {
+func (uc *createServiceTokenUseCase) Execute(ctx context.Context, st *domain.ServiceToken) (*domain.ServiceToken, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "service_token.create")
 	defer span.End()
 
-	if strings.TrimSpace(req.Name) == "" {
+	if strings.TrimSpace(st.Name) == "" {
 		return nil, NewServiceTokenValidationError("service token name cannot be empty", ErrTokenNameRequired)
 	}
 
-	resp, err := uc.service.CreateServiceToken(ctx, req)
+	resp, err := uc.service.CreateServiceToken(ctx, st)
 	if err != nil {
 		return nil, NewServiceTokenServiceError("failed to create service token", err)
 	}
 
-	return resp, nil
+	return &resp, nil
 }

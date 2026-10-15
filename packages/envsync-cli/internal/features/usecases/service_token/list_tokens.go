@@ -3,8 +3,7 @@ package service_token
 import (
 	"context"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
-
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -19,7 +18,7 @@ func NewListServiceTokensUseCase() ListServiceTokensUseCase {
 	}
 }
 
-func (uc *listServiceTokensUseCase) Execute(ctx context.Context) (sdk.ServiceTokensResponse, error) {
+func (uc *listServiceTokensUseCase) Execute(ctx context.Context) ([]domain.ServiceToken, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "service_token.list")
 	defer span.End()
 

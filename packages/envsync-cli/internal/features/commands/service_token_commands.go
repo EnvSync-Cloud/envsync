@@ -27,18 +27,17 @@ func serviceTokenCreateCommand(handler *handlers.ServiceTokenHandler) *cli.Comma
 		Action: handler.Create,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Service token name",
-				Aliases:  []string{"n"},
-				Required: true,
+				Name:    "name",
+				Usage:   "Service token name (asked interactively when omitted)",
+				Aliases: []string{"n"},
 			},
 			&cli.StringFlag{
 				Name:  "app-id",
-				Usage: "Application ID to scope the token to",
+				Usage: "Application ID to scope the token to (selected interactively when omitted)",
 			},
 			&cli.StringFlag{
 				Name:  "env-type-id",
-				Usage: "Environment type ID to scope the token to",
+				Usage: "Environment type ID to scope the token to (selected interactively when omitted)",
 			},
 			&cli.BoolFlag{
 				Name:  "read",

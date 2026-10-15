@@ -6,6 +6,12 @@ var (
 	ErrTokenNameRequired = errors.New("service token name is required")
 	ErrTokenIDRequired   = errors.New("service token ID is required")
 	ErrTokenNotFound     = errors.New("service token not found")
+
+	// ErrTokenCreateCancelled means the user backed out of the create wizard.
+	ErrTokenCreateCancelled = errors.New("service token creation cancelled by user")
+	// ErrNoApplications / ErrNoEnvironments mean the wizard has nothing to pick.
+	ErrNoApplications = errors.New("no applications available")
+	ErrNoEnvironments = errors.New("no environments available for this application")
 )
 
 type ServiceTokenError struct {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 	"text/tabwriter"
+	"time"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
-
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
 )
 
@@ -21,23 +21,23 @@ func NewServiceTokenFormatter() *ServiceTokenFormatter {
 	}
 }
 
-func (f *ServiceTokenFormatter) FormatCreateSuccessMessage(writer io.Writer, token *sdk.CreateServiceTokenResponse) error {
+func (f *ServiceTokenFormatter) FormatCreateSuccessMessage(writer io.Writer, token *domain.ServiceToken) error {
 	successMsg := fmt.Sprintf("✅ Service token '%s' created successfully!\n\n", token.Name)
 	successMsg += fmt.Sprintf("📛 Name: %s\n", token.Name)
-	successMsg += fmt.Sprintf("🆔 ID: %s\n", token.Id)
+	successMsg += fmt.Sprintf("🆔 ID: %s\n", token.ID)
 	successMsg += fmt.Sprintf("🔑 Token: %s\n", token.Token)
-	if token.AppId != nil {
-		successMsg += fmt.Sprintf("📱 App ID: %s\n", *token.AppId)
+	if token.AppID != "" {
+		successMsg += fmt.Sprintf("📱 App ID: %s\n", token.AppID)
 	}
-	if token.EnvTypeId != nil {
-		successMsg += fmt.Sprintf("🌍 Env Type ID: %s\n", *token.EnvTypeId)
+	if token.EnvTypeID != "" {
+		successMsg += fmt.Sprintf("🌍 Env Type ID: %s\n", token.EnvTypeID)
 	}
 	if token.Permissions != nil {
 		successMsg += fmt.Sprintf("📖 Read: %v\n", token.Permissions.Read)
 		successMsg += fmt.Sprintf("✏️  Write: %v\n", token.Permissions.Write)
 	}
-	successMsg += fmt.Sprintf("📅 Expires At: %s\n", token.ExpiresAt)
-	successMsg += fmt.Sprintf("🕐 Created At: %s\n", token.CreatedAt)
+	successMsg += fmt.Sprintf("📅 Expires At: %s\n", formatTime(token.ExpiresAt))
+	successMsg += fmt.Sprintf("🕐 Created At: %s\n", formatTime(token.CreatedAt))
 
 	successMsg = style.Render(style.BoxStyle, successMsg)
 
@@ -45,25 +45,25 @@ func (f *ServiceTokenFormatter) FormatCreateSuccessMessage(writer io.Writer, tok
 	return err
 }
 
-func (f *ServiceTokenFormatter) FormatGetSuccessMessage(writer io.Writer, token *sdk.ServiceTokenResponse) error {
+func (f *ServiceTokenFormatter) FormatGetSuccessMessage(writer io.Writer, token *domain.ServiceToken) error {
 	msg := "🔑 Service Token Details\n\n"
 	msg += fmt.Sprintf("📛 Name: %s\n", token.Name)
-	msg += fmt.Sprintf("🆔 ID: %s\n", token.Id)
-	if token.AppId != nil {
-		msg += fmt.Sprintf("📱 App ID: %s\n", *token.AppId)
+	msg += fmt.Sprintf("🆔 ID: %s\n", token.ID)
+	if token.AppID != "" {
+		msg += fmt.Sprintf("📱 App ID: %s\n", token.AppID)
 	}
-	if token.EnvTypeId != nil {
-		msg += fmt.Sprintf("🌍 Env Type ID: %s\n", *token.EnvTypeId)
+	if token.EnvTypeID != "" {
+		msg += fmt.Sprintf("🌍 Env Type ID: %s\n", token.EnvTypeID)
 	}
 	if token.Permissions != nil {
 		msg += fmt.Sprintf("📖 Read: %v\n", token.Permissions.Read)
 		msg += fmt.Sprintf("✏️  Write: %v\n", token.Permissions.Write)
 	}
-	msg += fmt.Sprintf("📅 Expires At: %s\n", token.ExpiresAt)
+	msg += fmt.Sprintf("📅 Expires At: %s\n", formatTime(token.ExpiresAt))
 	if token.LastUsedAt != nil {
-		msg += fmt.Sprintf("🕐 Last Used At: %s\n", *token.LastUsedAt)
+		msg += fmt.Sprintf("🕐 Last Used At: %s\n", formatTime(*token.LastUsedAt))
 	}
-	msg += fmt.Sprintf("🕐 Created At: %s\n", token.CreatedAt)
+	msg += fmt.Sprintf("🕐 Created At: %s\n", formatTime(token.CreatedAt))
 
 	msg = style.Render(style.BoxStyle, msg)
 
@@ -71,7 +71,7 @@ func (f *ServiceTokenFormatter) FormatGetSuccessMessage(writer io.Writer, token 
 	return err
 }
 
-func (f *ServiceTokenFormatter) FormatListTable(writer io.Writer, tokens sdk.ServiceTokensResponse) error {
+func (f *ServiceTokenFormatter) FormatListTable(writer io.Writer, tokens []domain.ServiceToken) error {
 	w := tabwriter.NewWriter(writer, 0, 0, 2, ' ', 0)
 
 	fmt.Fprintln(w, "ID\tNAME\tAPP ID\tENV TYPE ID\tREAD\tWRITE\tEXPIRES AT\tCREATED AT")
@@ -79,34 +79,43 @@ func (f *ServiceTokenFormatter) FormatListTable(writer io.Writer, tokens sdk.Ser
 
 	for _, token := range tokens {
 		appID := "-"
-		if token.AppId != nil {
-			appID = *token.AppId
+		if token.AppID != "" {
+			appID = token.AppID
 		}
 		envTypeID := "-"
-		if token.EnvTypeId != nil {
-			envTypeID = *token.EnvTypeId
+		if token.EnvTypeID != "" {
+			envTypeID = token.EnvTypeID
 		}
 
-		readPerm := "false"
-		writePerm := "false"
+		readPerm := "-"
+		writePerm := "-"
 		if token.Permissions != nil {
 			readPerm = fmt.Sprintf("%v", token.Permissions.Read)
 			writePerm = fmt.Sprintf("%v", token.Permissions.Write)
 		}
 
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			token.Id,
+			token.ID,
 			token.Name,
 			appID,
 			envTypeID,
 			readPerm,
 			writePerm,
-			token.ExpiresAt,
-			token.CreatedAt,
+			formatTime(token.ExpiresAt),
+			formatTime(token.CreatedAt),
 		)
 	}
 
 	return w.Flush()
+}
+
+// formatTime renders timestamps in RFC3339, the shape the API returns and the
+// CLI printed before the domain switch. Zero times mean "unknown".
+func formatTime(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.Format(time.RFC3339)
 }
 
 func (f *ServiceTokenFormatter) FormatDeleteSuccessMessage(writer io.Writer, id string) error {

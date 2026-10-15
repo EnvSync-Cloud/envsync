@@ -248,7 +248,10 @@ func buildDependencyContainer() *Container {
 		stListUseCase,
 		stGetUseCase,
 		stDeleteUseCase,
+		listAppsUseCase,
+		getEnvironmentUseCase,
 		stFormatter,
+		factory.NewServiceTokenFactory(),
 	)
 
 	oidcCreateUseCase := oidcUseCases.NewCreateOidcProviderUseCase()

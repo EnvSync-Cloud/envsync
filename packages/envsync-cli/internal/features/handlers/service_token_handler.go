@@ -3,13 +3,17 @@ package handlers
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/urfave/cli/v3"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
-
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/app"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/environment"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/service_token"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 )
 
 type ServiceTokenHandler struct {
@@ -17,7 +21,10 @@ type ServiceTokenHandler struct {
 	listUseCase   service_token.ListServiceTokensUseCase
 	getUseCase    service_token.GetServiceTokenUseCase
 	deleteUseCase service_token.DeleteServiceTokenUseCase
+	listApps      app.ListAppsUseCase
+	getEnvs       environment.GetEnvUseCase
 	formatter     *formatters.ServiceTokenFormatter
+	tui           *factory.ServiceTokenFactory
 }
 
 func NewServiceTokenHandler(
@@ -25,59 +32,165 @@ func NewServiceTokenHandler(
 	listUseCase service_token.ListServiceTokensUseCase,
 	getUseCase service_token.GetServiceTokenUseCase,
 	deleteUseCase service_token.DeleteServiceTokenUseCase,
+	listApps app.ListAppsUseCase,
+	getEnvs environment.GetEnvUseCase,
 	formatter *formatters.ServiceTokenFormatter,
+	tui *factory.ServiceTokenFactory,
 ) *ServiceTokenHandler {
 	return &ServiceTokenHandler{
 		createUseCase: createUseCase,
 		listUseCase:   listUseCase,
 		getUseCase:    getUseCase,
 		deleteUseCase: deleteUseCase,
+		listApps:      listApps,
+		getEnvs:       getEnvs,
 		formatter:     formatter,
+		tui:           tui,
 	}
 }
 
 func (h *ServiceTokenHandler) Create(ctx context.Context, cmd *cli.Command) error {
-	req := &sdk.CreateServiceTokenRequest{}
+	jsonOutput := cmd.Bool("json")
 
-	if cmd.IsSet("name") {
-		req.Name = cmd.String("name")
-	}
-	if cmd.IsSet("app-id") {
-		appID := cmd.String("app-id")
-		req.AppId = &appID
-	}
-	if cmd.IsSet("env-type-id") {
-		envTypeID := cmd.String("env-type-id")
-		req.EnvTypeId = &envTypeID
-	}
-	if cmd.IsSet("expires-in-days") {
-		days := int(cmd.Int("expires-in-days"))
-		req.ExpiresInDays = &days
-	}
+	name := cmd.String("name")
+	appID := cmd.String("app-id")
+	envTypeID := cmd.String("env-type-id")
+	read := cmd.Bool("read")
+	write := cmd.Bool("write")
 
+	// Permissions stay nil while the user states none: the API then applies
+	// its default (read-only). Once a flag is set or the form answers, the
+	// explicit values are sent — that is what keeps form "no/no" a real no.
+	var permissions *domain.ServiceTokenPermissions
 	if cmd.IsSet("read") || cmd.IsSet("write") {
-		permissions := &sdk.ServiceTokenPermissions{}
-		if cmd.IsSet("read") {
-			read := cmd.Bool("read")
-			permissions.Read = read
-		}
-		if cmd.IsSet("write") {
-			write := cmd.Bool("write")
-			permissions.Write = write
-		}
-		req.Permissions = permissions
+		permissions = &domain.ServiceTokenPermissions{Read: read, Write: write}
 	}
 
+	expiresInDays := 0
+	if cmd.IsSet("expires-in-days") {
+		expiresInDays = int(cmd.Int("expires-in-days"))
+	}
+
+	// Flags alone can carry a run when they cover the key and the scope. The
+	// pickers and form collect what is missing. JSON output is for scripts: it
+	// takes flag values only and never opens the TUI.
+	switch {
+	case jsonOutput:
+		if name == "" {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("name must be provided with json flag", service_token.ErrTokenNameRequired))
+		}
+	case name == "" || appID == "" || envTypeID == "":
+		if !spinner.IsTerminal(os.Stdin) {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("name, app-id and env-type-id are required; provide --name, --app-id and --env-type-id flags", service_token.ErrTokenNameRequired))
+		}
+
+		if appID == "" {
+			apps, err := h.fetchApps(ctx)
+			if err != nil {
+				return h.formatUseCaseError(cmd, err)
+			}
+
+			application, ok, err := h.tui.PickApplication(apps, "Select the application")
+			if err != nil {
+				return h.formatUseCaseError(cmd, err)
+			}
+			if !ok {
+				return h.formatUseCaseError(cmd, service_token.ErrTokenCreateCancelled)
+			}
+			appID = application.ID
+		}
+
+		if envTypeID == "" {
+			envs, err := h.fetchEnvs(ctx, appID)
+			if err != nil {
+				return h.formatUseCaseError(cmd, err)
+			}
+
+			env, ok, err := h.tui.PickEnvironment(envs, "Select the environment")
+			if err != nil {
+				return h.formatUseCaseError(cmd, err)
+			}
+			if !ok {
+				return h.formatUseCaseError(cmd, service_token.ErrTokenCreateCancelled)
+			}
+			envTypeID = env.ID
+		}
+
+		values, err := h.tui.CreateTokenTUI(factory.ServiceTokenCreateValues{
+			Name:          name,
+			Read:          read,
+			Write:         write,
+			ExpiresInDays: expiresInDays,
+		})
+		if err != nil {
+			return h.formatUseCaseError(cmd, err)
+		}
+		name = values.Name
+		permissions = &domain.ServiceTokenPermissions{Read: values.Read, Write: values.Write}
+		expiresInDays = values.ExpiresInDays
+	}
+
+	req := &domain.ServiceToken{
+		Name:          name,
+		AppID:         appID,
+		EnvTypeID:     envTypeID,
+		Permissions:   permissions,
+		ExpiresInDays: expiresInDays,
+	}
+
+	// Show progress while the token is created, then hand the screen over to
+	// the success message.
+	sp := spinner.New("Creating service token…", spinner.IsTerminal(os.Stderr), os.Stderr)
+
+	if !jsonOutput {
+		sp.Start()
+	}
 	token, err := h.createUseCase.Execute(ctx, req)
+	if !jsonOutput {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
+	if jsonOutput {
 		return h.formatter.FormatJSON(cmd.Writer, token)
 	}
 
 	return h.formatter.FormatCreateSuccessMessage(cmd.Writer, token)
+}
+
+// fetchApps loads the applications with the shared loader presentation.
+func (h *ServiceTokenHandler) fetchApps(ctx context.Context) ([]domain.Application, error) {
+	sp := spinner.New("Fetching applications…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	apps, err := h.listApps.Execute(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(apps) == 0 {
+		return nil, service_token.NewServiceTokenValidationError("no applications available; create one with 'envsync app create'", service_token.ErrNoApplications)
+	}
+	return apps, nil
+}
+
+// fetchEnvs loads the application's environments with the shared loader
+// presentation.
+func (h *ServiceTokenHandler) fetchEnvs(ctx context.Context, appID string) ([]domain.EnvType, error) {
+	sp := spinner.New("Fetching environments…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	defer sp.Stop()
+
+	envs, err := h.getEnvs.ExecuteByAppID(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	if len(envs) == 0 {
+		return nil, service_token.NewServiceTokenValidationError("no environments available for this application", service_token.ErrNoEnvironments)
+	}
+	return envs, nil
 }
 
 func (h *ServiceTokenHandler) List(ctx context.Context, cmd *cli.Command) error {
