@@ -278,13 +278,39 @@ func (h *ServiceTokenHandler) fetchTokens(ctx context.Context) ([]domain.Service
 }
 
 func (h *ServiceTokenHandler) Delete(ctx context.Context, cmd *cli.Command) error {
+	jsonOutput := cmd.Bool("json")
 	id := cmd.String("id")
+
+	// Without --id a terminal picks the token to delete. JSON is for scripts:
+	// it takes flag values only and never opens the TUI.
+	if id == "" {
+		if jsonOutput {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("id must be provided with json flag", service_token.ErrTokenIDRequired))
+		}
+		if !spinner.IsTerminal(os.Stdin) {
+			return h.formatUseCaseError(cmd, service_token.NewServiceTokenValidationError("id is required; provide --id flag", service_token.ErrTokenIDRequired))
+		}
+
+		tokens, err := h.fetchTokens(ctx)
+		if err != nil {
+			return h.formatUseCaseError(cmd, err)
+		}
+
+		token, ok, err := h.tui.PickTokenToDelete(tokens, "Select the service token to delete")
+		if err != nil {
+			return h.formatUseCaseError(cmd, err)
+		}
+		if !ok {
+			return h.formatUseCaseError(cmd, service_token.ErrTokenSelectionCancelled)
+		}
+		id = token.ID
+	}
 
 	if err := h.deleteUseCase.Execute(ctx, id); err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
+	if jsonOutput {
 		jsonData := map[string]any{
 			"message": "Service token deleted successfully",
 			"id":      id,

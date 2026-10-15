@@ -84,9 +84,8 @@ func serviceTokenDeleteCommand(handler *handlers.ServiceTokenHandler) *cli.Comma
 		Action: handler.Delete,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "id",
-				Usage:    "Service token ID",
-				Required: true,
+				Name:  "id",
+				Usage: "Service token ID (selected interactively when omitted)",
 			},
 		},
 	}

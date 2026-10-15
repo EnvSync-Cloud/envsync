@@ -145,11 +145,25 @@ func serviceTokenTableRow(t domain.ServiceToken) table.Row {
 }
 
 // PickToken shows the tokens in a table and returns the one the user submits.
+// ok is false when they quit without choosing.
+func (f *ServiceTokenFactory) PickToken(tokens []domain.ServiceToken, title string) (domain.ServiceToken, bool, error) {
+	return f.pickToken(tokens, title, nil)
+}
+
+// PickTokenToDelete shows the tokens and asks the user to confirm the
+// highlighted one before returning it.
+func (f *ServiceTokenFactory) PickTokenToDelete(tokens []domain.ServiceToken, title string) (domain.ServiceToken, bool, error) {
+	return f.pickToken(tokens, title, func(row table.Row) string {
+		return fmt.Sprintf("Delete '%s'?", row[0])
+	})
+}
+
+// pickToken shows the tokens in a table and returns the one the user submits.
 // ok is false when they quit without choosing. The ID is carried in a
 // zero-width column: invisible in the table (the renderer skips zero-width
 // columns) but still the row's identity on submit, so a lookalike row can
 // never resolve to the wrong token.
-func (f *ServiceTokenFactory) PickToken(tokens []domain.ServiceToken, title string) (domain.ServiceToken, bool, error) {
+func (f *ServiceTokenFactory) pickToken(tokens []domain.ServiceToken, title string, confirm func(table.Row) string) (domain.ServiceToken, bool, error) {
 	cols := append(serviceTokenTableColumns(), table.Column{Title: "ID", Width: 0})
 	rows := make([]table.Row, 0, len(tokens))
 	for _, t := range tokens {
@@ -169,6 +183,7 @@ func (f *ServiceTokenFactory) PickToken(tokens []domain.ServiceToken, title stri
 		Rows:    rows,
 		Width:   width,
 		Height:  24,
+		Confirm: confirm,
 		Help:    "↑/k up • ↓/j down • enter select • q cancel",
 	})
 	if !ok || err != nil {
