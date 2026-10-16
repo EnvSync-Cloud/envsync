@@ -5,6 +5,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type caStatusUseCase struct {
@@ -16,7 +17,10 @@ func NewCAStatusUseCase() CAStatusUseCase {
 	return &caStatusUseCase{service: service}
 }
 
-func (uc *caStatusUseCase) Execute(ctx context.Context) (*domain.Certificate, error) {
+func (uc *caStatusUseCase) Execute(ctx context.Context) (result *domain.Certificate, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "certificate.ca_status")
+	defer end(&err)
+
 	cert, err := uc.service.GetCA(ctx)
 	if err != nil {
 		return nil, NewServiceError("failed to get organization CA status", err)

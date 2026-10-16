@@ -57,11 +57,14 @@ func (f *AuthFormatter) FormatSuccess(writer io.Writer, message string) error {
 	return err
 }
 
-// FormatError formats error messages
+// FormatError formats error messages. The returned RenderedError marks the
+// command as failed without re-printing the message.
 func (f *AuthFormatter) FormatError(writer io.Writer, message string) error {
 	output := fmt.Sprintf("❌ %s\n", message)
-	_, err := writer.Write([]byte(output))
-	return err
+	if _, err := writer.Write([]byte(output)); err != nil {
+		return err
+	}
+	return NewRenderedError(message)
 }
 
 // FormatWarning formats warning messages

@@ -8,6 +8,9 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type switchEnvUseCase struct {
@@ -25,7 +28,15 @@ func NewSwitchEnvUseCase() SwitchEnvUseCase {
 	}
 }
 
-func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType) (domain.EnvType, error) {
+func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType) (result domain.EnvType, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "environment.switch",
+		trace.WithAttributes(
+			attribute.String("env.id", envType.ID),
+			attribute.String("env.name", envType.Name),
+			attribute.String("app.id", envType.AppID),
+		))
+	defer end(&err)
+
 	syncConfig, err := uc.readSyncConfig()
 	if err != nil {
 		return domain.EnvType{}, err

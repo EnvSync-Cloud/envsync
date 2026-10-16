@@ -18,9 +18,9 @@ func NewListOidcProvidersUseCase() ListOidcProvidersUseCase {
 	}
 }
 
-func (uc *listOidcProvidersUseCase) Execute(ctx context.Context) ([]domain.OidcProvider, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "oidc.list")
-	defer span.End()
+func (uc *listOidcProvidersUseCase) Execute(ctx context.Context) (result []domain.OidcProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "oidc.list")
+	defer end(&err)
 
 	providers, err := uc.service.ListProviders(ctx)
 	if err != nil {

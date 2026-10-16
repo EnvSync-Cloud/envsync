@@ -3,9 +3,14 @@ package config
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type setConfigUseCase struct{}
@@ -14,7 +19,11 @@ func NewSetConfigUseCase() SetConfigUseCase {
 	return &setConfigUseCase{}
 }
 
-func (uc *setConfigUseCase) Execute(ctx context.Context, req SetConfigRequest) error {
+func (uc *setConfigUseCase) Execute(ctx context.Context, req SetConfigRequest) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "config.set",
+		trace.WithAttributes(attribute.StringSlice("config.keys", slices.Sorted(maps.Keys(req.KeyValuePairs)))))
+	defer end(&err)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return NewValidationError("invalid set config request", "", err)

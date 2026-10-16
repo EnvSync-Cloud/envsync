@@ -4,6 +4,9 @@ import (
 	"context"
 	"os"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
@@ -23,15 +26,17 @@ func NewDeleteAppUseCase(tui *factory.AppFactory) DeleteAppUseCase {
 	}
 }
 
-func (uc *deleteAppUseCase) Execute(ctx context.Context) ([]domain.Application, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "app.delete")
-	defer span.End()
-
+func (uc *deleteAppUseCase) Execute(ctx context.Context) (deleted []domain.Application, err error) {
 	appID, _ := ctx.Value("appID").(string)
 	appName, _ := ctx.Value("appName").(string)
 
+	ctx, end := telemetry.StartSpan(ctx, "app.delete", trace.WithAttributes(
+		attribute.String("app.id", appID),
+		attribute.String("app.name", appName),
+	))
+	defer end(&err)
+
 	var deletedApps []domain.Application
-	var err error
 
 	switch {
 	case appID == "" && appName == "":

@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -18,9 +21,10 @@ func NewGetSamlMetadataUseCase() GetSamlMetadataUseCase {
 	}
 }
 
-func (uc *getSamlMetadataUseCase) Execute(ctx context.Context, orgSlug string) (string, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.metadata")
-	defer span.End()
+func (uc *getSamlMetadataUseCase) Execute(ctx context.Context, orgSlug string) (result string, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.metadata",
+		trace.WithAttributes(attribute.String("org.slug", orgSlug)))
+	defer end(&err)
 
 	if strings.TrimSpace(orgSlug) == "" {
 		return "", NewValidationError("organization slug is required", ErrOrgSlugRequired)

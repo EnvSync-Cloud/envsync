@@ -7,6 +7,9 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type resetConfigUseCase struct{}
@@ -15,7 +18,11 @@ func NewResetConfigUseCase() ResetConfigUseCase {
 	return &resetConfigUseCase{}
 }
 
-func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigRequest) error {
+func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigRequest) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "config.reset",
+		trace.WithAttributes(attribute.StringSlice("config.keys", req.Keys)))
+	defer end(&err)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return NewValidationError("invalid reset config request", "", err)

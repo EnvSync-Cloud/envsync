@@ -4,6 +4,8 @@ import (
 	"context"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +21,14 @@ func NewCreateLeaseUseCase() CreateLeaseUseCase {
 	}
 }
 
-func (uc *createLeaseUseCase) Execute(ctx context.Context, engineID string, req *sdk.CreateDynamicSecretLeaseRequest) (*sdk.DynamicSecretLeaseResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.create_lease")
-	defer span.End()
+func (uc *createLeaseUseCase) Execute(ctx context.Context, engineID string, req *sdk.CreateDynamicSecretLeaseRequest) (result *sdk.DynamicSecretLeaseResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.create_lease", trace.WithAttributes(
+		attribute.String("engine.id", engineID),
+		attribute.String("app.id", req.AppId),
+		attribute.String("env.id", req.EnvTypeId),
+		attribute.String("config.key", req.VariableKey),
+	))
+	defer end(&err)
 
 	if engineID == "" {
 		return nil, NewValidationError("engine ID is required", ErrEngineIDRequired)

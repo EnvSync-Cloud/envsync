@@ -128,10 +128,7 @@ func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Com
 
 func (h *EnvironmentHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		jsonOutput := map[string]any{
-			"error": err.Error(),
-		}
-		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 
 	switch e := err.(type) {

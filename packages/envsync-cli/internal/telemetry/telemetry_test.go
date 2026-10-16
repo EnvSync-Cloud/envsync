@@ -2,10 +2,16 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 )
@@ -89,6 +95,56 @@ func TestSignalURL(t *testing.T) {
 				t.Errorf("signalURL(%q, %q) = %q, want %q", tc.base, tc.signal, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestStartSpanRecordsErrorOnFailure(t *testing.T) {
+	rec := tracetest.NewSpanRecorder()
+	prev := otel.GetTracerProvider()
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec)))
+	t.Cleanup(func() { otel.SetTracerProvider(prev) })
+
+	_, end := StartSpan(context.Background(), "app.create")
+	boom := errors.New("boom")
+	end(&boom)
+
+	ended := rec.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("got %d ended spans, want 1", len(ended))
+	}
+	span := ended[0]
+	if span.Name() != "app.create" {
+		t.Errorf("span name = %q, want %q", span.Name(), "app.create")
+	}
+	if span.Status().Code != codes.Error {
+		t.Errorf("status = %v, want Error", span.Status().Code)
+	}
+	var sawException bool
+	for _, e := range span.Events() {
+		if e.Name == "exception" {
+			sawException = true
+		}
+	}
+	if !sawException {
+		t.Errorf("span events = %v, want an exception event", span.Events())
+	}
+}
+
+func TestStartSpanSuccessLeavesStatusUnset(t *testing.T) {
+	rec := tracetest.NewSpanRecorder()
+	prev := otel.GetTracerProvider()
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(rec)))
+	t.Cleanup(func() { otel.SetTracerProvider(prev) })
+
+	_, end := StartSpan(context.Background(), "app.list")
+	end(nil)
+
+	ended := rec.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("got %d ended spans, want 1", len(ended))
+	}
+	if got := ended[0].Status().Code; got != codes.Unset {
+		t.Errorf("status = %v, want Unset", got)
 	}
 }
 

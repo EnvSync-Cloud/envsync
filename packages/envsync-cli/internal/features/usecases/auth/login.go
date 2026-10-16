@@ -31,9 +31,9 @@ func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
 	return uc.ExecuteWithOptions(ctx, LoginOptions{})
 }
 
-func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, opts LoginOptions) (*LoginResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "auth.login")
-	defer span.End()
+func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, opts LoginOptions) (response *LoginResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "auth.login")
+	defer end(&err)
 
 	userInfo, err := uc.checkCurrentLoginStatus(ctx)
 	if err == nil && userInfo != nil {

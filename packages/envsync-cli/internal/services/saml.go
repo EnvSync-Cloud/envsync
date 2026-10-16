@@ -6,6 +6,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
@@ -26,7 +27,10 @@ func NewSamlService() SamlService {
 	return &samlService{}
 }
 
-func (s *samlService) CreateProvider(ctx context.Context, input domain.CreateSamlProviderInput) (*domain.SamlProvider, error) {
+func (s *samlService) CreateProvider(ctx context.Context, input domain.CreateSamlProviderInput) (result *domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.create_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	providerType, err := sdk.NewCreateSamlProviderRequestProviderTypeFromString(input.ProviderType)
@@ -50,7 +54,10 @@ func (s *samlService) CreateProvider(ctx context.Context, input domain.CreateSam
 	return mapSamlResponseToDomain(resp), nil
 }
 
-func (s *samlService) ListProviders(ctx context.Context) ([]domain.SamlProvider, error) {
+func (s *samlService) ListProviders(ctx context.Context) (result []domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.list_providers")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	resp, err := client.SamlProviders.GetAllSamlProviders(ctx)
@@ -66,7 +73,10 @@ func (s *samlService) ListProviders(ctx context.Context) ([]domain.SamlProvider,
 	return providers, nil
 }
 
-func (s *samlService) GetProvider(ctx context.Context, id string) (*domain.SamlProvider, error) {
+func (s *samlService) GetProvider(ctx context.Context, id string) (result *domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.get_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	resp, err := client.SamlProviders.GetSamlProvider(ctx, id)
@@ -77,7 +87,10 @@ func (s *samlService) GetProvider(ctx context.Context, id string) (*domain.SamlP
 	return mapSamlResponseToDomain(resp), nil
 }
 
-func (s *samlService) UpdateProvider(ctx context.Context, input domain.UpdateSamlProviderInput) error {
+func (s *samlService) UpdateProvider(ctx context.Context, input domain.UpdateSamlProviderInput) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.update_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	req := &sdk.UpdateSamlProviderRequest{
@@ -88,18 +101,24 @@ func (s *samlService) UpdateProvider(ctx context.Context, input domain.UpdateSam
 		Enabled:     input.Enabled,
 	}
 
-	_, err := client.SamlProviders.UpdateSamlProvider(ctx, input.ID, req)
+	_, err = client.SamlProviders.UpdateSamlProvider(ctx, input.ID, req)
 	return err
 }
 
-func (s *samlService) DeleteProvider(ctx context.Context, id string) error {
+func (s *samlService) DeleteProvider(ctx context.Context, id string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.delete_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
-	_, err := client.SamlProviders.DeleteSamlProvider(ctx, id)
+	_, err = client.SamlProviders.DeleteSamlProvider(ctx, id)
 	return err
 }
 
-func (s *samlService) GetMetadata(ctx context.Context, orgSlug string) (string, error) {
+func (s *samlService) GetMetadata(ctx context.Context, orgSlug string) (result string, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.get_metadata")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 	me, err := client.Authentication.Whoami(ctx)
 	if err != nil {
@@ -123,7 +142,10 @@ func (s *samlService) GetMetadata(ctx context.Context, orgSlug string) (string, 
 	return repository.GetPublicSamlMetadata(ctx, orgID)
 }
 
-func (s *samlService) InitiateSso(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error) {
+func (s *samlService) InitiateSso(ctx context.Context, orgSlug string, providerID string) (result *domain.SamlSsoResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.saml.initiate_sso")
+	defer end(&err)
+
 	resp, err := repository.StartPublicSamlSso(ctx, orgSlug, providerID)
 	if err != nil {
 		return nil, err

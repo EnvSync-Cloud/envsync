@@ -20,9 +20,9 @@ func NewLogoutUseCase() LogoutUseCase {
 	}
 }
 
-func (uc *logoutUseCase) Execute(ctx context.Context) error {
-	_, span := telemetry.Tracer().Start(ctx, "auth.logout")
-	defer span.End()
+func (uc *logoutUseCase) Execute(ctx context.Context) (err error) {
+	_, end := telemetry.StartSpan(ctx, "auth.logout")
+	defer end(&err)
 
 	// Perform logout
 	if err := uc.authService.Logout(); err != nil {

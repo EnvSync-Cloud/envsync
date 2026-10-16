@@ -5,6 +5,8 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type deletePolicyUseCase struct {
@@ -17,15 +19,16 @@ func NewDeletePolicyUseCase() DeletePolicyUseCase {
 	}
 }
 
-func (uc *deletePolicyUseCase) Execute(ctx context.Context, id string) error {
-	ctx, span := telemetry.Tracer().Start(ctx, "rotation.delete")
-	defer span.End()
+func (uc *deletePolicyUseCase) Execute(ctx context.Context, id string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "rotation.delete",
+		trace.WithAttributes(attribute.String("rotation.id", id)))
+	defer end(&err)
 
 	if id == "" {
 		return NewValidationError("rotation policy ID is required", ErrIDRequired)
 	}
 
-	_, err := uc.rotationService.DeletePolicy(ctx, id)
+	_, err = uc.rotationService.DeletePolicy(ctx, id)
 	if err != nil {
 		return NewServiceError("failed to delete rotation policy", err)
 	}

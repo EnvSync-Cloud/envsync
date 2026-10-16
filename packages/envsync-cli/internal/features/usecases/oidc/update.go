@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +22,9 @@ func NewUpdateOidcProviderUseCase() UpdateOidcProviderUseCase {
 	}
 }
 
-func (uc *updateOidcProviderUseCase) Execute(ctx context.Context, input domain.UpdateOidcProviderInput) error {
-	ctx, span := telemetry.Tracer().Start(ctx, "oidc.update")
-	defer span.End()
+func (uc *updateOidcProviderUseCase) Execute(ctx context.Context, input domain.UpdateOidcProviderInput) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "oidc.update", trace.WithAttributes(attribute.String("provider.id", input.ID)))
+	defer end(&err)
 
 	if strings.TrimSpace(input.ID) == "" {
 		return NewValidationError("provider ID is required", ErrProviderIDRequired)

@@ -87,10 +87,7 @@ func (h *SyncHandler) Push(ctx context.Context, cmd *cli.Command) error {
 
 func (h *SyncHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		jsonOutput := map[string]any{
-			"error": err.Error(),
-		}
-		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 	// Handle different types of use case errors
 	switch e := err.(type) {

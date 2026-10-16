@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -18,9 +21,9 @@ func NewDeleteOidcProviderUseCase() DeleteOidcProviderUseCase {
 	}
 }
 
-func (uc *deleteOidcProviderUseCase) Execute(ctx context.Context, id string) error {
-	ctx, span := telemetry.Tracer().Start(ctx, "oidc.delete")
-	defer span.End()
+func (uc *deleteOidcProviderUseCase) Execute(ctx context.Context, id string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "oidc.delete", trace.WithAttributes(attribute.String("provider.id", id)))
+	defer end(&err)
 
 	if strings.TrimSpace(id) == "" {
 		return NewValidationError("provider ID is required", ErrProviderIDRequired)

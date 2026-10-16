@@ -7,6 +7,8 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type createSamlProviderUseCase struct {
@@ -19,9 +21,14 @@ func NewCreateSamlProviderUseCase() CreateSamlProviderUseCase {
 	}
 }
 
-func (uc *createSamlProviderUseCase) Execute(ctx context.Context, input domain.CreateSamlProviderInput) (*domain.SamlProvider, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.create")
-	defer span.End()
+func (uc *createSamlProviderUseCase) Execute(ctx context.Context, input domain.CreateSamlProviderInput) (result *domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.create",
+		trace.WithAttributes(
+			attribute.String("provider.type", input.ProviderType),
+			attribute.String("provider.name", input.Name),
+			attribute.String("provider.entity_id", input.EntityID),
+		))
+	defer end(&err)
 
 	if err := uc.validateInput(input); err != nil {
 		return nil, err

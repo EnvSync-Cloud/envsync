@@ -19,9 +19,9 @@ func NewListEnginesUseCase() ListEnginesUseCase {
 	}
 }
 
-func (uc *listEnginesUseCase) Execute(ctx context.Context) (sdk.DynamicSecretEnginesResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.list_engines")
-	defer span.End()
+func (uc *listEnginesUseCase) Execute(ctx context.Context) (result sdk.DynamicSecretEnginesResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.list_engines")
+	defer end(&err)
 
 	engines, err := uc.dynamicSecretService.ListEngines(ctx)
 	if err != nil {

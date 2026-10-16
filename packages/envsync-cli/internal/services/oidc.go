@@ -5,6 +5,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 )
@@ -23,7 +24,10 @@ func NewOidcService() OidcService {
 	return &oidcService{}
 }
 
-func (s *oidcService) CreateProvider(ctx context.Context, input domain.CreateOidcProviderInput) (*domain.OidcProvider, error) {
+func (s *oidcService) CreateProvider(ctx context.Context, input domain.CreateOidcProviderInput) (result *domain.OidcProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.oidc.create_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	providerType, err := sdk.NewCreateOidcProviderRequestProviderTypeFromString(input.ProviderType)
@@ -46,7 +50,10 @@ func (s *oidcService) CreateProvider(ctx context.Context, input domain.CreateOid
 	return mapOidcResponseToDomain(resp), nil
 }
 
-func (s *oidcService) ListProviders(ctx context.Context) ([]domain.OidcProvider, error) {
+func (s *oidcService) ListProviders(ctx context.Context) (result []domain.OidcProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.oidc.list_providers")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	resp, err := client.OidcProviders.GetAllOidcProviders(ctx)
@@ -62,7 +69,10 @@ func (s *oidcService) ListProviders(ctx context.Context) ([]domain.OidcProvider,
 	return providers, nil
 }
 
-func (s *oidcService) GetProvider(ctx context.Context, id string) (*domain.OidcProvider, error) {
+func (s *oidcService) GetProvider(ctx context.Context, id string) (result *domain.OidcProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.oidc.get_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	resp, err := client.OidcProviders.GetOidcProvider(ctx, id)
@@ -73,7 +83,10 @@ func (s *oidcService) GetProvider(ctx context.Context, id string) (*domain.OidcP
 	return mapOidcResponseToDomain(resp), nil
 }
 
-func (s *oidcService) UpdateProvider(ctx context.Context, input domain.UpdateOidcProviderInput) error {
+func (s *oidcService) UpdateProvider(ctx context.Context, input domain.UpdateOidcProviderInput) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.oidc.update_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
 	req := &sdk.UpdateOidcProviderRequest{
@@ -82,14 +95,17 @@ func (s *oidcService) UpdateProvider(ctx context.Context, input domain.UpdateOid
 		AllowedSubjects: input.AllowedSubjects,
 	}
 
-	_, err := client.OidcProviders.UpdateOidcProvider(ctx, input.ID, req)
+	_, err = client.OidcProviders.UpdateOidcProvider(ctx, input.ID, req)
 	return err
 }
 
-func (s *oidcService) DeleteProvider(ctx context.Context, id string) error {
+func (s *oidcService) DeleteProvider(ctx context.Context, id string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.oidc.delete_provider")
+	defer end(&err)
+
 	client := repository.GetManagementClient()
 
-	_, err := client.OidcProviders.DeleteOidcProvider(ctx, id)
+	_, err = client.OidcProviders.DeleteOidcProvider(ctx, id)
 	return err
 }
 

@@ -5,6 +5,9 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type getEnvUseCase struct {
@@ -19,8 +22,12 @@ func NewGetEnvUseCase() GetEnvUseCase {
 	}
 }
 
-func (uc *getEnvUseCase) ExecuteByAppID(ctx context.Context, appID string) ([]domain.EnvType, error) {
-	appID, err := uc.resolveAppID(appID)
+func (uc *getEnvUseCase) ExecuteByAppID(ctx context.Context, appID string) (result []domain.EnvType, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "environment.get_by_app_id",
+		trace.WithAttributes(attribute.String("app.id", appID)))
+	defer end(&err)
+
+	appID, err = uc.resolveAppID(appID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +69,11 @@ func (uc *getEnvUseCase) resolveAppID(appID string) (string, error) {
 	return cfg.AppID, nil
 }
 
-func (uc *getEnvUseCase) ExecuteByID(ctx context.Context, id string) (domain.EnvType, error) {
+func (uc *getEnvUseCase) ExecuteByID(ctx context.Context, id string) (result domain.EnvType, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "environment.get_by_id",
+		trace.WithAttributes(attribute.String("env.id", id)))
+	defer end(&err)
+
 	env, err := uc.envService.GetEnvTypeByID(ctx, id)
 	if err != nil {
 		return domain.EnvType{}, NewServiceError("failed to get environment by ID", err)

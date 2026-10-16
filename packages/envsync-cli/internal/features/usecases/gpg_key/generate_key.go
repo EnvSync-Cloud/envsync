@@ -6,6 +6,9 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type generateKeyUseCase struct {
@@ -17,7 +20,15 @@ func NewGenerateKeyUseCase() GenerateKeyUseCase {
 	return &generateKeyUseCase{service: service}
 }
 
-func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorithm string, expiresInDays *int, usageFlags []string, isDefault bool) (*domain.GpgKey, error) {
+func (uc *generateKeyUseCase) Execute(ctx context.Context, name, email, algorithm string, expiresInDays *int, usageFlags []string, isDefault bool) (result *domain.GpgKey, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gpg_key.generate_key",
+		trace.WithAttributes(
+			attribute.String("key.name", name),
+			attribute.String("key.email", email),
+			attribute.String("key.algorithm", algorithm),
+		))
+	defer end(&err)
+
 	if name == "" {
 		return nil, NewValidationError("name is required", ErrNameRequired)
 	}

@@ -7,6 +7,8 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type getRotationStatesUseCase struct {
@@ -19,9 +21,10 @@ func NewGetRotationStatesUseCase() GetRotationStatesUseCase {
 	}
 }
 
-func (uc *getRotationStatesUseCase) Execute(ctx context.Context, id string) (sdk.RotationStatesResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "rotation.states")
-	defer span.End()
+func (uc *getRotationStatesUseCase) Execute(ctx context.Context, id string) (result sdk.RotationStatesResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "rotation.states",
+		trace.WithAttributes(attribute.String("rotation.id", id)))
+	defer end(&err)
 
 	if id == "" {
 		return nil, NewValidationError("rotation policy ID is required", ErrIDRequired)

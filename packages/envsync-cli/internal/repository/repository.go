@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"resty.dev/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 )
@@ -20,8 +20,6 @@ import (
 // tokenRefreshSkew refreshes slightly before the recorded expiry so a token
 // cannot lapse between the check and the request that uses it.
 const tokenRefreshSkew = 30 * time.Second
-
-// var l = logger.NewLogger()
 
 var (
 	resolvedOnce  sync.Once
@@ -47,7 +45,7 @@ func createSDKClient() *sdkclient.Client {
 		option.WithBaseURL(cfg.BackendURL),
 		option.WithHTTPHeader(headers),
 		option.WithHTTPClient(&http.Client{
-			Transport: otelhttp.NewTransport(http.DefaultTransport),
+			Transport: telemetry.NewInstrumentedTransport(http.DefaultTransport),
 		}),
 	}
 
@@ -79,7 +77,7 @@ func createHTTPClient() *resty.Client {
 		SetBaseURL(cfg.BackendURL).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-CLI-CMD", cliCmd).
-		SetTransport(otelhttp.NewTransport(http.DefaultTransport))
+		SetTransport(telemetry.NewInstrumentedTransport(http.DefaultTransport))
 
 	if hasAPIKey && apiKey != "" {
 		client.SetHeader("X-API-Key", apiKey)
@@ -156,6 +154,7 @@ func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, erro
 	var resBody responses.LoginTokenResponse
 	res, err := resty.New().
 		SetLoggerWarnLevel(false).
+		SetTransport(telemetry.NewInstrumentedTransport(http.DefaultTransport)).
 		R().
 		SetResult(&resBody).
 		SetFormData(map[string]string{

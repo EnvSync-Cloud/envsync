@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +22,9 @@ func NewCreateOidcProviderUseCase() CreateOidcProviderUseCase {
 	}
 }
 
-func (uc *createOidcProviderUseCase) Execute(ctx context.Context, input domain.CreateOidcProviderInput) (*domain.OidcProvider, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "oidc.create")
-	defer span.End()
+func (uc *createOidcProviderUseCase) Execute(ctx context.Context, input domain.CreateOidcProviderInput) (result *domain.OidcProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "oidc.create", trace.WithAttributes(attribute.String("provider.type", input.ProviderType)))
+	defer end(&err)
 
 	if err := uc.validateInput(input); err != nil {
 		return nil, err

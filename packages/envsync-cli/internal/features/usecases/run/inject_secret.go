@@ -6,6 +6,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
 )
 
@@ -20,7 +21,10 @@ func NewInjectSecretUseCase() InjectSecretsUseCase {
 	}
 }
 
-func (i *injectSecretUseCase) Execute(ctx context.Context) (map[string]string, error) {
+func (i *injectSecretUseCase) Execute(ctx context.Context) (result map[string]string, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "run.inject_secret")
+	defer end(&err)
+
 	managedSecret := ctx.Value("managedSecret").(bool)
 	privateKeyPath := ctx.Value("privateKeyPath").(string)
 	appID := ctx.Value("appID").(string)

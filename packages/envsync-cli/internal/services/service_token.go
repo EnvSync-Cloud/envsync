@@ -6,6 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type ServiceTokenService interface {
@@ -26,7 +27,10 @@ func NewServiceTokenService() ServiceTokenService {
 	}
 }
 
-func (s *serviceTokenService) CreateServiceToken(ctx context.Context, st *domain.ServiceToken) (domain.ServiceToken, error) {
+func (s *serviceTokenService) CreateServiceToken(ctx context.Context, st *domain.ServiceToken) (result domain.ServiceToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.service_token.create_service_token")
+	defer end(&err)
+
 	req := mappers.DomainToServiceTokenRequest(st)
 
 	res, err := s.repo.Create(ctx, req)
@@ -37,7 +41,10 @@ func (s *serviceTokenService) CreateServiceToken(ctx context.Context, st *domain
 	return mappers.ServiceTokenResponseToDomain(res), nil
 }
 
-func (s *serviceTokenService) GetAllServiceTokens(ctx context.Context) ([]domain.ServiceToken, error) {
+func (s *serviceTokenService) GetAllServiceTokens(ctx context.Context) (result []domain.ServiceToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.service_token.get_all_service_tokens")
+	defer end(&err)
+
 	res, err := s.repo.GetAll(ctx)
 	if err != nil {
 		return nil, err
@@ -51,7 +58,10 @@ func (s *serviceTokenService) GetAllServiceTokens(ctx context.Context) ([]domain
 	return tokens, nil
 }
 
-func (s *serviceTokenService) GetServiceToken(ctx context.Context, id string) (domain.ServiceToken, error) {
+func (s *serviceTokenService) GetServiceToken(ctx context.Context, id string) (result domain.ServiceToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.service_token.get_service_token")
+	defer end(&err)
+
 	res, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return domain.ServiceToken{}, err
@@ -60,6 +70,9 @@ func (s *serviceTokenService) GetServiceToken(ctx context.Context, id string) (d
 	return mappers.ServiceTokenResponseToDomain(res), nil
 }
 
-func (s *serviceTokenService) DeleteServiceToken(ctx context.Context, id string) error {
+func (s *serviceTokenService) DeleteServiceToken(ctx context.Context, id string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.service_token.delete_service_token")
+	defer end(&err)
+
 	return s.repo.Delete(ctx, id)
 }

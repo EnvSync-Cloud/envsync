@@ -18,9 +18,9 @@ func NewListLogForwardingConfigsUseCase() ListLogForwardingConfigsUseCase {
 	}
 }
 
-func (uc *listLogForwardingConfigsUseCase) Execute(ctx context.Context) (sdk.LogForwardingsResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "log_forwarding.list")
-	defer span.End()
+func (uc *listLogForwardingConfigsUseCase) Execute(ctx context.Context) (result sdk.LogForwardingsResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "log_forwarding.list")
+	defer end(&err)
 
 	configs, err := uc.service.GetLogForwardingConfigs(ctx)
 	if err != nil {

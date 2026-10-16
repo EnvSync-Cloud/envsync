@@ -17,9 +17,11 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/logger"
 )
 
 var version = "dev"
@@ -106,13 +108,28 @@ func Tracer() trace.Tracer {
 	return otel.Tracer(tracerName)
 }
 
-func RecordError(ctx context.Context, err error) {
-	if err == nil {
-		return
+// StartSpan starts a named span for one CLI operation and returns the context
+// carrying it together with an end function. Use it with a named error result:
+//
+//	ctx, end := telemetry.StartSpan(ctx, "app.create")
+//	defer end(&err)
+//
+// When err is non-nil at return time, end records it on the span (exception
+// event + error status) and logs the failure through the context-bound logger
+// before ending the span, so failures show up in the local log file and in the
+// exported OTEL logs and traces alike. Results without an error pass nil:
+// defer end(nil).
+func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, func(*error)) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, name, opts...)
+	end := func(err *error) {
+		if err != nil && *err != nil {
+			span.RecordError(*err)
+			span.SetStatus(codes.Error, (*err).Error())
+			logger.FromContext(ctx).Error(name+" failed", zap.Error(*err))
+		}
+		span.End()
 	}
-	span := trace.SpanFromContext(ctx)
-	span.RecordError(err)
-	span.SetStatus(codes.Error, err.Error())
+	return ctx, end
 }
 
 // signalURL joins a configured OTLP endpoint with a signal path such as

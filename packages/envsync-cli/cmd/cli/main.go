@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 
@@ -58,6 +59,12 @@ func main() {
 
 	// Run the application
 	if err := app.Run(context.Background(), os.Args); err != nil {
+		var rendered formatters.RenderedError
+		if errors.As(err, &rendered) {
+			// The formatter already displayed the failure; exit non-zero
+			// without printing the message a second time.
+			os.Exit(1)
+		}
 		log.Fatal(err)
 	}
 }

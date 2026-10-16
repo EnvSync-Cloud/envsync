@@ -19,9 +19,9 @@ func NewCleanupUseCase() CleanupUseCase {
 	}
 }
 
-func (uc *cleanupUseCase) Execute(ctx context.Context) (*sdk.CleanupResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.cleanup")
-	defer span.End()
+func (uc *cleanupUseCase) Execute(ctx context.Context) (response *sdk.CleanupResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.cleanup")
+	defer end(&err)
 
 	result, err := uc.dynamicSecretService.CleanupExpiredLeases(ctx)
 	if err != nil {

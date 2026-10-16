@@ -155,11 +155,7 @@ func (h *ConfigHandler) Reset(ctx context.Context, cmd *cli.Command) error {
 
 func (h *ConfigHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		// If JSON output is requested, format the error as JSON
-		jsonOutput := map[string]any{
-			"error": err.Error(),
-		}
-		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 
 	// Handle different types of use case errors

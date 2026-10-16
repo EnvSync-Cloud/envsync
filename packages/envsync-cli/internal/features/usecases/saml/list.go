@@ -18,9 +18,9 @@ func NewListSamlProvidersUseCase() ListSamlProvidersUseCase {
 	}
 }
 
-func (uc *listSamlProvidersUseCase) Execute(ctx context.Context) ([]domain.SamlProvider, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.list")
-	defer span.End()
+func (uc *listSamlProvidersUseCase) Execute(ctx context.Context) (result []domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.list")
+	defer end(&err)
 
 	providers, err := uc.service.ListProviders(ctx)
 	if err != nil {

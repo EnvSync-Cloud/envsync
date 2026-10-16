@@ -9,6 +9,9 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type signUseCase struct {
@@ -20,13 +23,20 @@ func NewSignUseCase() SignUseCase {
 	return &signUseCase{service: service}
 }
 
-func (uc *signUseCase) Execute(ctx context.Context, keyID, filePath, mode string, detached bool, useStdin bool) (*domain.GpgSignatureResult, error) {
+func (uc *signUseCase) Execute(ctx context.Context, keyID, filePath, mode string, detached bool, useStdin bool) (signed *domain.GpgSignatureResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gpg_key.sign",
+		trace.WithAttributes(
+			attribute.String("key.id", keyID),
+			attribute.String("file.path", filePath),
+			attribute.String("sign.mode", mode),
+		))
+	defer end(&err)
+
 	if keyID == "" {
 		return nil, NewValidationError("key ID is required", ErrKeyIDRequired)
 	}
 
 	var data []byte
-	var err error
 
 	if filePath != "" {
 		data, err = os.ReadFile(filePath)

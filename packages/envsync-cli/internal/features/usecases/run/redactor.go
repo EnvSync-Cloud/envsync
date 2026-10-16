@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	"github.com/aymanbagabas/go-pty"
 )
 
@@ -22,6 +23,9 @@ func NewRedactor() RedactUseCase {
 }
 
 func (uc *redactUseCase) Execute(ctx context.Context, args []string, envData map[string]string) int {
+	ctx, span := telemetry.Tracer().Start(ctx, "run.redactor")
+	defer span.End()
+
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "No command provided\n")
 		return 1

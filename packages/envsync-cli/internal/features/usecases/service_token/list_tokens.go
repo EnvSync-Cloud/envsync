@@ -18,9 +18,9 @@ func NewListServiceTokensUseCase() ListServiceTokensUseCase {
 	}
 }
 
-func (uc *listServiceTokensUseCase) Execute(ctx context.Context) ([]domain.ServiceToken, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "service_token.list")
-	defer span.End()
+func (uc *listServiceTokensUseCase) Execute(ctx context.Context) (result []domain.ServiceToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "service_token.list")
+	defer end(&err)
 
 	tokens, err := uc.service.GetAllServiceTokens(ctx)
 	if err != nil {

@@ -7,6 +7,8 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type updateSamlProviderUseCase struct {
@@ -19,9 +21,14 @@ func NewUpdateSamlProviderUseCase() UpdateSamlProviderUseCase {
 	}
 }
 
-func (uc *updateSamlProviderUseCase) Execute(ctx context.Context, input domain.UpdateSamlProviderInput) error {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.update")
-	defer span.End()
+func (uc *updateSamlProviderUseCase) Execute(ctx context.Context, input domain.UpdateSamlProviderInput) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.update",
+		trace.WithAttributes(
+			attribute.String("provider.id", input.ID),
+			attribute.String("provider.name", input.Name),
+			attribute.String("provider.entity_id", input.EntityID),
+		))
+	defer end(&err)
 
 	if strings.TrimSpace(input.ID) == "" {
 		return NewValidationError("provider ID is required", ErrProviderIDRequired)

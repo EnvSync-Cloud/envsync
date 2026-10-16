@@ -5,6 +5,9 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type revokeCertUseCase struct {
@@ -16,7 +19,11 @@ func NewRevokeCertUseCase() RevokeCertUseCase {
 	return &revokeCertUseCase{service: service}
 }
 
-func (uc *revokeCertUseCase) Execute(ctx context.Context, serialHex string, reason int) (*responses.RevokeCertResponse, error) {
+func (uc *revokeCertUseCase) Execute(ctx context.Context, serialHex string, reason int) (revokeResult *responses.RevokeCertResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "certificate.revoke_cert",
+		trace.WithAttributes(attribute.String("cert.serial", serialHex)))
+	defer end(&err)
+
 	if serialHex == "" {
 		return nil, NewValidationError("certificate serial number is required", ErrSerialRequired)
 	}

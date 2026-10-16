@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/BurntSushi/toml"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
@@ -32,9 +35,13 @@ func (uc *initCaseUse) Execute(ctx context.Context, config string) (InitResult, 
 	return uc.ExecuteWithOptions(ctx, config, "", "")
 }
 
-func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, appID string, envTypeID string) (InitResult, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "project.init")
-	defer span.End()
+func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, appID string, envTypeID string) (result InitResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "project.init", trace.WithAttributes(
+		attribute.String("config.path", config),
+		attribute.String("app.id", appID),
+		attribute.String("env.id", envTypeID),
+	))
+	defer end(&err)
 
 	if err := uc.checkConfigExists(config); err == nil {
 		return InitResult{}, err

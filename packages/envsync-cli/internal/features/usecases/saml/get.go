@@ -7,6 +7,8 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type getSamlProviderUseCase struct {
@@ -19,9 +21,10 @@ func NewGetSamlProviderUseCase() GetSamlProviderUseCase {
 	}
 }
 
-func (uc *getSamlProviderUseCase) Execute(ctx context.Context, id string) (*domain.SamlProvider, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.get")
-	defer span.End()
+func (uc *getSamlProviderUseCase) Execute(ctx context.Context, id string) (result *domain.SamlProvider, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.get",
+		trace.WithAttributes(attribute.String("provider.id", id)))
+	defer end(&err)
 
 	if strings.TrimSpace(id) == "" {
 		return nil, NewValidationError("provider ID is required", ErrProviderIDRequired)

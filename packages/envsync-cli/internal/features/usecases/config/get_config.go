@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type getConfigUseCase struct{}
@@ -14,7 +17,11 @@ func NewGetConfigUseCase() GetConfigUseCase {
 	return &getConfigUseCase{}
 }
 
-func (uc *getConfigUseCase) Execute(ctx context.Context, req GetConfigRequest) (*GetConfigResponse, error) {
+func (uc *getConfigUseCase) Execute(ctx context.Context, req GetConfigRequest) (result *GetConfigResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "config.get",
+		trace.WithAttributes(attribute.StringSlice("config.keys", req.Keys)))
+	defer end(&err)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError("invalid get config request", "", err)

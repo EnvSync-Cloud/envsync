@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type exportUseCase struct {
@@ -15,7 +18,11 @@ func NewExportUseCase() ExportUseCase {
 	return &exportUseCase{service: service}
 }
 
-func (uc *exportUseCase) Execute(ctx context.Context, keyID string) (string, string, error) {
+func (uc *exportUseCase) Execute(ctx context.Context, keyID string) (exportedPublicKey, exportedFingerprint string, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gpg_key.export_key",
+		trace.WithAttributes(attribute.String("key.id", keyID)))
+	defer end(&err)
+
 	if keyID == "" {
 		return "", "", NewValidationError("key ID is required", ErrKeyIDRequired)
 	}

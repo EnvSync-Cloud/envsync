@@ -9,6 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
@@ -33,9 +36,9 @@ func NewCreateAppUseCase() CreateAppUseCase {
 	}
 }
 
-func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application) (*domain.Application, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "app.create")
-	defer span.End()
+func (uc *createAppUseCase) Execute(ctx context.Context, app domain.Application) (created *domain.Application, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "app.create", trace.WithAttributes(attribute.String("app.name", app.Name)))
+	defer end(&err)
 
 	// A missing name means the TUI supplies it, so duplicate detection has to
 	// wait until the name is final — otherwise apps created interactively were

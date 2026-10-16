@@ -4,6 +4,8 @@ import (
 	"context"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +21,9 @@ func NewRevokeLeaseUseCase() RevokeLeaseUseCase {
 	}
 }
 
-func (uc *revokeLeaseUseCase) Execute(ctx context.Context, leaseID string) (*sdk.RevokeLeaseResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.revoke_lease")
-	defer span.End()
+func (uc *revokeLeaseUseCase) Execute(ctx context.Context, leaseID string) (response *sdk.RevokeLeaseResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.revoke_lease", trace.WithAttributes(attribute.String("lease.id", leaseID)))
+	defer end(&err)
 
 	if leaseID == "" {
 		return nil, NewValidationError("lease ID is required", ErrIDRequired)

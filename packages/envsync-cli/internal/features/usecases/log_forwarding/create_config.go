@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -24,9 +26,12 @@ func (uc *createLogForwardingConfigUseCase) Execute(
 	ctx context.Context,
 	name, providerType, endpointURL, apiKey string,
 	enabled bool,
-) (*sdk.LogForwardingResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "log_forwarding.create")
-	defer span.End()
+) (result *sdk.LogForwardingResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "log_forwarding.create", trace.WithAttributes(
+		attribute.String("config.name", name),
+		attribute.String("provider.type", providerType),
+	))
+	defer end(&err)
 
 	// Validate inputs
 	if err := uc.validateInputs(name, providerType, endpointURL, apiKey); err != nil {

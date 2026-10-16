@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -19,9 +21,9 @@ func NewGetLogForwardingConfigUseCase() GetLogForwardingConfigUseCase {
 	}
 }
 
-func (uc *getLogForwardingConfigUseCase) Execute(ctx context.Context, id string) (*sdk.LogForwardingResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "log_forwarding.get")
-	defer span.End()
+func (uc *getLogForwardingConfigUseCase) Execute(ctx context.Context, id string) (result *sdk.LogForwardingResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "log_forwarding.get", trace.WithAttributes(attribute.String("config.id", id)))
+	defer end(&err)
 
 	if strings.TrimSpace(id) == "" {
 		return nil, NewValidationError("config ID is required", ErrConfigIDRequired)

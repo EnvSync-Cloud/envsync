@@ -4,6 +4,9 @@ import (
 	"context"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +22,13 @@ func NewInitiateSamlSsoUseCase() InitiateSamlSsoUseCase {
 	}
 }
 
-func (uc *initiateSamlSsoUseCase) Execute(ctx context.Context, orgSlug string, providerID string) (*domain.SamlSsoResult, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "saml.sso")
-	defer span.End()
+func (uc *initiateSamlSsoUseCase) Execute(ctx context.Context, orgSlug string, providerID string) (resp *domain.SamlSsoResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "saml.sso",
+		trace.WithAttributes(
+			attribute.String("org.slug", orgSlug),
+			attribute.String("provider.id", providerID),
+		))
+	defer end(&err)
 
 	if strings.TrimSpace(orgSlug) == "" {
 		return nil, NewValidationError("organization slug is required", ErrOrgSlugRequired)
