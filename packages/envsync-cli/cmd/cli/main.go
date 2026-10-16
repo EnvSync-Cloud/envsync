@@ -235,7 +235,7 @@ func buildDependencyContainer() *Container {
 	)
 
 	c.TeamHandler = handlers.NewTeamHandler()
-	c.AccessHandler = handlers.NewAccessHandler()
+	c.AccessHandler = handlers.NewAccessHandler(factory.NewAccessFactory())
 	c.RequestHandler = handlers.NewRequestHandler()
 
 	stCreateUseCase := serviceTokenUseCases.NewCreateServiceTokenUseCase()
