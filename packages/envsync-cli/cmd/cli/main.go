@@ -16,10 +16,7 @@ import (
 	genpem "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gen_pem"
 	gpgUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
 	inituc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/init"
-	lfUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/log_forwarding"
-	oidcUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/oidc"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/run"
-	samlUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/saml"
 	serviceTokenUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/service_token"
 	syncUseCase "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/sync"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
@@ -47,11 +44,8 @@ func main() {
 		container.AccessHandler,
 		container.RequestHandler,
 		container.ServiceTokenHandler,
-		container.OidcHandler,
-		container.SamlHandler,
 		container.RotationHandler,
 		container.DynamicSecretHandler,
-		container.LogForwardingHandler,
 	)
 
 	// Build CLI app
@@ -85,11 +79,8 @@ type Container struct {
 	AccessHandler        *handlers.AccessHandler
 	RequestHandler       *handlers.RequestHandler
 	ServiceTokenHandler  *handlers.ServiceTokenHandler
-	OidcHandler          *handlers.OidcHandler
-	SamlHandler          *handlers.SamlHandler
 	RotationHandler      *handlers.RotationHandler
 	DynamicSecretHandler *handlers.DynamicSecretHandler
-	LogForwardingHandler *handlers.LogForwardingHandler
 }
 
 // buildDependencyContainer creates and wires all handler dependencies
@@ -261,55 +252,8 @@ func buildDependencyContainer() *Container {
 		factory.NewServiceTokenFactory(),
 	)
 
-	oidcCreateUseCase := oidcUseCases.NewCreateOidcProviderUseCase()
-	oidcListUseCase := oidcUseCases.NewListOidcProvidersUseCase()
-	oidcGetUseCase := oidcUseCases.NewGetOidcProviderUseCase()
-	oidcUpdateUseCase := oidcUseCases.NewUpdateOidcProviderUseCase()
-	oidcDeleteUseCase := oidcUseCases.NewDeleteOidcProviderUseCase()
-	oidcFormatter := formatters.NewOidcFormatter()
-	c.OidcHandler = handlers.NewOidcHandler(
-		oidcCreateUseCase,
-		oidcListUseCase,
-		oidcGetUseCase,
-		oidcUpdateUseCase,
-		oidcDeleteUseCase,
-		oidcFormatter,
-	)
-
-	samlCreateUseCase := samlUseCases.NewCreateSamlProviderUseCase()
-	samlListUseCase := samlUseCases.NewListSamlProvidersUseCase()
-	samlGetUseCase := samlUseCases.NewGetSamlProviderUseCase()
-	samlUpdateUseCase := samlUseCases.NewUpdateSamlProviderUseCase()
-	samlDeleteUseCase := samlUseCases.NewDeleteSamlProviderUseCase()
-	samlMetadataUseCase := samlUseCases.NewGetSamlMetadataUseCase()
-	samlSsoUseCase := samlUseCases.NewInitiateSamlSsoUseCase()
-	samlFormatter := formatters.NewSamlFormatter()
-	c.SamlHandler = handlers.NewSamlHandler(
-		samlCreateUseCase,
-		samlListUseCase,
-		samlGetUseCase,
-		samlUpdateUseCase,
-		samlDeleteUseCase,
-		samlMetadataUseCase,
-		samlSsoUseCase,
-		samlFormatter,
-	)
-
 	c.RotationHandler = handlers.NewRotationHandler()
 	c.DynamicSecretHandler = handlers.NewDynamicSecretHandler()
-
-	lfCreateUseCase := lfUseCases.NewCreateLogForwardingConfigUseCase()
-	lfListUseCase := lfUseCases.NewListLogForwardingConfigsUseCase()
-	lfGetUseCase := lfUseCases.NewGetLogForwardingConfigUseCase()
-	lfDeleteUseCase := lfUseCases.NewDeleteLogForwardingConfigUseCase()
-	lfFormatter := formatters.NewLogForwardingFormatter()
-	c.LogForwardingHandler = handlers.NewLogForwardingHandler(
-		lfCreateUseCase,
-		lfListUseCase,
-		lfGetUseCase,
-		lfDeleteUseCase,
-		lfFormatter,
-	)
 
 	return c
 }

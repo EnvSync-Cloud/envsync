@@ -39,11 +39,8 @@ type CommandRegistry struct {
 	accessHandler        *handlers.AccessHandler
 	requestHandler       *handlers.RequestHandler
 	serviceTokenHandler  *handlers.ServiceTokenHandler
-	oidcHandler          *handlers.OidcHandler
-	samlHandler          *handlers.SamlHandler
 	rotationHandler      *handlers.RotationHandler
 	dynamicSecretHandler *handlers.DynamicSecretHandler
-	logForwardingHandler *handlers.LogForwardingHandler
 }
 
 func NewCommandRegistry(
@@ -61,11 +58,8 @@ func NewCommandRegistry(
 	accessHandler *handlers.AccessHandler,
 	requestHandler *handlers.RequestHandler,
 	serviceTokenHandler *handlers.ServiceTokenHandler,
-	oidcHandler *handlers.OidcHandler,
-	samlHandler *handlers.SamlHandler,
 	rotationHandler *handlers.RotationHandler,
 	dynamicSecretHandler *handlers.DynamicSecretHandler,
-	logForwardingHandler *handlers.LogForwardingHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
 		appHandler:           appHandler,
@@ -82,11 +76,8 @@ func NewCommandRegistry(
 		accessHandler:        accessHandler,
 		requestHandler:       requestHandler,
 		serviceTokenHandler:  serviceTokenHandler,
-		oidcHandler:          oidcHandler,
-		samlHandler:          samlHandler,
 		rotationHandler:      rotationHandler,
 		dynamicSecretHandler: dynamicSecretHandler,
-		logForwardingHandler: logForwardingHandler,
 	}
 }
 
@@ -126,11 +117,8 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 			AccessCommands(r.accessHandler),
 			RequestCommands(r.requestHandler),
 			ServiceTokenCommands(r.serviceTokenHandler),
-			OidcCommands(r.oidcHandler),
-			SamlCommands(r.samlHandler),
 			RotationCommands(r.rotationHandler),
 			DynamicSecretCommands(r.dynamicSecretHandler),
-			LogForwardingCommands(r.logForwardingHandler),
 		},
 	}
 	return observe(root, "")
