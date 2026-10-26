@@ -3,13 +3,13 @@ package certificate
 import "errors"
 
 var (
-	ErrOrgNameRequired    = errors.New("organization name is required")
-	ErrEmailRequired      = errors.New("member email is required")
-	ErrRoleRequired       = errors.New("role is required")
-	ErrCNRequired         = errors.New("common name is required")
-	ErrSerialRequired     = errors.New("certificate serial number is required")
-	ErrCANotInitialized   = errors.New("organization CA not initialized")
-	ErrCertNotFound       = errors.New("certificate not found")
+	ErrOrgNameRequired  = errors.New("organization name is required")
+	ErrEmailRequired    = errors.New("member email is required")
+	ErrRoleRequired     = errors.New("role is required")
+	ErrCNRequired       = errors.New("common name is required")
+	ErrSerialRequired   = errors.New("certificate serial number is required")
+	ErrCANotInitialized = errors.New("organization CA not initialized")
+	ErrCertNotFound     = errors.New("certificate not found")
 )
 
 type CertError struct {
