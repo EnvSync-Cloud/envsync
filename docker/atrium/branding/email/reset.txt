@@ -1,0 +1,8 @@
+Subject: Reset your password
+Reset the password for {{.Username}}
+
+Someone asked to reset this EnvSync password. The link expires in {{.TTL}}.
+
+{{.Link}}
+
+If this wasn't you, ignore the message. Your password stays the same.

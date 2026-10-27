@@ -2,9 +2,9 @@ import { type Context } from "hono";
 import * as openid from "openid-client";
 
 import { config } from "@/utils/env";
-import { exchangeAuthorizationCode, getIdentityIssuer, passwordGrantLogin } from "@/helpers/identity";
+import { exchangeAuthorizationCode, getIdentityIssuer, passwordGrantLogin, revokeDirectoryToken } from "@/helpers/identity";
 import { detectAuthType } from "@/helpers/access";
-import { clearWebAuthCookies, readAccessToken, readLoginState, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
+import { clearWebAuthCookies, readAccessToken, readIdToken, readLoginState, readRefreshToken, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
 import { UserService } from "@/services/user.service";
 import { verifyJWTToken } from "@/helpers/jwt";
 
@@ -147,6 +147,8 @@ export class AccessController {
 
 	public static readonly logoutWebLogin = async (c: Context) => {
 		const accessToken = readAccessToken(c) ?? "";
+		const refreshToken = readRefreshToken(c) ?? "";
+		const idToken = readIdToken(c) ?? "";
 		const authType = detectAuthType(accessToken);
 		clearWebAuthCookies(c);
 
@@ -161,10 +163,18 @@ export class AccessController {
 			);
 		}
 
+		await Promise.all([
+			refreshToken ? revokeDirectoryToken(refreshToken, "refresh_token").catch(() => undefined) : undefined,
+			accessToken && authType !== "SAML" ? revokeDirectoryToken(accessToken, "access_token").catch(() => undefined) : undefined,
+		]);
+
 		const logoutUrl = new URL(`${getIdentityIssuer()}/oauth/logout`);
 		logoutUrl.searchParams.set("client_id", config.ATRIUM_WEB_CLIENT_ID);
 		logoutUrl.searchParams.set("post_logout_redirect_uri", config.DASHBOARD_URL);
 		logoutUrl.searchParams.set("confirm", "yes");
+		if (idToken) {
+			logoutUrl.searchParams.set("id_token_hint", idToken);
+		}
 
 		return c.json(
 			{

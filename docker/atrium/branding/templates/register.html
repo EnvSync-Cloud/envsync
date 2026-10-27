@@ -1,0 +1,25 @@
+{{template "head" .}}
+    <h1>Create your account</h1>
+    {{if .Brand.ClientName}}<p class="sub">You'll join {{.Brand.ClientName}} on {{.Brand.ProductName}}.</p>{{else}}<p class="sub">Create your {{.Brand.ProductName}} account.</p>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/register">
+        {{template "oauth_fields" .}}
+        <div class="field">
+            <label for="username">Work email</label>
+            <input class="input" id="username" name="username" type="text" autocomplete="username" required autofocus>
+        </div>
+        <div class="field">
+            <label for="email">Email</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email">
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="new-password" required>
+            <p class="help">At least 8 characters.</p>
+        </div>
+        {{template "bot_widget" .}}
+        <button class="primary" type="submit">Create account</button>
+    </form>
+    <p class="below">Already registered? <a href="/login?client_id={{.ClientID}}&redirect_uri={{.RedirectURI}}&response_type={{.ResponseType}}&scope={{.Scope}}&state={{.State}}&nonce={{.Nonce}}&code_challenge={{.CodeChallenge}}&code_challenge_method={{.CodeChallengeMethod}}">Sign in</a></p>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

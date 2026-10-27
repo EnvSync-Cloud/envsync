@@ -235,6 +235,24 @@ export async function exchangeAuthorizationCode(
 	}));
 }
 
+export async function revokeDirectoryToken(token: string, hint: "access_token" | "refresh_token" = "refresh_token") {
+	const body = new URLSearchParams({
+		token,
+		token_type_hint: hint,
+		client_id: config.ATRIUM_WEB_CLIENT_ID,
+		client_secret: config.ATRIUM_WEB_CLIENT_SECRET,
+	});
+	const res = await fetch(`${internalBase()}/oauth/revoke`, {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body,
+		signal: AbortSignal.timeout(10_000),
+	});
+	if (!res.ok) {
+		throw new Error(`Atrium revoke failed: ${res.status} ${await res.text()}`);
+	}
+}
+
 export async function refreshDirectoryToken(
 	refreshToken: string,
 	clientId: string,

@@ -1,0 +1,21 @@
+{{template "head" .}}
+    <h1>Check your email</h1>
+    <p class="sub">We sent a 6-digit code{{if .LoginHint}} to {{.LoginHint}}{{end}}. It expires in 10 minutes.</p>
+    {{if .Notice}}<p class="hint">{{.Notice}}</p>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/login/otp">
+        {{template "oauth_fields" .}}
+        <input type="hidden" name="username" value="{{.LoginHint}}">
+        <div class="field">
+            <label for="otp">6-digit code</label>
+            <input class="input" id="otp" name="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required autofocus>
+        </div>
+        <button class="primary" type="submit">Sign in</button>
+    </form>
+    <form method="POST" action="/login/otp/resend">
+        {{template "oauth_fields" .}}
+        <input type="hidden" name="username" value="{{.LoginHint}}">
+        <button class="ghost" type="submit">Send a new code</button>
+    </form>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

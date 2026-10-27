@@ -10,6 +10,7 @@ database:
 security:
   issuer: http://auth.lvh.me:8080
   login_identifier: username
+  identifier_first: true
   access_token_format: jwt
   access_token_lifetime: 1h
   refresh_token_lifetime: 168h
@@ -34,6 +35,9 @@ smtp:
   starttls: false
   implicit_tls: false
 
+email:
+  templates_dir: /branding/email
+
 queue:
   type: memory
 
@@ -41,6 +45,17 @@ org:
   enabled: false
 
 branding:
-  product_name: envsync
-  login_title: Sign in
+  product_name: EnvSync
+  login_title: Welcome back
+  username_label: Work email
+  password_label: Password
+  submit_label: Continue
+  assets_dir: /branding/assets
+  logo_file: logo.png
+  favicon_file: logo.png
+  primary_color: "#3ddc84"
+  background_color: "#050507"
+  text_color: "#f5f5f6"
   show_register: false
+  show_forgot_password: true
+  templates: /branding/templates

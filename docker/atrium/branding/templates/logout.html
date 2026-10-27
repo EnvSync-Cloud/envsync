@@ -1,0 +1,21 @@
+{{template "head" .}}
+    {{if .Done}}
+    <h1>Signed out</h1>
+    <p class="sub">This browser session has ended. Other devices stay signed in.</p>
+    {{else}}
+    <h1>Sign out of {{.Brand.ProductName}}?</h1>
+    <p class="sub">This ends the session in this browser. Other devices stay signed in.</p>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/oauth/logout">
+        {{template "csrf_field" .}}
+        <input type="hidden" name="confirm" value="yes">
+        <input type="hidden" name="id_token_hint" value="{{.IDTokenHint}}">
+        <input type="hidden" name="client_id" value="{{.ClientID}}">
+        <input type="hidden" name="post_logout_redirect_uri" value="{{.PostLogoutRedirectURI}}">
+        <input type="hidden" name="state" value="{{.State}}">
+        <button class="primary" type="submit">Sign out</button>
+    </form>
+    <p class="hint"><a href="/login">Stay signed in</a></p>
+    {{end}}
+{{template "card_close" .}}
+{{template "brand_footer" .}}

@@ -1,0 +1,8 @@
+Subject: Confirm your email
+Confirm {{.Email}}
+
+Use this link to finish creating your EnvSync account. The link stops working in 24 hours.
+
+{{.Link}}
+
+If you didn't create an EnvSync account, you can ignore this message.
