@@ -133,6 +133,37 @@ function dockerComposeUp(): void {
 	throw new Error(`Docker Compose up failed after ${E2E_COMPOSE_UP_ATTEMPTS} attempts.`);
 }
 
+function waitForAtriumSeed(): void {
+	console.log("Waiting for atrium-seed to restore clients...");
+	const deadline = Date.now() + 180_000;
+	for (;;) {
+		const result = spawnSync("docker", ["compose", "ps", "-a", "--format", "json", "atrium-seed"], {
+			cwd: rootDir,
+			encoding: "utf8",
+			env: process.env,
+		});
+		const raw = result.stdout?.trim() ?? "";
+		const seed = raw
+			.split("\n")
+			.filter(Boolean)
+			.map(line => JSON.parse(line) as { State?: string; ExitCode?: number; Status?: string })
+			.at(-1);
+		if (seed?.State === "exited") {
+			if (seed.ExitCode === 0) return;
+			spawnSync("docker", ["compose", "logs", "--no-color", "atrium-seed"], {
+				cwd: rootDir,
+				stdio: "inherit",
+				env: process.env,
+			});
+			throw new Error(`atrium-seed exited ${seed.ExitCode} before the E2E client could be read.`);
+		}
+		if (Date.now() > deadline) {
+			throw new Error(`atrium-seed did not finish: ${seed?.Status ?? "container not found"}`);
+		}
+		sleepMs(1_000);
+	}
+}
+
 function dockerComposeExec(service: string, args: string[], opts: { stdio?: "inherit" | "pipe"; encoding?: BufferEncoding } = {}) {
 	return spawnSync(
 		"docker",
@@ -288,6 +319,7 @@ async function init(): Promise<void> {
 	await waitForMailpit();
 	const atriumUrl = process.env.ATRIUM_INTERNAL_URL ?? "http://auth.lvh.me:8080";
 	await waitForAtrium(atriumUrl);
+	waitForAtriumSeed();
 	await waitForMiniKMS();
 
 	ensureMiniKmsSchema();

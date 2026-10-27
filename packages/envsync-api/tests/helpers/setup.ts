@@ -231,6 +231,7 @@ if (!isE2E) {
 					expires_in: 900,
 					refresh_expires_in: 86400,
 				}),
+				revokeDirectoryToken: async () => {},
 			}));
 
 		// Mock KMS — in-memory AES-256-GCM with deterministic test keys + Vault + Session mocks
