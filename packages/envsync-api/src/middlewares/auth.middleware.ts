@@ -16,7 +16,7 @@ import { RoleService } from "@/services/role.service";
 import { SystemCertificateProvisioningService } from "@/services/system-certificate-provisioning.service";
 import { UserService } from "@/services/user.service";
 import { validateAccess, detectAuthType } from "@/helpers/access";
-import { keycloakRefreshToken } from "@/helpers/keycloak";
+import { refreshDirectoryToken } from "@/helpers/identity";
 import { isServiceTokenAllowedPath } from "@/middlewares/service-token-scope.middleware";
 
 function isQueryCredentialAttempt(ctx: Context) {
@@ -89,10 +89,10 @@ export const authMiddleware = (): MiddlewareHandler => {
 					}
 
 					try {
-						const refreshed = await keycloakRefreshToken(
+						const refreshed = await refreshDirectoryToken(
 							refreshToken,
-							config.KEYCLOAK_WEB_CLIENT_ID,
-							config.KEYCLOAK_WEB_CLIENT_SECRET,
+							config.ATRIUM_WEB_CLIENT_ID,
+							config.ATRIUM_WEB_CLIENT_SECRET,
 						);
 						setWebAuthCookies(ctx, refreshed);
 						token = refreshed.access_token;

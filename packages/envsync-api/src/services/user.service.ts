@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { createKeycloakUser } from "@/helpers/keycloak";
+import { createDirectoryUser } from "@/helpers/identity";
 import { DB } from "@/libs/db";
 import { AppError, orNotFound } from "@/libs/errors";
 import { runSaga } from "@/helpers/saga";
@@ -83,7 +83,7 @@ export class UserService {
 					const firstName = parts[0]?.slice(0, 200) ?? "User";
 					const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
 
-					const zUser = await createKeycloakUser({
+					const zUser = await createDirectoryUser({
 						userName: data.email,
 						email: data.email,
 						firstName,

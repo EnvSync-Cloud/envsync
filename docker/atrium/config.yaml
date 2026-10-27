@@ -1,0 +1,46 @@
+server:
+  host: 0.0.0.0
+  port: 8080
+
+database:
+  driver: postgres
+  dsn: postgres://atrium:atrium@atrium_db:5432/atrium?sslmode=disable
+  migrations: true
+
+security:
+  issuer: http://auth.lvh.me:8080
+  login_identifier: username
+  access_token_format: jwt
+  access_token_lifetime: 1h
+  refresh_token_lifetime: 168h
+  session_lifetime: 168h
+  disable_registration: true
+  disable_social_registration: true
+  hash_algo: internal/hashalgo/algo.go
+
+registration:
+  dcr_enabled: false
+  cimd_enabled: false
+
+management:
+  client_id: management
+  client_secret: replace-me-management
+
+smtp:
+  enabled: true
+  host: mailpit
+  port: 1025
+  from: atrium@envsync.local
+  starttls: false
+  implicit_tls: false
+
+queue:
+  type: memory
+
+org:
+  enabled: false
+
+branding:
+  product_name: envsync
+  login_title: Sign in
+  show_register: false

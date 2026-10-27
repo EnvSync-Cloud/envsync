@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { deleteKeycloakUser } from "@/helpers/keycloak";
+import { deleteDirectoryUser } from "@/helpers/identity";
 import { runSaga } from "@/helpers/saga";
 import { DB } from "@/libs/db";
 import { invalidateSessionToken } from "@/libs/kms/session-manager";
@@ -132,7 +132,7 @@ export class OrgService {
 		]);
 
 		await Promise.allSettled(
-			orphanedAuthServiceIds.map((authServiceId) => deleteKeycloakUser(authServiceId)),
+			orphanedAuthServiceIds.map((authServiceId) => deleteDirectoryUser(authServiceId)),
 		);
 	};
 }
