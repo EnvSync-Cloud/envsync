@@ -2,23 +2,16 @@
 
 import { CreateBucketCommand, PutBucketPolicyCommand, S3Client } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 
 import { config } from "../src/utils/env";
 import { updateRootEnv } from "../src/utils/load-root-env";
 import { DB } from "../src/libs/db";
 import {
-	createKeycloakUser,
-	findKeycloakUserByUsername,
-	getKeycloakBaseUrl,
-	getKeycloakRealm,
-	getKeycloakUserById,
-	setKeycloakUserPassword,
-} from "../src/helpers/keycloak";
-
-const repoRoot = path.resolve(import.meta.dir, "..", "..", "..");
-const localRealmImportPath = path.join(repoRoot, "docker/keycloak/realm-import/envsync-realm.json");
+	createDirectoryUser,
+	findDirectoryUserByUsername,
+	getDirectoryUserById,
+	setDirectoryUserPassword,
+} from "../src/helpers/identity";
 
 function buildPublicReadBucketPolicy(bucket: string) {
 	return JSON.stringify({
@@ -67,218 +60,28 @@ async function initRustfsBucket() {
 	console.log(`RustFS: public read policy applied to bucket ${config.S3_BUCKET}.`);
 }
 
-async function getAdminToken() {
-	const res = await fetch(`${getKeycloakBaseUrl()}/realms/master/protocol/openid-connect/token`, {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams({
-			grant_type: "password",
-			client_id: "admin-cli",
-			username: config.KEYCLOAK_ADMIN_USER,
-			password: config.KEYCLOAK_ADMIN_PASSWORD,
-		}),
-	});
-	if (!res.ok) throw new Error(`Keycloak admin login failed: ${res.status} ${await res.text()}`);
-	return (await res.json()) as { access_token: string };
-}
-
-async function ensureKeycloakRealmSessionSettings(token: string) {
-	const base = `${getKeycloakBaseUrl()}/admin/realms/${getKeycloakRealm()}`;
-	const lookup = await fetch(base, {
-		headers: { Authorization: `Bearer ${token}` },
-	});
-	if (!lookup.ok)
-		throw new Error(`Keycloak realm lookup failed: ${lookup.status} ${await lookup.text()}`);
-
-	const realm = (await lookup.json()) as Record<string, unknown>;
-	const updateRes = await fetch(base, {
-		method: "PUT",
-		headers: {
-			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			...realm,
-			accessTokenLifespan: Number(config.KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS),
-			ssoSessionIdleTimeout: Number(config.KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS),
-			ssoSessionMaxLifespan: Number(config.KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS),
-			clientSessionIdleTimeout: Number(config.KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS),
-			clientSessionMaxLifespan: Number(config.KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS),
-		}),
-	});
-	if (!updateRes.ok && updateRes.status !== 204) {
-		throw new Error(`Keycloak realm update failed: ${updateRes.status} ${await updateRes.text()}`);
-	}
-}
-
-function loadImportedRealmClients() {
-	if (!fs.existsSync(localRealmImportPath)) return null;
-
-	const parsed = JSON.parse(fs.readFileSync(localRealmImportPath, "utf8")) as {
-		clients?: Array<{
-			clientId?: string;
-			publicClient?: boolean;
-			secret?: string;
-		}>;
-	};
-
-	const clients = parsed.clients ?? [];
-	const web = clients.find(client => client.clientId === config.KEYCLOAK_WEB_CLIENT_ID);
-	const api = clients.find(client => client.clientId === config.KEYCLOAK_API_CLIENT_ID);
-	const cli = clients.find(client => client.clientId === config.KEYCLOAK_CLI_CLIENT_ID);
-
-	if (!web?.secret || !api?.secret || !cli) return null;
-
-	return {
-		web: { clientId: config.KEYCLOAK_WEB_CLIENT_ID, clientSecret: web.secret },
-		api: { clientId: config.KEYCLOAK_API_CLIENT_ID, clientSecret: api.secret },
-		cli: { clientId: config.KEYCLOAK_CLI_CLIENT_ID, clientSecret: "" },
-	};
-}
-
-async function ensureKeycloakClient(
-	token: string,
-	clientId: string,
-	opts: {
-		publicClient: boolean;
-		redirectUris: string[];
-		standardFlowEnabled: boolean;
-		directAccessGrantsEnabled?: boolean;
-		deviceGrant?: boolean;
-		webOrigins?: string[];
-		attributes?: Record<string, string>;
-	},
-) {
-	const base = `${getKeycloakBaseUrl()}/admin/realms/${getKeycloakRealm()}`;
-	const lookup = await fetch(`${base}/clients?clientId=${encodeURIComponent(clientId)}`, {
-		headers: { Authorization: `Bearer ${token}` },
-	});
-	if (!lookup.ok)
-		throw new Error(`Keycloak client lookup failed: ${lookup.status} ${await lookup.text()}`);
-	const existing = ((await lookup.json()) as Array<{ id: string }>)[0];
-	if (existing?.id) {
-		const updateRes = await fetch(`${base}/clients/${existing.id}`, {
-			method: "PUT",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				clientId,
-				name: clientId,
-				protocol: "openid-connect",
-				publicClient: opts.publicClient,
-				standardFlowEnabled: opts.standardFlowEnabled,
-				directAccessGrantsEnabled: opts.directAccessGrantsEnabled ?? false,
-				serviceAccountsEnabled: false,
-				redirectUris: opts.redirectUris,
-				webOrigins: opts.webOrigins ?? ["*"],
-				attributes: {
-					...(opts.attributes ?? {}),
-					...(opts.deviceGrant ? { "oauth2.device.authorization.grant.enabled": "true" } : {}),
-				},
-			}),
-		});
-		if (!updateRes.ok && updateRes.status !== 204) {
-			throw new Error(
-				`Keycloak client update failed: ${updateRes.status} ${await updateRes.text()}`,
-			);
-		}
-		if (opts.publicClient) return { clientId, clientSecret: "" };
-		const secretRes = await fetch(`${base}/clients/${existing.id}/client-secret`, {
-			headers: { Authorization: `Bearer ${token}` },
-		});
-		const secretData = (await secretRes.json()) as { value: string };
-		return { clientId, clientSecret: secretData.value };
-	}
-
-	const createRes = await fetch(`${base}/clients`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			clientId,
-			name: clientId,
-			protocol: "openid-connect",
-			publicClient: opts.publicClient,
-			standardFlowEnabled: opts.standardFlowEnabled,
-			directAccessGrantsEnabled: opts.directAccessGrantsEnabled ?? false,
-			serviceAccountsEnabled: false,
-			redirectUris: opts.redirectUris,
-			webOrigins: opts.webOrigins ?? ["*"],
-			attributes: {
-				...(opts.attributes ?? {}),
-				...(opts.deviceGrant ? { "oauth2.device.authorization.grant.enabled": "true" } : {}),
-			},
-		}),
-	});
-	if (!createRes.ok && createRes.status !== 201) {
-		throw new Error(`Keycloak client create failed: ${createRes.status} ${await createRes.text()}`);
-	}
-
-	return ensureKeycloakClient(token, clientId, opts);
-}
-
-async function initKeycloakClients() {
-	let web: { clientId: string; clientSecret: string };
-	let api: { clientId: string; clientSecret: string };
-	let cli: { clientId: string; clientSecret: string };
-
-	try {
-		const { access_token } = await getAdminToken();
-		await ensureKeycloakRealmSessionSettings(access_token);
-		const webCallbackOrigin = new URL(config.KEYCLOAK_WEB_CALLBACK_URL).origin;
-		web = await ensureKeycloakClient(access_token, config.KEYCLOAK_WEB_CLIENT_ID, {
-			publicClient: false,
-			redirectUris: [
-				config.KEYCLOAK_WEB_REDIRECT_URI,
-				config.KEYCLOAK_WEB_CALLBACK_URL,
-				webCallbackOrigin,
-			],
-			standardFlowEnabled: true,
-			directAccessGrantsEnabled: true,
-			webOrigins: [webCallbackOrigin],
-			attributes: { "post.logout.redirect.uris": "+" },
-		});
-		api = await ensureKeycloakClient(access_token, config.KEYCLOAK_API_CLIENT_ID, {
-			publicClient: false,
-			redirectUris: [config.KEYCLOAK_API_REDIRECT_URI],
-			standardFlowEnabled: true,
-		});
-		cli = await ensureKeycloakClient(access_token, config.KEYCLOAK_CLI_CLIENT_ID, {
-			publicClient: true,
-			redirectUris: [],
-			standardFlowEnabled: false,
-			deviceGrant: true,
-		});
-	} catch (error) {
-		const imported = loadImportedRealmClients();
-		if (!imported) {
-			throw error;
-		}
-		web = imported.web;
-		api = imported.api;
-		cli = imported.cli;
-		console.log(
-			"Keycloak: admin bootstrap unavailable locally, using imported realm client definitions.",
-		);
-	}
-
+async function initAtriumClients() {
 	updateRootEnv({
-		KEYCLOAK_WEB_CLIENT_ID: web.clientId,
-		KEYCLOAK_WEB_CLIENT_SECRET: web.clientSecret,
-		KEYCLOAK_API_CLIENT_ID: api.clientId,
-		KEYCLOAK_API_CLIENT_SECRET: api.clientSecret,
-		KEYCLOAK_CLI_CLIENT_ID: cli.clientId,
+		ATRIUM_INTERNAL_URL: config.ATRIUM_INTERNAL_URL,
+		ATRIUM_PUBLIC_URL: config.ATRIUM_PUBLIC_URL,
+		ATRIUM_ISSUER: config.ATRIUM_ISSUER,
+		ATRIUM_MANAGEMENT_CLIENT_ID: config.ATRIUM_MANAGEMENT_CLIENT_ID,
+		ATRIUM_MANAGEMENT_CLIENT_SECRET: config.ATRIUM_MANAGEMENT_CLIENT_SECRET,
+		ATRIUM_WEB_CLIENT_ID: config.ATRIUM_WEB_CLIENT_ID,
+		ATRIUM_WEB_CLIENT_SECRET: config.ATRIUM_WEB_CLIENT_SECRET,
+		ATRIUM_API_CLIENT_ID: config.ATRIUM_API_CLIENT_ID,
+		ATRIUM_API_CLIENT_SECRET: config.ATRIUM_API_CLIENT_SECRET,
+		ATRIUM_CLI_CLIENT_ID: config.ATRIUM_CLI_CLIENT_ID,
+		ATRIUM_WEB_REDIRECT_URI: config.ATRIUM_WEB_REDIRECT_URI,
+		ATRIUM_WEB_CALLBACK_URL: config.ATRIUM_WEB_CALLBACK_URL,
+		ATRIUM_API_REDIRECT_URI: config.ATRIUM_API_REDIRECT_URI,
 	});
-	console.log("Keycloak: clients bootstrapped and written to root .env");
+	console.log("Atrium: client ids are owned by atrium-seed. Recorded the configured values in root .env");
 }
 
 async function init() {
 	await initRustfsBucket();
-	await initKeycloakClients();
+	await initAtriumClients();
 	console.log("\nInit done.");
 }
 
@@ -327,7 +130,7 @@ async function ensureDevOrg(
 			.executeTakeFirst();
 		const existingKeycloakBootstrapUser = localBootstrapUser
 			? null
-			: await findKeycloakUserByUsername(bootstrapUser.email);
+			: await findDirectoryUserByUsername(bootstrapUser.email);
 		const shouldUseTemporaryBootstrapUser = Boolean(
 			localBootstrapUser || existingKeycloakBootstrapUser,
 		);
@@ -1078,9 +881,9 @@ async function ensureUiHarnessMembership(
 	const password = DEV_USER_PASSWORD;
 	const parts = identity.fullName.trim().split(/\s+/).filter(Boolean);
 
-	let idpUser = await findKeycloakUserByUsername(identity.email);
+	let idpUser = await findDirectoryUserByUsername(identity.email);
 	if (!idpUser) {
-		idpUser = await createKeycloakUser({
+		idpUser = await createDirectoryUser({
 			userName: identity.email,
 			email: identity.email,
 			firstName: parts[0] ?? "EnvSync",
@@ -1089,7 +892,7 @@ async function ensureUiHarnessMembership(
 		});
 		console.log(`Created Keycloak user for ${identity.email}`);
 	} else {
-		await setKeycloakUserPassword(idpUser.id, password);
+		await setDirectoryUserPassword(idpUser.id, password);
 	}
 
 	const memberships = await UserService.listUsersByIdpId(idpUser.id);
@@ -1235,7 +1038,7 @@ async function bootstrapUiHarness() {
 
 	const summary = await Promise.all(
 		UI_HARNESS_IDENTITIES.map(async identity => {
-			const keycloakUser = await findKeycloakUserByUsername(identity.email);
+			const keycloakUser = await findDirectoryUserByUsername(identity.email);
 			if (!keycloakUser) {
 				return `${identity.email}: missing`;
 			}
@@ -1288,10 +1091,10 @@ async function createDevUser() {
 
 	if (!user) {
 		const parts = fullName.trim().split(/\s+/).filter(Boolean);
-		const existingIdpUser = await findKeycloakUserByUsername(email);
+		const existingIdpUser = await findDirectoryUserByUsername(email);
 		const idp =
 			existingIdpUser ??
-			(await createKeycloakUser({
+			(await createDirectoryUser({
 				userName: email,
 				email,
 				firstName: parts[0] ?? "EnvSync",
@@ -1299,7 +1102,7 @@ async function createDevUser() {
 				password,
 			}));
 		if (existingIdpUser) {
-			await setKeycloakUserPassword(existingIdpUser.id, password);
+			await setDirectoryUserPassword(existingIdpUser.id, password);
 			console.log("Recovered existing Keycloak-only dev user into local database");
 		}
 
@@ -1328,13 +1131,13 @@ async function createDevUser() {
 	} else {
 		console.log(`Dev user already exists: ${email}`);
 
-		let idpUser = user.auth_service_id ? await getKeycloakUserById(user.auth_service_id) : null;
+		let idpUser = user.auth_service_id ? await getDirectoryUserById(user.auth_service_id) : null;
 		if (!idpUser) {
-			idpUser = await findKeycloakUserByUsername(email);
+			idpUser = await findDirectoryUserByUsername(email);
 		}
 		if (!idpUser) {
 			const parts = fullName.trim().split(/\s+/).filter(Boolean);
-			idpUser = await createKeycloakUser({
+			idpUser = await createDirectoryUser({
 				userName: email,
 				email,
 				firstName: parts[0] ?? "EnvSync",
@@ -1356,7 +1159,7 @@ async function createDevUser() {
 				.executeTakeFirstOrThrow();
 			console.log("Synced dev user auth_service_id with Keycloak");
 		}
-		await setKeycloakUserPassword(idpUser.id, password);
+		await setDirectoryUserPassword(idpUser.id, password);
 		console.log(`Dev user login reset: ${email} / ${password}`);
 		if (user.org_id !== org.id) {
 			await moveUserToOrg(user.id, org.id, role.id, user.org_id);

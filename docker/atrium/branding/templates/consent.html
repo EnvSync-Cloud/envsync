@@ -1,0 +1,20 @@
+{{template "head" .}}
+    <h1>{{if .Brand.ClientName}}{{.Brand.ClientName}}{{else}}{{.ClientID}}{{end}}</h1>
+    <p class="sub">wants access to your {{.Brand.ProductName}} account{{if .Username}} ({{.Username}}){{end}}.</p>
+    {{if .ActorName}}<p class="sub">This lets <strong>{{.ActorName}}</strong> act on your behalf.</p>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    {{if .Scopes}}
+    <ul class="scopes">
+        {{range .Scopes}}<li><i class="dot"></i><div>{{scopeLabel .}}<span>{{.}}</span></div></li>{{end}}
+    </ul>
+    {{end}}
+    <form method="POST" action="/consent">
+        {{template "oauth_fields" .}}
+        <div class="row">
+            <button class="ghost" type="submit" name="action" value="deny">Deny</button>
+            <button class="primary" type="submit" name="action" value="approve">Allow</button>
+        </div>
+    </form>
+    <p class="hint">You can revoke this later from your account.</p>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

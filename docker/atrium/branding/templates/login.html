@@ -1,0 +1,50 @@
+{{template "head" .}}
+    <h1>{{.Brand.Heading}}</h1>
+    {{if .Brand.ClientName}}<p class="sub">Continue to {{.Brand.ClientName}}.</p>{{else}}<p class="sub">Sign in to {{.Brand.ProductName}}.</p>{{end}}
+    {{if .Organization}}<div class="chip"><div>Organization <strong>{{.Organization}}</strong></div></div>{{end}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    {{if or .Passwordless (and .IdentifierFirst (not .AskPassword))}}
+    <form method="POST" action="/login">
+        {{template "oauth_fields" .}}
+        <input type="hidden" name="login_step" value="identifier">
+        <div class="field">
+            <label for="username">{{.Brand.UsernameLabel}}</label>
+            <input class="input" id="username" name="username" type="text" value="{{.LoginHint}}" autocomplete="{{.Brand.Autocomplete}}" required autofocus>
+        </div>
+        {{template "bot_widget" .}}
+        <button class="primary" type="submit">Continue</button>
+        {{if .Status}}<p class="hint">{{.Status}}</p>{{end}}
+        {{if .Providers}}
+        <div class="split">OR</div>
+        {{range .Providers}}<a class="ghost social" href="/login/social/{{.ID}}?{{$.OAuthQuery}}">Continue with {{.Name}}</a>{{end}}
+        {{end}}
+        {{if .Brand.ShowRegister}}<p class="below">Don't have an account? <a href="/register?client_id={{.ClientID}}&redirect_uri={{.RedirectURI}}&response_type={{.ResponseType}}&scope={{.Scope}}&state={{.State}}&nonce={{.Nonce}}&code_challenge={{.CodeChallenge}}&code_challenge_method={{.CodeChallengeMethod}}&next={{.Next}}">Create an account</a></p>{{end}}
+    </form>
+    {{else}}
+    <form method="POST" action="/login">
+        {{template "oauth_fields" .}}
+        {{if .IdentifierFirst}}<input type="hidden" name="login_step" value="password">{{end}}
+        {{if .IdentifierFirst}}
+        <input type="hidden" name="username" value="{{.LoginHint}}">
+        <div class="chip"><div>Email <strong>{{.LoginHint}}</strong></div><a href="/login?{{.OAuthQuery}}">Change</a></div>
+        {{else}}
+        <div class="field">
+            <label for="username">{{.Brand.UsernameLabel}}</label>
+            <input class="input" id="username" name="username" type="text" value="{{.LoginHint}}" autocomplete="{{.Brand.Autocomplete}}" required autofocus>
+        </div>
+        {{end}}
+        <div class="field">
+            <label for="password">{{.Brand.PasswordLabel}}</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+        </div>
+        {{template "bot_widget" .}}
+        <button class="primary" type="submit">Sign in</button>
+        {{if .Brand.ShowForgot}}<p class="hint"><a href="/forgot">Forgot password</a></p>{{end}}
+        {{if .Providers}}
+        <div class="split">OR</div>
+        {{range .Providers}}<a class="ghost social" href="/login/social/{{.ID}}?{{$.OAuthQuery}}">Continue with {{.Name}}</a>{{end}}
+        {{end}}
+    </form>
+    {{end}}
+{{template "card_close" .}}
+{{template "brand_footer" .}}

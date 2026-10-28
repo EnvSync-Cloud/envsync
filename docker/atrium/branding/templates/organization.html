@@ -1,0 +1,17 @@
+{{template "head" .}}
+    <h1>Where are you working?</h1>
+    <p class="sub">{{if .Username}}{{.Username}} is a member of these organizations.{{else}}Choose an organization.{{end}}</p>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/organization">
+        {{template "oauth_fields" .}}
+        {{range .Orgs}}
+        <label class="choice">
+            {{if .LogoURL}}<img class="avatar" src="{{.LogoURL}}" alt="">{{else}}<span class="avatar">{{.Initial}}</span>{{end}}
+            <span>{{.Name}}<small>{{.Slug}}</small></span>
+            <input type="radio" name="organization" value="{{.Slug}}" required>
+        </label>
+        {{end}}
+        <button class="primary" type="submit">Continue</button>
+    </form>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

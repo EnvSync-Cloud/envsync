@@ -1,0 +1,4 @@
+Subject: Set a password to sign in
+Sign in at {{.Issuer}}/login
+
+We will email you a one-time code, then ask you to set a password.

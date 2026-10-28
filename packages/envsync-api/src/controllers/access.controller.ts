@@ -2,17 +2,17 @@ import { type Context } from "hono";
 import * as openid from "openid-client";
 
 import { config } from "@/utils/env";
-import { getKeycloakIssuer, getKeycloakPublicBaseUrl, getKeycloakRealm, keycloakPasswordLogin, keycloakTokenExchange } from "@/helpers/keycloak";
+import { exchangeAuthorizationCode, getIdentityIssuer, passwordGrantLogin, revokeDirectoryToken } from "@/helpers/identity";
 import { detectAuthType } from "@/helpers/access";
-import { clearWebAuthCookies, readAccessToken, readLoginState, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
+import { clearWebAuthCookies, readAccessToken, readIdToken, readLoginState, readRefreshToken, setActiveMembershipCookie, setLoginStateCookie, setWebAuthCookies } from "@/helpers/web-auth";
 import { UserService } from "@/services/user.service";
 import { verifyJWTToken } from "@/helpers/jwt";
 
-const keycloakDiscoveryUrl = () => `${getKeycloakIssuer()}/.well-known/openid-configuration`;
-const authorizeEndpoint = () => `${getKeycloakIssuer()}/protocol/openid-connect/auth`;
+const directoryDiscoveryUrl = () => `${getIdentityIssuer()}/.well-known/openid-configuration`;
+const authorizeEndpoint = () => `${getIdentityIssuer()}/oauth/authorize`;
 
 const clientMetadata: openid.ClientMetadata = {
-	client_id: config.KEYCLOAK_CLI_CLIENT_ID,
+	client_id: config.ATRIUM_CLI_CLIENT_ID,
 	redirect_uris: [],
 };
 const clientAuth: openid.ClientAuth = openid.None();
@@ -40,11 +40,11 @@ export class AccessController {
 	}
 
 	public static readonly createCliLogin = async (c: Context) => {
-		const { KEYCLOAK_CLI_CLIENT_ID } = config;
+		const { ATRIUM_CLI_CLIENT_ID } = config;
 
 		const authConfig: openid.Configuration = await openid.discovery(
-			new URL(keycloakDiscoveryUrl()),
-			KEYCLOAK_CLI_CLIENT_ID,
+			new URL(directoryDiscoveryUrl()),
+			ATRIUM_CLI_CLIENT_ID,
 			clientMetadata,
 			clientAuth,
 			{
@@ -64,7 +64,7 @@ export class AccessController {
 				device_code: deviceAuthInit.device_code,
 				expires_in: deviceAuthInit.expires_in,
 				interval: deviceAuthInit.interval,
-				client_id: KEYCLOAK_CLI_CLIENT_ID,
+				client_id: ATRIUM_CLI_CLIENT_ID,
 				token_url: authConfig.serverMetadata().token_endpoint
 			},
 			201,
@@ -72,11 +72,11 @@ export class AccessController {
 	};
 
 	public static readonly createWebLogin = async (c: Context) => {
-		const { KEYCLOAK_WEB_CLIENT_ID, KEYCLOAK_WEB_REDIRECT_URI } = config;
+		const { ATRIUM_WEB_CLIENT_ID, ATRIUM_WEB_REDIRECT_URI } = config;
 		const state = crypto.randomUUID();
 		setLoginStateCookie(c, state);
 
-		const loginUrl = `${authorizeEndpoint()}?client_id=${KEYCLOAK_WEB_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(KEYCLOAK_WEB_REDIRECT_URI)}&state=${encodeURIComponent(state)}`;
+		const loginUrl = `${authorizeEndpoint()}?client_id=${ATRIUM_WEB_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(ATRIUM_WEB_REDIRECT_URI)}&state=${encodeURIComponent(state)}`;
 
 		return c.json({ message: "Web login created successfully.", loginUrl }, 201);
 	};
@@ -91,9 +91,9 @@ export class AccessController {
 		}
 
 		try {
-			const clientId = config.KEYCLOAK_E2E_CLIENT_ID || config.KEYCLOAK_WEB_CLIENT_ID;
-			const clientSecret = config.KEYCLOAK_E2E_CLIENT_SECRET || config.KEYCLOAK_WEB_CLIENT_SECRET;
-			const tokenData = await keycloakPasswordLogin(
+			const clientId = config.ATRIUM_E2E_CLIENT_ID || config.ATRIUM_WEB_CLIENT_ID;
+			const clientSecret = config.ATRIUM_E2E_CLIENT_SECRET || config.ATRIUM_WEB_CLIENT_SECRET;
+			const tokenData = await passwordGrantLogin(
 				email,
 				password,
 				clientId,
@@ -116,10 +116,10 @@ export class AccessController {
 
 	public static readonly callbackWebLogin = async (c: Context) => {
 		const {
-			KEYCLOAK_WEB_CLIENT_ID,
-			KEYCLOAK_WEB_CLIENT_SECRET,
-			KEYCLOAK_WEB_REDIRECT_URI,
-			KEYCLOAK_WEB_CALLBACK_URL,
+			ATRIUM_WEB_CLIENT_ID,
+			ATRIUM_WEB_CLIENT_SECRET,
+			ATRIUM_WEB_REDIRECT_URI,
+			ATRIUM_WEB_CALLBACK_URL,
 		} = config;
 
 		const { code, state } = c.req.query();
@@ -133,20 +133,22 @@ export class AccessController {
 			return c.json({ error: "Invalid login state." }, 400);
 		}
 
-		const tokenData = await keycloakTokenExchange(
+		const tokenData = await exchangeAuthorizationCode(
 			code,
-			KEYCLOAK_WEB_REDIRECT_URI,
-			KEYCLOAK_WEB_CLIENT_ID,
-			KEYCLOAK_WEB_CLIENT_SECRET,
+			ATRIUM_WEB_REDIRECT_URI,
+			ATRIUM_WEB_CLIENT_ID,
+			ATRIUM_WEB_CLIENT_SECRET,
 		);
 
 		setWebAuthCookies(c, tokenData);
 		await this.setActiveMembershipFromAccessToken(c, tokenData.access_token);
-		return c.redirect(KEYCLOAK_WEB_CALLBACK_URL, 302);
+		return c.redirect(ATRIUM_WEB_CALLBACK_URL, 302);
 	};
 
 	public static readonly logoutWebLogin = async (c: Context) => {
 		const accessToken = readAccessToken(c) ?? "";
+		const refreshToken = readRefreshToken(c) ?? "";
+		const idToken = readIdToken(c) ?? "";
 		const authType = detectAuthType(accessToken);
 		clearWebAuthCookies(c);
 
@@ -161,11 +163,18 @@ export class AccessController {
 			);
 		}
 
-		const logoutUrl = new URL(
-			`${getKeycloakPublicBaseUrl()}/realms/${getKeycloakRealm()}/protocol/openid-connect/logout`,
-		);
-		logoutUrl.searchParams.set("client_id", config.KEYCLOAK_WEB_CLIENT_ID);
+		await Promise.all([
+			refreshToken ? revokeDirectoryToken(refreshToken, "refresh_token").catch(() => undefined) : undefined,
+			accessToken && authType !== "SAML" ? revokeDirectoryToken(accessToken, "access_token").catch(() => undefined) : undefined,
+		]);
+
+		const logoutUrl = new URL(`${getIdentityIssuer()}/oauth/logout`);
+		logoutUrl.searchParams.set("client_id", config.ATRIUM_WEB_CLIENT_ID);
 		logoutUrl.searchParams.set("post_logout_redirect_uri", config.DASHBOARD_URL);
+		logoutUrl.searchParams.set("confirm", "yes");
+		if (idToken) {
+			logoutUrl.searchParams.set("id_token_hint", idToken);
+		}
 
 		return c.json(
 			{
@@ -177,18 +186,18 @@ export class AccessController {
 	};
 
 	public static readonly createApiLogin = async (c: Context) => {
-		const { KEYCLOAK_API_CLIENT_ID, KEYCLOAK_API_REDIRECT_URI } = config;
+		const { ATRIUM_API_CLIENT_ID, ATRIUM_API_REDIRECT_URI } = config;
 
-		const loginUrl = `${authorizeEndpoint()}?client_id=${KEYCLOAK_API_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(KEYCLOAK_API_REDIRECT_URI)}`;
+		const loginUrl = `${authorizeEndpoint()}?client_id=${ATRIUM_API_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(ATRIUM_API_REDIRECT_URI)}`;
 
 		return c.json({ message: "API login created successfully.", loginUrl }, 201);
 	};
 
 	public static readonly callbackApiLogin = async (c: Context) => {
 		const {
-			KEYCLOAK_API_CLIENT_ID,
-			KEYCLOAK_API_CLIENT_SECRET,
-			KEYCLOAK_API_REDIRECT_URI,
+			ATRIUM_API_CLIENT_ID,
+			ATRIUM_API_CLIENT_SECRET,
+			ATRIUM_API_REDIRECT_URI,
 		} = config;
 
 		const { code } = c.req.query();
@@ -197,11 +206,11 @@ export class AccessController {
 			return c.json({ error: "Code is required." }, 400);
 		}
 
-		const tokenData = await keycloakTokenExchange(
+		const tokenData = await exchangeAuthorizationCode(
 			code,
-			KEYCLOAK_API_REDIRECT_URI,
-			KEYCLOAK_API_CLIENT_ID,
-			KEYCLOAK_API_CLIENT_SECRET,
+			ATRIUM_API_REDIRECT_URI,
+			ATRIUM_API_CLIENT_ID,
+			ATRIUM_API_CLIENT_SECRET,
 		);
 
 		return c.json(

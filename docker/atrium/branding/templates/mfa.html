@@ -1,0 +1,14 @@
+{{template "head" .}}
+    <h1>Check your authenticator</h1>
+    <p class="sub">Enter the code for {{.Brand.ProductName}}{{if .Username}} · {{.Username}}{{end}}.</p>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/login/mfa">
+        {{template "oauth_fields" .}}
+        <div class="field">
+            <label for="code">6-digit code</label>
+            <input class="input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required autofocus>
+        </div>
+        <button class="primary" type="submit">Verify and continue</button>
+    </form>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

@@ -22,10 +22,6 @@ import { ensureE2EEnv } from "./bootstrap-env";
 
 ensureE2EEnv();
 
-ensureKeycloakHttpAdminSupport(
-	process.env.KEYCLOAK_ADMIN_USER ?? "admin",
-	process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin",
-);
 ensureMiniKmsSchema();
 
 // ── 4. Initialize cache ─────────────────────────────────────────────
@@ -37,54 +33,6 @@ const { DB } = await import("@/libs/db");
 await DB.getInstance();
 console.log("[E2E Setup] Database initialized and migrations applied.");
 console.log("[E2E Setup] All services are REAL — zero mock.module() calls.");
-
-function ensureKeycloakHttpAdminSupport(adminUser: string, adminPassword: string): void {
-	const monorepoRoot = findMonorepoRoot();
-	const result = spawnSync(
-		"docker",
-		[
-			"compose",
-			"exec",
-			"-T",
-			"keycloak",
-			"/opt/keycloak/bin/kcadm.sh",
-			"config",
-			"credentials",
-			"--server",
-			"http://localhost:8080",
-			"--realm",
-			"master",
-			"--user",
-			adminUser,
-			"--password",
-			adminPassword,
-		],
-		{ cwd: monorepoRoot, encoding: "utf8", env: process.env },
-	);
-	if (result.status !== 0) {
-		console.warn("[E2E Setup] Failed to log into Keycloak via kcadm. Admin HTTP flow may still fail.");
-		return;
-	}
-
-	const update = spawnSync(
-		"docker",
-		[
-			"compose",
-			"exec",
-			"-T",
-			"keycloak",
-			"/opt/keycloak/bin/kcadm.sh",
-			"update",
-			"realms/master",
-			"-s",
-			"sslRequired=NONE",
-		],
-		{ cwd: monorepoRoot, encoding: "utf8", env: process.env },
-	);
-	if (update.status === 0) {
-		console.log("[E2E Setup] Keycloak master realm updated for local HTTP admin access.");
-	}
-}
 
 function ensureMiniKmsSchema(): void {
 	const monorepoRoot = findMonorepoRoot();

@@ -1,0 +1,8 @@
+Subject: New sign-in to EnvSync
+Your account was used to sign in. If this was you, you're done.
+
+Account: {{.Username}}
+Time: {{.Time}}
+IP address: {{.IP}}
+
+Secure the account at {{.Issuer}}/forgot
