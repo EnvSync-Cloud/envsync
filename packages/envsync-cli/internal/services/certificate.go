@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"errors"
+
+	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
@@ -41,6 +44,11 @@ func (s *certService) InitCA(ctx context.Context, req requests.InitOrgCARequest)
 
 	res, err := s.repo.InitCA(ctx, req)
 	if err != nil {
+		// Auth already creates the org CA for an admin. A second init is success.
+		var conflict *sdk.ConflictError
+		if errors.As(err, &conflict) {
+			return s.GetCA(ctx)
+		}
 		return domain.Certificate{}, err
 	}
 	return mappers.OrgCAResponseToDomain(res), nil

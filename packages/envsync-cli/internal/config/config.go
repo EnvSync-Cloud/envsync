@@ -158,6 +158,8 @@ func overrideConfigWithEnv(cfg AppConfig) AppConfig {
 	}
 	if envBackendURL := os.Getenv(constants.EnvBackendURL); envBackendURL != "" {
 		cfg.BackendURL = envBackendURL
+	} else if envBackendURL := os.Getenv("ENVSYNC_API_URL"); envBackendURL != "" {
+		cfg.BackendURL = envBackendURL
 	}
 	if envTelemetryURL := os.Getenv(constants.EnvOTELURL); envTelemetryURL != "" {
 		cfg.OTELConfig.Endpoint = envTelemetryURL

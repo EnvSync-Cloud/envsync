@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 )
 
 // isolateConfigDir points the config lookup at a throwaway HOME/XDG root and
@@ -80,6 +82,16 @@ func TestConfigJSONRoundTrip(t *testing.T) {
 
 	if got != want {
 		t.Errorf("round-trip mismatch:\n got  %+v\n want %+v", got, want)
+	}
+}
+
+func TestEnvsyncAPIURLOverridesSavedBackend(t *testing.T) {
+	t.Setenv(constants.EnvBackendURL, "")
+	t.Setenv("ENVSYNC_API_URL", "http://e2e.local")
+
+	got := overrideConfigWithEnv(AppConfig{BackendURL: "https://invalid.example.test"})
+	if got.BackendURL != "http://e2e.local" {
+		t.Fatalf("backend URL = %q, want ENVSYNC_API_URL", got.BackendURL)
 	}
 }
 
