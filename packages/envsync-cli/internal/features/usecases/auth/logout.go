@@ -20,9 +20,9 @@ func NewLogoutUseCase() LogoutUseCase {
 	}
 }
 
-func (uc *logoutUseCase) Execute(ctx context.Context) error {
-	_, span := telemetry.Tracer().Start(ctx, "auth.logout")
-	defer span.End()
+func (uc *logoutUseCase) Execute(ctx context.Context) (err error) {
+	_, end := telemetry.StartSpan(ctx, "auth.logout")
+	defer end(&err)
 
 	// Perform logout
 	if err := uc.authService.Logout(); err != nil {
@@ -39,10 +39,10 @@ func (uc *logoutUseCase) Execute(ctx context.Context) error {
 
 func (uc *logoutUseCase) cleanupLocalState() error {
 	cfg := config.New()
-	cfg.AccessToken = ""
+	cfg.AuthConfig = config.AuthConfig{}
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to clear access token: %w", err)
+		return fmt.Errorf("failed to clear auth config: %w", err)
 	}
 
 	return nil

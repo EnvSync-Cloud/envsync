@@ -9,6 +9,8 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	"github.com/joho/godotenv"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type pullUseCase struct {
@@ -22,9 +24,10 @@ func NewPullUseCase() PullUseCase {
 	}
 }
 
-func (uc *pullUseCase) Execute(ctx context.Context, configPath string) (SyncResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "sync.pull")
-	defer span.End()
+func (uc *pullUseCase) Execute(ctx context.Context, configPath string) (result SyncResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "sync.pull",
+		trace.WithAttributes(attribute.String("file.path", configPath)))
+	defer end(&err)
 
 	// Check if the configuration file exists
 	if err := uc.checkConfigFileExists(configPath); err != nil {

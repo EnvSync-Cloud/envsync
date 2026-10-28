@@ -55,7 +55,7 @@ func (r *teamRepo) List(ctx context.Context) ([]TeamResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return nil, fmt.Errorf("list teams failed: %s", resp.String())
 	}
 	return result, nil
@@ -68,7 +68,7 @@ func (r *teamRepo) Get(ctx context.Context, id string) (TeamDetailResponse, erro
 	if err != nil {
 		return TeamDetailResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return TeamDetailResponse{}, fmt.Errorf("get team failed: %s", resp.String())
 	}
 	return result, nil
@@ -81,7 +81,7 @@ func (r *teamRepo) Create(ctx context.Context, payload map[string]any) (TeamResp
 	if err != nil {
 		return TeamResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return TeamResponse{}, fmt.Errorf("create team failed: %s", resp.String())
 	}
 	return result, nil
@@ -93,7 +93,7 @@ func (r *teamRepo) Update(ctx context.Context, id string, payload map[string]any
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("update team failed: %s", resp.String())
 	}
 	return nil
@@ -105,7 +105,7 @@ func (r *teamRepo) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("delete team failed: %s", resp.String())
 	}
 	return nil
@@ -120,7 +120,7 @@ func (r *teamRepo) AddMember(ctx context.Context, teamID, userID string) error {
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("add team member failed: %s", resp.String())
 	}
 	return nil
@@ -132,7 +132,7 @@ func (r *teamRepo) RemoveMember(ctx context.Context, teamID, userID string) erro
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("remove team member failed: %s", resp.String())
 	}
 	return nil
@@ -147,7 +147,7 @@ func (r *teamRepo) AssignRole(ctx context.Context, teamID, roleID string) error 
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("assign team role failed: %s", resp.String())
 	}
 	return nil
@@ -159,7 +159,7 @@ func (r *teamRepo) UnassignRole(ctx context.Context, teamID string) error {
 	if err != nil {
 		return err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return fmt.Errorf("unassign team role failed: %s", resp.String())
 	}
 	return nil

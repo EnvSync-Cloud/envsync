@@ -12,7 +12,7 @@ type GetEnvUseCase interface {
 }
 
 type SwitchEnvUseCase interface {
-	Execute(context.Context, domain.EnvType) error
+	Execute(context.Context, domain.EnvType) (domain.EnvType, error)
 }
 
 type DeleteEnvUseCase interface {

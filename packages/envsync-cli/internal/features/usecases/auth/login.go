@@ -3,12 +3,14 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pkg/browser"
 	"github.com/savioxavier/termlink"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/style"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -26,12 +28,12 @@ func NewLoginUseCase() LoginUseCase {
 }
 
 func (uc *loginUseCase) Execute(ctx context.Context) (*LoginResponse, error) {
-	return uc.ExecuteWithOptions(ctx, false, false)
+	return uc.ExecuteWithOptions(ctx, LoginOptions{})
 }
 
-func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, noBrowser bool, noWait bool) (*LoginResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "auth.login")
-	defer span.End()
+func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, opts LoginOptions) (response *LoginResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "auth.login")
+	defer end(&err)
 
 	userInfo, err := uc.checkCurrentLoginStatus(ctx)
 	if err == nil && userInfo != nil {
@@ -47,7 +49,7 @@ func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, noBrowser bool, 
 		return nil, NewLoginFailedError("failed to initiate login process", err)
 	}
 
-	if noWait {
+	if opts.NoWait {
 		return &LoginResponse{
 			Success: true,
 			Message: "Device code generated. Complete authentication in your browser, then run 'envsync auth whoami' to verify.",
@@ -63,17 +65,27 @@ func (uc *loginUseCase) ExecuteWithOptions(ctx context.Context, noBrowser bool, 
 	if err := uc.displayLoginInstructions(credentials); err != nil {
 	}
 
-	if !noBrowser {
+	if !opts.NoBrowser {
 		if err := uc.openBrowserForLogin(credentials.GetVerificationUri()); err != nil {
 		}
 	}
 
+	// The poll can run for as long as the device code is valid, so keep a
+	// visible status on stderr instead of looking hung. Stop clears the line on
+	// both paths, so whatever the caller prints next replaces the spinner.
+	sp := spinner.New(
+		fmt.Sprintf("Waiting for you to sign in in your browser… (code: %s)", credentials.GetUserCode()),
+		!opts.JSON && spinner.IsTerminal(os.Stderr),
+		os.Stderr,
+	)
+	sp.Start()
 	token, err := uc.authService.PollForToken(ctx, credentials)
+	sp.Stop()
 	if err != nil {
 		return nil, uc.handlePollingError(err)
 	}
 
-	if err := uc.authService.SaveToken(token); err != nil {
+	if err := uc.authService.SaveToken(token, credentials); err != nil {
 		return nil, NewServiceError("failed to save authentication token", err)
 	}
 

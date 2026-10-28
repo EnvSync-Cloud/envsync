@@ -86,37 +86,27 @@ func (h *ConfigHandler) Get(ctx context.Context, cmd *cli.Command) error {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	// Format output based on requested format
-	if cmd.Bool("json") {
-		return h.formatter.FormatJSON(cmd.Writer, response.Config)
+	jsonOut := cmd.Bool("json")
+
+	// No keys requested: report the whole configuration.
+	if len(keys) == 0 {
+		if jsonOut {
+			return h.formatter.FormatJSON(cmd.Writer, response.Config)
+		}
+		return h.formatter.FormatKeyValueList(cmd.Writer, "Config", response.Values)
 	}
 
-	// If specific keys were requested, show only those
-	if len(keys) > 0 {
-		for _, key := range keys {
-			if value, exists := response.Values[key]; exists {
-				if cmd.Bool("json") {
-					jsonOutput := map[string]any{
-						"key":   key,
-						"value": value,
-					}
-					if err := h.formatter.FormatJSON(cmd.Writer, jsonOutput); err != nil {
-						return err
-					}
-				}
+	// Exactly one JSON document per invocation. Calling FormatJSON inside the
+	// per-key loop emitted a separate object per key, which is not parseable as
+	// a single JSON value. Keys are emitted like the human-readable output.
+	if jsonOut {
+		return h.formatter.FormatJSON(cmd.Writer, response.Values)
+	}
 
-				if err := h.formatter.FormatSingleValue(cmd.Writer, key, value); err != nil {
-					return err
-				}
-			} else {
-				if !cmd.Bool("json") {
-					if err := h.formatter.FormatWarning(cmd.Writer, "Key '"+key+"' not found"); err != nil {
-						return err
-					}
-				}
-			}
+	for _, key := range keys {
+		if err := h.formatter.FormatSingleValue(cmd.Writer, key, response.Values[key]); err != nil {
+			return err
 		}
-		return nil
 	}
 
 	return nil
@@ -165,11 +155,7 @@ func (h *ConfigHandler) Reset(ctx context.Context, cmd *cli.Command) error {
 
 func (h *ConfigHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		// If JSON output is requested, format the error as JSON
-		jsonOutput := map[string]any{
-			"error": err.Error(),
-		}
-		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 
 	// Handle different types of use case errors
@@ -177,20 +163,20 @@ func (h *ConfigHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *configUseCase.ConfigError:
 		switch e.Code {
 		case configUseCase.ConfigErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error \n"+e.Error())
 		case configUseCase.ConfigErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.Writer, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error \n"+e.Error())
 		case configUseCase.ConfigErrorCodePermission:
-			return h.formatter.FormatError(cmd.Writer, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error \n"+e.Error())
 		case configUseCase.ConfigErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Configuration not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Configuration not found \n"+e.Error())
 		case configUseCase.ConfigErrorCodeCorrupted:
-			return h.formatter.FormatError(cmd.Writer, "Configuration corrupted: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Configuration corrupted \n"+e.Error())
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error \n"+e.Error())
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error\n "+err.Error())
 	}
 }
 

@@ -14,17 +14,17 @@ import (
 )
 
 type DynamicSecretHandler struct {
-	listEnginesUseCase   dynamic_secret.ListEnginesUseCase
-	createEngineUseCase  dynamic_secret.CreateEngineUseCase
-	getEngineUseCase     dynamic_secret.GetEngineUseCase
-	updateEngineUseCase  dynamic_secret.UpdateEngineUseCase
-	deleteEngineUseCase  dynamic_secret.DeleteEngineUseCase
-	listLeasesUseCase    dynamic_secret.ListLeasesUseCase
-	createLeaseUseCase   dynamic_secret.CreateLeaseUseCase
-	getLeaseUseCase      dynamic_secret.GetLeaseUseCase
-	revokeLeaseUseCase   dynamic_secret.RevokeLeaseUseCase
-	cleanupUseCase       dynamic_secret.CleanupUseCase
-	formatter            *formatters.DynamicSecretFormatter
+	listEnginesUseCase  dynamic_secret.ListEnginesUseCase
+	createEngineUseCase dynamic_secret.CreateEngineUseCase
+	getEngineUseCase    dynamic_secret.GetEngineUseCase
+	updateEngineUseCase dynamic_secret.UpdateEngineUseCase
+	deleteEngineUseCase dynamic_secret.DeleteEngineUseCase
+	listLeasesUseCase   dynamic_secret.ListLeasesUseCase
+	createLeaseUseCase  dynamic_secret.CreateLeaseUseCase
+	getLeaseUseCase     dynamic_secret.GetLeaseUseCase
+	revokeLeaseUseCase  dynamic_secret.RevokeLeaseUseCase
+	cleanupUseCase      dynamic_secret.CleanupUseCase
+	formatter           *formatters.DynamicSecretFormatter
 }
 
 func NewDynamicSecretHandler() *DynamicSecretHandler {
@@ -61,7 +61,7 @@ func (h *DynamicSecretHandler) ListEngines(ctx context.Context, cmd *cli.Command
 func (h *DynamicSecretHandler) CreateEngine(ctx context.Context, cmd *cli.Command) error {
 	engineType, err := sdk.NewCreateDynamicSecretEngineRequestEngineTypeFromString(cmd.String("engine"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, "Invalid engine type: "+cmd.String("engine"))
+		return h.formatter.FormatError(cmd.ErrWriter, "Invalid engine type: "+cmd.String("engine"))
 	}
 
 	req := &sdk.CreateDynamicSecretEngineRequest{
@@ -72,7 +72,7 @@ func (h *DynamicSecretHandler) CreateEngine(ctx context.Context, cmd *cli.Comman
 	if cmd.IsSet("config") {
 		var configMap map[string]interface{}
 		if err := json.Unmarshal([]byte(cmd.String("config")), &configMap); err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Invalid config JSON: "+err.Error())
+			return h.formatter.FormatError(cmd.ErrWriter, "Invalid config JSON: "+err.Error())
 		}
 		// For CLI simplicity, we pass config as a raw map
 		// The SDK union type requires specific struct, so we skip it here
@@ -94,7 +94,7 @@ func (h *DynamicSecretHandler) CreateEngine(ctx context.Context, cmd *cli.Comman
 func (h *DynamicSecretHandler) GetEngine(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Engine ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Engine ID is required (--id)")
 	}
 
 	engine, err := h.getEngineUseCase.Execute(ctx, id)
@@ -112,7 +112,7 @@ func (h *DynamicSecretHandler) GetEngine(ctx context.Context, cmd *cli.Command) 
 func (h *DynamicSecretHandler) UpdateEngine(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Engine ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Engine ID is required (--id)")
 	}
 
 	req := &sdk.UpdateDynamicSecretEngineRequest{}
@@ -141,7 +141,7 @@ func (h *DynamicSecretHandler) UpdateEngine(ctx context.Context, cmd *cli.Comman
 func (h *DynamicSecretHandler) DeleteEngine(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Engine ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Engine ID is required (--id)")
 	}
 
 	if err := h.deleteEngineUseCase.Execute(ctx, id); err != nil {
@@ -160,7 +160,7 @@ func (h *DynamicSecretHandler) DeleteEngine(ctx context.Context, cmd *cli.Comman
 func (h *DynamicSecretHandler) ListLeases(ctx context.Context, cmd *cli.Command) error {
 	engineID := cmd.String("engine-id")
 	if engineID == "" {
-		return h.formatter.FormatError(cmd.Writer, "Engine ID is required (--engine-id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Engine ID is required (--engine-id)")
 	}
 
 	leases, err := h.listLeasesUseCase.Execute(ctx, engineID)
@@ -178,7 +178,7 @@ func (h *DynamicSecretHandler) ListLeases(ctx context.Context, cmd *cli.Command)
 func (h *DynamicSecretHandler) CreateLease(ctx context.Context, cmd *cli.Command) error {
 	engineID := cmd.String("engine-id")
 	if engineID == "" {
-		return h.formatter.FormatError(cmd.Writer, "Engine ID is required (--engine-id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Engine ID is required (--engine-id)")
 	}
 
 	req := &sdk.CreateDynamicSecretLeaseRequest{}
@@ -187,7 +187,7 @@ func (h *DynamicSecretHandler) CreateLease(ctx context.Context, cmd *cli.Command
 		ttlStr := cmd.String("ttl")
 		duration, err := time.ParseDuration(ttlStr)
 		if err != nil {
-			return h.formatter.FormatError(cmd.Writer, "Invalid TTL duration: "+ttlStr)
+			return h.formatter.FormatError(cmd.ErrWriter, "Invalid TTL duration: "+ttlStr)
 		}
 		ttlSeconds := int(duration.Seconds())
 		req.TtlSeconds = &ttlSeconds
@@ -208,7 +208,7 @@ func (h *DynamicSecretHandler) CreateLease(ctx context.Context, cmd *cli.Command
 func (h *DynamicSecretHandler) GetLease(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Lease ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Lease ID is required (--id)")
 	}
 
 	lease, err := h.getLeaseUseCase.Execute(ctx, id)
@@ -226,7 +226,7 @@ func (h *DynamicSecretHandler) GetLease(ctx context.Context, cmd *cli.Command) e
 func (h *DynamicSecretHandler) RevokeLease(ctx context.Context, cmd *cli.Command) error {
 	id := cmd.String("id")
 	if id == "" {
-		return h.formatter.FormatError(cmd.Writer, "Lease ID is required (--id)")
+		return h.formatter.FormatError(cmd.ErrWriter, "Lease ID is required (--id)")
 	}
 
 	result, err := h.revokeLeaseUseCase.Execute(ctx, id)
@@ -258,5 +258,5 @@ func (h *DynamicSecretHandler) formatError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
-	return h.formatter.FormatError(cmd.Writer, err.Error())
+	return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 }

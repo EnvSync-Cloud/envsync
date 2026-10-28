@@ -177,7 +177,7 @@ func (r *gpgKeyRepo) Rotate(ctx context.Context, id string, payload map[string]a
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return responses.GpgKeyResponse{}, fmt.Errorf("rotate gpg key failed: %s", resp.String())
 	}
 	return result, nil
@@ -194,7 +194,7 @@ func (r *gpgKeyRepo) ExtendExpiry(ctx context.Context, id string, expiresInDays 
 	if err != nil {
 		return responses.GpgKeyResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return responses.GpgKeyResponse{}, fmt.Errorf("extend gpg key expiry failed: %s", resp.String())
 	}
 	return result, nil
@@ -217,7 +217,7 @@ func sdkGpgKeyToResponse(k *sdk.GpgKeyResponse) responses.GpgKeyResponse {
 		KeySize:     keySize,
 		UsageFlags:  k.UsageFlags,
 		TrustLevel:  k.TrustLevel,
-		Status:      "",
+		Status:      k.Status,
 		ExpiresAt:   k.ExpiresAt,
 		RevokedAt:   k.RevokedAt,
 		IsDefault:   k.IsDefault,
@@ -243,7 +243,7 @@ func sdkGpgKeyDetailToResponse(k *sdk.GpgKeyDetailResponse) responses.GpgKeyResp
 		KeySize:     keySize,
 		UsageFlags:  k.UsageFlags,
 		TrustLevel:  k.TrustLevel,
-		Status:      "",
+		Status:      k.Status,
 		ExpiresAt:   k.ExpiresAt,
 		RevokedAt:   k.RevokedAt,
 		IsDefault:   k.IsDefault,

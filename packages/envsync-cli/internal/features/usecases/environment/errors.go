@@ -66,6 +66,8 @@ const (
 	EnvErrorCodeNotFound     = "ENV_NOT_FOUND"
 	EnvErrorCodeCorrupted    = "ENV_CORRUPTED"
 	EnvErrorCodeServiceError = "SERVICE_ERROR"
+	EnvErrorCodeTUIError     = "TUI_ERROR"
+	EnvErrorCodeCancelled    = "CANCELLED"
 )
 
 // Helper functions to create structured errors
@@ -113,6 +115,22 @@ func NewCorruptedError(message string, cause error) *EnvError {
 func NewServiceError(message string, cause error) *EnvError {
 	return &EnvError{
 		Code:    EnvErrorCodeServiceError,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
+func NewTUIError(message string, cause error) *EnvError {
+	return &EnvError{
+		Code:    EnvErrorCodeTUIError,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
+func NewCancelledError(message string, cause error) *EnvError {
+	return &EnvError{
+		Code:    EnvErrorCodeCancelled,
 		Message: message,
 		Cause:   cause,
 	}

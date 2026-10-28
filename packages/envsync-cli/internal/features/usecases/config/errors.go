@@ -9,8 +9,12 @@ var (
 	ErrEmptyConfigKey   = errors.New("configuration key cannot be empty")
 	ErrInvalidConfigKey = errors.New("invalid configuration key")
 
-	ErrEmptyBackendURL   = errors.New("backend URL cannot be empty")
-	ErrInvalidBackendURL = errors.New("backend URL is invalid")
+	ErrEmptyBackendURL      = errors.New("backend URL cannot be empty")
+	ErrInvalidBackendURL    = errors.New("backend URL is invalid")
+	ErrEmptyServiceName     = errors.New("service name cannot be empty")
+	ErrInvalidDisabledValue = errors.New("disabled value must be true or false")
+	ErrEmptyEndpoint        = errors.New("endpoint cannot be empty")
+	ErrInvalidEndpoint      = errors.New("endpoint is invalid")
 
 	// File system errors
 	ErrConfigFileNotFound   = errors.New("configuration file not found")

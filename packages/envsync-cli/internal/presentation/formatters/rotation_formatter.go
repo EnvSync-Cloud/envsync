@@ -42,7 +42,7 @@ func (f *RotationFormatter) FormatPolicyList(writer io.Writer, policies sdk.Rota
 }
 
 func (f *RotationFormatter) FormatPolicyDetail(writer io.Writer, policy *sdk.RotationPolicyResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"🔄 Rotation Policy\n\n"+
 			"🆔 ID: %s\n"+
 			"🔧 Engine: %s\n"+
@@ -66,42 +66,8 @@ func (f *RotationFormatter) FormatPolicyDetail(writer io.Writer, policy *sdk.Rot
 	return err
 }
 
-func (f *RotationFormatter) FormatCreateSuccess(writer io.Writer, policy *sdk.RotationPolicyResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
-		"✅ Rotation policy created successfully!\n\n"+
-			"🆔 ID: %s\n"+
-			"🔧 Engine: %s\n"+
-			"🔑 Variable: %s\n"+
-			"📅 Schedule: %s\n",
-		policy.Id,
-		policy.EngineType,
-		policy.VariableKey,
-		policy.ScheduleCron,
-	))
-
-	_, err := writer.Write([]byte(output + "\n"))
-	return err
-}
-
-func (f *RotationFormatter) FormatUpdateSuccess(writer io.Writer, policy *sdk.RotationPolicyResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
-		"✅ Rotation policy updated successfully!\n\n"+
-			"🆔 ID: %s\n"+
-			"🔧 Engine: %s\n"+
-			"📅 Schedule: %s\n"+
-			"✅ Enabled: %t\n",
-		policy.Id,
-		policy.EngineType,
-		policy.ScheduleCron,
-		policy.Enabled,
-	))
-
-	_, err := writer.Write([]byte(output + "\n"))
-	return err
-}
-
 func (f *RotationFormatter) FormatTriggerSuccess(writer io.Writer, result *sdk.TriggerRotationResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Rotation triggered successfully!\n\n"+
 			"💬 Message: %s\n"+
 			"🆔 State ID: %s\n"+
@@ -140,7 +106,7 @@ func (f *RotationFormatter) FormatStatesList(writer io.Writer, states sdk.Rotati
 }
 
 func (f *RotationFormatter) FormatRevokeSuccess(writer io.Writer, result *sdk.RevokeOldCredentialResponse) error {
-	output := style.BoxStyle.Render(fmt.Sprintf(
+	output := style.Render(style.BoxStyle, fmt.Sprintf(
 		"✅ Expired credentials revoked successfully!\n\n"+
 			"💬 Message: %s\n"+
 			"🕐 Revoked At: %s\n",

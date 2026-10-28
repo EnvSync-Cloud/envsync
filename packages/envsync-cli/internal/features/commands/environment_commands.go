@@ -26,11 +26,6 @@ func SwitchEnvironmentCommand(handlers *handlers.EnvironmentHandler) *cli.Comman
 		Action:  handlers.SwitchEnvironment,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "app-id",
-				Usage:    "ID of the application to switch environment for",
-				Required: false,
-			},
-			&cli.StringFlag{
 				Name:     "env-id",
 				Usage:    "ID of the environment to switch to",
 				Required: false,
@@ -47,9 +42,8 @@ func GetAllEnvironmentsCommand(handlers *handlers.EnvironmentHandler) *cli.Comma
 		Action:  handlers.GetAllEnvironments,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "app-id",
-				Usage:    "ID of the application to list environments for",
-				Required: true,
+				Name:  "app-id",
+				Usage: "ID of the application to list environments for (defaults to app_id in ./envsyncrc.toml)",
 			},
 		},
 	}

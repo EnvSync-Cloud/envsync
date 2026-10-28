@@ -9,7 +9,14 @@ import (
 // LoginUseCase defines the interface for user authentication
 type LoginUseCase interface {
 	Execute(context.Context) (*LoginResponse, error)
-	ExecuteWithOptions(ctx context.Context, noBrowser bool, noWait bool) (*LoginResponse, error)
+	ExecuteWithOptions(ctx context.Context, opts LoginOptions) (*LoginResponse, error)
+}
+
+// LoginOptions controls how a login attempt is presented to the user.
+type LoginOptions struct {
+	NoBrowser bool // do not launch the system browser
+	NoWait    bool // return as soon as the device code is issued
+	JSON      bool // machine-readable output: suppress the spinner
 }
 
 // LogoutUseCase defines the interface for user logout

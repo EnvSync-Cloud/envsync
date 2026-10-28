@@ -6,6 +6,10 @@ import (
 	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type resetConfigUseCase struct{}
@@ -14,7 +18,11 @@ func NewResetConfigUseCase() ResetConfigUseCase {
 	return &resetConfigUseCase{}
 }
 
-func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigRequest) error {
+func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigRequest) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "config.reset",
+		trace.WithAttributes(attribute.StringSlice("config.keys", req.Keys)))
+	defer end(&err)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return NewValidationError("invalid reset config request", "", err)
@@ -28,13 +36,10 @@ func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigReques
 
 	// Reset configuration based on request
 	if len(req.Keys) == 0 {
-		// Reset all configuration
 		err = uc.resetAllConfig()
 	} else {
-		// Reset specific keys
 		err = uc.resetSpecificKeys(cfg, req.Keys)
 	}
-
 	if err != nil {
 		return err
 	}
@@ -43,12 +48,9 @@ func (uc *resetConfigUseCase) Execute(ctx context.Context, req ResetConfigReques
 }
 
 func (uc *resetConfigUseCase) resetAllConfig() error {
-	emptyCfg := config.AppConfig{
-		BackendURL:   "https://api.envsync.cloud",
-		TelemetryURL: "https://t.envsync.cloud/obs",
-	}
+	cfg := config.DefaultConfig()
 
-	if err := emptyCfg.WriteConfigFile(); err != nil {
+	if err := cfg.WriteConfigFile(); err != nil {
 		return NewFileSystemError("failed to write reset config file", err)
 	}
 
@@ -76,13 +78,21 @@ func (uc *resetConfigUseCase) resetConfigKey(cfg *config.AppConfig, key string) 
 	case "backend_url", "backendurl":
 		cfg.BackendURL = "https://api.envsync.cloud"
 	case "telemetry_url", "telemetryurl":
-		cfg.TelemetryURL = "https://t.envsync.cloud/obs"
+		cfg.OTELConfig.Endpoint = constants.OTELEndpoint
+	case "service_name", "servicename":
+		cfg.OTELConfig.ServiceName = ""
 	case "access_token", "accesstoken":
-		cfg.AccessToken = ""
-	case "telemetry_token", "telemetrytoken":
-		cfg.TelemetryToken = ""
+		cfg.AuthConfig.AccessToken = ""
+	case "refresh_token", "refreshtoken":
+		cfg.AuthConfig.RefreshToken = ""
+	case "expires_at", "expiresat":
+		cfg.AuthConfig.ExpiresAt = 0
+	case "client_id", "clientid":
+		cfg.AuthConfig.ClientID = ""
+	case "token_url", "tokenurl":
+		cfg.AuthConfig.TokenURL = ""
 	default:
-		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url, telemetry_url, access_token, telemetry_token", key)
+		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url, telemetry_url, access_token, refresh_token, expires_at, client_id, token_url", key)
 	}
 
 	return nil

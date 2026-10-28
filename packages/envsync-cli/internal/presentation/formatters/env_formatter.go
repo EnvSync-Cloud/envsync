@@ -19,7 +19,7 @@ func NewEnvFormatter() *EnvFormatter {
 	}
 }
 
-func (f *EnvFormatter) FormatEnvList(writer io.Writer, envs []domain.EnvType) error {
+func (f *EnvFormatter) FormatEnvTable(writer io.Writer, envs []domain.EnvType) error {
 	if len(envs) == 0 {
 		_, err := writer.Write([]byte("📭 No environments found.\n"))
 		return err

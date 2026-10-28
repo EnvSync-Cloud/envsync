@@ -9,6 +9,9 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type verifyUseCase struct {
@@ -20,7 +23,15 @@ func NewVerifyUseCase() VerifyUseCase {
 	return &verifyUseCase{service: service}
 }
 
-func (uc *verifyUseCase) Execute(ctx context.Context, filePath, signaturePath, keyID string) (*domain.GpgVerifyResult, error) {
+func (uc *verifyUseCase) Execute(ctx context.Context, filePath, signaturePath, keyID string) (verified *domain.GpgVerifyResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gpg_key.verify",
+		trace.WithAttributes(
+			attribute.String("file.path", filePath),
+			attribute.String("signature.path", signaturePath),
+			attribute.String("key.id", keyID),
+		))
+	defer end(&err)
+
 	if filePath == "" {
 		return nil, NewValidationError("file path is required for verification", ErrFileNotFound)
 	}

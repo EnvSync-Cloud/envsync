@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 
@@ -16,13 +17,11 @@ import (
 	genpem "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gen_pem"
 	gpgUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/gpg_key"
 	inituc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/init"
-	lfUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/log_forwarding"
-	oidcUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/oidc"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/run"
-	samlUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/saml"
 	serviceTokenUseCases "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/service_token"
 	syncUseCase "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/sync"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
@@ -47,11 +46,8 @@ func main() {
 		container.AccessHandler,
 		container.RequestHandler,
 		container.ServiceTokenHandler,
-		container.OidcHandler,
-		container.SamlHandler,
 		container.RotationHandler,
 		container.DynamicSecretHandler,
-		container.LogForwardingHandler,
 	)
 
 	// Build CLI app
@@ -59,32 +55,35 @@ func main() {
 
 	// Run the application
 	if err := app.Run(context.Background(), os.Args); err != nil {
+		var rendered formatters.RenderedError
+		if errors.As(err, &rendered) {
+			// The formatter already displayed the failure; exit non-zero
+			// without printing the message a second time.
+			os.Exit(1)
+		}
 		log.Fatal(err)
 	}
 }
 
 // Container holds the handler dependencies
 type Container struct {
-	AppHandler            *handlers.AppHandler
-	AuthHandler           *handlers.AuthHandler
-	ConfigHandler         *handlers.ConfigHandler
-	EnvironmentHandler    *handlers.EnvironmentHandler
-	SyncHandler           *handlers.SyncHandler
-	ExportHandler         *handlers.ExportHandler
-	InitHandler           *handlers.InitHandler
-	RunHandler            *handlers.RunHandler
-	GenPEMKeyHandler      *handlers.GenPEMKeyHandler
-	GpgKeyHandler         *handlers.GpgKeyHandler
-	CertificateHandler    *handlers.CertificateHandler
-	TeamHandler           *handlers.TeamHandler
-	AccessHandler         *handlers.AccessHandler
-	RequestHandler        *handlers.RequestHandler
-	ServiceTokenHandler   *handlers.ServiceTokenHandler
-	OidcHandler           *handlers.OidcHandler
-	SamlHandler           *handlers.SamlHandler
-	RotationHandler       *handlers.RotationHandler
-	DynamicSecretHandler  *handlers.DynamicSecretHandler
-	LogForwardingHandler  *handlers.LogForwardingHandler
+	AppHandler           *handlers.AppHandler
+	AuthHandler          *handlers.AuthHandler
+	ConfigHandler        *handlers.ConfigHandler
+	EnvironmentHandler   *handlers.EnvironmentHandler
+	SyncHandler          *handlers.SyncHandler
+	ExportHandler        *handlers.ExportHandler
+	InitHandler          *handlers.InitHandler
+	RunHandler           *handlers.RunHandler
+	GenPEMKeyHandler     *handlers.GenPEMKeyHandler
+	GpgKeyHandler        *handlers.GpgKeyHandler
+	CertificateHandler   *handlers.CertificateHandler
+	TeamHandler          *handlers.TeamHandler
+	AccessHandler        *handlers.AccessHandler
+	RequestHandler       *handlers.RequestHandler
+	ServiceTokenHandler  *handlers.ServiceTokenHandler
+	RotationHandler      *handlers.RotationHandler
+	DynamicSecretHandler *handlers.DynamicSecretHandler
 }
 
 // buildDependencyContainer creates and wires all handler dependencies
@@ -98,10 +97,12 @@ func buildDependencyContainer() *Container {
 	envFormatter := formatters.NewEnvFormatter()
 	initFormatter := formatters.NewInitFormatter()
 	syncFormatter := formatters.NewSyncFormatter()
+	runFormatter := formatters.NewRunFormatter()
 
 	// Initialize use cases
 	createAppUseCase := appUseCases.NewCreateAppUseCase()
-	deleteAppUseCase := appUseCases.NewDeleteAppUseCase()
+	tuiFactory := factory.NewAppFactory()
+	deleteAppUseCase := appUseCases.NewDeleteAppUseCase(tuiFactory)
 	listAppsUseCase := appUseCases.NewListAppsUseCase()
 
 	loginUseCase := authUseCases.NewLoginUseCase()
@@ -120,7 +121,8 @@ func buildDependencyContainer() *Container {
 	pushUseCase := syncUseCase.NewPushUseCase()
 	exportUseCase := exportUseCases.NewExportUseCase()
 
-	initUC := inituc.NewInitUseCase()
+	initFactory := factory.NewInitFactory()
+	initUC := inituc.NewInitUseCase(initFactory)
 
 	injectUseCase := run.NewInjectEnv()
 	injectSecretUseCase := run.NewInjectSecretUseCase()
@@ -157,6 +159,7 @@ func buildDependencyContainer() *Container {
 		deleteAppUseCase,
 		listAppsUseCase,
 		appFormatter,
+		tuiFactory,
 	)
 
 	c.AuthHandler = handlers.NewAuthHandler(
@@ -178,6 +181,7 @@ func buildDependencyContainer() *Container {
 		switchEnvironmentUseCase,
 		deleteEnvironmentUseCase,
 		envFormatter,
+		factory.NewEnvFactory(),
 	)
 
 	c.SyncHandler = handlers.NewSyncHandler(
@@ -201,6 +205,7 @@ func buildDependencyContainer() *Container {
 		injectSecretUseCase,
 		fetchAppUseCase,
 		readConfigUseCase,
+		runFormatter,
 	)
 
 	c.GenPEMKeyHandler = handlers.NewGenPEMKeyHandler(
@@ -218,6 +223,7 @@ func buildDependencyContainer() *Container {
 		gpgDeleteKeyUseCase,
 		gpgService,
 		gpgKeyFormatter,
+		factory.NewGpgKeyFactory(),
 	)
 
 	certFormatter := formatters.NewCertificateFormatter()
@@ -235,7 +241,7 @@ func buildDependencyContainer() *Container {
 	)
 
 	c.TeamHandler = handlers.NewTeamHandler()
-	c.AccessHandler = handlers.NewAccessHandler()
+	c.AccessHandler = handlers.NewAccessHandler(factory.NewAccessFactory())
 	c.RequestHandler = handlers.NewRequestHandler()
 
 	stCreateUseCase := serviceTokenUseCases.NewCreateServiceTokenUseCase()
@@ -248,58 +254,14 @@ func buildDependencyContainer() *Container {
 		stListUseCase,
 		stGetUseCase,
 		stDeleteUseCase,
+		listAppsUseCase,
+		getEnvironmentUseCase,
 		stFormatter,
-	)
-
-	oidcCreateUseCase := oidcUseCases.NewCreateOidcProviderUseCase()
-	oidcListUseCase := oidcUseCases.NewListOidcProvidersUseCase()
-	oidcGetUseCase := oidcUseCases.NewGetOidcProviderUseCase()
-	oidcUpdateUseCase := oidcUseCases.NewUpdateOidcProviderUseCase()
-	oidcDeleteUseCase := oidcUseCases.NewDeleteOidcProviderUseCase()
-	oidcFormatter := formatters.NewOidcFormatter()
-	c.OidcHandler = handlers.NewOidcHandler(
-		oidcCreateUseCase,
-		oidcListUseCase,
-		oidcGetUseCase,
-		oidcUpdateUseCase,
-		oidcDeleteUseCase,
-		oidcFormatter,
-	)
-
-	samlCreateUseCase := samlUseCases.NewCreateSamlProviderUseCase()
-	samlListUseCase := samlUseCases.NewListSamlProvidersUseCase()
-	samlGetUseCase := samlUseCases.NewGetSamlProviderUseCase()
-	samlUpdateUseCase := samlUseCases.NewUpdateSamlProviderUseCase()
-	samlDeleteUseCase := samlUseCases.NewDeleteSamlProviderUseCase()
-	samlMetadataUseCase := samlUseCases.NewGetSamlMetadataUseCase()
-	samlSsoUseCase := samlUseCases.NewInitiateSamlSsoUseCase()
-	samlFormatter := formatters.NewSamlFormatter()
-	c.SamlHandler = handlers.NewSamlHandler(
-		samlCreateUseCase,
-		samlListUseCase,
-		samlGetUseCase,
-		samlUpdateUseCase,
-		samlDeleteUseCase,
-		samlMetadataUseCase,
-		samlSsoUseCase,
-		samlFormatter,
+		factory.NewServiceTokenFactory(),
 	)
 
 	c.RotationHandler = handlers.NewRotationHandler()
 	c.DynamicSecretHandler = handlers.NewDynamicSecretHandler()
-
-	lfCreateUseCase := lfUseCases.NewCreateLogForwardingConfigUseCase()
-	lfListUseCase := lfUseCases.NewListLogForwardingConfigsUseCase()
-	lfGetUseCase := lfUseCases.NewGetLogForwardingConfigUseCase()
-	lfDeleteUseCase := lfUseCases.NewDeleteLogForwardingConfigUseCase()
-	lfFormatter := formatters.NewLogForwardingFormatter()
-	c.LogForwardingHandler = handlers.NewLogForwardingHandler(
-		lfCreateUseCase,
-		lfListUseCase,
-		lfGetUseCase,
-		lfDeleteUseCase,
-		lfFormatter,
-	)
 
 	return c
 }

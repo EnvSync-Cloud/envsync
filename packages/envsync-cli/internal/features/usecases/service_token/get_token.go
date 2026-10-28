@@ -4,8 +4,10 @@ import (
 	"context"
 	"strings"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
@@ -20,9 +22,9 @@ func NewGetServiceTokenUseCase() GetServiceTokenUseCase {
 	}
 }
 
-func (uc *getServiceTokenUseCase) Execute(ctx context.Context, id string) (*sdk.ServiceTokenResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "service_token.get")
-	defer span.End()
+func (uc *getServiceTokenUseCase) Execute(ctx context.Context, id string) (result *domain.ServiceToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "service_token.get", trace.WithAttributes(attribute.String("token.id", id)))
+	defer end(&err)
 
 	if strings.TrimSpace(id) == "" {
 		return nil, NewServiceTokenValidationError("service token ID is required", ErrTokenIDRequired)
@@ -33,5 +35,5 @@ func (uc *getServiceTokenUseCase) Execute(ctx context.Context, id string) (*sdk.
 		return nil, NewServiceTokenServiceError("failed to get service token", err)
 	}
 
-	return token, nil
+	return &token, nil
 }

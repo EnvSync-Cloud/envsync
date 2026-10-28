@@ -12,6 +12,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type SyncService interface {
@@ -88,7 +89,10 @@ func (s *sync) WriteConfigData(cfg domain.SyncConfig) error {
 	return nil
 }
 
-func (s *sync) ReadRemoteEnv(ctx context.Context) ([]*domain.EnvironmentVariable, error) {
+func (s *sync) ReadRemoteEnv(ctx context.Context) (result []*domain.EnvironmentVariable, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.sync.read_remote_env")
+	defer end(&err)
+
 	envRes, err := s.repo.GetAllEnv(ctx)
 	if err != nil {
 		return nil, err
@@ -129,7 +133,10 @@ func (s *sync) WriteLocalEnv(env map[string]string) error {
 	return godotenv.Write(env, ".env")
 }
 
-func (s *sync) WriteRemoteEnv(ctx context.Context, env *domain.EnvironmentSync) error {
+func (s *sync) WriteRemoteEnv(ctx context.Context, env *domain.EnvironmentSync) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.sync.write_remote_env")
+	defer end(&err)
+
 	toCreate := env.ToAdd
 	toUpdate := env.ToUpdate
 	toDelete := env.ToDelete
