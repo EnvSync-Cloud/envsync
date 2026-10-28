@@ -6,6 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type SecretService interface {
@@ -24,7 +25,10 @@ func NewSecretService() SecretService {
 	}
 }
 
-func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID string) ([]domain.Secret, error) {
+func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID string) (result []domain.Secret, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.secret.get_all_secrets")
+	defer end(&err)
+
 	sec, err := s.repo.GetAll(ctx, appID, envTypeID)
 	if err != nil {
 		return nil, err
@@ -38,7 +42,10 @@ func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID stri
 	return secrets, nil
 }
 
-func (s *secretService) RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) ([]domain.Secret, error) {
+func (s *secretService) RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) (result []domain.Secret, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.secret.revel_secrets")
+	defer end(&err)
+
 	sec, err := s.repo.Reveal(ctx, appID, envTypeID, keys)
 	if err != nil {
 		return nil, err

@@ -18,9 +18,9 @@ func NewWhoamiUseCase() WhoamiUseCase {
 	}
 }
 
-func (uc *whoamiUseCase) Execute(ctx context.Context) (*WhoamiResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "auth.whoami")
-	defer span.End()
+func (uc *whoamiUseCase) Execute(ctx context.Context) (result *WhoamiResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "auth.whoami")
+	defer end(&err)
 
 	// Initialize response with configuration info
 	response := &WhoamiResponse{

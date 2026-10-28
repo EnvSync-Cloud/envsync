@@ -56,8 +56,8 @@ func certCACommands(handler *handlers.CertificateHandler) *cli.Command {
 
 func certIssueCommand(handler *handlers.CertificateHandler) *cli.Command {
 	return &cli.Command{
-		Name:  "issue",
-		Usage: "Issue a member or service certificate",
+		Name:   "issue",
+		Usage:  "Issue a member or service certificate",
 		Action: handler.IssueCert,
 		Flags: []cli.Flag{
 			&cli.StringFlag{

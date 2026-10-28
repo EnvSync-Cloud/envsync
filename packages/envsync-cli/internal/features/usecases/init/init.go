@@ -1,49 +1,62 @@
 package init
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
-	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/BurntSushi/toml"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type initCaseUse struct {
 	appService services.ApplicationService
+	envService services.EnvTypeService
+	tui        *factory.InitFactory
 }
 
-func NewInitUseCase() InitUseCase {
-	appService := services.NewAppService()
+func NewInitUseCase(tui *factory.InitFactory) InitUseCase {
 	return &initCaseUse{
-		appService: appService,
+		appService: services.NewAppService(),
+		envService: services.NewEnvTypeService(),
+		tui:        tui,
 	}
 }
 
-func (uc *initCaseUse) Execute(ctx context.Context, config string) error {
+func (uc *initCaseUse) Execute(ctx context.Context, config string) (InitResult, error) {
 	return uc.ExecuteWithOptions(ctx, config, "", "")
 }
 
-func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, appID string, envTypeID string) error {
-	ctx, span := telemetry.Tracer().Start(ctx, "project.init")
-	defer span.End()
+func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, appID string, envTypeID string) (result InitResult, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "project.init", trace.WithAttributes(
+		attribute.String("config.path", config),
+		attribute.String("app.id", appID),
+		attribute.String("env.id", envTypeID),
+	))
+	defer end(&err)
 
 	if err := uc.checkConfigExists(config); err == nil {
-		return err
+		return InitResult{}, err
 	}
 
+	sp := spinner.New("Fetching applications…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
 	apps, err := uc.appService.GetAllApps(ctx)
+	sp.Stop()
 	if err != nil {
-		return NewServiceError("failed to retrieve applications", err)
+		return InitResult{}, NewServiceError("failed to retrieve applications", err)
 	}
 
 	if len(apps) == 0 {
-		return NewNotFoundError("no applications found. Create an application first with 'envsync app create'", nil)
+		return InitResult{}, NewNotFoundError("no applications found. Create an application first with 'envsync app create'", nil)
 	}
 
 	var selectedAppID, selectedEnvID string
@@ -53,22 +66,23 @@ func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, ap
 		selectedEnvID = envTypeID
 
 		if envTypeID == "" {
-			for _, app := range apps {
-				if app.ID == appID {
-					if len(app.EnvTypes) > 0 {
-						selectedEnvID, err = uc.selectEnvType(app)
-						if err != nil {
-							return err
-						}
-					}
+			appName := ""
+			for _, a := range apps {
+				if a.ID == appID {
+					appName = a.Name
 					break
 				}
+			}
+
+			selectedEnvID, err = uc.selectEnvType(ctx, appID, appName)
+			if err != nil {
+				return InitResult{}, err
 			}
 		}
 	} else {
 		selectedAppID, selectedEnvID, err = uc.selectAppAndEnv(ctx, apps)
 		if err != nil {
-			return err
+			return InitResult{}, err
 		}
 	}
 
@@ -77,80 +91,76 @@ func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, ap
 		EnvTypeID: selectedEnvID,
 	}
 
-	return uc.saveConfig(syncConfig)
+	if err := uc.saveConfig(syncConfig); err != nil {
+		return InitResult{}, err
+	}
+
+	return InitResult{
+		Path:      constants.DefaultProjectConfig,
+		AppID:     selectedAppID,
+		EnvTypeID: selectedEnvID,
+	}, nil
+}
+
+// fetchEnvTypes loads an application's environment types. The application list
+// does not carry them, so they have to be fetched per application.
+func (uc *initCaseUse) fetchEnvTypes(ctx context.Context, appID, appName string) ([]domain.EnvType, error) {
+	sp := spinner.New(fmt.Sprintf("Fetching environments for %s…", appName), spinner.IsTerminal(os.Stderr), os.Stderr)
+	sp.Start()
+	envTypes, err := uc.envService.GetEnvTypesByAppID(ctx, appID)
+	sp.Stop()
+	if err != nil {
+		return nil, NewServiceError("failed to retrieve environment types", err)
+	}
+	return envTypes, nil
 }
 
 func (uc *initCaseUse) selectAppAndEnv(ctx context.Context, apps []domain.Application) (string, string, error) {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("\n📋 Available Applications:")
-	fmt.Println(strings.Repeat("-", 60))
-	for i, app := range apps {
-		fmt.Printf("  %d) %s (ID: %s)\n", i+1, app.Name, app.ID)
+	selected, ok, err := uc.tui.PickApp(apps)
+	if err != nil {
+		return "", "", NewTUIError("failed to select application", err)
 	}
-	fmt.Println(strings.Repeat("-", 60))
-
-	fmt.Print("\nSelect application (enter number or ID): ")
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	var selectedApp *domain.Application
-	for i, app := range apps {
-		if input == fmt.Sprintf("%d", i+1) || input == app.ID || strings.EqualFold(input, app.Name) {
-			selectedApp = &apps[i]
-			break
-		}
+	if !ok {
+		return "", "", NewCancelledError("initialisation cancelled by user", nil)
 	}
 
-	if selectedApp == nil {
-		return "", "", NewNotFoundError("application not found: "+input, nil)
+	envTypes, err := uc.fetchEnvTypes(ctx, selected.ID, selected.Name)
+	if err != nil {
+		return "", "", err
+	}
+	if len(envTypes) == 0 {
+		return "", "", NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
 	}
 
-	if len(selectedApp.EnvTypes) == 0 {
-		return selectedApp.ID, "", nil
+	env, ok, err := factory.PickEnvType(envTypes, "Select an environment for "+selected.Name)
+	if err != nil {
+		return "", "", NewTUIError("failed to select environment", err)
+	}
+	if !ok {
+		return "", "", NewCancelledError("initialisation cancelled by user", nil)
 	}
 
-	fmt.Printf("\n🌍 Available Environments for %s:\n", selectedApp.Name)
-	fmt.Println(strings.Repeat("-", 60))
-	for i, env := range selectedApp.EnvTypes {
-		fmt.Printf("  %d) %s (ID: %s)\n", i+1, env.Name, env.ID)
-	}
-	fmt.Println(strings.Repeat("-", 60))
-
-	fmt.Print("\nSelect environment (enter number or ID): ")
-	envInput, _ := reader.ReadString('\n')
-	envInput = strings.TrimSpace(envInput)
-
-	for i, env := range selectedApp.EnvTypes {
-		if envInput == fmt.Sprintf("%d", i+1) || envInput == env.ID || strings.EqualFold(envInput, env.Name) {
-			return selectedApp.ID, env.ID, nil
-		}
-	}
-
-	return "", "", NewNotFoundError("environment not found: "+envInput, nil)
+	return selected.ID, env.ID, nil
 }
 
-func (uc *initCaseUse) selectEnvType(app domain.Application) (string, error) {
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Printf("\n🌍 Available Environments for %s:\n", app.Name)
-	fmt.Println(strings.Repeat("-", 60))
-	for i, env := range app.EnvTypes {
-		fmt.Printf("  %d) %s (ID: %s)\n", i+1, env.Name, env.ID)
+func (uc *initCaseUse) selectEnvType(ctx context.Context, appID, appName string) (string, error) {
+	envTypes, err := uc.fetchEnvTypes(ctx, appID, appName)
+	if err != nil {
+		return "", err
 	}
-	fmt.Println(strings.Repeat("-", 60))
-
-	fmt.Print("\nSelect environment (enter number or ID): ")
-	envInput, _ := reader.ReadString('\n')
-	envInput = strings.TrimSpace(envInput)
-
-	for i, env := range app.EnvTypes {
-		if envInput == fmt.Sprintf("%d", i+1) || envInput == env.ID || strings.EqualFold(envInput, env.Name) {
-			return env.ID, nil
-		}
+	if len(envTypes) == 0 {
+		return "", NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
 	}
 
-	return "", NewNotFoundError("environment not found: "+envInput, nil)
+	env, ok, err := factory.PickEnvType(envTypes, "Select an environment for "+appName)
+	if err != nil {
+		return "", NewTUIError("failed to select environment", err)
+	}
+	if !ok {
+		return "", NewCancelledError("initialisation cancelled by user", nil)
+	}
+
+	return env.ID, nil
 }
 
 func (uc *initCaseUse) checkConfigExists(configPath string) error {

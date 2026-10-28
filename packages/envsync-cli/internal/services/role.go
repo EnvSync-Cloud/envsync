@@ -6,6 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type RoleService interface {
@@ -24,7 +25,10 @@ func NewRoleService() RoleService {
 	}
 }
 
-func (r *role) GetAllRoles(ctx context.Context) ([]domain.Role, error) {
+func (r *role) GetAllRoles(ctx context.Context) (result []domain.Role, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.role.get_all_roles")
+	defer end(&err)
+
 	roleRes, err := r.roleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err

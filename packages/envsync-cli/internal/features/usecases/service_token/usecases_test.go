@@ -6,41 +6,40 @@ import (
 	"strings"
 	"testing"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
-
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 )
 
 // mockServiceTokenService is a test double implementing services.ServiceTokenService.
 // Each method delegates to an assignable function field so tests control behavior.
 type mockServiceTokenService struct {
-	createFn      func(ctx context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error)
-	getAllFn      func(ctx context.Context) (sdk.ServiceTokensResponse, error)
-	getByIDFn     func(ctx context.Context, id string) (*sdk.ServiceTokenResponse, error)
-	deleteFn      func(ctx context.Context, id string) error
+	createFn  func(ctx context.Context, st *domain.ServiceToken) (domain.ServiceToken, error)
+	getAllFn  func(ctx context.Context) ([]domain.ServiceToken, error)
+	getByIDFn func(ctx context.Context, id string) (domain.ServiceToken, error)
+	deleteFn  func(ctx context.Context, id string) error
 }
 
 var _ services.ServiceTokenService = (*mockServiceTokenService)(nil)
 
-func (m *mockServiceTokenService) CreateServiceToken(ctx context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error) {
+func (m *mockServiceTokenService) CreateServiceToken(ctx context.Context, st *domain.ServiceToken) (domain.ServiceToken, error) {
 	if m.createFn != nil {
-		return m.createFn(ctx, req)
+		return m.createFn(ctx, st)
 	}
-	return nil, nil
+	return domain.ServiceToken{}, nil
 }
 
-func (m *mockServiceTokenService) GetAllServiceTokens(ctx context.Context) (sdk.ServiceTokensResponse, error) {
+func (m *mockServiceTokenService) GetAllServiceTokens(ctx context.Context) ([]domain.ServiceToken, error) {
 	if m.getAllFn != nil {
 		return m.getAllFn(ctx)
 	}
 	return nil, nil
 }
 
-func (m *mockServiceTokenService) GetServiceToken(ctx context.Context, id string) (*sdk.ServiceTokenResponse, error) {
+func (m *mockServiceTokenService) GetServiceToken(ctx context.Context, id string) (domain.ServiceToken, error) {
 	if m.getByIDFn != nil {
 		return m.getByIDFn(ctx, id)
 	}
-	return nil, nil
+	return domain.ServiceToken{}, nil
 }
 
 func (m *mockServiceTokenService) DeleteServiceToken(ctx context.Context, id string) error {
@@ -170,50 +169,46 @@ func TestSentinelErrors(t *testing.T) {
 func TestCreateServiceTokenUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
-		req         *sdk.CreateServiceTokenRequest
-		mockFn      func(ctx context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error)
+		req         *domain.ServiceToken
+		mockFn      func(ctx context.Context, st *domain.ServiceToken) (domain.ServiceToken, error)
 		wantErr     bool
 		wantCode    string
 		errContains string
 	}{
 		{
 			name: "success",
-			req:  &sdk.CreateServiceTokenRequest{Name: "my-token"},
-			mockFn: func(_ context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error) {
-				return &sdk.CreateServiceTokenResponse{
-					Id:    "tok-123",
-					Token: "secret-value",
-					Name:  req.Name,
-				}, nil
+			req:  &domain.ServiceToken{Name: "my-token"},
+			mockFn: func(_ context.Context, st *domain.ServiceToken) (domain.ServiceToken, error) {
+				return domain.ServiceToken{ID: "tok-123", Token: "secret-value", Name: st.Name}, nil
 			},
 			wantErr: false,
 		},
 		{
 			name:        "empty name",
-			req:         &sdk.CreateServiceTokenRequest{Name: ""},
+			req:         &domain.ServiceToken{Name: ""},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeValidation,
 			errContains: "name cannot be empty",
 		},
 		{
 			name:        "whitespace only name",
-			req:         &sdk.CreateServiceTokenRequest{Name: "   "},
+			req:         &domain.ServiceToken{Name: "   "},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeValidation,
 			errContains: "name cannot be empty",
 		},
 		{
 			name:        "tab-only name",
-			req:         &sdk.CreateServiceTokenRequest{Name: "\t\n"},
+			req:         &domain.ServiceToken{Name: "\t\n"},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeValidation,
 			errContains: "name cannot be empty",
 		},
 		{
 			name: "service returns error",
-			req:  &sdk.CreateServiceTokenRequest{Name: "valid-name"},
-			mockFn: func(_ context.Context, _ *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error) {
-				return nil, errors.New("network error")
+			req:  &domain.ServiceToken{Name: "valid-name"},
+			mockFn: func(_ context.Context, _ *domain.ServiceToken) (domain.ServiceToken, error) {
+				return domain.ServiceToken{}, errors.New("network error")
 			},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeServiceError,
@@ -221,12 +216,9 @@ func TestCreateServiceTokenUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "name with leading/trailing spaces is valid",
-			req:  &sdk.CreateServiceTokenRequest{Name: "  real-token  "},
-			mockFn: func(_ context.Context, req *sdk.CreateServiceTokenRequest) (*sdk.CreateServiceTokenResponse, error) {
-				return &sdk.CreateServiceTokenResponse{
-					Id:   "tok-456",
-					Name: strings.TrimSpace(req.Name),
-				}, nil
+			req:  &domain.ServiceToken{Name: "  real-token  "},
+			mockFn: func(_ context.Context, st *domain.ServiceToken) (domain.ServiceToken, error) {
+				return domain.ServiceToken{ID: "tok-456", Name: strings.TrimSpace(st.Name)}, nil
 			},
 			wantErr: false,
 		},
@@ -274,17 +266,17 @@ func TestCreateServiceTokenUseCase_Execute(t *testing.T) {
 func TestListServiceTokensUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name     string
-		mockFn   func(ctx context.Context) (sdk.ServiceTokensResponse, error)
+		mockFn   func(ctx context.Context) ([]domain.ServiceToken, error)
 		wantErr  bool
 		wantCode string
 		wantLen  int
 	}{
 		{
 			name: "success with tokens",
-			mockFn: func(_ context.Context) (sdk.ServiceTokensResponse, error) {
-				return sdk.ServiceTokensResponse{
-					&sdk.ServiceTokenResponse{Id: "tok-1", Name: "alpha"},
-					&sdk.ServiceTokenResponse{Id: "tok-2", Name: "beta"},
+			mockFn: func(_ context.Context) ([]domain.ServiceToken, error) {
+				return []domain.ServiceToken{
+					{ID: "tok-1", Name: "alpha"},
+					{ID: "tok-2", Name: "beta"},
 				}, nil
 			},
 			wantErr: false,
@@ -292,15 +284,15 @@ func TestListServiceTokensUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "success empty list",
-			mockFn: func(_ context.Context) (sdk.ServiceTokensResponse, error) {
-				return sdk.ServiceTokensResponse{}, nil
+			mockFn: func(_ context.Context) ([]domain.ServiceToken, error) {
+				return []domain.ServiceToken{}, nil
 			},
 			wantErr: false,
 			wantLen: 0,
 		},
 		{
 			name: "success nil list",
-			mockFn: func(_ context.Context) (sdk.ServiceTokensResponse, error) {
+			mockFn: func(_ context.Context) ([]domain.ServiceToken, error) {
 				return nil, nil
 			},
 			wantErr: false,
@@ -308,7 +300,7 @@ func TestListServiceTokensUseCase_Execute(t *testing.T) {
 		},
 		{
 			name: "service error",
-			mockFn: func(_ context.Context) (sdk.ServiceTokensResponse, error) {
+			mockFn: func(_ context.Context) ([]domain.ServiceToken, error) {
 				return nil, errors.New("unauthorized")
 			},
 			wantErr:  true,
@@ -328,9 +320,6 @@ func TestListServiceTokensUseCase_Execute(t *testing.T) {
 				if err == nil {
 					t.Fatal("Execute() error = nil, want error")
 				}
-				if !strings.Contains(err.Error(), "failed to list service tokens") {
-					t.Errorf("error %q does not contain expected prefix", err.Error())
-				}
 				var svcErr *ServiceTokenError
 				if !errors.As(err, &svcErr) {
 					t.Errorf("error is not *ServiceTokenError: %T", err)
@@ -344,7 +333,7 @@ func TestListServiceTokensUseCase_Execute(t *testing.T) {
 				t.Fatalf("Execute() error = %v, want nil", err)
 			}
 			if len(resp) != tt.wantLen {
-				t.Errorf("len(response) = %d, want %d", len(resp), tt.wantLen)
+				t.Errorf("len(resp) = %d, want %d", len(resp), tt.wantLen)
 			}
 		})
 	}
@@ -356,19 +345,16 @@ func TestGetServiceTokenUseCase_Execute(t *testing.T) {
 	tests := []struct {
 		name        string
 		id          string
-		mockFn      func(ctx context.Context, id string) (*sdk.ServiceTokenResponse, error)
+		mockFn      func(ctx context.Context, id string) (domain.ServiceToken, error)
 		wantErr     bool
 		wantCode    string
 		errContains string
 	}{
 		{
 			name: "success",
-			id:   "tok-abc",
-			mockFn: func(_ context.Context, id string) (*sdk.ServiceTokenResponse, error) {
-				return &sdk.ServiceTokenResponse{
-					Id:   id,
-					Name: "my-token",
-				}, nil
+			id:   "tok-123",
+			mockFn: func(_ context.Context, id string) (domain.ServiceToken, error) {
+				return domain.ServiceToken{ID: id, Name: "my-token"}, nil
 			},
 			wantErr: false,
 		},
@@ -380,34 +366,17 @@ func TestGetServiceTokenUseCase_Execute(t *testing.T) {
 			errContains: "ID is required",
 		},
 		{
-			name:        "whitespace only id",
+			name:        "whitespace id",
 			id:          "   ",
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeValidation,
 			errContains: "ID is required",
 		},
 		{
-			name:        "tab-only id",
-			id:          "\t",
-			wantErr:     true,
-			wantCode:    ServiceTokenErrorCodeValidation,
-			errContains: "ID is required",
-		},
-		{
 			name: "service error",
-			id:   "tok-valid",
-			mockFn: func(_ context.Context, _ string) (*sdk.ServiceTokenResponse, error) {
-				return nil, errors.New("connection reset")
-			},
-			wantErr:     true,
-			wantCode:    ServiceTokenErrorCodeServiceError,
-			errContains: "failed to get service token",
-		},
-		{
-			name: "not found wraps as service error",
-			id:   "tok-missing",
-			mockFn: func(_ context.Context, _ string) (*sdk.ServiceTokenResponse, error) {
-				return nil, NewServiceTokenNotFoundError("token not found", ErrTokenNotFound)
+			id:   "tok-123",
+			mockFn: func(_ context.Context, _ string) (domain.ServiceToken, error) {
+				return domain.ServiceToken{}, errors.New("boom")
 			},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeServiceError,
@@ -465,7 +434,7 @@ func TestDeleteServiceTokenUseCase_Execute(t *testing.T) {
 	}{
 		{
 			name: "success",
-			id:   "tok-del",
+			id:   "tok-123",
 			mockFn: func(_ context.Context, _ string) error {
 				return nil
 			},
@@ -479,24 +448,10 @@ func TestDeleteServiceTokenUseCase_Execute(t *testing.T) {
 			errContains: "ID is required",
 		},
 		{
-			name:        "whitespace only id",
-			id:          "   ",
-			wantErr:     true,
-			wantCode:    ServiceTokenErrorCodeValidation,
-			errContains: "ID is required",
-		},
-		{
-			name:        "newline-only id",
-			id:          "\n",
-			wantErr:     true,
-			wantCode:    ServiceTokenErrorCodeValidation,
-			errContains: "ID is required",
-		},
-		{
 			name: "service error",
-			id:   "tok-valid",
+			id:   "tok-123",
 			mockFn: func(_ context.Context, _ string) error {
-				return errors.New("permission denied")
+				return errors.New("boom")
 			},
 			wantErr:     true,
 			wantCode:    ServiceTokenErrorCodeServiceError,

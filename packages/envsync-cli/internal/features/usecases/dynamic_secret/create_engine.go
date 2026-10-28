@@ -4,6 +4,8 @@ import (
 	"context"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +21,12 @@ func NewCreateEngineUseCase() CreateEngineUseCase {
 	}
 }
 
-func (uc *createEngineUseCase) Execute(ctx context.Context, req *sdk.CreateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.create_engine")
-	defer span.End()
+func (uc *createEngineUseCase) Execute(ctx context.Context, req *sdk.CreateDynamicSecretEngineRequest) (result *sdk.DynamicSecretEngineResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.create_engine", trace.WithAttributes(
+		attribute.String("engine.name", req.Name),
+		attribute.String("engine.type", string(req.EngineType)),
+	))
+	defer end(&err)
 
 	if err := uc.validateCreateRequest(req); err != nil {
 		return nil, err

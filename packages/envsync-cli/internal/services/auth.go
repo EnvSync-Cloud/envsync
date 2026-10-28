@@ -9,13 +9,14 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type AuthService interface {
 	InitiateLogin(ctx context.Context) (*domain.LoginCredentials, error)
 	CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
 	PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error)
-	SaveToken(token *domain.AccessToken) error
+	SaveToken(token *domain.AccessToken, credentials *domain.LoginCredentials) error
 	Whoami(ctx context.Context) (*domain.UserInfo, error)
 	Logout() error
 }
@@ -36,7 +37,10 @@ func NewAuthService() AuthService {
 }
 
 // InitiateLogin starts the OAuth device flow and returns login credentials
-func (s *auth) InitiateLogin(ctx context.Context) (*domain.LoginCredentials, error) {
+func (s *auth) InitiateLogin(ctx context.Context) (result *domain.LoginCredentials, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.auth.initiate_login")
+	defer end(&err)
+
 	deviceCodeResp, err := s.repo.LoginDeviceCode(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initiate login: %w", err)
@@ -48,7 +52,10 @@ func (s *auth) InitiateLogin(ctx context.Context) (*domain.LoginCredentials, err
 }
 
 // CompleteLogin attempts to exchange device code for access token
-func (s *auth) CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
+func (s *auth) CompleteLogin(ctx context.Context, credentials *domain.LoginCredentials) (result *domain.AccessToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.auth.complete_login")
+	defer end(&err)
+
 	tokenResp, err := s.repo.LoginToken(ctx, credentials.DeviceCode, credentials.ClientId, credentials.TokenUrl)
 	if err != nil {
 		return nil, err
@@ -59,7 +66,10 @@ func (s *auth) CompleteLogin(ctx context.Context, credentials *domain.LoginCrede
 }
 
 // PollForToken polls the authorization server until user completes authentication
-func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (*domain.AccessToken, error) {
+func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCredentials) (result *domain.AccessToken, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.auth.poll_for_token")
+	defer end(&err)
+
 	timeout := time.Now().Add(time.Duration(credentials.ExpiresIn) * time.Second)
 	interval := time.Duration(credentials.Interval) * time.Second
 
@@ -77,20 +87,28 @@ func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCreden
 	return nil, fmt.Errorf("authentication timeout: user did not complete login within %d seconds", credentials.ExpiresIn)
 }
 
-// SaveToken persists the access token to configuration
-func (s *auth) SaveToken(token *domain.AccessToken) error {
+// SaveToken persists the access token and the token endpoint details needed
+// for later refresh grants to configuration
+func (s *auth) SaveToken(token *domain.AccessToken, credentials *domain.LoginCredentials) error {
 	cfg := config.New()
-	cfg.AccessToken = token.Token
+	cfg.AuthConfig.AccessToken = token.Token
+	cfg.AuthConfig.RefreshToken = token.RefreshToken
+	cfg.AuthConfig.ExpiresAt = int(token.ExpiresAt.Unix())
+	cfg.AuthConfig.ClientID = credentials.ClientId
+	cfg.AuthConfig.TokenURL = credentials.TokenUrl
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to save access token: %w", err)
+		return fmt.Errorf("failed to save refresh/access token: %w", err)
 	}
 
 	return nil
 }
 
 // Whoami retrieves the current user's information
-func (s *auth) Whoami(ctx context.Context) (*domain.UserInfo, error) {
+func (s *auth) Whoami(ctx context.Context) (result *domain.UserInfo, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.auth.whoami")
+	defer end(&err)
+
 	userInfoResp, err := s.repo.Whoami(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user info: %w", err)
@@ -100,16 +118,17 @@ func (s *auth) Whoami(ctx context.Context) (*domain.UserInfo, error) {
 	return userInfo, nil
 }
 
-// Logout clears the access token from configuration
+// Logout clears the stored credentials from configuration. The refresh token
+// goes too: leaving it behind would let a later refresh resurrect the session.
 func (s *auth) Logout() error {
 	// TODO: Refactor this implementation to use a dedicated logout repository
 	// which hits logout endpoint
 
 	cfg := config.New()
-	cfg.AccessToken = ""
+	cfg.AuthConfig = config.AuthConfig{}
 
 	if err := cfg.WriteConfigFile(); err != nil {
-		return fmt.Errorf("failed to clear access token: %w", err)
+		return fmt.Errorf("failed to clear auth config: %w", err)
 	}
 
 	return nil

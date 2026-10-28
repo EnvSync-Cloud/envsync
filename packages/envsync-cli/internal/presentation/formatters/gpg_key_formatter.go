@@ -16,38 +16,52 @@ func NewGpgKeyFormatter() *GpgKeyFormatter {
 	return &GpgKeyFormatter{BaseFormatter: NewBaseFormatter()}
 }
 
-func (f *GpgKeyFormatter) FormatKeyList(writer io.Writer, keys []domain.GpgKey) error {
+func (f *GpgKeyFormatter) FormatListTable(writer io.Writer, keys []domain.GpgKey) error {
 	if len(keys) == 0 {
-		return f.FormatWarning(writer, "No GPG keys found.")
+		_, err := writer.Write([]byte("📭 No GPG keys found.\n"))
+		return err
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%-36s  %-20s  %-30s  %-16s  %-10s  %-8s\n",
-		"ID", "Name", "Email", "Fingerprint", "Algorithm", "Status"))
+
+	sb.WriteString(fmt.Sprintf("\n📋 GPG Keys (%d)\n", len(keys)))
+	sb.WriteString(strings.Repeat("─", 130) + "\n")
+	sb.WriteString(fmt.Sprintf("%-36s %-20s %-30s %-16s %-10s %-8s\n",
+		"ID", "NAME", "EMAIL", "FINGERPRINT", "ALGORITHM", "STATUS"))
 	sb.WriteString(strings.Repeat("─", 130) + "\n")
 
 	for _, key := range keys {
-		fp := key.Fingerprint
-		if len(fp) > 16 {
-			fp = fp[:4] + "..." + fp[len(fp)-8:]
-		}
-
-		status := key.Status
-		if status == "" {
-			status = "active"
-			if key.RevokedAt != nil {
-				status = "revoked"
-			} else if key.ExpiresAt != nil && key.ExpiresAt.Before(key.CreatedAt) {
-				status = "expired"
-			}
-		}
-
-		sb.WriteString(fmt.Sprintf("%-36s  %-20s  %-30s  %-16s  %-10s  %-8s\n",
-			key.ID, truncate(key.Name, 20), truncate(key.Email, 30), fp, key.Algorithm, status))
+		sb.WriteString(fmt.Sprintf("%-36s %-20s %-30s %-16s %-10s %-8s\n",
+			key.ID, truncate(key.Name, 18), truncate(key.Email, 28), ShortFingerprint(key.Fingerprint), key.Algorithm, GpgKeyStatus(key)))
 	}
+
+	sb.WriteString(strings.Repeat("─", 130) + "\n")
 
 	_, err := writer.Write([]byte(sb.String()))
 	return err
+}
+
+// ShortFingerprint abbreviates a fingerprint to its first four and last eight
+// hex characters.
+func ShortFingerprint(fp string) string {
+	if len(fp) > 16 {
+		return fp[:4] + "..." + fp[len(fp)-8:]
+	}
+	return fp
+}
+
+// GpgKeyStatus derives a display status when the backend did not send one.
+func GpgKeyStatus(key domain.GpgKey) string {
+	if key.Status != "" {
+		return key.Status
+	}
+	if key.RevokedAt != nil {
+		return "revoked"
+	}
+	if key.ExpiresAt != nil && key.ExpiresAt.Before(key.CreatedAt) {
+		return "expired"
+	}
+	return "active"
 }
 
 func (f *GpgKeyFormatter) FormatKeyGenerated(writer io.Writer, key domain.GpgKey) error {

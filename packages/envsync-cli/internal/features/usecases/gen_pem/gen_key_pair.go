@@ -3,7 +3,10 @@ package genpem
 import (
 	"context"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -18,7 +21,11 @@ func NewGenKeyPairUseCase() GenKeyPairUseCase {
 }
 
 // GenerateKeyPair implements GenKeyPairUseCase.
-func (g *genKeyPairUseCase) GenerateKeyPair(ctx context.Context, output string) error {
+func (g *genKeyPairUseCase) GenerateKeyPair(ctx context.Context, output string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gen_pem.generate_key_pair",
+		trace.WithAttributes(attribute.String("file.path", output)))
+	defer end(&err)
+
 	keyPair, err := utils.GenerateKeyPair()
 	if err != nil {
 		return err

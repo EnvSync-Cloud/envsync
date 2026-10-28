@@ -7,6 +7,9 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type issueCertUseCase struct {
@@ -18,7 +21,17 @@ func NewIssueCertUseCase() IssueCertUseCase {
 	return &issueCertUseCase{service: service}
 }
 
-func (uc *issueCertUseCase) Execute(ctx context.Context, input IssueCertInput) (*domain.Certificate, error) {
+func (uc *issueCertUseCase) Execute(ctx context.Context, input IssueCertInput) (result *domain.Certificate, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "certificate.issue_cert",
+		trace.WithAttributes(
+			attribute.String("app.id", input.AppID),
+			attribute.String("env.id", input.EnvTypeID),
+			attribute.String("cert.common_name", input.CommonName),
+			attribute.String("cert.email", input.Email),
+			attribute.String("file.path", input.CSRPath),
+		))
+	defer end(&err)
+
 	if input.CSRPath != "" {
 		pemBytes, err := os.ReadFile(input.CSRPath)
 		if err != nil {

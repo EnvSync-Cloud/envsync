@@ -27,18 +27,17 @@ func serviceTokenCreateCommand(handler *handlers.ServiceTokenHandler) *cli.Comma
 		Action: handler.Create,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "name",
-				Usage:    "Service token name",
-				Aliases:  []string{"n"},
-				Required: true,
+				Name:    "name",
+				Usage:   "Service token name (asked interactively when omitted)",
+				Aliases: []string{"n"},
 			},
 			&cli.StringFlag{
 				Name:  "app-id",
-				Usage: "Application ID to scope the token to",
+				Usage: "Application ID to scope the token to (selected interactively when omitted)",
 			},
 			&cli.StringFlag{
 				Name:  "env-type-id",
-				Usage: "Environment type ID to scope the token to",
+				Usage: "Environment type ID to scope the token to (selected interactively when omitted)",
 			},
 			&cli.BoolFlag{
 				Name:  "read",
@@ -71,9 +70,8 @@ func serviceTokenGetCommand(handler *handlers.ServiceTokenHandler) *cli.Command 
 		Action: handler.Get,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "id",
-				Usage:    "Service token ID",
-				Required: true,
+				Name:  "id",
+				Usage: "Service token ID (selected interactively when omitted)",
 			},
 		},
 	}
@@ -86,9 +84,8 @@ func serviceTokenDeleteCommand(handler *handlers.ServiceTokenHandler) *cli.Comma
 		Action: handler.Delete,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:     "id",
-				Usage:    "Service token ID",
-				Required: true,
+				Name:  "id",
+				Usage: "Service token ID (selected interactively when omitted)",
 			},
 		},
 	}

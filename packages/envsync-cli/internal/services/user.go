@@ -6,6 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type UserService interface {
@@ -27,7 +28,10 @@ func NewUserService() UserService {
 	}
 }
 
-func (u *user) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+func (u *user) GetAllUsers(ctx context.Context) (result []domain.User, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.user.get_all_users")
+	defer end(&err)
+
 	userRes, err := u.userRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err

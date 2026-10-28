@@ -10,15 +10,15 @@ import (
 
 // mockDynamicSecretService implements services.DynamicSecretService for testing.
 type mockDynamicSecretService struct {
-	listEnginesFn         func(ctx context.Context) (sdk.DynamicSecretEnginesResponse, error)
-	createEngineFn        func(ctx context.Context, req *sdk.CreateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error)
-	getEngineFn           func(ctx context.Context, id string) (*sdk.DynamicSecretEngineResponse, error)
-	deleteEngineFn        func(ctx context.Context, id string) (*sdk.ErrorResponse, error)
-	updateEngineFn        func(ctx context.Context, id string, req *sdk.UpdateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error)
-	listLeasesFn          func(ctx context.Context, engineID string) (sdk.DynamicSecretLeasesResponse, error)
-	createLeaseFn         func(ctx context.Context, engineID string, req *sdk.CreateDynamicSecretLeaseRequest) (*sdk.DynamicSecretLeaseResponse, error)
-	getLeaseFn            func(ctx context.Context, leaseID string) (*sdk.DynamicSecretLeaseResponse, error)
-	revokeLeaseFn         func(ctx context.Context, leaseID string) (*sdk.RevokeLeaseResponse, error)
+	listEnginesFn          func(ctx context.Context) (sdk.DynamicSecretEnginesResponse, error)
+	createEngineFn         func(ctx context.Context, req *sdk.CreateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error)
+	getEngineFn            func(ctx context.Context, id string) (*sdk.DynamicSecretEngineResponse, error)
+	deleteEngineFn         func(ctx context.Context, id string) (*sdk.ErrorResponse, error)
+	updateEngineFn         func(ctx context.Context, id string, req *sdk.UpdateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error)
+	listLeasesFn           func(ctx context.Context, engineID string) (sdk.DynamicSecretLeasesResponse, error)
+	createLeaseFn          func(ctx context.Context, engineID string, req *sdk.CreateDynamicSecretLeaseRequest) (*sdk.DynamicSecretLeaseResponse, error)
+	getLeaseFn             func(ctx context.Context, leaseID string) (*sdk.DynamicSecretLeaseResponse, error)
+	revokeLeaseFn          func(ctx context.Context, leaseID string) (*sdk.RevokeLeaseResponse, error)
 	cleanupExpiredLeasesFn func(ctx context.Context) (*sdk.CleanupResponse, error)
 }
 

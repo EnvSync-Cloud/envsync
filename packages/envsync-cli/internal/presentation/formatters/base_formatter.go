@@ -34,7 +34,10 @@ func (f *BaseFormatter) FormatJSONError(writer io.Writer, err error) error {
 	jsonError := map[string]string{
 		"error": err.Error(),
 	}
-	return f.FormatJSON(writer, jsonError)
+	if werr := f.FormatJSON(writer, jsonError); werr != nil {
+		return werr
+	}
+	return NewRenderedError(err.Error())
 }
 
 func (f *BaseFormatter) FormatWarningJSON(writer io.Writer, message string) error {
@@ -45,21 +48,25 @@ func (f *BaseFormatter) FormatWarningJSON(writer io.Writer, message string) erro
 }
 
 func (f *BaseFormatter) FormatSuccess(writer io.Writer, message string) error {
-	output := style.BoxStyle.Render(style.SuccessStyle.Render(fmt.Sprintf("✅ %s\n", message)))
+	output := style.Render(style.BoxStyle, style.SuccessStyle.Render("✓ "+message))
 	_, err := writer.Write([]byte(output))
 	return err
 }
 
-// FormatError formats error messages
+// FormatError formats error messages. Callers pass the error stream (stderr)
+// so error text never pollutes machine-readable stdout. The returned
+// RenderedError marks the command as failed without re-printing the message.
 func (f *BaseFormatter) FormatError(writer io.Writer, message string) error {
-	output := style.ErrorStyle.Render(fmt.Sprintf("❎ %s\n", message))
-	_, err := writer.Write([]byte(output))
-	return err
+	output := style.Render(style.ErrorStyle, "✗ "+message)
+	if _, err := writer.Write([]byte(output)); err != nil {
+		return err
+	}
+	return NewRenderedError(message)
 }
 
 // FormatWarning formats warning messages
 func (f *BaseFormatter) FormatWarning(writer io.Writer, message string) error {
-	output := style.WarningStyle.Render(fmt.Sprintf("⚠️  %s\n", message))
+	output := style.Render(style.WarningStyle, "⚠️  "+message)
 	_, err := writer.Write([]byte(output))
 	return err
 }
