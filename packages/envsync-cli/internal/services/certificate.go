@@ -3,8 +3,9 @@ package services
 import (
 	"context"
 	"errors"
+	"net/http"
 
-	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	core "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/core"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
@@ -44,14 +45,19 @@ func (s *certService) InitCA(ctx context.Context, req requests.InitOrgCARequest)
 
 	res, err := s.repo.InitCA(ctx, req)
 	if err != nil {
-		// Auth already creates the org CA for an admin. A second init is success.
-		var conflict *sdk.ConflictError
-		if errors.As(err, &conflict) {
+		// Org creation already initializes the CA. The SDK returns a plain 409,
+		// not the generated ConflictError type.
+		if caAlreadyExists(err) {
 			return s.GetCA(ctx)
 		}
 		return domain.Certificate{}, err
 	}
 	return mappers.OrgCAResponseToDomain(res), nil
+}
+
+func caAlreadyExists(err error) bool {
+	var apiErr *core.APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusConflict
 }
 
 func (s *certService) GetCA(ctx context.Context) (result domain.Certificate, err error) {
