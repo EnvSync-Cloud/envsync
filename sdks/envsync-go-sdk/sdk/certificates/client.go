@@ -202,6 +202,79 @@ func (c *Client) GetCertificateChain(
 	return response, nil
 }
 
+// Enterprise-only. Private key stays in miniKMS; sign the CSR offline and install the certificate.
+func (c *Client) CreateOrgCaCsr(
+	ctx context.Context,
+	request *sdk.CreateOrgCaCsrRequest,
+	opts ...option.RequestOption,
+) error {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/ca/csr"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) InstallOrgCa(
+	ctx context.Context,
+	request *sdk.InstallOrgCaRequest,
+	opts ...option.RequestOption,
+) error {
+	options := core.NewRequestOptions(opts...)
+	baseURL := internal.ResolveBaseURL(
+		options.BaseURL,
+		c.baseURL,
+		"http://localhost:4000",
+	)
+	endpointURL := baseURL + "/api/certificate/ca/install"
+	headers := internal.MergeHeaders(
+		c.header.Clone(),
+		options.ToHeader(),
+	)
+	headers.Set("Content-Type", "application/json")
+
+	if err := c.caller.Call(
+		ctx,
+		&internal.CallParams{
+			URL:             endpointURL,
+			Method:          http.MethodPost,
+			Headers:         headers,
+			MaxAttempts:     options.MaxAttempts,
+			BodyProperties:  options.BodyProperties,
+			QueryParameters: options.QueryParameters,
+			Client:          options.HTTPClient,
+			Request:         request,
+		},
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Enterprise-only. Store a PEM chain (external root/intermediates) next to the org CA.
 func (c *Client) ImportCertificateChain(
 	ctx context.Context,

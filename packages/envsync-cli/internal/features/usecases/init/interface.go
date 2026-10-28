@@ -9,7 +9,9 @@ type InitUseCase interface {
 
 // InitResult describes the configuration a successful init wrote.
 type InitResult struct {
-	Path      string `json:"path"`
-	AppID     string `json:"app_id"`
-	EnvTypeID string `json:"env_type_id"`
+	Path        string `json:"path"`
+	AppID       string `json:"app_id"`
+	EnvTypeID   string `json:"env_type_id"`
+	AppName     string `json:"app_name"`
+	EnvTypeName string `json:"env_type_name"`
 }

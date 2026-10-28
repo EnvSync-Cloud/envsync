@@ -63,6 +63,31 @@ func NewApplication(
 	}
 }
 
+// FindAppByName returns the organization project whose name matches exactly.
+// The comparison is trimmed and case-sensitive.
+func FindAppByName(apps []Application, name string) (Application, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return Application{}, fmt.Errorf("application name is required")
+	}
+
+	var found *Application
+	for i := range apps {
+		if apps[i].Name != name {
+			continue
+		}
+		if found != nil {
+			return Application{}, fmt.Errorf("application %q is ambiguous", name)
+		}
+		match := apps[i]
+		found = &match
+	}
+	if found == nil {
+		return Application{}, fmt.Errorf("failed to resolve application %q", name)
+	}
+	return *found, nil
+}
+
 var (
 	DefaultEnvTypes = []EnvType{
 		{Name: "Production", Color: "#ef4444", IsDefault: false},

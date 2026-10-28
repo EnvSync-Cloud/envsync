@@ -8,6 +8,7 @@ import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
 import { ServiceTokenService } from "@/services/service_token.service";
 import { smartEncrypt, kmsDecrypt, rsaLayerDecrypt } from "@/helpers/key-store";
+import { resolveProjectEnvScope } from "@/helpers/project-env-scope";
 import { secretOperations } from "@/libs/telemetry/metrics";
 
 
@@ -17,11 +18,12 @@ export class SecretController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 
-		const { key, value, app_id, env_type_id, change_message } = await c.req.json();
-
-		if (!key || !org_id || !app_id || !env_type_id) {
-			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		const { key, value, change_message } = body;
+		if (!key || !org_id) {
+			return c.json({ error: "key and org_id are required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 
 		// Check if the secret already exists
@@ -105,11 +107,12 @@ export class SecretController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { key } = c.req.param();
-		const { value, app_id, env_type_id, change_message } = await c.req.json();
-
-		if (!key || !org_id || !app_id || !env_type_id) {
-			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		const { value, change_message } = body;
+		if (!key || !org_id) {
+			return c.json({ error: "key and org_id are required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 
 		const existingSecret = await SecretService.getSecret({
@@ -188,11 +191,12 @@ export class SecretController {
 	public static readonly deleteSecret = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, key, change_message } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id || !key) {
-			return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
+		const body = await c.req.json();
+		const { key, change_message } = body;
+		if (!org_id || !key) {
+			return c.json({ error: "org_id and key are required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 
 		// Get the existing secret before deletion for PiT record
@@ -252,7 +256,12 @@ export class SecretController {
 	public static readonly batchCreateSecrets = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		let { app_id, env_type_id, envs, change_message } = await c.req.json();
+		const body = await c.req.json();
+		const { envs, change_message } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!envs || !Array.isArray(envs)) {
 			return c.json({ error: "envs must be an array." }, 400);
@@ -345,7 +354,12 @@ export class SecretController {
 	public static readonly batchUpdateSecrets = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, envs, change_message } = await c.req.json();
+		const body = await c.req.json();
+		const { envs, change_message } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!envs || !Array.isArray(envs)) {
 			return c.json({ error: "envs must be an array." }, 400);
@@ -442,7 +456,12 @@ export class SecretController {
 	public static readonly batchDeleteSecrets = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, keys, change_message } = await c.req.json();
+		const body = await c.req.json();
+		const { keys, change_message } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!keys || !Array.isArray(keys)) {
 			return c.json({ error: "keys must be an array." }, 400);
@@ -513,11 +532,11 @@ export class SecretController {
 	public static readonly getSecrets = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id) {
-			return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
 		if (!canView) {
@@ -1453,11 +1472,12 @@ export class SecretController {
 	public static readonly revealSecret = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, keys } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id || !keys) {
-			return c.json({ error: "org_id, app_id, env_type_id, and keys are required." }, 400);
+		const body = await c.req.json();
+		const { keys } = body;
+		if (!org_id || !keys) {
+			return c.json({ error: "org_id and keys are required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
 		if (!canView) {

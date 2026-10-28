@@ -319,23 +319,23 @@ func (a *AcceptOrgInviteResponseGeneratedCertificateBundle) String() string {
 }
 
 type AcceptUserInviteRequest struct {
-	FullName string `json:"full_name" url:"full_name"`
-	Password string `json:"password" url:"password"`
+	FullName *string `json:"full_name,omitempty" url:"full_name,omitempty"`
+	Password *string `json:"password,omitempty" url:"password,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (a *AcceptUserInviteRequest) GetFullName() string {
+func (a *AcceptUserInviteRequest) GetFullName() *string {
 	if a == nil {
-		return ""
+		return nil
 	}
 	return a.FullName
 }
 
-func (a *AcceptUserInviteRequest) GetPassword() string {
+func (a *AcceptUserInviteRequest) GetPassword() *string {
 	if a == nil {
-		return ""
+		return nil
 	}
 	return a.Password
 }
@@ -374,7 +374,7 @@ func (a *AcceptUserInviteRequest) String() string {
 
 type AcceptUserInviteResponse struct {
 	Message                    string                                              `json:"message" url:"message"`
-	GeneratedCertificateBundle *AcceptUserInviteResponseGeneratedCertificateBundle `json:"generated_certificate_bundle" url:"generated_certificate_bundle"`
+	GeneratedCertificateBundle *AcceptUserInviteResponseGeneratedCertificateBundle `json:"generated_certificate_bundle,omitempty" url:"generated_certificate_bundle,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -659,7 +659,8 @@ func (c *CreateUserInviteRequest) String() string {
 }
 
 type CreateUserInviteResponse struct {
-	Message string `json:"message" url:"message"`
+	Message       string `json:"message" url:"message"`
+	AccountExists *bool  `json:"account_exists,omitempty" url:"account_exists,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -670,6 +671,13 @@ func (c *CreateUserInviteResponse) GetMessage() string {
 		return ""
 	}
 	return c.Message
+}
+
+func (c *CreateUserInviteResponse) GetAccountExists() *bool {
+	if c == nil {
+		return nil
+	}
+	return c.AccountExists
 }
 
 func (c *CreateUserInviteResponse) GetExtraProperties() map[string]interface{} {
@@ -929,14 +937,15 @@ func (g *GetUserInviteByTokenResponse) String() string {
 }
 
 type GetUserInviteByTokenResponseInvite struct {
-	Id          string `json:"id" url:"id"`
-	Email       string `json:"email" url:"email"`
-	InviteToken string `json:"invite_token" url:"invite_token"`
-	RoleId      string `json:"role_id" url:"role_id"`
-	OrgId       string `json:"org_id" url:"org_id"`
-	IsAccepted  bool   `json:"is_accepted" url:"is_accepted"`
-	CreatedAt   string `json:"created_at" url:"created_at"`
-	UpdatedAt   string `json:"updated_at" url:"updated_at"`
+	Id            string `json:"id" url:"id"`
+	Email         string `json:"email" url:"email"`
+	InviteToken   string `json:"invite_token" url:"invite_token"`
+	RoleId        string `json:"role_id" url:"role_id"`
+	OrgId         string `json:"org_id" url:"org_id"`
+	IsAccepted    bool   `json:"is_accepted" url:"is_accepted"`
+	AccountExists *bool  `json:"account_exists,omitempty" url:"account_exists,omitempty"`
+	CreatedAt     string `json:"created_at" url:"created_at"`
+	UpdatedAt     string `json:"updated_at" url:"updated_at"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
@@ -982,6 +991,13 @@ func (g *GetUserInviteByTokenResponseInvite) GetIsAccepted() bool {
 		return false
 	}
 	return g.IsAccepted
+}
+
+func (g *GetUserInviteByTokenResponseInvite) GetAccountExists() *bool {
+	if g == nil {
+		return nil
+	}
+	return g.AccountExists
 }
 
 func (g *GetUserInviteByTokenResponseInvite) GetCreatedAt() string {

@@ -12,16 +12,26 @@ func ExportCommand(handler *handlers.ExportHandler) *cli.Command {
 		Action: handler.Export,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "app-id",
-				Usage: "Application ID to export from",
+				Name:  "app",
+				Usage: "Project name to export",
 			},
 			&cli.StringFlag{
-				Name:  "env-type-id",
-				Usage: "Environment type ID to export from",
+				Name:  "env",
+				Usage: "Environment name to export",
 			},
 			&cli.StringFlag{
 				Name:  "env-type",
-				Usage: "Environment type name to resolve within the application",
+				Usage: "Environment name to export. Prefer --env",
+			},
+			&cli.StringFlag{
+				Name:   "app-id",
+				Hidden: true,
+				Usage:  "Removed. Use --app",
+			},
+			&cli.StringFlag{
+				Name:   "env-type-id",
+				Hidden: true,
+				Usage:  "Removed. Use --env",
 			},
 			&cli.StringFlag{
 				Name:        "config",
