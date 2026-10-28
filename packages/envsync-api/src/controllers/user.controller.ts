@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 
 import {
-	updateKeycloakUser,
-	deleteKeycloakUser,
-	sendKeycloakPasswordReset,
-	keycloakUserHasPassword,
-} from "@/helpers/keycloak";
+	updateDirectoryUser,
+	deleteDirectoryUser,
+	sendDirectoryPasswordReset,
+	directoryUserHasPassword,
+} from "@/helpers/identity";
 import { UserService } from "@/services/user.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { OrgAdminGuardService } from "@/services/org-admin-guard.service";
@@ -86,7 +86,7 @@ export class UserController {
 
 		if (user.auth_service_id) {
 			const parts = (updateData.full_name ?? "").trim().split(/\s+/);
-			await updateKeycloakUser(user.auth_service_id, {
+			await updateDirectoryUser(user.auth_service_id, {
 				firstName: parts[0],
 				lastName: parts.slice(1).join(" ") || "",
 				email: updateData.email,
@@ -130,7 +130,7 @@ export class UserController {
 		await UserService.deleteUser(id);
 		if (deleteIdentity && user.auth_service_id) {
 			try {
-				await deleteKeycloakUser(user.auth_service_id);
+				await deleteDirectoryUser(user.auth_service_id);
 			} catch (error) {
 				console.error("Failed to delete Keycloak user after org membership deletion:", error);
 			}
@@ -196,7 +196,7 @@ export class UserController {
 		}
 
 		if (user.auth_service_id) {
-			const hasPassword = await keycloakUserHasPassword(user.auth_service_id);
+			const hasPassword = await directoryUserHasPassword(user.auth_service_id);
 			if (!hasPassword) {
 				return c.json(
 					{
@@ -206,7 +206,7 @@ export class UserController {
 					409,
 				);
 			}
-			await sendKeycloakPasswordReset(user.auth_service_id);
+			await sendDirectoryPasswordReset(user.auth_service_id);
 		}
 
 		await AuditLogService.notifyAuditSystem({

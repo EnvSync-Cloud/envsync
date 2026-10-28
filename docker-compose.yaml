@@ -56,43 +56,57 @@ services:
       - mailpit_data:/data
     networks: [envsync_network]
 
-  keycloak_db:
+  atrium_db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      POSTGRES_DB: keycloak
+      POSTGRES_USER: atrium
+      POSTGRES_PASSWORD: ${ATRIUM_DB_PASSWORD:-atrium}
+      POSTGRES_DB: atrium
     volumes:
-      - keycloak_db_data:/var/lib/postgresql/data
+      - atrium_db_data:/var/lib/postgresql/data
     networks: [envsync_network]
 
-  keycloak:
-    build:
-      context: ./packages/envsync-keycloak-theme
-      dockerfile: Dockerfile
-    image: envsync-keycloak:local
+  atrium:
+    image: ${ATRIUM_IMAGE:-ghcr.io/bravo68web/atrium:0.2.0-rc.6}
     restart: unless-stopped
-    entrypoint: ["/bin/sh", "-lc"]
-    command:
-      [
-        "/opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import --override true && exec /opt/keycloak/bin/kc.sh start-dev"
-      ]
     ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_HTTP_ENABLED: "true"
-      KC_HOSTNAME_STRICT: "false"
+      - "${ATRIUM_PORT:-8080}:8080"
     volumes:
-      - ./docker/keycloak/realm-import:/opt/keycloak/data/import:ro
+      - ./docker/atrium/config.yaml:/app/config.yaml:ro
+      - ./docker/atrium/branding/templates:/branding/templates:ro
+      - ./docker/atrium/branding/assets:/branding/assets:ro
+      - ./docker/atrium/branding/email:/branding/email:ro
     depends_on:
-      - keycloak_db
+      - atrium_db
+    networks: [envsync_network]
+
+  atrium-seed:
+    image: curlimages/curl:8.10.1
+    restart: "no"
+    volumes:
+      - ./docker/atrium/clients.json:/clients.json:ro
+    environment:
+      ATRIUM_MANAGEMENT_CLIENT_ID: ${ATRIUM_MANAGEMENT_CLIENT_ID:-management}
+      ATRIUM_MANAGEMENT_CLIENT_SECRET: ${ATRIUM_MANAGEMENT_CLIENT_SECRET:-replace-me-management}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        until curl -fsS http://atrium:8080/health >/dev/null; do sleep 1; done
+        token=$$(curl -fsS -X POST http://atrium:8080/oauth/token \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "grant_type=client_credentials&client_id=$$ATRIUM_MANAGEMENT_CLIENT_ID&client_secret=$$ATRIUM_MANAGEMENT_CLIENT_SECRET&scope=management" \
+          | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+        test -n "$$token"
+        code=$$(curl -s -o /tmp/existing -w "%{http_code}" -H "Authorization: Bearer $$token" http://atrium:8080/api/clients/envsync-web || true)
+        if [ "$$code" = "200" ]; then exit 0; fi
+        curl -fsS -X POST "http://atrium:8080/api/restore?force=true" \
+          -H "Authorization: Bearer $$token" \
+          -H "Content-Type: application/json" \
+          --data-binary @/clients.json
+    depends_on:
+      - atrium
     networks: [envsync_network]
 
   openfga_db:
@@ -233,7 +247,7 @@ volumes:
   redis_data:
   rustfs_data:
   mailpit_data:
-  keycloak_db_data:
+  atrium_db_data:
   openfga_db_data:
   minikms_db_data:
   clickstack_data:

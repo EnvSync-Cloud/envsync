@@ -169,14 +169,18 @@ export async function waitForMiniKMS(host?: string, port?: number): Promise<void
 // ── Keycloak helpers ────────────────────────────────────────────────
 
 export async function waitForKeycloak(url?: string, realm?: string): Promise<void> {
-	const base = (url ?? process.env.KEYCLOAK_URL ?? "http://localhost:8080").replace(/\/$/, "");
-	const keycloakRealm = realm ?? process.env.KEYCLOAK_REALM ?? "envsync";
-	const checkUrl = base.includes("keycloak:") ? "http://localhost:8080" : base;
+	await waitForAtrium(url);
+	void realm;
+}
+
+export async function waitForAtrium(url?: string): Promise<void> {
+	const base = (url ?? process.env.ATRIUM_INTERNAL_URL ?? process.env.KEYCLOAK_URL ?? "http://localhost:8080").replace(/\/$/, "");
+	const checkUrl = base.includes("atrium:") ? "http://localhost:8080" : base;
 	await waitFor(
-		"Keycloak",
+		"Atrium",
 		async () => {
 			try {
-				const res = await fetch(`${checkUrl}/realms/${keycloakRealm}/.well-known/openid-configuration`, {
+				const res = await fetch(`${checkUrl}/health`, {
 					signal: AbortSignal.timeout(5000),
 				});
 				return res.ok;

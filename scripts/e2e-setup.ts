@@ -25,7 +25,7 @@ import {
 	waitForPostgres,
 	waitForOpenFGA,
 	waitForMailpit,
-	waitForKeycloak,
+	waitForAtrium,
 	waitForMiniKMS,
 } from "./lib/services";
 import { bootstrapKeycloakClient } from "../packages/envsync-api/tests/e2e/helpers/keycloak-bootstrap";
@@ -46,11 +46,10 @@ const E2E_ENV_OVERRIDE_KEYS = [
 	"DATABASE_PASSWORD",
 	"POSTGRES_PORT",
 	"REDIS_PORT",
-	"KEYCLOAK_PORT",
-	"KEYCLOAK_URL",
-	"KEYCLOAK_REALM",
-	"KEYCLOAK_ADMIN_USER",
-	"KEYCLOAK_ADMIN_PASSWORD",
+	"ATRIUM_PORT",
+	"ATRIUM_INTERNAL_URL",
+	"ATRIUM_PUBLIC_URL",
+	"ATRIUM_ISSUER",
 	"OPENFGA_HTTP_PORT",
 	"OPENFGA_GRPC_PORT",
 	"OPENFGA_API_URL",
@@ -95,16 +94,6 @@ function loadRootEnvPreservingOverrides(): void {
 
 // ── Docker Compose helpers ──────────────────────────────────────────
 
-function dockerComposeBuildKeycloak(): void {
-	console.log("\nBuilding local Keycloak image for E2E...");
-	const result = spawnSync(
-		"docker",
-		["compose", "build", "keycloak"],
-		{ cwd: rootDir, stdio: "inherit", env: process.env },
-	);
-	if (result.status !== 0) throw new Error("Docker Compose build for Keycloak failed.");
-}
-
 function dockerComposeUp(): void {
 	process.env.MINIKMS_ROOT_KEY ||= E2E_MINIKMS_ROOT_KEY;
 	const composeUpArgs = [
@@ -118,8 +107,9 @@ function dockerComposeUp(): void {
 		"openfga_migrate",
 		"openfga",
 		"mailpit",
-		"keycloak_db",
-		"keycloak",
+		"atrium_db",
+		"atrium",
+		"atrium-seed",
 		"minikms_db",
 		"minikms_migrate",
 		"minikms",
@@ -143,6 +133,37 @@ function dockerComposeUp(): void {
 	throw new Error(`Docker Compose up failed after ${E2E_COMPOSE_UP_ATTEMPTS} attempts.`);
 }
 
+function waitForAtriumSeed(): void {
+	console.log("Waiting for atrium-seed to restore clients...");
+	const deadline = Date.now() + 180_000;
+	for (;;) {
+		const result = spawnSync("docker", ["compose", "ps", "-a", "--format", "json", "atrium-seed"], {
+			cwd: rootDir,
+			encoding: "utf8",
+			env: process.env,
+		});
+		const raw = result.stdout?.trim() ?? "";
+		const seed = raw
+			.split("\n")
+			.filter(Boolean)
+			.map(line => JSON.parse(line) as { State?: string; ExitCode?: number; Status?: string })
+			.at(-1);
+		if (seed?.State === "exited") {
+			if (seed.ExitCode === 0) return;
+			spawnSync("docker", ["compose", "logs", "--no-color", "atrium-seed"], {
+				cwd: rootDir,
+				stdio: "inherit",
+				env: process.env,
+			});
+			throw new Error(`atrium-seed exited ${seed.ExitCode} before the E2E client could be read.`);
+		}
+		if (Date.now() > deadline) {
+			throw new Error(`atrium-seed did not finish: ${seed?.Status ?? "container not found"}`);
+		}
+		sleepMs(1_000);
+	}
+}
+
 function dockerComposeExec(service: string, args: string[], opts: { stdio?: "inherit" | "pipe"; encoding?: BufferEncoding } = {}) {
 	return spawnSync(
 		"docker",
@@ -159,43 +180,6 @@ function dockerComposeRestart(service: string): void {
 	});
 	if (result.status !== 0) {
 		throw new Error(`Failed to restart ${service}.`);
-	}
-}
-
-function ensureKeycloakHttpAdminSupport(adminUser: string, adminPassword: string): void {
-	console.log("\nConfiguring Keycloak admin realm for local HTTP...");
-	const login = dockerComposeExec(
-		"keycloak",
-		[
-			"/opt/keycloak/bin/kcadm.sh",
-			"config",
-			"credentials",
-			"--server",
-			"http://localhost:8080",
-			"--realm",
-			"master",
-			"--user",
-			adminUser,
-			"--password",
-			adminPassword,
-		],
-	);
-	if (login.status !== 0) {
-		throw new Error("Failed to authenticate to Keycloak via kcadm.");
-	}
-
-	const update = dockerComposeExec(
-		"keycloak",
-		[
-			"/opt/keycloak/bin/kcadm.sh",
-			"update",
-			"realms/master",
-			"-s",
-			"sslRequired=NONE",
-		],
-	);
-	if (update.status !== 0) {
-		throw new Error("Failed to relax Keycloak master realm SSL requirement for local E2E.");
 	}
 }
 
@@ -325,7 +309,6 @@ async function init(): Promise<void> {
 	process.env.MINIKMS_ROOT_KEY ||= E2E_MINIKMS_ROOT_KEY;
 
 	// Start docker services
-	dockerComposeBuildKeycloak();
 	dockerComposeUp();
 
 	// Wait for services
@@ -334,25 +317,21 @@ async function init(): Promise<void> {
 	await waitForPostgres();
 	await waitForOpenFGA();
 	await waitForMailpit();
-	await waitForKeycloak();
+	const atriumUrl = process.env.ATRIUM_INTERNAL_URL ?? "http://auth.lvh.me:8080";
+	await waitForAtrium(atriumUrl);
+	waitForAtriumSeed();
 	await waitForMiniKMS();
 
-	const keycloakUrl = process.env.KEYCLOAK_URL ?? "http://localhost:8080";
-	const keycloakRealm = process.env.KEYCLOAK_REALM ?? "envsync";
-	const keycloakAdminUser = process.env.KEYCLOAK_ADMIN_USER ?? "admin";
-	const keycloakAdminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin";
-
-	ensureKeycloakHttpAdminSupport(keycloakAdminUser, keycloakAdminPassword);
 	ensureMiniKmsSchema();
 
-	console.log("\nBootstrapping Keycloak client for E2E...");
-	const keycloakClient = await bootstrapKeycloakClient(
-		keycloakUrl,
-		keycloakRealm,
-		keycloakAdminUser,
-		keycloakAdminPassword,
+	console.log("\nUsing the seeded Atrium e2e client...");
+	const atriumClient = await bootstrapKeycloakClient(
+		atriumUrl,
+		"atrium",
+		process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management",
+		process.env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? "replace-me-management",
 	);
-	console.log(`  Client: ${keycloakClient.clientId}`);
+	console.log(`  Client: ${atriumClient.clientId}`);
 
 	// Create E2E database
 	createE2EDatabase();
@@ -374,20 +353,21 @@ async function init(): Promise<void> {
 		OPENFGA_API_URL: openfgaUrl,
 		OPENFGA_STORE_ID: openfga.storeId,
 		OPENFGA_MODEL_ID: openfga.modelId,
-		KEYCLOAK_URL: keycloakUrl,
-		KEYCLOAK_REALM: keycloakRealm,
-		KEYCLOAK_ADMIN_USER: keycloakAdminUser,
-		KEYCLOAK_ADMIN_PASSWORD: keycloakAdminPassword,
-		KEYCLOAK_WEB_CLIENT_ID: process.env.KEYCLOAK_WEB_CLIENT_ID ?? "envsync-web",
-		KEYCLOAK_WEB_CLIENT_SECRET: process.env.KEYCLOAK_WEB_CLIENT_SECRET ?? "test-web-client-secret",
-		KEYCLOAK_CLI_CLIENT_ID: process.env.KEYCLOAK_CLI_CLIENT_ID ?? "envsync-cli",
-		KEYCLOAK_API_CLIENT_ID: process.env.KEYCLOAK_API_CLIENT_ID ?? "envsync-api",
-		KEYCLOAK_API_CLIENT_SECRET: process.env.KEYCLOAK_API_CLIENT_SECRET ?? "test-api-client-secret",
-		KEYCLOAK_WEB_REDIRECT_URI: process.env.KEYCLOAK_WEB_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/web/callback",
-		KEYCLOAK_WEB_CALLBACK_URL: process.env.KEYCLOAK_WEB_CALLBACK_URL ?? "http://app.lvh.me:8001/auth/callback",
-		KEYCLOAK_API_REDIRECT_URI: process.env.KEYCLOAK_API_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/api/callback",
-		KEYCLOAK_E2E_CLIENT_ID: keycloakClient.clientId,
-		KEYCLOAK_E2E_CLIENT_SECRET: keycloakClient.clientSecret,
+		ATRIUM_INTERNAL_URL: atriumUrl,
+		ATRIUM_PUBLIC_URL: process.env.ATRIUM_PUBLIC_URL ?? atriumUrl,
+		ATRIUM_ISSUER: process.env.ATRIUM_ISSUER ?? atriumUrl,
+		ATRIUM_MANAGEMENT_CLIENT_ID: process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management",
+		ATRIUM_MANAGEMENT_CLIENT_SECRET: process.env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? "replace-me-management",
+		ATRIUM_WEB_CLIENT_ID: process.env.ATRIUM_WEB_CLIENT_ID ?? "envsync-web",
+		ATRIUM_WEB_CLIENT_SECRET: process.env.ATRIUM_WEB_CLIENT_SECRET ?? "dev-web-secret",
+		ATRIUM_CLI_CLIENT_ID: process.env.ATRIUM_CLI_CLIENT_ID ?? "envsync-cli",
+		ATRIUM_API_CLIENT_ID: process.env.ATRIUM_API_CLIENT_ID ?? "envsync-api",
+		ATRIUM_API_CLIENT_SECRET: process.env.ATRIUM_API_CLIENT_SECRET ?? "dev-api-secret",
+		ATRIUM_WEB_REDIRECT_URI: process.env.ATRIUM_WEB_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/web/callback",
+		ATRIUM_WEB_CALLBACK_URL: process.env.ATRIUM_WEB_CALLBACK_URL ?? "http://app.lvh.me:8001/auth/callback",
+		ATRIUM_API_REDIRECT_URI: process.env.ATRIUM_API_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/api/callback",
+		ATRIUM_E2E_CLIENT_ID: atriumClient.clientId,
+		ATRIUM_E2E_CLIENT_SECRET: atriumClient.clientSecret,
 		LANDING_PAGE_URL: process.env.LANDING_PAGE_URL ?? "http://localhost:8002",
 		DASHBOARD_URL: process.env.DASHBOARD_URL ?? "http://app.lvh.me:8001",
 		ENVSYNC_EDITION: process.env.ENVSYNC_EDITION ?? "enterprise",

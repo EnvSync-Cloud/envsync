@@ -51,14 +51,14 @@ let keycloakCreds: KeycloakCreds | null = null;
 let keycloakCredsPromise: Promise<KeycloakCreds> | null = null;
 
 function getBaseKeycloakCredentials() {
-	const url = process.env.KEYCLOAK_URL;
-	const realm = process.env.KEYCLOAK_REALM;
-	const adminUser = process.env.KEYCLOAK_ADMIN_USER;
-	const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD;
+	const url = process.env.ATRIUM_INTERNAL_URL ?? process.env.ATRIUM_PUBLIC_URL;
+	const realm = "atrium";
+	const adminUser = process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management";
+	const adminPassword = process.env.ATRIUM_MANAGEMENT_CLIENT_SECRET;
 
-	if (!url || !realm || !adminUser || !adminPassword) {
+	if (!url || !adminPassword) {
 		throw new Error(
-			"Missing Keycloak E2E admin credentials. Ensure KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_ADMIN_USER, and KEYCLOAK_ADMIN_PASSWORD are set. " +
+			"Missing Atrium E2E credentials. Ensure ATRIUM_INTERNAL_URL and ATRIUM_MANAGEMENT_CLIENT_SECRET are set. " +
 			"Run 'bun run e2e:init' first.",
 		);
 	}
@@ -87,8 +87,8 @@ function persistKeycloakClientCredentials(clientId: string, clientSecret: string
 	const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
 	const lines = existing.length > 0 ? existing.split(/\r?\n/) : [];
 	const next = new Map<string, string>([
-		["KEYCLOAK_E2E_CLIENT_ID", clientId],
-		["KEYCLOAK_E2E_CLIENT_SECRET", clientSecret],
+		["ATRIUM_E2E_CLIENT_ID", clientId],
+		["ATRIUM_E2E_CLIENT_SECRET", clientSecret],
 	]);
 
 	const updatedLines = lines.map((line) => {
@@ -116,8 +116,8 @@ async function bootstrapAndPersistKeycloakClient(baseCreds: ReturnType<typeof ge
 		baseCreds.adminPassword,
 	);
 
-	process.env.KEYCLOAK_E2E_CLIENT_ID = client.clientId;
-	process.env.KEYCLOAK_E2E_CLIENT_SECRET = client.clientSecret;
+	process.env.ATRIUM_E2E_CLIENT_ID = client.clientId;
+	process.env.ATRIUM_E2E_CLIENT_SECRET = client.clientSecret;
 	persistKeycloakClientCredentials(client.clientId, client.clientSecret);
 
 	return {
@@ -133,8 +133,8 @@ async function ensureKeycloakCredentials(forceRefresh = false): Promise<Keycloak
 
 	const promise = (async () => {
 		const baseCreds = getBaseKeycloakCredentials();
-		const clientId = process.env.KEYCLOAK_E2E_CLIENT_ID;
-		const clientSecret = process.env.KEYCLOAK_E2E_CLIENT_SECRET;
+		const clientId = process.env.ATRIUM_E2E_CLIENT_ID;
+		const clientSecret = process.env.ATRIUM_E2E_CLIENT_SECRET;
 
 		if (!forceRefresh && clientId && clientSecret) {
 			return {
@@ -472,11 +472,10 @@ export async function checkServiceHealth(): Promise<void> {
 			},
 		},
 		{
-			name: "Keycloak",
+			name: "Atrium",
 			check: async () => {
-				const url = (process.env.KEYCLOAK_URL ?? "http://localhost:8080").replace(/\/$/, "");
-				const realm = process.env.KEYCLOAK_REALM ?? "envsync";
-				const res = await fetch(`${url}/realms/${realm}/.well-known/openid-configuration`, {
+				const url = (process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080").replace(/\/$/, "");
+				const res = await fetch(`${url}/health`, {
 					signal: AbortSignal.timeout(5000),
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);

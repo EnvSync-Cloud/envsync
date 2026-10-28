@@ -5,7 +5,7 @@ import { UserService } from "@/services/user.service";
 import { AppError } from "@/libs/errors";
 import { verifyJWTToken } from "./jwt";
 import { verifyOidcToken, mightBeOidcToken } from "./oidc";
-import { getKeycloakIssuer } from "@/helpers/keycloak";
+import { getIdentityIssuer } from "@/helpers/identity";
 import { config } from "@/utils/env";
 
 export type AuthTokenType = "JWT" | "API_KEY" | "OIDC" | "SAML" | "SERVICE_TOKEN";
@@ -22,7 +22,7 @@ export function samlSessionSecret(): string {
 			"SAML_SESSION_SECRET_MISSING",
 		);
 	}
-	return `saml-session:${config.KEYCLOAK_WEB_CLIENT_SECRET}:${config.KEYCLOAK_REALM}`;
+	return `saml-session:${config.ATRIUM_WEB_CLIENT_SECRET}:envsync`;
 }
 
 export const validateAccess = async ({
@@ -152,8 +152,8 @@ export function detectAuthType(bearerToken: string): AuthTokenType {
 		return "SAML";
 	}
 
-	const keycloakIssuer = getKeycloakIssuer();
-	if (mightBeOidcToken(cleanToken, keycloakIssuer)) {
+	const directoryIssuer = getIdentityIssuer();
+	if (mightBeOidcToken(cleanToken, directoryIssuer)) {
 		return "OIDC";
 	}
 

@@ -1,0 +1,7 @@
+{{template "head" .}}
+    <div class="ok" aria-hidden="true">✓</div>
+    <h1>{{.Brand.Heading}}</h1>
+    <p class="sub">{{.Message}}</p>
+    <p class="below"><a class="primary" href="/login">Continue to {{.Brand.ProductName}}</a></p>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

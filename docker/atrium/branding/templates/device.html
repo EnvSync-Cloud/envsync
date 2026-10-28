@@ -1,0 +1,42 @@
+{{template "head" .}}
+    {{if .Done}}
+        {{if .Approved}}
+        <div class="ok" aria-hidden="true">✓</div>
+        <h1>CLI connected</h1>
+        <p class="sub">You can return to the terminal.</p>
+        {{else}}
+        <h1>Request denied</h1>
+        <p class="sub">The CLI was not signed in.</p>
+        {{end}}
+    {{else if .Confirm}}
+        <h1>Connect {{if .ClientName}}{{.ClientName}}{{else}}EnvSync CLI{{end}}</h1>
+        <p class="sub">Approve this sign-in{{if .Username}} for {{.Username}}{{end}}.</p>
+        {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+        {{if .Scopes}}
+        <ul class="scopes">
+            {{range .Scopes}}<li><i class="dot"></i><div>{{scopeLabel .}}<span>{{.}}</span></div></li>{{end}}
+        </ul>
+        {{end}}
+        <form method="POST" action="/device">
+            {{template "csrf_field" .}}
+            <input type="hidden" name="user_code" value="{{.UserCode}}">
+            <div class="row">
+                <button class="ghost" type="submit" name="action" value="deny">Deny</button>
+                <button class="primary" type="submit" name="action" value="approve">Approve this CLI</button>
+            </div>
+        </form>
+    {{else}}
+        <h1>Connect EnvSync CLI</h1>
+        <p class="sub">Enter the code from your terminal to approve this sign-in.</p>
+        {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+        <form method="POST" action="/device">
+            {{template "csrf_field" .}}
+            <div class="field">
+                <label for="user_code">Device code</label>
+                <input class="input" id="user_code" name="user_code" value="{{.UserCode}}" autocomplete="one-time-code" required autofocus>
+            </div>
+            <button class="primary" type="submit">Continue</button>
+        </form>
+    {{end}}
+{{template "card_close" .}}
+{{template "brand_footer" .}}

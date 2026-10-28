@@ -1,0 +1,4 @@
+Subject: Your sign-in code
+Your sign-in code is {{.Code}}
+
+It expires in {{.TTL}}. Enter it on the sign-in page, then choose a password.

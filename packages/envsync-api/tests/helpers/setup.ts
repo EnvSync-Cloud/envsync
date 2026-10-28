@@ -151,19 +151,20 @@ if (!isE2E) {
 			SMTP_PORT: "1025",
 			SMTP_SECURE: "false",
 			SMTP_FROM: "test@envsync.local",
-			// Keycloak
-			KEYCLOAK_URL: "http://localhost:8080",
-			KEYCLOAK_REALM: "envsync",
-			KEYCLOAK_ADMIN_USER: "admin",
-			KEYCLOAK_ADMIN_PASSWORD: "admin",
-			KEYCLOAK_WEB_CLIENT_ID: "envsync-web",
-			KEYCLOAK_WEB_CLIENT_SECRET: "test-web-client-secret",
-			KEYCLOAK_CLI_CLIENT_ID: "envsync-cli",
-			KEYCLOAK_API_CLIENT_ID: "envsync-api",
-			KEYCLOAK_API_CLIENT_SECRET: "test-api-client-secret",
-			KEYCLOAK_WEB_REDIRECT_URI: "http://api.lvh.me:4000/api/access/web/callback",
-			KEYCLOAK_WEB_CALLBACK_URL: "http://app.lvh.me:8001/auth/callback",
-			KEYCLOAK_API_REDIRECT_URI: "http://api.lvh.me:4000/api/access/api/callback",
+			// Atrium
+			ATRIUM_INTERNAL_URL: "http://localhost:8080",
+			ATRIUM_PUBLIC_URL: "http://localhost:8080",
+			ATRIUM_ISSUER: "http://localhost:8080",
+			ATRIUM_MANAGEMENT_CLIENT_ID: "management",
+			ATRIUM_MANAGEMENT_CLIENT_SECRET: "test-management-secret",
+			ATRIUM_WEB_CLIENT_ID: "envsync-web",
+			ATRIUM_WEB_CLIENT_SECRET: "test-web-client-secret",
+			ATRIUM_CLI_CLIENT_ID: "envsync-cli",
+			ATRIUM_API_CLIENT_ID: "envsync-api",
+			ATRIUM_API_CLIENT_SECRET: "test-api-client-secret",
+			ATRIUM_WEB_REDIRECT_URI: "http://api.lvh.me:4000/api/access/web/callback",
+			ATRIUM_WEB_CALLBACK_URL: "http://app.lvh.me:8001/auth/callback",
+			ATRIUM_API_REDIRECT_URI: "http://api.lvh.me:4000/api/access/api/callback",
 			// miniKMS
 			MINIKMS_GRPC_ADDR: "localhost:50051",
 			MINIKMS_TLS_ENABLED: "false",
@@ -196,42 +197,41 @@ if (!isE2E) {
 			},
 		}));
 
-			// Mock Keycloak helpers — no-op user management
-			mock.module("@/helpers/keycloak", () => ({
-				getKeycloakBaseUrl: () => "http://localhost:8080",
-				getKeycloakPublicBaseUrl: () => "http://localhost:8080",
-				getKeycloakIssuer: () => "http://localhost:8080/realms/envsync",
-				getKeycloakRealm: () => "envsync",
-				createKeycloakUser: async () => ({
-					id: `keycloak-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+			mock.module("@/helpers/identity", () => ({
+				getIdentityInternalBaseUrl: () => "http://localhost:8080",
+				getIdentityPublicBaseUrl: () => "http://localhost:8080",
+				getIdentityIssuer: () => "http://localhost:8080",
+				createDirectoryUser: async () => ({
+					id: `atrium-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 				}),
-				updateKeycloakUser: async () => {},
-				deleteKeycloakUser: async () => {},
-				sendKeycloakPasswordReset: async () => {},
-				findKeycloakUserByUsername: async () => null,
-				getKeycloakUserById: async () => null,
-				setKeycloakUserPassword: async () => {},
-				keycloakUserHasPassword: async () => true,
-				keycloakTokenExchange: async (code: string) => ({
+				updateDirectoryUser: async () => {},
+				deleteDirectoryUser: async () => {},
+				sendDirectoryPasswordReset: async () => {},
+				findDirectoryUserByUsername: async () => null,
+				getDirectoryUserById: async () => null,
+				setDirectoryUserPassword: async () => {},
+				directoryUserHasPassword: async () => true,
+				exchangeAuthorizationCode: async (code: string) => ({
 					access_token: `mock-access-token-${code}`,
 					id_token: `mock-id-token-${code}`,
 					refresh_token: `mock-refresh-token-${code}`,
 					expires_in: 900,
 					refresh_expires_in: 86400,
 				}),
-				keycloakPasswordLogin: async (username: string, _password: string) => ({
+				passwordGrantLogin: async (username: string, _password: string) => ({
 					access_token: `mock-password-access-token-${username}`,
 					id_token: `mock-password-id-token-${username}`,
 					refresh_token: `mock-password-refresh-token-${username}`,
 					expires_in: 900,
 					refresh_expires_in: 86400,
 				}),
-				keycloakRefreshToken: async (refreshToken: string) => ({
+				refreshDirectoryToken: async (refreshToken: string) => ({
 					access_token: `mock-refreshed-access-token-${refreshToken}`,
 					refresh_token: refreshToken,
 					expires_in: 900,
 					refresh_expires_in: 86400,
 				}),
+				revokeDirectoryToken: async () => {},
 			}));
 
 		// Mock KMS — in-memory AES-256-GCM with deterministic test keys + Vault + Session mocks
