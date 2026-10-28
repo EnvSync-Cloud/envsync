@@ -3,7 +3,7 @@
   "info": {
     "title": "EnvSync API",
     "description": "EnvSync API documentation.\n\nEnterprise manage routes are mounted at `/api/v1/manage/{module}/...` on this same process (one OpenAPI document, one API process). Tags marked *Only available in Enterprise deployment* require an Enterprise edition.\n\nBearer-token clients can optionally send the `X-EnvSync-Org-Id` header to select an active organization for that request. Cookie sessions continue to use `envsync_active_membership`, and API-key requests ignore this header.",
-    "version": "0.22.0"
+    "version": "0.23.3"
   },
   "tags": [
     {
@@ -1210,14 +1210,27 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "env_type": {
             "type": "string",
+            "minLength": 1,
             "example": "production"
           },
           "enable_secrets": {
@@ -1242,10 +1255,7 @@
             "type": "string",
             "example": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
           }
-        },
-        "required": [
-          "app_id"
-        ]
+        }
       },
       "EnvsResponse": {
         "type": "array",
@@ -1305,17 +1315,25 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
-        },
-        "required": [
-          "app_id",
-          "env_type_id"
-        ]
+        }
       },
       "CreateEnvRequest": {
         "type": "object",
@@ -1330,18 +1348,28 @@
           },
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
         },
         "required": [
           "key",
-          "value",
-          "app_id",
-          "env_type_id"
+          "value"
         ]
       },
       "BatchEnvsResponse": {
@@ -1361,11 +1389,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "envs": {
             "type": "array",
@@ -1390,8 +1430,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "envs"
         ]
       },
@@ -1400,11 +1438,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "key": {
             "type": "string",
@@ -1412,8 +1462,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "key"
         ]
       },
@@ -1426,17 +1474,27 @@
           },
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
         },
         "required": [
-          "value",
-          "app_id",
-          "env_type_id"
+          "value"
         ]
       },
       "BatchDeleteEnvsRequest": {
@@ -1444,11 +1502,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "keys": {
             "type": "array",
@@ -1460,8 +1530,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "keys"
         ]
       },
@@ -2536,6 +2604,10 @@
                 "type": "boolean",
                 "example": false
               },
+              "account_exists": {
+                "type": "boolean",
+                "example": false
+              },
               "created_at": {
                 "type": "string",
                 "example": "2023-01-01T00:00:00Z"
@@ -2569,7 +2641,10 @@
             "example": "User invite accepted successfully."
           },
           "generated_certificate_bundle": {
-            "type": "object",
+            "type": [
+              "object",
+              "null"
+            ],
             "properties": {
               "root_ca_pem": {
                 "type": "string",
@@ -2623,11 +2698,7 @@
             "type": "string",
             "example": "securepassword123"
           }
-        },
-        "required": [
-          "full_name",
-          "password"
-        ]
+        }
       },
       "CreateUserInviteResponse": {
         "type": "object",
@@ -2635,6 +2706,10 @@
           "message": {
             "type": "string",
             "example": "User invite created successfully."
+          },
+          "account_exists": {
+            "type": "boolean",
+            "example": false
           }
         },
         "required": [
@@ -2753,17 +2828,25 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
-        },
-        "required": [
-          "app_id",
-          "env_type_id"
-        ]
+        }
       },
       "CreateSecretRequest": {
         "type": "object",
@@ -2778,18 +2861,28 @@
           },
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
         },
         "required": [
           "key",
-          "value",
-          "app_id",
-          "env_type_id"
+          "value"
         ]
       },
       "BatchSecretsResponse": {
@@ -2809,11 +2902,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "envs": {
             "type": "array",
@@ -2838,8 +2943,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "envs"
         ]
       },
@@ -2848,11 +2951,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "key": {
             "type": "string",
@@ -2860,8 +2975,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "key"
         ]
       },
@@ -2874,17 +2987,27 @@
           },
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           }
         },
         "required": [
-          "value",
-          "app_id",
-          "env_type_id"
+          "value"
         ]
       },
       "BatchDeleteSecretsRequest": {
@@ -2892,11 +3015,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "keys": {
             "type": "array",
@@ -2908,8 +3043,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "keys"
         ]
       },
@@ -2968,11 +3101,23 @@
         "properties": {
           "app_id": {
             "type": "string",
+            "minLength": 1,
             "example": "app_123"
+          },
+          "app_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Core Platform"
           },
           "env_type_id": {
             "type": "string",
+            "minLength": 1,
             "example": "env_type_123"
+          },
+          "env_type_name": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Development"
           },
           "keys": {
             "type": "array",
@@ -2984,8 +3129,6 @@
           }
         },
         "required": [
-          "app_id",
-          "env_type_id",
           "keys"
         ]
       },
@@ -5086,6 +5229,36 @@
           "imported_count"
         ]
       },
+      "CreateOrgCaCsrRequest": {
+        "type": "object",
+        "properties": {
+          "org_name": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "org_name"
+        ]
+      },
+      "InstallOrgCaRequest": {
+        "type": "object",
+        "properties": {
+          "cert_pem": {
+            "type": "string",
+            "minLength": 32
+          },
+          "chain_pem": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cert_pem"
+        ]
+      },
       "ImportChainRequest": {
         "type": "object",
         "properties": {
@@ -6670,6 +6843,117 @@
           "org_name",
           "admin_email",
           "admin_password"
+        ]
+      },
+      "PlatformProvisionResponse": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "org_name": {
+            "type": "string"
+          },
+          "org_slug": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "auth_service_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer",
+              "plus",
+              "enterprise"
+            ]
+          },
+          "overlay_features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "existing_identity",
+              "fresh_tenant"
+            ]
+          }
+        },
+        "required": [
+          "org_id",
+          "org_name",
+          "org_slug",
+          "user_id",
+          "auth_service_id",
+          "plan",
+          "overlay_features",
+          "mode"
+        ]
+      },
+      "PlatformProvisionRequest": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "existing_identity",
+              "fresh_tenant"
+            ]
+          },
+          "organization_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer",
+              "plus",
+              "enterprise"
+            ]
+          },
+          "overlay_features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "membership_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "admin_email": {
+            "type": "string",
+            "format": "email"
+          },
+          "admin_full_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "actor_email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "mode",
+          "organization_name"
         ]
       },
       "LicenseActionResponse": {
@@ -14742,6 +15026,55 @@
         "description": "PEM bundle of imported chains, organization CA, and root CA"
       }
     },
+    "/api/certificate/ca/csr": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "CSR PEM"
+          }
+        },
+        "operationId": "createOrgCaCsr",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Create an organization CA CSR for an offline root",
+        "description": "Enterprise-only. Private key stays in miniKMS; sign the CSR offline and install the certificate.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgCaCsrRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/certificate/ca/install": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "CA installed"
+          }
+        },
+        "operationId": "installOrgCa",
+        "tags": [
+          "Certificates"
+        ],
+        "parameters": [],
+        "summary": "Install an organization CA signed by an offline root",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallOrgCaRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/certificate/ca/import-chain": {
       "post": {
         "responses": {
@@ -15910,6 +16243,77 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateSetupOrgRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/platform/organizations": {
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Organization provisioned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformProvisionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid platform token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not hosted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User or organization already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "provisionPlatformOrganization",
+        "tags": [
+          "Platform"
+        ],
+        "parameters": [
+          {
+            "name": "X-EnvSync-Platform-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Provision a Hosted organization (SuperAdmin)",
+        "description": "Hosted platform API. existing_identity attaches a new org to a membership. fresh_tenant creates Keycloak user + org. Source is hosted_ops; per-user org caps are skipped.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformProvisionRequest"
               }
             }
           }

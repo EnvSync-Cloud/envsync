@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -59,36 +60,50 @@ func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, ap
 		return InitResult{}, NewNotFoundError("no applications found. Create an application first with 'envsync app create'", nil)
 	}
 
-	var selectedAppID, selectedEnvID string
+	var selectedApp domain.Application
+	var selectedEnv domain.EnvType
 
 	if appID != "" {
-		selectedAppID = appID
-		selectedEnvID = envTypeID
+		for _, app := range apps {
+			if app.ID == appID {
+				selectedApp = app
+				break
+			}
+		}
+		if selectedApp.ID == "" {
+			return InitResult{}, NewNotFoundError("application not found: "+appID, nil)
+		}
 
 		if envTypeID == "" {
-			appName := ""
-			for _, a := range apps {
-				if a.ID == appID {
-					appName = a.Name
-					break
-				}
-			}
-
-			selectedEnvID, err = uc.selectEnvType(ctx, appID, appName)
+			selectedEnv, err = uc.selectEnvType(ctx, selectedApp.ID, selectedApp.Name)
 			if err != nil {
 				return InitResult{}, err
 			}
+		} else {
+			envTypes, err := uc.fetchEnvTypes(ctx, selectedApp.ID, selectedApp.Name)
+			if err != nil {
+				return InitResult{}, err
+			}
+			for _, envType := range envTypes {
+				if envType.ID == envTypeID {
+					selectedEnv = envType
+					break
+				}
+			}
+			if selectedEnv.ID == "" {
+				return InitResult{}, NewNotFoundError("environment type not found: "+envTypeID, nil)
+			}
 		}
 	} else {
-		selectedAppID, selectedEnvID, err = uc.selectAppAndEnv(ctx, apps)
+		selectedApp, selectedEnv, err = uc.selectAppAndEnv(ctx, apps)
 		if err != nil {
 			return InitResult{}, err
 		}
 	}
 
 	syncConfig := domain.SyncConfig{
-		AppID:     selectedAppID,
-		EnvTypeID: selectedEnvID,
+		AppName:     strings.TrimSpace(selectedApp.Name),
+		EnvTypeName: strings.TrimSpace(selectedEnv.Name),
 	}
 
 	if err := uc.saveConfig(syncConfig); err != nil {
@@ -96,9 +111,11 @@ func (uc *initCaseUse) ExecuteWithOptions(ctx context.Context, config string, ap
 	}
 
 	return InitResult{
-		Path:      constants.DefaultProjectConfig,
-		AppID:     selectedAppID,
-		EnvTypeID: selectedEnvID,
+		Path:        constants.DefaultProjectConfig,
+		AppID:       selectedApp.ID,
+		EnvTypeID:   selectedEnv.ID,
+		AppName:     syncConfig.AppName,
+		EnvTypeName: syncConfig.EnvTypeName,
 	}, nil
 }
 
@@ -115,52 +132,41 @@ func (uc *initCaseUse) fetchEnvTypes(ctx context.Context, appID, appName string)
 	return envTypes, nil
 }
 
-func (uc *initCaseUse) selectAppAndEnv(ctx context.Context, apps []domain.Application) (string, string, error) {
+func (uc *initCaseUse) selectAppAndEnv(ctx context.Context, apps []domain.Application) (domain.Application, domain.EnvType, error) {
 	selected, ok, err := uc.tui.PickApp(apps)
 	if err != nil {
-		return "", "", NewTUIError("failed to select application", err)
+		return domain.Application{}, domain.EnvType{}, NewTUIError("failed to select application", err)
 	}
 	if !ok {
-		return "", "", NewCancelledError("initialisation cancelled by user", nil)
+		return domain.Application{}, domain.EnvType{}, NewCancelledError("initialisation cancelled by user", nil)
 	}
 
-	envTypes, err := uc.fetchEnvTypes(ctx, selected.ID, selected.Name)
+	env, err := uc.selectEnvType(ctx, selected.ID, selected.Name)
 	if err != nil {
-		return "", "", err
-	}
-	if len(envTypes) == 0 {
-		return "", "", NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
+		return domain.Application{}, domain.EnvType{}, err
 	}
 
-	env, ok, err := factory.PickEnvType(envTypes, "Select an environment for "+selected.Name)
-	if err != nil {
-		return "", "", NewTUIError("failed to select environment", err)
-	}
-	if !ok {
-		return "", "", NewCancelledError("initialisation cancelled by user", nil)
-	}
-
-	return selected.ID, env.ID, nil
+	return selected, env, nil
 }
 
-func (uc *initCaseUse) selectEnvType(ctx context.Context, appID, appName string) (string, error) {
+func (uc *initCaseUse) selectEnvType(ctx context.Context, appID, appName string) (domain.EnvType, error) {
 	envTypes, err := uc.fetchEnvTypes(ctx, appID, appName)
 	if err != nil {
-		return "", err
+		return domain.EnvType{}, err
 	}
 	if len(envTypes) == 0 {
-		return "", NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
+		return domain.EnvType{}, NewNotFoundError("no environment types found \n Create one using 'envsync env create'", nil)
 	}
 
 	env, ok, err := factory.PickEnvType(envTypes, "Select an environment for "+appName)
 	if err != nil {
-		return "", NewTUIError("failed to select environment", err)
+		return domain.EnvType{}, NewTUIError("failed to select environment", err)
 	}
 	if !ok {
-		return "", NewCancelledError("initialisation cancelled by user", nil)
+		return domain.EnvType{}, NewCancelledError("initialisation cancelled by user", nil)
 	}
 
-	return env.ID, nil
+	return env, nil
 }
 
 func (uc *initCaseUse) checkConfigExists(configPath string) error {

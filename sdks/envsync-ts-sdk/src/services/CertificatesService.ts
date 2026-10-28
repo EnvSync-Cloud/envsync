@@ -4,9 +4,11 @@
 /* eslint-disable */
 import type { CertificateChainResponse } from '../models/CertificateChainResponse';
 import type { CertificateListResponse } from '../models/CertificateListResponse';
+import type { CreateOrgCaCsrRequest } from '../models/CreateOrgCaCsrRequest';
 import type { CRLResponse } from '../models/CRLResponse';
 import type { ImportChainRequest } from '../models/ImportChainRequest';
 import type { InitOrgCARequest } from '../models/InitOrgCARequest';
+import type { InstallOrgCaRequest } from '../models/InstallOrgCaRequest';
 import type { IssueLeafCertRequest } from '../models/IssueLeafCertRequest';
 import type { IssueMemberCertRequest } from '../models/IssueMemberCertRequest';
 import type { LabelEnvCaRequest } from '../models/LabelEnvCaRequest';
@@ -85,6 +87,39 @@ export class CertificatesService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/api/certificate/chain',
+        });
+    }
+    /**
+     * Create an organization CA CSR for an offline root
+     * Enterprise-only. Private key stays in miniKMS; sign the CSR offline and install the certificate.
+     * @param requestBody
+     * @returns any CSR PEM
+     * @throws ApiError
+     */
+    public createOrgCaCsr(
+        requestBody?: CreateOrgCaCsrRequest,
+    ): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/ca/csr',
+            body: requestBody,
+            mediaType: 'application/json',
+        });
+    }
+    /**
+     * Install an organization CA signed by an offline root
+     * @param requestBody
+     * @returns any CA installed
+     * @throws ApiError
+     */
+    public installOrgCa(
+        requestBody?: InstallOrgCaRequest,
+    ): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/api/certificate/ca/install',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

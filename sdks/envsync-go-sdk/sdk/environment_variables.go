@@ -9,21 +9,27 @@ import (
 )
 
 type CreateEnvRequest struct {
-	Key       string `json:"key" url:"-"`
-	Value     string `json:"value" url:"-"`
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
+	Key         string  `json:"key" url:"-"`
+	Value       string  `json:"value" url:"-"`
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	AppName     *string `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"-"`
 }
 
 type BatchDeleteEnvsRequest struct {
-	AppId     string   `json:"app_id" url:"-"`
-	EnvTypeId string   `json:"env_type_id" url:"-"`
-	Keys      []string `json:"keys,omitempty" url:"-"`
+	AppId       *string  `json:"app_id,omitempty" url:"-"`
+	AppName     *string  `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string  `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string  `json:"env_type_name,omitempty" url:"-"`
+	Keys        []string `json:"keys,omitempty" url:"-"`
 }
 
 type ExportEnvRequest struct {
-	AppId           string                           `json:"app_id" url:"-"`
+	AppId           *string                          `json:"app_id,omitempty" url:"-"`
+	AppName         *string                          `json:"app_name,omitempty" url:"-"`
 	EnvTypeId       *string                          `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName     *string                          `json:"env_type_name,omitempty" url:"-"`
 	EnvType         *string                          `json:"env_type,omitempty" url:"-"`
 	EnableSecrets   *ExportEnvRequestEnableSecrets   `json:"enable_secrets,omitempty" url:"-"`
 	IsSecretManaged *ExportEnvRequestIsSecretManaged `json:"is_secret_managed,omitempty" url:"-"`
@@ -31,26 +37,42 @@ type ExportEnvRequest struct {
 }
 
 type BatchCreateEnvsRequest struct {
-	AppId     string                            `json:"app_id" url:"app_id"`
-	EnvTypeId string                            `json:"env_type_id" url:"env_type_id"`
-	Envs      []*BatchCreateEnvsRequestEnvsItem `json:"envs" url:"envs"`
+	AppId       *string                           `json:"app_id,omitempty" url:"app_id,omitempty"`
+	AppName     *string                           `json:"app_name,omitempty" url:"app_name,omitempty"`
+	EnvTypeId   *string                           `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	EnvTypeName *string                           `json:"env_type_name,omitempty" url:"env_type_name,omitempty"`
+	Envs        []*BatchCreateEnvsRequestEnvsItem `json:"envs" url:"envs"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (b *BatchCreateEnvsRequest) GetAppId() string {
+func (b *BatchCreateEnvsRequest) GetAppId() *string {
 	if b == nil {
-		return ""
+		return nil
 	}
 	return b.AppId
 }
 
-func (b *BatchCreateEnvsRequest) GetEnvTypeId() string {
+func (b *BatchCreateEnvsRequest) GetAppName() *string {
 	if b == nil {
-		return ""
+		return nil
+	}
+	return b.AppName
+}
+
+func (b *BatchCreateEnvsRequest) GetEnvTypeId() *string {
+	if b == nil {
+		return nil
 	}
 	return b.EnvTypeId
+}
+
+func (b *BatchCreateEnvsRequest) GetEnvTypeName() *string {
+	if b == nil {
+		return nil
+	}
+	return b.EnvTypeName
 }
 
 func (b *BatchCreateEnvsRequest) GetEnvs() []*BatchCreateEnvsRequestEnvsItem {
@@ -193,26 +215,42 @@ func (b *BatchEnvsResponse) String() string {
 }
 
 type DeleteEnvRequest struct {
-	AppId     string `json:"app_id" url:"app_id"`
-	EnvTypeId string `json:"env_type_id" url:"env_type_id"`
-	Key       string `json:"key" url:"key"`
+	AppId       *string `json:"app_id,omitempty" url:"app_id,omitempty"`
+	AppName     *string `json:"app_name,omitempty" url:"app_name,omitempty"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"env_type_name,omitempty"`
+	Key         string  `json:"key" url:"key"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (d *DeleteEnvRequest) GetAppId() string {
+func (d *DeleteEnvRequest) GetAppId() *string {
 	if d == nil {
-		return ""
+		return nil
 	}
 	return d.AppId
 }
 
-func (d *DeleteEnvRequest) GetEnvTypeId() string {
+func (d *DeleteEnvRequest) GetAppName() *string {
 	if d == nil {
-		return ""
+		return nil
+	}
+	return d.AppName
+}
+
+func (d *DeleteEnvRequest) GetEnvTypeId() *string {
+	if d == nil {
+		return nil
 	}
 	return d.EnvTypeId
+}
+
+func (d *DeleteEnvRequest) GetEnvTypeName() *string {
+	if d == nil {
+		return nil
+	}
+	return d.EnvTypeName
 }
 
 func (d *DeleteEnvRequest) GetKey() string {
@@ -445,25 +483,41 @@ func (e *ExportEnvResponse) String() string {
 }
 
 type GetEnvRequest struct {
-	AppId     string `json:"app_id" url:"app_id"`
-	EnvTypeId string `json:"env_type_id" url:"env_type_id"`
+	AppId       *string `json:"app_id,omitempty" url:"app_id,omitempty"`
+	AppName     *string `json:"app_name,omitempty" url:"app_name,omitempty"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"env_type_name,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (g *GetEnvRequest) GetAppId() string {
+func (g *GetEnvRequest) GetAppId() *string {
 	if g == nil {
-		return ""
+		return nil
 	}
 	return g.AppId
 }
 
-func (g *GetEnvRequest) GetEnvTypeId() string {
+func (g *GetEnvRequest) GetAppName() *string {
 	if g == nil {
-		return ""
+		return nil
+	}
+	return g.AppName
+}
+
+func (g *GetEnvRequest) GetEnvTypeId() *string {
+	if g == nil {
+		return nil
 	}
 	return g.EnvTypeId
+}
+
+func (g *GetEnvRequest) GetEnvTypeName() *string {
+	if g == nil {
+		return nil
+	}
+	return g.EnvTypeName
 }
 
 func (g *GetEnvRequest) GetExtraProperties() map[string]interface{} {
@@ -549,7 +603,9 @@ func (e ExportEnvRequestIsSecretManaged) Ptr() *ExportEnvRequestIsSecretManaged 
 }
 
 type UpdateEnvRequest struct {
-	Value     string `json:"value" url:"-"`
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
+	Value       string  `json:"value" url:"-"`
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	AppName     *string `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"-"`
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 
 	exportuc "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/export"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
@@ -19,10 +20,27 @@ func NewExportHandler(exportUseCase exportuc.ExportUseCase) *ExportHandler {
 }
 
 func (h *ExportHandler) Export(ctx context.Context, cmd *cli.Command) error {
+	if cmd.IsSet("app-id") {
+		return errors.New("flag --app-id is not supported; use --app")
+	}
+	if cmd.IsSet("env-type-id") {
+		return errors.New("flag --env-type-id is not supported; use --env")
+	}
+
+	envName := cmd.String("env")
+	if cmd.IsSet("env-type") {
+		legacy := cmd.String("env-type")
+		if envName != "" && envName != legacy {
+			return errors.New("only one of --env or --env-type may be provided")
+		}
+		if envName == "" {
+			envName = legacy
+		}
+	}
+
 	result, err := h.exportUseCase.Execute(ctx, exportuc.ExportOptions{
-		AppID:           cmd.String("app-id"),
-		EnvTypeID:       cmd.String("env-type-id"),
-		EnvTypeName:     cmd.String("env-type"),
+		AppName:         cmd.String("app"),
+		EnvName:         envName,
 		ConfigPath:      cmd.String("config"),
 		Format:          cmd.String("format"),
 		EnableSecrets:   cmd.String("enable-secrets"),

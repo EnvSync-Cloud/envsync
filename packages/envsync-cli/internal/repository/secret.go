@@ -6,12 +6,13 @@ import (
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
 
 type SecretRepository interface {
-	GetAll(ctx context.Context, appID string, envTypeID string) ([]responses.SecretResponse, error)
-	Reveal(ctx context.Context, appID string, envTypeID string, keys []string) ([]responses.SecretResponse, error)
+	GetAll(ctx context.Context, ref domain.ProjectEnvRef) ([]responses.SecretResponse, error)
+	Reveal(ctx context.Context, ref domain.ProjectEnvRef, keys []string) ([]responses.SecretResponse, error)
 }
 
 type secretRepo struct {
@@ -26,10 +27,13 @@ func NewSecretRepository() SecretRepository {
 	}
 }
 
-func (s *secretRepo) GetAll(ctx context.Context, appID, envTypeID string) ([]responses.SecretResponse, error) {
+func (s *secretRepo) GetAll(ctx context.Context, ref domain.ProjectEnvRef) ([]responses.SecretResponse, error) {
+	scope := scopeFromRef(ref)
 	secrets, err := s.client.Secrets.GetSecrets(ctx, &sdk.GetSecretRequest{
-		AppId:     appID,
-		EnvTypeId: envTypeID,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
 	})
 	if err != nil {
 		return nil, err
@@ -52,11 +56,14 @@ func (s *secretRepo) GetAll(ctx context.Context, appID, envTypeID string) ([]res
 	return result, nil
 }
 
-func (s *secretRepo) Reveal(ctx context.Context, appID, envTypeID string, keys []string) ([]responses.SecretResponse, error) {
+func (s *secretRepo) Reveal(ctx context.Context, ref domain.ProjectEnvRef, keys []string) ([]responses.SecretResponse, error) {
+	scope := scopeFromRef(ref)
 	secrets, err := s.client.Secrets.RevealSecrets(ctx, &sdk.RevealSecretsRequest{
-		AppId:     appID,
-		EnvTypeId: envTypeID,
-		Keys:      keys,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
+		Keys:        keys,
 	})
 	if err != nil {
 		return nil, err
