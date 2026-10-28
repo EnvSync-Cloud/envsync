@@ -83,6 +83,12 @@ func TestConfigJSONRoundTrip(t *testing.T) {
 	}
 }
 
+func TestDefaultBackendURLUsesLinkerVariable(t *testing.T) {
+	if got := DefaultConfig().BackendURL; got != backendURL {
+		t.Fatalf("DefaultConfig backend URL = %q, want linker value %q", got, backendURL)
+	}
+}
+
 func TestReadConfigFileEmptyFallsBackToDefaults(t *testing.T) {
 	path := isolateConfigDir(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

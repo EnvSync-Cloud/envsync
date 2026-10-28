@@ -46,6 +46,9 @@ var (
 	cfg     AppConfig
 	once    sync.Once
 	initErr error
+	// backendURL is the default API origin. The E2E harness overrides it with
+	// -X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=...
+	backendURL = constants.BackendURL
 )
 
 func New() AppConfig {
@@ -134,7 +137,7 @@ func ReadConfigFile() (AppConfig, error) {
 // defaultConfig returns the default configuration for the application.
 func DefaultConfig() AppConfig {
 	return AppConfig{
-		BackendURL: constants.BackendURL,
+		BackendURL: backendURL,
 		AuthConfig: AuthConfig{
 			AccessToken:  "",
 			RefreshToken: "",
@@ -150,6 +153,9 @@ func DefaultConfig() AppConfig {
 
 // overrideConfigWithEnv overrides the configuration with environment variables.
 func overrideConfigWithEnv(cfg AppConfig) AppConfig {
+	if cfg.BackendURL == "" {
+		cfg.BackendURL = backendURL
+	}
 	if envBackendURL := os.Getenv(constants.EnvBackendURL); envBackendURL != "" {
 		cfg.BackendURL = envBackendURL
 	}
