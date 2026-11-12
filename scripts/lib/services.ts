@@ -166,15 +166,8 @@ export async function waitForMiniKMS(host?: string, port?: number): Promise<void
 	);
 }
 
-// ── Keycloak helpers ────────────────────────────────────────────────
-
-export async function waitForKeycloak(url?: string, realm?: string): Promise<void> {
-	await waitForAtrium(url);
-	void realm;
-}
-
 export async function waitForAtrium(url?: string): Promise<void> {
-	const base = (url ?? process.env.ATRIUM_INTERNAL_URL ?? process.env.KEYCLOAK_URL ?? "http://localhost:8080").replace(/\/$/, "");
+	const base = (url ?? process.env.ATRIUM_PUBLIC_URL ?? process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080").replace(/\/$/, "");
 	const checkUrl = base.includes("atrium:") ? "http://localhost:8080" : base;
 	await waitFor(
 		"Atrium",

@@ -271,8 +271,8 @@ async function startWebLoginFromChooser(page: Page) {
 		await page.goto(new URL("/login", config.baseUrl).toString(), { waitUntil: "domcontentloaded" });
 	}
 
-	const keycloakButton = page.getByTestId("login-keycloak");
-	await keycloakButton.waitFor({ state: "visible", timeout: 10_000 });
+	const continueButton = page.getByTestId("login-continue");
+	await continueButton.waitFor({ state: "visible", timeout: 10_000 });
 	await Promise.all([
 		page.waitForURL((url) => {
 			try {
@@ -281,7 +281,7 @@ async function startWebLoginFromChooser(page: Page) {
 				return false;
 			}
 		}, { timeout: config.actionTimeoutMs, waitUntil: "commit" }),
-		keycloakButton.click(),
+		continueButton.click(),
 	]);
 }
 
@@ -308,7 +308,7 @@ async function startWebLogin(page: Page) {
 		return;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		console.warn(`[ui-login] login chooser Keycloak bounce failed, falling back to API (${message})`);
+		console.warn(`[ui-login] login chooser bounce failed, falling back to API (${message})`);
 	}
 
 	await startWebLoginFromApi(page);
@@ -382,23 +382,29 @@ async function attemptLocalAutologinWithCredential(page: Page, credential: AuthC
 		return false;
 	}
 
-	const isLocalKeycloakPage = new URL(currentUrl).origin === new URL(config.authUrl).origin;
-	if (!isLocalKeycloakPage) {
+	const isLocalAuthPage = new URL(currentUrl).origin === new URL(config.authUrl).origin;
+	if (!isLocalAuthPage) {
 		return false;
 	}
 
 	const username = page.locator("#username");
 	const password = page.locator("#password");
-	const submit = page.locator("#kc-login");
-	if (!await username.isVisible().catch(() => false)) {
+	const submit = page.locator("button.primary");
+	if (await username.isVisible().catch(() => false) && !(await password.isVisible().catch(() => false))) {
+		await username.fill(credential.email);
+		await Promise.all([
+			page.waitForLoadState("domcontentloaded"),
+			submit.click(),
+		]);
+	}
+	if (!(await password.isVisible().catch(() => false))) {
 		return false;
 	}
 
-	await username.fill(credential.email);
 	await password.fill(credential.password);
 	await Promise.all([
 		page.waitForLoadState("domcontentloaded"),
-		submit.click(),
+		page.locator("button.primary").click(),
 	]);
 	await settleAuthenticatedPage(page);
 	return true;

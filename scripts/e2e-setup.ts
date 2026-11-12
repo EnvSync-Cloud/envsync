@@ -28,7 +28,7 @@ import {
 	waitForAtrium,
 	waitForMiniKMS,
 } from "./lib/services";
-import { bootstrapKeycloakClient } from "../packages/envsync-api/tests/e2e/helpers/keycloak-bootstrap";
+import { bootstrapAtriumClient } from "../packages/envsync-api/tests/e2e/helpers/atrium-bootstrap";
 import { authorizationModelDef } from "../packages/envsync-api/src/libs/openfga/model";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -325,7 +325,7 @@ async function init(): Promise<void> {
 	ensureMiniKmsSchema();
 
 	console.log("\nUsing the seeded Atrium e2e client...");
-	const atriumClient = await bootstrapKeycloakClient(
+	const atriumClient = await bootstrapAtriumClient(
 		atriumUrl,
 		"atrium",
 		process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management",

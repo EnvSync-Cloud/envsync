@@ -9,7 +9,8 @@ import {
 	renderApiMaintenanceConf,
 	renderClickstackClickHouseConfig,
 	renderFrontendRuntimeConfig,
-	renderKeycloakRealm,
+	renderAtriumClients,
+	renderAtriumConfig,
 	renderNginxConf,
 	renderNginxVpnConf,
 	renderEnvFile,
@@ -36,7 +37,7 @@ const config: DeployConfig = {
 	},
 	images: {
 		api: "ghcr.io/envsync-cloud/envsync-api:0.8.7",
-		keycloak: "envsync-keycloak:0.8.7",
+		atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.6",
 		web: "ghcr.io/envsync-cloud/envsync-web-static:0.8.7",
 		landing: "ghcr.io/envsync-cloud/envsync-landing-static:0.8.7",
 		clickstack: "ghcr.io/envsync-cloud/clickstack:0.8.7",
@@ -51,17 +52,17 @@ const config: DeployConfig = {
 		clickstack_ui_port: 8080,
 		clickstack_otlp_http_port: 4318,
 		clickstack_otlp_grpc_port: 4317,
-		keycloak_port: 8080,
+		atrium_port: 8080,
 		rustfs_port: 9000,
 		rustfs_console_port: 9001,
 	},
 	auth: {
-		keycloak_realm: "envsync",
 		admin_user: "admin",
 		admin_password: "admin",
 		web_client_id: "envsync-web",
 		api_client_id: "envsync-api",
 		cli_client_id: "envsync-cli",
+		management_client_id: "management",
 	},
 	observability: {
 		retention_days: 14,
@@ -109,7 +110,7 @@ const configWithNetutils: DeployConfig = {
 		enabled: true,
 		forwards: [
 			{ service: "postgres", service_port: 5432, host_port: 15432, protocol: "tcp" },
-			{ service: "keycloak", service_port: 8080, host_port: 18080, protocol: "tcp" },
+			{ service: "atrium", service_port: 8080, host_port: 18080, protocol: "tcp" },
 		],
 	},
 };
@@ -153,9 +154,10 @@ const generated: DeployGeneratedState = {
 	},
 	secrets: {
 		s3_secret_key: "s3-secret-key",
-		keycloak_db_password: "keycloak-db-pass",
-		keycloak_web_client_secret: "web-client-secret",
-		keycloak_api_client_secret: "api-client-secret",
+		atrium_db_password: "atrium-db-pass",
+		atrium_management_client_secret: "management-secret",
+		atrium_web_client_secret: "web-client-secret",
+		atrium_api_client_secret: "api-client-secret",
 		openfga_db_password: "openfga-db-pass",
 		minikms_root_key: "minikms-root-key",
 		minikms_session_signing_key: "-----BEGIN PRIVATE KEY-----\nDEV\n-----END PRIVATE KEY-----\n",
@@ -171,7 +173,8 @@ const paths = {
 	traefikStateRoot: "/var/lib/envsync/traefik",
 	deployRoot: "/opt/envsync/deploy",
 	releasesRoot: "/opt/envsync/releases",
-	keycloakRealmFile: "/opt/envsync/deploy/keycloak-realm.envsync.json",
+	atriumConfigFile: "/opt/envsync/deploy/atrium-config.yaml",
+	atriumClientsFile: "/opt/envsync/deploy/atrium-clients.json",
 	clickstackClickhouseConf: "/opt/envsync/deploy/clickhouse-listen.xml",
 	otelAgentConf: "/opt/envsync/deploy/otel-agent.yaml",
 	nginxLandingConf: "/opt/envsync/deploy/nginx-landing.conf",
@@ -183,7 +186,9 @@ const paths = {
 describe("buildRuntimeEnv", () => {
 	test("populates enterprise license and standard fields", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
-		expect(runtimeEnv.KEYCLOAK_WEB_CLIENT_SECRET).toBe("web-client-secret");
+		expect(runtimeEnv.ATRIUM_WEB_CLIENT_SECRET).toBe("web-client-secret");
+		expect(runtimeEnv.ATRIUM_ISSUER).toBe("https://auth.enterprise.example.com");
+		expect(runtimeEnv.ATRIUM_INTERNAL_URL).toBe("http://atrium:8080");
 		expect(runtimeEnv.OPENFGA_STORE_ID).toBe("store_123");
 		expect(runtimeEnv.DASHBOARD_URL).toBe("https://app.enterprise.example.com");
 		expect(runtimeEnv.MANAGEMENT_API_URL).toBe("https://api.enterprise.example.com/api/v1/manage");
@@ -209,11 +214,11 @@ describe("swarmConfigObjectName", () => {
 		const file = join(tmpdir(), `envsync-realm-${Date.now()}.json`);
 		writeFileSync(file, '{"realm":"envsync"}');
 		try {
-			const first = swarmConfigObjectName("envsync", "keycloak_realm", file, "0.21.0");
+			const first = swarmConfigObjectName("envsync", "atrium_config", file, "0.21.0");
 			writeFileSync(file, '{"realm":"envsync","updated":true}');
-			const second = swarmConfigObjectName("envsync", "keycloak_realm", file, "0.21.0");
-			expect(first).toMatch(/^envsync_keycloak_realm_[a-f0-9]{12}$/);
-			expect(second).toMatch(/^envsync_keycloak_realm_[a-f0-9]{12}$/);
+			const second = swarmConfigObjectName("envsync", "atrium_config", file, "0.21.0");
+			expect(first).toMatch(/^envsync_atrium_config_[a-f0-9]{12}$/);
+			expect(second).toMatch(/^envsync_atrium_config_[a-f0-9]{12}$/);
 			expect(first).not.toBe(second);
 		} finally {
 			unlinkSync(file);
@@ -221,8 +226,8 @@ describe("swarmConfigObjectName", () => {
 	});
 
 	test("falls back to the release version when the file is missing", () => {
-		expect(swarmConfigObjectName("envsync", "keycloak_realm", "/no/such/file.json", "0.21.0")).toBe(
-			"envsync_keycloak_realm_0_21_0",
+		expect(swarmConfigObjectName("envsync", "atrium_config", "/no/such/file.json", "0.21.0")).toBe(
+			"envsync_atrium_config_0_21_0",
 		);
 	});
 });
@@ -253,9 +258,10 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
-		expect(stackFull).toContain("/opt/envsync/deploy/keycloak-realm.envsync.json");
-		expect(stackFull).toContain("name: envsync_keycloak_realm_0_8_7");
-		expect(stackFull).toContain("kc.sh import --dir /opt/keycloak/data/import --override false");
+		expect(stackFull).toContain("/opt/envsync/deploy/atrium-config.yaml");
+		expect(stackFull).toContain("name: envsync_atrium_config_0_8_7");
+		expect(stackFull).toContain("ghcr.io/bravo68web/atrium:0.2.0-rc.6");
+		expect(stackFull).not.toContain("keycloak");
 		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
 		expect(stackFull).toContain("  netutils:");
@@ -282,16 +288,17 @@ describe("renderTraefikDynamicConfig", () => {
 	});
 });
 
-describe("renderKeycloakRealm", () => {
-	test("configures realm clients, uris, and attributes", () => {
+describe("renderAtriumClients", () => {
+	test("pins redirect URIs and token lifetimes for the deployment domain", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
-		const keycloakRealm = renderKeycloakRealm(config, runtimeEnv);
-		expect(keycloakRealm).toContain("\"clientId\": \"envsync-web\"");
-		expect(keycloakRealm).toContain("https://api.enterprise.example.com/api/access/web/callback");
-		expect(keycloakRealm).toContain("https://app.enterprise.example.com/auth/callback");
-		expect(keycloakRealm).toContain("\"accessTokenLifespan\": 3600");
-		expect(keycloakRealm).toContain("\"ssoSessionIdleTimeout\": 604800");
-		expect(keycloakRealm).toContain("\"ssoSessionMaxLifespan\": 604800");
+		const clients = renderAtriumClients(config, runtimeEnv);
+		const configYaml = renderAtriumConfig(config, runtimeEnv);
+		expect(clients).toContain("\"id\": \"envsync-web\"");
+		expect(clients).toContain("https://api.enterprise.example.com/api/access/web/callback");
+		expect(clients).toContain("https://app.enterprise.example.com/auth/callback");
+		expect(configYaml).toContain("issuer: \"https://auth.enterprise.example.com\"");
+		expect(configYaml).toContain("access_token_lifetime: 1h");
+		expect(configYaml).toContain("refresh_token_lifetime: 168h");
 	});
 });
 
@@ -313,8 +320,8 @@ describe("renderFrontendRuntimeConfig", () => {
 		const envFile = renderEnvFile(buildRuntimeEnv(config, generated));
 		expect(envFile).toContain("API_URL=https://api.enterprise.example.com");
 		expect(envFile).not.toContain("API_URL=http://localhost");
-		expect(envFile).toContain("KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS=3600");
-		expect(envFile).toContain("KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS=604800");
+		expect(envFile).toContain("ATRIUM_INTERNAL_URL=http://atrium:8080");
+		expect(envFile).toContain("ATRIUM_ISSUER=https://auth.enterprise.example.com");
 		expect(envFile).toContain(`SAML_SESSION_SECRET=${"a".repeat(64)}`);
 	});
 
@@ -399,7 +406,7 @@ describe("VPN Configuration (Netbird)", () => {
 
 	test("renderNginxVpnConf uses configured internal domain", () => {
 		const vpnConf = renderNginxVpnConf(configWithNetbird);
-		expect(vpnConf).toContain("server_name keycloak.infra.envsync.local;");
+		expect(vpnConf).toContain("server_name atrium.infra.envsync.local;");
 		expect(vpnConf).toContain("server_name openfga.infra.envsync.local;");
 		expect(vpnConf).toContain("server_name clickstack.infra.envsync.local;");
 		expect(vpnConf).toContain("server_name rustfs.infra.envsync.local;");
@@ -412,7 +419,7 @@ describe("VPN Configuration (Netbird)", () => {
 
 	test("renderNginxVpnConf defaults to envsync.local", () => {
 		const vpnConf = renderNginxVpnConf(config);
-		expect(vpnConf).toContain("server_name keycloak.envsync.local;");
+		expect(vpnConf).toContain("server_name atrium.envsync.local;");
 		expect(vpnConf).toContain("server_name openfga.envsync.local;");
 		expect(vpnConf).toContain("server_name clickstack.envsync.local;");
 		expect(vpnConf).toContain("server_name rustfs.envsync.local;");

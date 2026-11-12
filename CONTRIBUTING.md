@@ -6,9 +6,9 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 
 - **Bun 1.3+**, **Go 1.24+**, **Docker**
 - `bun install` — install all JS/TS dependencies
-- `docker compose up -d` — start Postgres, miniKMS, OpenFGA, Keycloak, Mailpit
-- Keycloak is built locally from `packages/envsync-keycloak-theme`; no GHCR auth is required for local auth/E2E
-- `bun run cli:init` — bootstrap RustFS and Keycloak clients
+- `docker compose up -d` — start Postgres, miniKMS, OpenFGA, Atrium, Mailpit
+- Atrium is the pinned image `ghcr.io/bravo68web/atrium:0.2.0-rc.6`. Dev mounts `docker/atrium` for config and branding.
+- `bun run cli:init` — bootstrap RustFS and Atrium clients
 - `bun run cli create-dev-user --seed` — seed a development user
 
 ## Development Workflow
@@ -169,7 +169,7 @@ All PRs must pass these GitHub Actions jobs (`.github/workflows/ci.yaml`):
 |-----|-------------|
 | **build** | `bun run build` (all packages) |
 | **test-mock** | Mock/unit tests against a Postgres service container |
-| **test-e2e** | Full integration tests with Postgres, miniKMS, OpenFGA, Keycloak, Mailpit |
+| **test-e2e** | Full integration tests with Postgres, miniKMS, OpenFGA, Atrium, Mailpit |
 
 ## Commit Messages
 

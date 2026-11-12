@@ -16,7 +16,7 @@ export interface DeployConfig {
 	};
 	images: {
 		api: string;
-		keycloak: string;
+		atrium: string;
 		web: string;
 		landing: string;
 		clickstack: string;
@@ -31,17 +31,17 @@ export interface DeployConfig {
 		clickstack_ui_port: number;
 		clickstack_otlp_http_port: number;
 		clickstack_otlp_grpc_port: number;
-		keycloak_port: number;
+		atrium_port: number;
 		rustfs_port: number;
 		rustfs_console_port: number;
 	};
 	auth: {
-		keycloak_realm: string;
 		admin_user: string;
 		admin_password: string;
 		web_client_id: string;
 		api_client_id: string;
 		cli_client_id: string;
+		management_client_id: string;
 	};
 	observability: {
 		retention_days: number;
@@ -129,9 +129,10 @@ export interface DeployGeneratedState {
 	};
 	secrets: {
 		s3_secret_key: string;
-		keycloak_db_password: string;
-		keycloak_web_client_secret: string;
-		keycloak_api_client_secret: string;
+		atrium_db_password: string;
+		atrium_management_client_secret: string;
+		atrium_web_client_secret: string;
+		atrium_api_client_secret: string;
 		openfga_db_password: string;
 		minikms_root_key: string;
 		minikms_session_signing_key: string;
@@ -147,7 +148,8 @@ export interface DeployRenderPaths {
 	traefikStateRoot: string;
 	deployRoot: string;
 	releasesRoot: string;
-	keycloakRealmFile: string;
+	atriumConfigFile: string;
+	atriumClientsFile: string;
 	clickstackClickhouseConf: string;
 	otelAgentConf: string;
 	nginxLandingConf: string;
@@ -211,9 +213,7 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 	return publicHttpsOriginVariants(config, host).map(origin => `${origin}${urlPath}`);
 }
 
-function keycloakImageTag(image: string) {
-	return image.split(":").slice(1).join(":") || "local";
-}
+export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.6";
 
 function slotServiceName(slot: ApiSlot) {
 	return `envsync_api_${slot}`;
@@ -307,20 +307,21 @@ export function buildRuntimeEnv(
 		SMTP_USER: config.smtp.user,
 		SMTP_PASS: config.smtp.pass,
 		SMTP_FROM: config.smtp.from,
-		KEYCLOAK_URL: "http://keycloak:8080",
-		KEYCLOAK_PUBLIC_URL: publicHttpsUrl(config, hosts.auth),
-		KEYCLOAK_REALM: config.auth.keycloak_realm,
-		KEYCLOAK_ADMIN_USER: config.auth.admin_user,
-		KEYCLOAK_ADMIN_PASSWORD: config.auth.admin_password,
-		KEYCLOAK_DB_PASSWORD: generated.secrets.keycloak_db_password || config.auth.admin_password,
-		KEYCLOAK_WEB_CLIENT_ID: config.auth.web_client_id,
-		KEYCLOAK_WEB_CLIENT_SECRET: generated.secrets.keycloak_web_client_secret,
-		KEYCLOAK_CLI_CLIENT_ID: config.auth.cli_client_id,
-		KEYCLOAK_API_CLIENT_ID: config.auth.api_client_id,
-		KEYCLOAK_API_CLIENT_SECRET: generated.secrets.keycloak_api_client_secret,
-		KEYCLOAK_WEB_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/web/callback"),
-		KEYCLOAK_WEB_CALLBACK_URL: publicHttpsUrl(config, hosts.app, "/auth/callback"),
-		KEYCLOAK_API_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/api/callback"),
+		ATRIUM_INTERNAL_URL: "http://atrium:8080",
+		ATRIUM_PUBLIC_URL: publicHttpsUrl(config, hosts.auth),
+		ATRIUM_ISSUER: publicHttpsUrl(config, hosts.auth),
+		ATRIUM_DB_PASSWORD: generated.secrets.atrium_db_password,
+		ATRIUM_MANAGEMENT_CLIENT_ID: config.auth.management_client_id,
+		ATRIUM_MANAGEMENT_CLIENT_SECRET: generated.secrets.atrium_management_client_secret,
+		ATRIUM_WEB_CLIENT_ID: config.auth.web_client_id,
+		ATRIUM_WEB_CLIENT_SECRET: generated.secrets.atrium_web_client_secret,
+		ATRIUM_CLI_CLIENT_ID: config.auth.cli_client_id,
+		ATRIUM_API_CLIENT_ID: config.auth.api_client_id,
+		ATRIUM_API_CLIENT_SECRET: generated.secrets.atrium_api_client_secret,
+		ATRIUM_WEB_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/web/callback"),
+		ATRIUM_WEB_CALLBACK_URL: publicHttpsUrl(config, hosts.app, "/auth/callback"),
+		ATRIUM_API_REDIRECT_URI: publicHttpsUrl(config, hosts.api, "/api/access/api/callback"),
+		ATRIUM_IMAGE: config.images.atrium,
 		// Self-host: no landing; invite emails use dashboard accept routes (Phase 2).
 		LANDING_PAGE_URL: publicHttpsUrl(config, hosts.app),
 		DASHBOARD_URL: publicHttpsUrl(config, hosts.app),
@@ -331,11 +332,6 @@ export function buildRuntimeEnv(
 		API_URL: publicHttpsUrl(config, hosts.api),
 		SAML_SESSION_SECRET: generated.secrets.saml_session_secret,
 		MANAGEMENT_API_URL: oss ? "" : publicHttpsUrl(config, hosts.api, "/api/v1/manage"),
-		KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS: "3600",
-		KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS: "604800",
-		KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS: "604800",
-		KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS: "604800",
-		KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS: "604800",
 		CLICKSTACK_OPERATOR_EMAIL: generated.clickstack.operator_email,
 		CLICKSTACK_OPERATOR_PASSWORD: generated.clickstack.operator_password,
 		CLICKSTACK_ACCESS_KEY: generated.clickstack.access_key,
@@ -355,7 +351,6 @@ export function buildRuntimeEnv(
 		POSTHOG_HOST: config.analytics?.posthog_host || process.env.POSTHOG_HOST || "https://eu.i.posthog.com",
 		ENVSYNC_POSTHOG_DISABLED: config.analytics?.disabled ? "true" : (process.env.ENVSYNC_POSTHOG_DISABLED || "false"),
 		CLICKSTACK_URL: publicHttpsUrl(config, hosts.obs),
-		KEYCLOAK_IMAGE_TAG: keycloakImageTag(config.images.keycloak),
 		// Is this too hacky? We go Shawn way.
 		...(config.vpn?.provider && config.vpn.provider !== "none" && config.vpn.nb_setup_key
 			? { NB_SETUP_KEY: config.vpn.nb_setup_key }
@@ -419,72 +414,135 @@ export function renderEnvList(values: Record<string, string | number | boolean>,
 		.join("\n");
 }
 
-export function renderKeycloakRealm(config: DeployConfig, runtimeEnv: RuntimeEnv) {
+function yamlQuote(value: string) {
+	return JSON.stringify(value);
+}
+
+export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv) {
+	const password = encodeURIComponent(runtimeEnv.ATRIUM_DB_PASSWORD);
+	const dsn = `postgres://atrium:${password}@atrium_db:5432/atrium?sslmode=disable`;
+	const smtpSecure = config.smtp.secure ? "true" : "false";
+	return [
+		"server:",
+		"  host: 0.0.0.0",
+		"  port: 8080",
+		"",
+		"database:",
+		"  driver: postgres",
+		`  dsn: ${yamlQuote(dsn)}`,
+		"  migrations: true",
+		"",
+		"security:",
+		`  issuer: ${yamlQuote(runtimeEnv.ATRIUM_ISSUER)}`,
+		"  login_identifier: username",
+		"  identifier_first: true",
+		"  access_token_format: jwt",
+		"  access_token_lifetime: 1h",
+		"  refresh_token_lifetime: 168h",
+		"  session_lifetime: 168h",
+		"  disable_registration: true",
+		"  disable_social_registration: true",
+		"",
+		"registration:",
+		"  dcr_enabled: false",
+		"  cimd_enabled: false",
+		"",
+		"management:",
+		`  client_id: ${yamlQuote(runtimeEnv.ATRIUM_MANAGEMENT_CLIENT_ID)}`,
+		`  client_secret: ${yamlQuote(runtimeEnv.ATRIUM_MANAGEMENT_CLIENT_SECRET)}`,
+		"",
+		"smtp:",
+		"  enabled: true",
+		`  host: ${yamlQuote(config.smtp.host)}`,
+		`  port: ${config.smtp.port}`,
+		`  username: ${yamlQuote(config.smtp.user)}`,
+		`  password: ${yamlQuote(config.smtp.pass)}`,
+		`  from: ${yamlQuote(config.smtp.from)}`,
+		`  starttls: ${smtpSecure}`,
+		"  implicit_tls: false",
+		"",
+		"email:",
+		"  templates_dir: /branding/email",
+		"",
+		"queue:",
+		"  type: memory",
+		"",
+		"org:",
+		"  enabled: false",
+		"",
+		"branding:",
+		"  product_name: EnvSync",
+		"  login_title: Welcome back",
+		"  username_label: Work email",
+		"  password_label: Password",
+		"  submit_label: Continue",
+		"  assets_dir: /branding/assets",
+		"  logo_file: logo.png",
+		"  favicon_file: logo.png",
+		'  primary_color: "#3ddc84"',
+		'  background_color: "#050507"',
+		'  text_color: "#f5f5f6"',
+		"  show_register: false",
+		"  show_forgot_password: true",
+		"  templates: /branding/templates",
+		"",
+	].join("\n");
+}
+
+export function renderAtriumClients(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 	const hosts = domainMap(config.domain.root_domain);
 	const webRedirectUris = [
 		...publicHttpsUrlVariants(config, hosts.api, "/api/access/web/callback"),
 		...publicHttpsUrlVariants(config, hosts.app, "/auth/callback"),
 		...publicHttpsUrlVariants(config, hosts.app),
 	];
-	const webOrigins = publicHttpsOriginVariants(config, hosts.app);
+	const postLogout = publicHttpsOriginVariants(config, hosts.app);
 	const apiRedirectUris = publicHttpsUrlVariants(config, hosts.api, "/api/access/api/callback");
-	const apiOrigins = publicHttpsOriginVariants(config, hosts.api);
-	const accessTokenLifespan = Number(runtimeEnv.KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS || "3600");
-	const ssoSessionIdleTimeout = Number(runtimeEnv.KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS || "604800");
-	const ssoSessionMaxLifespan = Number(runtimeEnv.KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS || "604800");
-	const clientSessionIdleTimeout = Number(runtimeEnv.KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS || "604800");
-	const clientSessionMaxLifespan = Number(runtimeEnv.KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS || "604800");
 	return JSON.stringify(
 		{
-			realm: config.auth.keycloak_realm,
-			enabled: true,
-			loginTheme: "envsync",
-			emailTheme: "envsync",
-			accessTokenLifespan,
-			ssoSessionIdleTimeout,
-			ssoSessionMaxLifespan,
-			clientSessionIdleTimeout,
-			clientSessionMaxLifespan,
+			version: 1,
+			users: [],
 			clients: [
 				{
-					clientId: config.auth.web_client_id,
+					id: config.auth.web_client_id,
+					secret: runtimeEnv.ATRIUM_WEB_CLIENT_SECRET,
 					name: "EnvSync Web",
-					protocol: "openid-connect",
-					publicClient: false,
-					secret: runtimeEnv.KEYCLOAK_WEB_CLIENT_SECRET,
-					standardFlowEnabled: true,
-					directAccessGrantsEnabled: false,
-					redirectUris: [...new Set(webRedirectUris)],
-					webOrigins: [...new Set(webOrigins)],
-					attributes: {
-						"post.logout.redirect.uris": "+",
-					},
-					defaultClientScopes: ["basic", "web-origins", "profile", "email", "roles"],
+					redirect_uris: [...new Set(webRedirectUris)],
+					post_logout_redirect_uris: [...new Set(postLogout)],
+					grant_types: ["authorization_code", "refresh_token"],
+					scopes: ["openid", "profile", "email"],
+					token_endpoint_auth_method: "client_secret_post",
+					skip_consent: true,
 				},
 				{
-					clientId: config.auth.api_client_id,
+					id: config.auth.api_client_id,
+					secret: runtimeEnv.ATRIUM_API_CLIENT_SECRET,
 					name: "EnvSync API",
-					protocol: "openid-connect",
-					publicClient: false,
-					secret: runtimeEnv.KEYCLOAK_API_CLIENT_SECRET,
-					standardFlowEnabled: true,
-					redirectUris: [...new Set(apiRedirectUris)],
-					webOrigins: [...new Set(apiOrigins)],
-					defaultClientScopes: ["basic", "profile", "email", "roles"],
+					redirect_uris: [...new Set(apiRedirectUris)],
+					grant_types: ["authorization_code", "refresh_token"],
+					scopes: ["openid", "profile", "email"],
+					token_endpoint_auth_method: "client_secret_post",
+					skip_consent: true,
 				},
 				{
-					clientId: config.auth.cli_client_id,
+					id: config.auth.cli_client_id,
 					name: "EnvSync CLI",
-					protocol: "openid-connect",
-					publicClient: true,
-					standardFlowEnabled: false,
-					directAccessGrantsEnabled: false,
-					attributes: {
-						"oauth2.device.authorization.grant.enabled": "true",
-					},
-					defaultClientScopes: ["basic", "profile", "email", "roles"],
+					redirect_uris: [],
+					grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
+					scopes: ["openid", "profile", "email"],
+					token_endpoint_auth_method: "none",
+					skip_consent: true,
 				},
 			],
+			organizations: [],
+			consents: [],
+			scopes: [],
+			resources: [],
+			webhooks: [],
+			social_identities: [],
+			push_devices: [],
+			pairwise_subjects: [],
+			signing_keys: [],
 		},
 		null,
 		2,
@@ -684,7 +742,6 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 		appBaseUrl: publicHttpsUrl(config, hosts.app),
 		authBaseUrl: publicHttpsUrl(config, hosts.auth),
 		managementApiUrl,
-		keycloakRealm: config.auth.keycloak_realm,
 		webClientId: config.auth.web_client_id,
 		apiDocsUrl: publicHttpsUrl(config, hosts.api, "/docs"),
 		edition,
@@ -819,9 +876,9 @@ stream {
 http {
   server {
     listen 80;
-    server_name keycloak.${domain};
+    server_name atrium.${domain};
     location / {
-      proxy_pass http://keycloak:8080/;
+      proxy_pass http://atrium:8080/;
       proxy_set_header Host $host;
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -936,7 +993,7 @@ export function renderStack(
 	const apiEnvironment = {
 		...runtimeEnv,
 		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
-		KEYCLOAK_URL: "http://keycloak:8080",
+		ATRIUM_INTERNAL_URL: "http://atrium:8080",
 		OPENFGA_API_URL: "http://openfga:8090",
 		MINIKMS_GRPC_ADDR: "minikms:50051",
 		S3_ENDPOINT: "http://rustfs:9000",
@@ -1021,48 +1078,60 @@ ${renderEnvList({
         - traefik.http.routers.${s3ConsoleRouterName}.service=${s3ConsoleServiceName}
         - traefik.http.services.${s3ConsoleServiceName}.loadbalancer.server.port=9001
 
-  keycloak_db:
+  atrium_db:
     image: postgres:17
     environment:
 ${renderEnvList({
-		POSTGRES_USER: "keycloak",
-		POSTGRES_PASSWORD: runtimeEnv.KEYCLOAK_DB_PASSWORD,
-		POSTGRES_DB: "keycloak",
+		POSTGRES_USER: "atrium",
+		POSTGRES_PASSWORD: runtimeEnv.ATRIUM_DB_PASSWORD,
+		POSTGRES_DB: "atrium",
 	})}
     volumes:
-      - keycloak_db_data:/var/lib/postgresql/data
+      - atrium_db_data:/var/lib/postgresql/data
     networks: [envsync]
 ${includeRuntimeInfra ? `
-  keycloak:
-    image: ${config.images.keycloak}
-    entrypoint: ["/bin/sh", "-lc"]
-    command:
-      - /opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import --override false && exec /opt/keycloak/bin/kc.sh start --optimized
-    environment:
-${renderEnvList({
-		KC_DB: "postgres",
-		KC_DB_URL: "jdbc:postgresql://keycloak_db:5432/keycloak",
-		KC_DB_USERNAME: "keycloak",
-		KC_DB_PASSWORD: runtimeEnv.KEYCLOAK_DB_PASSWORD,
-		KC_BOOTSTRAP_ADMIN_USERNAME: config.auth.admin_user,
-		KC_BOOTSTRAP_ADMIN_PASSWORD: config.auth.admin_password,
-		KC_HTTP_ENABLED: "true",
-		KC_HEALTH_ENABLED: "true",
-		KC_PROXY_HEADERS: "xforwarded",
-		KC_HOSTNAME: hosts.auth,
-		KC_HOSTNAME_STRICT: "false",
-	})}
+  atrium:
+    image: ${config.images.atrium}
     configs:
-      - source: keycloak_realm
-        target: /opt/keycloak/data/import/realm.json
+      - source: atrium_config
+        target: /app/config.yaml
+    volumes:
+      - ${paths.deployRoot}/atrium-branding/templates:/branding/templates:ro
+      - ${paths.deployRoot}/atrium-branding/assets:/branding/assets:ro
+      - ${paths.deployRoot}/atrium-branding/email:/branding/email:ro
     networks: [envsync]
     deploy:
       labels:
         - traefik.enable=true
-        - traefik.http.routers.keycloak.rule=Host(\`${hosts.auth}\`)
-        - traefik.http.routers.keycloak.entrypoints=websecure
-        - traefik.http.routers.keycloak.tls.certresolver=letsencrypt
-        - traefik.http.services.keycloak.loadbalancer.server.port=8080` : ""}
+        - traefik.http.routers.atrium.rule=Host(\`${hosts.auth}\`)
+        - traefik.http.routers.atrium.entrypoints=websecure
+        - traefik.http.routers.atrium.tls.certresolver=letsencrypt
+        - traefik.http.services.atrium.loadbalancer.server.port=8080
+
+  atrium_seed:
+    image: curlimages/curl:8.10.1
+    environment:
+${renderEnvList({
+		ATRIUM_MANAGEMENT_CLIENT_ID: runtimeEnv.ATRIUM_MANAGEMENT_CLIENT_ID,
+		ATRIUM_MANAGEMENT_CLIENT_SECRET: runtimeEnv.ATRIUM_MANAGEMENT_CLIENT_SECRET,
+	})}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        until curl -fsS http://atrium:8080/health >/dev/null; do sleep 1; done
+        token=$(curl -fsS -X POST http://atrium:8080/oauth/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=$ATRIUM_MANAGEMENT_CLIENT_ID&client_secret=$ATRIUM_MANAGEMENT_CLIENT_SECRET&scope=management" | sed -n 's/.*"access_token":"\\([^"]*\\)".*/\\1/p')
+        test -n "$token"
+        code=$(curl -s -o /tmp/existing -w "%{http_code}" -H "Authorization: Bearer $token" http://atrium:8080/api/clients/envsync-web || true)
+        if [ "$code" = "200" ]; then exit 0; fi
+        curl -fsS -X POST "http://atrium:8080/api/restore?force=true" -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data-binary @/clients.json
+    configs:
+      - source: atrium_clients
+        target: /clients.json
+    networks: [envsync]
+    deploy:
+      restart_policy:
+        condition: none` : ""}
 
   openfga_db:
     image: postgres:17
@@ -1223,7 +1292,7 @@ volumes:
   postgres_data:
   redis_data:
   rustfs_data:
-  keycloak_db_data:
+  atrium_db_data:
   openfga_db_data:
   minikms_db_data:
   clickstack_data:
@@ -1233,9 +1302,12 @@ volumes:
   ${v}:`).join("") ?? ""}
 
 configs:
-  keycloak_realm:
-    name: ${configName("keycloak_realm", paths.keycloakRealmFile)}
-    file: ${paths.keycloakRealmFile}
+  atrium_config:
+    name: ${configName("atrium_config", paths.atriumConfigFile)}
+    file: ${paths.atriumConfigFile}
+  atrium_clients:
+    name: ${configName("atrium_clients", paths.atriumClientsFile)}
+    file: ${paths.atriumClientsFile}
   clickstack_clickhouse_conf:
     name: ${configName("clickstack_clickhouse_conf", paths.clickstackClickhouseConf)}
     file: ${paths.clickstackClickhouseConf}

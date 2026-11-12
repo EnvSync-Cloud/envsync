@@ -22,7 +22,7 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 - **urfave/cli** — command framework
 - **envsync-go-sdk** — HTTP client (product + Enterprise manage on one API origin)
 - **Uber Zap** — structured logging
-- Auth against EnvSync API / Keycloak (not Auth0)
+- Auth against EnvSync API / Atrium (not Auth0)
 
 ## 🚀 Installation
 

@@ -55,7 +55,7 @@ export const validateAccess = async ({
 				user = await UserService.getUserByIdpId(idpSub);
 			} catch (error) {
 				throw new Error(
-					`User not found for Keycloak subject ${idpSub}: ${error instanceof Error ? error.message : String(error)}`,
+					`User not found for Atrium subject ${idpSub}: ${error instanceof Error ? error.message : String(error)}`,
 				);
 			}
 			userId = user.id;
@@ -136,7 +136,7 @@ export const validateAccess = async ({
 /**
  * Determine the auth type for a Bearer token.
  * - If the token's issuer is "envsync-saml" → SAML.
- * - If the token's issuer matches Keycloak → JWT.
+ * - If the token's issuer matches Atrium → JWT.
  * - If the token's issuer matches a registered OIDC provider → OIDC.
  * - Falls back to JWT (which will fail with a clear error if invalid).
  */
@@ -216,7 +216,7 @@ export async function issueSamlSessionToken(input: {
 /**
  * Verify a SAML session token (HS256).
  * These tokens are issued by the SAML ACS endpoint and signed with a
- * derived secret from the SAML_SESSION_SECRET env var (or Keycloak config).
+ * derived secret from the SAML_SESSION_SECRET env var (or Atrium config).
  */
 async function verifySamlToken(token: string): Promise<Record<string, unknown>> {
 	const secret = samlSessionSecret();

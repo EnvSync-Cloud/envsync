@@ -1,7 +1,7 @@
 /**
  * E2E: SAML Provider CRUD — create → list → get → update → delete
  *
- * Uses real PostgreSQL, OpenFGA, and Keycloak.
+ * Uses real PostgreSQL, OpenFGA, and Atrium.
  * Tests the SAML identity provider management surface for SSO authentication.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

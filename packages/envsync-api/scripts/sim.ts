@@ -50,7 +50,7 @@ if (fs.existsSync(rootEnvPath)) {
 	console.log(`[Sim] Loaded root env from ${rootEnvPath}`);
 }
 
-// Layer E2E-specific credentials (Keycloak, OpenFGA, miniKMS)
+// Layer E2E-specific credentials (Atrium, OpenFGA, miniKMS)
 const envE2EPath = path.join(projectRoot, ".env.e2e.test");
 if (fs.existsSync(envE2EPath)) {
 	loadEnvFileSimple(envE2EPath);
@@ -61,7 +61,7 @@ if (fs.existsSync(envE2EPath)) {
 }
 
 // ── 3. Set required environment variables ────────────────────────────
-const atriumUrl = process.env.ATRIUM_INTERNAL_URL ?? process.env.KEYCLOAK_URL ?? "http://localhost:8080";
+const atriumUrl = process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080";
 
 Object.assign(process.env, {
 	NODE_ENV: "development",

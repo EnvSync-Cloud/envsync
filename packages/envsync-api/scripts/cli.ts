@@ -128,11 +128,11 @@ async function ensureDevOrg(
 			.select(["id"])
 			.where("email", "=", bootstrapUser.email)
 			.executeTakeFirst();
-		const existingKeycloakBootstrapUser = localBootstrapUser
+		const existingAtriumBootstrapUser = localBootstrapUser
 			? null
 			: await findDirectoryUserByUsername(bootstrapUser.email);
 		const shouldUseTemporaryBootstrapUser = Boolean(
-			localBootstrapUser || existingKeycloakBootstrapUser,
+			localBootstrapUser || existingAtriumBootstrapUser,
 		);
 		const provisioningBootstrapUser = shouldUseTemporaryBootstrapUser
 			? {
@@ -144,7 +144,7 @@ async function ensureDevOrg(
 		if (shouldUseTemporaryBootstrapUser) {
 			const collisionReason = localBootstrapUser
 				? "already exists locally"
-				: "already exists in Keycloak without a local user row";
+				: "already exists in Atrium without a local user row";
 			console.warn(
 				`Bootstrap user ${bootstrapUser.email} ${collisionReason}; provisioning org ${orgSlug} with temporary bootstrap user ${provisioningBootstrapUser.email}.`,
 			);
@@ -890,7 +890,7 @@ async function ensureUiHarnessMembership(
 			lastName: parts.slice(1).join(" ") || "User",
 			password,
 		});
-		console.log(`Created Keycloak user for ${identity.email}`);
+		console.log(`Created Atrium user for ${identity.email}`);
 	} else {
 		await setDirectoryUserPassword(idpUser.id, password);
 	}
@@ -1038,12 +1038,12 @@ async function bootstrapUiHarness() {
 
 	const summary = await Promise.all(
 		UI_HARNESS_IDENTITIES.map(async identity => {
-			const keycloakUser = await findDirectoryUserByUsername(identity.email);
-			if (!keycloakUser) {
+			const directoryUser = await findDirectoryUserByUsername(identity.email);
+			if (!directoryUser) {
 				return `${identity.email}: missing`;
 			}
 			const { UserService } = await import("../src/services/user.service");
-			const membership = (await UserService.listUsersByIdpId(keycloakUser.id)).find(user => user.org_id === org.id);
+			const membership = (await UserService.listUsersByIdpId(directoryUser.id)).find(user => user.org_id === org.id);
 			return `${identity.email}: ${membership?.id ?? "missing"} (${identity.roleName})`;
 		}),
 	);
@@ -1103,7 +1103,7 @@ async function createDevUser() {
 			}));
 		if (existingIdpUser) {
 			await setDirectoryUserPassword(existingIdpUser.id, password);
-			console.log("Recovered existing Keycloak-only dev user into local database");
+			console.log("Recovered existing Atrium-only dev user into local database");
 		}
 
 		const userId = randomUUID();
@@ -1144,7 +1144,7 @@ async function createDevUser() {
 				lastName: parts.slice(1).join(" ") || "Dev",
 				password,
 			});
-			console.log("Recreated missing Keycloak user for existing dev account");
+			console.log("Recreated missing Atrium user for existing dev account");
 		}
 		if (user.auth_service_id !== idpUser.id) {
 			await db
@@ -1157,7 +1157,7 @@ async function createDevUser() {
 				.selectAll()
 				.where("id", "=", user.id)
 				.executeTakeFirstOrThrow();
-			console.log("Synced dev user auth_service_id with Keycloak");
+			console.log("Synced dev user auth_service_id with Atrium");
 		}
 		await setDirectoryUserPassword(idpUser.id, password);
 		console.log(`Dev user login reset: ${email} / ${password}`);

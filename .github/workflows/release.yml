@@ -46,8 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Keycloak is intentionally built from repo source during local/E2E/self-hosted
-      # deploy flows. This workflow only publishes the API image.
+      # Atrium is the pinned upstream image. This workflow only publishes the API image.
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

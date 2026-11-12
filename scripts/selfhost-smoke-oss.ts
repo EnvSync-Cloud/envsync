@@ -149,7 +149,7 @@ function writeConfig() {
 		},
 		images: {
 			api: localApiImage,
-			keycloak: `envsync-keycloak:${version}`,
+			atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.6",
 			web: localWebImage,
 			landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
 			clickstack: "clickhouse/clickstack-all-in-one:latest",
@@ -164,12 +164,12 @@ function writeConfig() {
 			clickstack_ui_port: 8080,
 			clickstack_otlp_http_port: 4318,
 			clickstack_otlp_grpc_port: 4317,
-			keycloak_port: 8080,
+			atrium_port: 8080,
 			rustfs_port: 9000,
 			rustfs_console_port: 9001,
 		},
 		auth: {
-			keycloak_realm: "envsync",
+			management_client_id: "management",
 			admin_user: "admin",
 			admin_password: "envsync-oss-smoke-admin",
 			web_client_id: "envsync-web",

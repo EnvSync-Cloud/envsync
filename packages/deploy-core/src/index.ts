@@ -38,7 +38,7 @@ const deployConfigSchema = z.object({
 		web: z.string().default("ghcr.io/envsync-cloud/envsync-web-oss-static:stable"),
 		enterprise_web: z.string().default("ghcr.io/envsync-cloud/envsync-web-static:stable"),
 		landing: z.string().default("ghcr.io/envsync-cloud/envsync-landing-static:stable"),
-		keycloak: z.string().default("envsync-keycloak:stable"),
+		atrium: z.string().default("ghcr.io/bravo68web/atrium:0.2.0-rc.6"),
 		clickstack: z.string().default("ghcr.io/envsync-cloud/clickstack:stable"),
 		otel_agent: z.string().default("otel/opentelemetry-collector-contrib:latest"),
 	}).default({}),
@@ -190,7 +190,7 @@ function buildServicePlans(config: DeployConfig, edition: DeployEdition): Servic
 		{ id: "rustfs", enabled: true, tier: "core", reason: "Object storage for artifacts.", image: null },
 		{ id: "openfga", enabled: true, tier: "core", reason: "Authorization service.", image: null },
 		{ id: "minikms", enabled: true, tier: "core", reason: "Secret encryption service.", image: null },
-		{ id: "keycloak", enabled: true, tier: "core", reason: "Authentication provider.", image: config.images.keycloak },
+		{ id: "atrium", enabled: true, tier: "core", reason: "Authentication provider.", image: config.images.atrium },
 		// Manage surface lives on core API under /api/v1/manage (no second process).
 		{ id: "landing", enabled: landingEnabled, tier: "optional", reason: landingEnabled ? "Optional marketing surface (Hosted)." : "Omitted from self-host; user invites use dashboard.", image: landingEnabled ? config.images.landing : null },
 		{ id: "clickstack", enabled: observabilityEnabled, tier: observabilityEnabled ? "optional" : "optional", reason: observabilityEnabled ? "Observability enabled for this topology." : "Observability disabled.", image: observabilityEnabled ? config.images.clickstack : null },
