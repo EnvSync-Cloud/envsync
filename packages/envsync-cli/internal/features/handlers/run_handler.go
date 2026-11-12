@@ -64,7 +64,7 @@ func (h *RunHandler) Run(ctx context.Context, cmd *cli.Command) error {
 	if !cmd.Bool("json") {
 		s.Start()
 	}
-	app, err := h.appUseCase.Execute(ctx, configData.AppID)
+	app, err := h.appUseCase.Execute(ctx, configData)
 	if !cmd.Bool("json") {
 		s.Stop()
 	}
@@ -94,8 +94,7 @@ func (h *RunHandler) Run(ctx context.Context, cmd *cli.Command) error {
 
 		ctx = context.WithValue(ctx, "managedSecret", app.IsManagedSecret)
 		ctx = context.WithValue(ctx, "privateKeyPath", cmd.String("private-key"))
-		ctx = context.WithValue(ctx, "appID", configData.AppID)
-		ctx = context.WithValue(ctx, "envTypeID", configData.EnvTypeID)
+		ctx = context.WithValue(ctx, "projectRef", configData.APIRef())
 
 		if !cmd.Bool("json") {
 			s.Start()

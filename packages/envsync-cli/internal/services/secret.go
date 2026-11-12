@@ -10,8 +10,8 @@ import (
 )
 
 type SecretService interface {
-	GetAllSecrets(ctx context.Context, appID string, envTypeID string) ([]domain.Secret, error)
-	RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) ([]domain.Secret, error)
+	GetAllSecrets(ctx context.Context, ref domain.ProjectEnvRef) ([]domain.Secret, error)
+	RevelSecrets(ctx context.Context, ref domain.ProjectEnvRef, keys []string) ([]domain.Secret, error)
 }
 
 type secretService struct {
@@ -25,11 +25,11 @@ func NewSecretService() SecretService {
 	}
 }
 
-func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID string) (result []domain.Secret, err error) {
+func (s *secretService) GetAllSecrets(ctx context.Context, ref domain.ProjectEnvRef) (result []domain.Secret, err error) {
 	ctx, end := telemetry.StartSpan(ctx, "svc.secret.get_all_secrets")
 	defer end(&err)
 
-	sec, err := s.repo.GetAll(ctx, appID, envTypeID)
+	sec, err := s.repo.GetAll(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +42,11 @@ func (s *secretService) GetAllSecrets(ctx context.Context, appID, envTypeID stri
 	return secrets, nil
 }
 
-func (s *secretService) RevelSecrets(ctx context.Context, appID string, envTypeID string, keys []string) (result []domain.Secret, err error) {
+func (s *secretService) RevelSecrets(ctx context.Context, ref domain.ProjectEnvRef, keys []string) (result []domain.Secret, err error) {
 	ctx, end := telemetry.StartSpan(ctx, "svc.secret.revel_secrets")
 	defer end(&err)
 
-	sec, err := s.repo.Reveal(ctx, appID, envTypeID, keys)
+	sec, err := s.repo.Reveal(ctx, ref, keys)
 	if err != nil {
 		return nil, err
 	}

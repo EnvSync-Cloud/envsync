@@ -41,7 +41,7 @@ func NewSyncService() SyncService {
 
 func NewSyncServiceWithConfig(projCfg domain.SyncConfig) SyncService {
 	return &sync{
-		repo:       repository.NewEnvVariableRepository(projCfg.AppID, projCfg.EnvTypeID),
+		repo:       repository.NewEnvVariableRepository(projCfg.APIRef()),
 		projectCfg: projCfg,
 	}
 }
@@ -141,22 +141,23 @@ func (s *sync) WriteRemoteEnv(ctx context.Context, env *domain.EnvironmentSync) 
 	toUpdate := env.ToUpdate
 	toDelete := env.ToDelete
 
+	ref := s.projectCfg.APIRef()
 	if len(toCreate) != 0 {
-		batchCreateReq := mappers.EnvironmentVariableToBatchRequest(toCreate, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchCreateReq := mappers.EnvironmentVariableToBatchRequest(toCreate, ref)
 		if err := s.repo.BatchCreateEnv(ctx, batchCreateReq); err != nil {
 			return err
 		}
 	}
 
 	if len(toUpdate) != 0 {
-		batchUpdateReq := mappers.EnvironmentVariableToBatchRequest(toUpdate, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchUpdateReq := mappers.EnvironmentVariableToBatchRequest(toUpdate, ref)
 		if err := s.repo.BatchUpdateEnv(ctx, batchUpdateReq); err != nil {
 			return err
 		}
 	}
 
 	if len(toDelete) != 0 {
-		batchDeleteReq := mappers.KeysToBatchDeleteRequest(toDelete, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchDeleteReq := mappers.KeysToBatchDeleteRequest(toDelete, ref)
 		if err := s.repo.BatchDeleteEnv(ctx, batchDeleteReq); err != nil {
 			return err
 		}

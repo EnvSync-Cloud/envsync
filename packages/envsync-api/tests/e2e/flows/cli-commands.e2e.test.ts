@@ -99,14 +99,14 @@ beforeAll(async () => {
 
 	// Dummy project dir for commands that don't need valid app/env config
 	projectDir = createProjectDir({
-		appId: "dummy",
-		envTypeId: "dummy",
+		appName: "dummy",
+		envTypeName: "dummy",
 	});
 
 	// Real project dir for commands that need valid app/env config (run, etc.)
 	realProjectDir = createProjectDir({
-		appId,
-		envTypeId,
+		appName: "CLI Commands App",
+		envTypeName: "cli-commands-env",
 	});
 });
 

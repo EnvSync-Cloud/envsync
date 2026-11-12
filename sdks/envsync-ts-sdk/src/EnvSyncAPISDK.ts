@@ -29,6 +29,7 @@ import { OnboardingService } from './services/OnboardingService';
 import { OrganizationsService } from './services/OrganizationsService';
 import { OrgFeaturesService } from './services/OrgFeaturesService';
 import { PermissionsService } from './services/PermissionsService';
+import { PlatformService } from './services/PlatformService';
 import { RolesService } from './services/RolesService';
 import { RotationService } from './services/RotationService';
 import { SamlProvidersService } from './services/SamlProvidersService';
@@ -68,6 +69,7 @@ export class EnvSyncAPISDK {
     public readonly organizations: OrganizationsService;
     public readonly orgFeatures: OrgFeaturesService;
     public readonly permissions: PermissionsService;
+    public readonly platform: PlatformService;
     public readonly roles: RolesService;
     public readonly rotation: RotationService;
     public readonly samlProviders: SamlProvidersService;
@@ -85,7 +87,7 @@ export class EnvSyncAPISDK {
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
             BASE: config?.BASE ?? 'http://localhost:4000',
-            VERSION: config?.VERSION ?? '0.22.0',
+            VERSION: config?.VERSION ?? '0.23.3',
             WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
             CREDENTIALS: config?.CREDENTIALS ?? 'include',
             TOKEN: config?.TOKEN,
@@ -118,6 +120,7 @@ export class EnvSyncAPISDK {
         this.organizations = new OrganizationsService(this.request);
         this.orgFeatures = new OrgFeaturesService(this.request);
         this.permissions = new PermissionsService(this.request);
+        this.platform = new PlatformService(this.request);
         this.roles = new RolesService(this.request);
         this.rotation = new RotationService(this.request);
         this.samlProviders = new SamlProvidersService(this.request);

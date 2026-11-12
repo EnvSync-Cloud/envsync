@@ -1,11 +1,12 @@
 import z from "zod";
 import "zod-openapi/extend";
 
+import { projectEnvScopeFields } from "@/validators/project-env-scope";
+
 const envBaseSchema = z.object({
 	key: z.string().openapi({ example: "DATABASE_URL" }),
 	value: z.string().openapi({ example: "postgresql://localhost:5432/db" }),
-	app_id: z.string().openapi({ example: "app_123" }),
-	env_type_id: z.string().openapi({ example: "env_type_123" }),
+	...projectEnvScopeFields,
 });
 
 export const createEnvRequestSchema = envBaseSchema.openapi({ ref: "CreateEnvRequest" });
@@ -16,16 +17,14 @@ export const updateEnvRequestSchema = envBaseSchema
 
 export const deleteEnvRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 		key: z.string().openapi({ example: "DATABASE_URL" }),
 	})
 	.openapi({ ref: "DeleteEnvRequest" });
 
 export const getEnvRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 	})
 	.openapi({ ref: "GetEnvRequest" });
 
@@ -33,9 +32,8 @@ const exportModeSchema = z.enum(["auto", "true", "false"]);
 
 export const exportEnvRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().optional().openapi({ example: "env_type_123" }),
-		env_type: z.string().optional().openapi({ example: "production" }),
+		...projectEnvScopeFields,
+		env_type: z.string().trim().min(1).optional().openapi({ example: "production" }),
 		enable_secrets: exportModeSchema.optional().openapi({ example: "auto" }),
 		is_secret_managed: exportModeSchema.optional().openapi({ example: "auto" }),
 		private_key: z
@@ -63,21 +61,21 @@ export const exportEnvResponseSchema = z
 
 export const batchEnvsRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		envs: z.array(
-			z.object({
-				key: z.string().openapi({ example: "API_KEY" }),
-				value: z.string().openapi({ example: "secret_key_123" }),
-			}),
-		).max(100),
+		...projectEnvScopeFields,
+		envs: z
+			.array(
+				z.object({
+					key: z.string().openapi({ example: "API_KEY" }),
+					value: z.string().openapi({ example: "secret_key_123" }),
+				}),
+			)
+			.max(100),
 	})
 	.openapi({ ref: "BatchCreateEnvsRequest" });
 
 export const batchEnvsDeleteRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 		keys: z.array(z.string().openapi({ example: "API_KEY" })).max(100),
 	})
 	.openapi({ ref: "BatchDeleteEnvsRequest" });

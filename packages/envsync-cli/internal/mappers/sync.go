@@ -21,11 +21,13 @@ func EnvironmentVariablesToDomain(envs []responses.EnvironmentVariable) []*domai
 	return domainEnvs
 }
 
-func EnvironmentVariableToBatchRequest(envs []domain.EnvironmentVariable, appID, envTypeID string) requests.BatchSyncEnvRequest {
+func EnvironmentVariableToBatchRequest(envs []domain.EnvironmentVariable, ref domain.ProjectEnvRef) requests.BatchSyncEnvRequest {
 	batchRequests := requests.BatchSyncEnvRequest{
-		AppID:     appID,
-		EnvTypeID: envTypeID,
-		Envs:      make([]requests.EnvVariable, len(envs)),
+		AppID:       ref.AppID,
+		AppName:     ref.AppName,
+		EnvTypeID:   ref.EnvTypeID,
+		EnvTypeName: ref.EnvTypeName,
+		Envs:        make([]requests.EnvVariable, len(envs)),
 	}
 
 	for i, env := range envs {
@@ -38,11 +40,13 @@ func EnvironmentVariableToBatchRequest(envs []domain.EnvironmentVariable, appID,
 	return batchRequests
 }
 
-func KeysToBatchDeleteRequest(envs []string, appID, envTypeID string) requests.BatchDeleteRequest {
+func KeysToBatchDeleteRequest(envs []string, ref domain.ProjectEnvRef) requests.BatchDeleteRequest {
 	batchRequests := requests.BatchDeleteRequest{
-		AppID:     appID,
-		EnvTypeID: envTypeID,
-		Keys:      make([]string, len(envs)),
+		AppID:       ref.AppID,
+		AppName:     ref.AppName,
+		EnvTypeID:   ref.EnvTypeID,
+		EnvTypeName: ref.EnvTypeName,
+		Keys:        make([]string, len(envs)),
 	}
 
 	copy(batchRequests.Keys, envs)
