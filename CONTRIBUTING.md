@@ -7,7 +7,7 @@ See the [README](README.md) and per-package `AGENTS.md` files for full architect
 - **Bun 1.3+**, **Go 1.24+**, **Docker**
 - `bun install` — install all JS/TS dependencies
 - `docker compose up -d` — start Postgres, miniKMS, OpenFGA, Atrium, Mailpit
-- Atrium is the pinned image `ghcr.io/bravo68web/atrium:0.2.0-rc.6`. Dev mounts `docker/atrium` for config and branding.
+- Atrium is the pinned image `ghcr.io/bravo68web/atrium:0.2.0-rc.8`. Dev mounts `docker/atrium` for config and branding.
 - `bun run cli:init` — bootstrap RustFS and Atrium clients
 - `bun run cli create-dev-user --seed` — seed a development user
 
