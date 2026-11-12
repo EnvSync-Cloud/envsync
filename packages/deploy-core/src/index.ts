@@ -38,7 +38,7 @@ const deployConfigSchema = z.object({
 		web: z.string().default("ghcr.io/envsync-cloud/envsync-web-oss-static:stable"),
 		enterprise_web: z.string().default("ghcr.io/envsync-cloud/envsync-web-static:stable"),
 		landing: z.string().default("ghcr.io/envsync-cloud/envsync-landing-static:stable"),
-		atrium: z.string().default("ghcr.io/bravo68web/atrium:0.2.0-rc.6"),
+		atrium: z.string().default("ghcr.io/bravo68web/atrium:0.2.0-rc.8"),
 		clickstack: z.string().default("ghcr.io/envsync-cloud/clickstack:stable"),
 		otel_agent: z.string().default("otel/opentelemetry-collector-contrib:latest"),
 	}).default({}),

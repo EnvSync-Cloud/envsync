@@ -143,6 +143,7 @@ interface DeployGeneratedState {
 		s3_secret_key: string;
 		atrium_db_password: string;
 		atrium_management_client_secret: string;
+		atrium_data_key: string;
 		atrium_web_client_secret: string;
 		atrium_api_client_secret: string;
 		openfga_db_password: string;
@@ -1516,6 +1517,7 @@ function emptyGeneratedState(): DeployGeneratedState {
 			s3_secret_key: "",
 			atrium_db_password: "",
 			atrium_management_client_secret: "",
+			atrium_data_key: "",
 			atrium_web_client_secret: "",
 			atrium_api_client_secret: "",
 			openfga_db_password: "",
@@ -1558,6 +1560,7 @@ function normalizeGeneratedState(raw?: Partial<DeployGeneratedState>): DeployGen
 			s3_secret_key: raw?.secrets?.s3_secret_key ?? defaults.secrets.s3_secret_key,
 			atrium_db_password: legacyGeneratedSecret(raw, "atrium_db_password", "keycloak_db_password") ?? defaults.secrets.atrium_db_password,
 			atrium_management_client_secret: legacyGeneratedSecret(raw, "atrium_management_client_secret") ?? defaults.secrets.atrium_management_client_secret,
+			atrium_data_key: legacyGeneratedSecret(raw, "atrium_data_key") ?? defaults.secrets.atrium_data_key,
 			atrium_web_client_secret: legacyGeneratedSecret(raw, "atrium_web_client_secret", "keycloak_web_client_secret") ?? defaults.secrets.atrium_web_client_secret,
 			atrium_api_client_secret: legacyGeneratedSecret(raw, "atrium_api_client_secret", "keycloak_api_client_secret") ?? defaults.secrets.atrium_api_client_secret,
 			openfga_db_password: raw?.secrets?.openfga_db_password ?? defaults.secrets.openfga_db_password,
@@ -1616,6 +1619,7 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 			s3_secret_key: env.S3_SECRET_KEY ?? normalized.secrets.s3_secret_key,
 			atrium_db_password: env.ATRIUM_DB_PASSWORD ?? env.KEYCLOAK_DB_PASSWORD ?? normalized.secrets.atrium_db_password,
 			atrium_management_client_secret: env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? normalized.secrets.atrium_management_client_secret,
+			atrium_data_key: env.ATRIUM_DATA_KEY ?? normalized.secrets.atrium_data_key,
 			atrium_web_client_secret: env.ATRIUM_WEB_CLIENT_SECRET ?? env.KEYCLOAK_WEB_CLIENT_SECRET ?? normalized.secrets.atrium_web_client_secret,
 			atrium_api_client_secret: env.ATRIUM_API_CLIENT_SECRET ?? env.KEYCLOAK_API_CLIENT_SECRET ?? normalized.secrets.atrium_api_client_secret,
 			openfga_db_password: env.OPENFGA_DB_PASSWORD ?? normalized.secrets.openfga_db_password,
@@ -1650,6 +1654,7 @@ function ensureGeneratedRuntimeState(config: DeployConfig, generated: DeployGene
 			s3_secret_key: generated.secrets.s3_secret_key || randomSecret(16),
 			atrium_db_password: generated.secrets.atrium_db_password || randomSecret(),
 			atrium_management_client_secret: generated.secrets.atrium_management_client_secret || randomSecret(),
+			atrium_data_key: generated.secrets.atrium_data_key || randomBytes(32).toString("base64"),
 			atrium_web_client_secret: generated.secrets.atrium_web_client_secret || randomSecret(),
 			atrium_api_client_secret: generated.secrets.atrium_api_client_secret || randomSecret(),
 			openfga_db_password: generated.secrets.openfga_db_password || randomSecret(),
@@ -1850,6 +1855,9 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
 		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
 	const existingEnv = loadGeneratedEnv();
+	if (!generated.secrets.atrium_data_key) {
+		generated.secrets.atrium_data_key = randomBytes(32).toString("base64");
+	}
 	const generatedEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
 	const merged = renderHelpers.mergeRuntimeEnvLocalFirst(generatedEnv, existingEnv);
 	const runtimeEnv = merged.env;

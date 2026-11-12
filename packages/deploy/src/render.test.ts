@@ -37,7 +37,7 @@ const config: DeployConfig = {
 	},
 	images: {
 		api: "ghcr.io/envsync-cloud/envsync-api:0.8.7",
-		atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.6",
+		atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.8",
 		web: "ghcr.io/envsync-cloud/envsync-web-static:0.8.7",
 		landing: "ghcr.io/envsync-cloud/envsync-landing-static:0.8.7",
 		clickstack: "ghcr.io/envsync-cloud/clickstack:0.8.7",
@@ -156,6 +156,7 @@ const generated: DeployGeneratedState = {
 		s3_secret_key: "s3-secret-key",
 		atrium_db_password: "atrium-db-pass",
 		atrium_management_client_secret: "management-secret",
+		atrium_data_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
 		atrium_web_client_secret: "web-client-secret",
 		atrium_api_client_secret: "api-client-secret",
 		openfga_db_password: "openfga-db-pass",
@@ -260,7 +261,7 @@ describe("renderStack", () => {
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/atrium-config.yaml");
 		expect(stackFull).toContain("name: envsync_atrium_config_0_8_7");
-		expect(stackFull).toContain("ghcr.io/bravo68web/atrium:0.2.0-rc.6");
+		expect(stackFull).toContain("ghcr.io/bravo68web/atrium:0.2.0-rc.8");
 		expect(stackFull).not.toContain("keycloak");
 		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");
@@ -297,6 +298,9 @@ describe("renderAtriumClients", () => {
 		expect(clients).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(clients).toContain("https://app.enterprise.example.com/auth/callback");
 		expect(configYaml).toContain("issuer: \"https://auth.enterprise.example.com\"");
+		expect(configYaml).toContain("disable_passwords: true");
+		expect(configYaml).toContain("passwordless_mode: otp");
+		expect(configYaml).toContain('data_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="');
 		expect(configYaml).toContain("access_token_lifetime: 1h");
 		expect(configYaml).toContain("refresh_token_lifetime: 168h");
 	});

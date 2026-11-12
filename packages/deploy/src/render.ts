@@ -131,6 +131,7 @@ export interface DeployGeneratedState {
 		s3_secret_key: string;
 		atrium_db_password: string;
 		atrium_management_client_secret: string;
+		atrium_data_key: string;
 		atrium_web_client_secret: string;
 		atrium_api_client_secret: string;
 		openfga_db_password: string;
@@ -213,7 +214,7 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 	return publicHttpsOriginVariants(config, host).map(origin => `${origin}${urlPath}`);
 }
 
-export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.6";
+export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.8";
 
 function slotServiceName(slot: ApiSlot) {
 	return `envsync_api_${slot}`;
@@ -313,6 +314,7 @@ export function buildRuntimeEnv(
 		ATRIUM_DB_PASSWORD: generated.secrets.atrium_db_password,
 		ATRIUM_MANAGEMENT_CLIENT_ID: config.auth.management_client_id,
 		ATRIUM_MANAGEMENT_CLIENT_SECRET: generated.secrets.atrium_management_client_secret,
+		ATRIUM_DATA_KEY: generated.secrets.atrium_data_key,
 		ATRIUM_WEB_CLIENT_ID: config.auth.web_client_id,
 		ATRIUM_WEB_CLIENT_SECRET: generated.secrets.atrium_web_client_secret,
 		ATRIUM_CLI_CLIENT_ID: config.auth.cli_client_id,
@@ -421,7 +423,8 @@ function yamlQuote(value: string) {
 export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 	const password = encodeURIComponent(runtimeEnv.ATRIUM_DB_PASSWORD);
 	const dsn = `postgres://atrium:${password}@atrium_db:5432/atrium?sslmode=disable`;
-	const smtpSecure = config.smtp.secure ? "true" : "false";
+	const implicitTls = config.smtp.secure && config.smtp.port === 465;
+	const startTls = config.smtp.secure && !implicitTls;
 	return [
 		"server:",
 		"  host: 0.0.0.0",
@@ -436,6 +439,9 @@ export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv)
 		`  issuer: ${yamlQuote(runtimeEnv.ATRIUM_ISSUER)}`,
 		"  login_identifier: username",
 		"  identifier_first: true",
+		"  disable_passwords: true",
+		"  passwordless_mode: otp",
+		`  data_key: ${yamlQuote(runtimeEnv.ATRIUM_DATA_KEY)}`,
 		"  access_token_format: jwt",
 		"  access_token_lifetime: 1h",
 		"  refresh_token_lifetime: 168h",
@@ -458,8 +464,8 @@ export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv)
 		`  username: ${yamlQuote(config.smtp.user)}`,
 		`  password: ${yamlQuote(config.smtp.pass)}`,
 		`  from: ${yamlQuote(config.smtp.from)}`,
-		`  starttls: ${smtpSecure}`,
-		"  implicit_tls: false",
+		`  starttls: ${startTls ? "true" : "false"}`,
+		`  implicit_tls: ${implicitTls ? "true" : "false"}`,
 		"",
 		"email:",
 		"  templates_dir: /branding/email",
