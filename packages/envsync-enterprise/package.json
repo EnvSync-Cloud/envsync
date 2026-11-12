@@ -1,6 +1,6 @@
 {
   "name": "envsync-enterprise",
-  "version": "0.23.3",
+  "version": "0.23.4",
   "description": "Proprietary EnvSync enterprise API modules (management surface, EE capabilities)",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
