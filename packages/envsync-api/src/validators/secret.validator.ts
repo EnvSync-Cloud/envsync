@@ -1,11 +1,12 @@
 import z from "zod";
 import "zod-openapi/extend";
 
+import { projectEnvScopeFields } from "@/validators/project-env-scope";
+
 const secretBaseSchema = z.object({
 	key: z.string().openapi({ example: "API_SECRET_KEY" }),
 	value: z.string().openapi({ example: "sk_live_abc123xyz789" }),
-	app_id: z.string().openapi({ example: "app_123" }),
-	env_type_id: z.string().openapi({ example: "env_type_123" }),
+	...projectEnvScopeFields,
 });
 
 export const createSecretRequestSchema = secretBaseSchema.openapi({ ref: "CreateSecretRequest" });
@@ -16,44 +17,41 @@ export const updateSecretRequestSchema = secretBaseSchema
 
 export const deleteSecretRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 		key: z.string().openapi({ example: "API_SECRET_KEY" }),
 	})
 	.openapi({ ref: "DeleteSecretRequest" });
 
 export const getSecretRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 	})
 	.openapi({ ref: "GetSecretRequest" });
 
 export const batchSecretsRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
-		envs: z.array(
-			z.object({
-				key: z.string().openapi({ example: "JWT_SECRET" }),
-				value: z.string().openapi({ example: "super_secret_jwt_key_123" }),
-			}),
-		).max(100),
+		...projectEnvScopeFields,
+		envs: z
+			.array(
+				z.object({
+					key: z.string().openapi({ example: "JWT_SECRET" }),
+					value: z.string().openapi({ example: "super_secret_jwt_key_123" }),
+				}),
+			)
+			.max(100),
 	})
 	.openapi({ ref: "BatchCreateSecretsRequest" });
 
 export const batchSecretsDeleteRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })).max(100),
 	})
 	.openapi({ ref: "BatchDeleteSecretsRequest" });
 
 export const revealSecretsRequestSchema = z
 	.object({
-		app_id: z.string().openapi({ example: "app_123" }),
-		env_type_id: z.string().openapi({ example: "env_type_123" }),
+		...projectEnvScopeFields,
 		keys: z.array(z.string().openapi({ example: "API_SECRET_KEY" })).max(100),
 	})
 	.openapi({ ref: "RevealSecretsRequest" });

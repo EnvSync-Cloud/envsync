@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // EnvironmentVariable represents a single environment variable
 type EnvironmentVariable struct {
@@ -18,10 +21,39 @@ type EnvironmentSync struct {
 	LastSynced time.Time
 }
 
-// SyncConfig represents the configuration needed for syncing
+// ProjectEnvRef is the project and environment sent on env and secret calls.
+// A name is preferred over an id when both were loaded from an older file.
+type ProjectEnvRef struct {
+	AppID       string
+	AppName     string
+	EnvTypeID   string
+	EnvTypeName string
+}
+
+// SyncConfig is the project file. New files store names. Ids are still read
+// from files written before names were the project file contract.
 type SyncConfig struct {
-	AppID     string `toml:"app_id"`
-	EnvTypeID string `toml:"env_type_id"`
+	AppName     string `toml:"app_name,omitempty"`
+	EnvTypeName string `toml:"env_type_name,omitempty"`
+	AppID       string `toml:"app_id,omitempty"`
+	EnvTypeID   string `toml:"env_type_id,omitempty"`
+}
+
+// APIRef chooses the name fields when they are set, so pull, push, run, and
+// export send names instead of ids.
+func (c SyncConfig) APIRef() ProjectEnvRef {
+	ref := ProjectEnvRef{}
+	if name := strings.TrimSpace(c.AppName); name != "" {
+		ref.AppName = name
+	} else {
+		ref.AppID = strings.TrimSpace(c.AppID)
+	}
+	if name := strings.TrimSpace(c.EnvTypeName); name != "" {
+		ref.EnvTypeName = name
+	} else {
+		ref.EnvTypeID = strings.TrimSpace(c.EnvTypeID)
+	}
+	return ref
 }
 
 // NewEnvironmentSync creates a new EnvironmentSync instance

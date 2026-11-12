@@ -8,6 +8,10 @@ import (
 	internal "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/internal"
 )
 
+type CreateOrgCaCsrRequest struct {
+	OrgName string `json:"org_name" url:"-"`
+}
+
 type ImportChainRequest struct {
 	ChainPem    string  `json:"chain_pem" url:"-"`
 	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
@@ -16,6 +20,12 @@ type ImportChainRequest struct {
 
 type InitOrgCaRequest struct {
 	OrgName     string  `json:"org_name" url:"-"`
+	Description *string `json:"description,omitempty" url:"-"`
+}
+
+type InstallOrgCaRequest struct {
+	CertPem     string  `json:"cert_pem" url:"-"`
+	ChainPem    *string `json:"chain_pem,omitempty" url:"-"`
 	Description *string `json:"description,omitempty" url:"-"`
 }
 

@@ -9,6 +9,8 @@ import { AppService } from "@/services/app.service";
 import { SecretService } from "@/services/secret.service";
 import { ServiceTokenService } from "@/services/service_token.service";
 import { rsaLayerDecrypt } from "@/helpers/key-store";
+import { resolveProjectEnvScope } from "@/helpers/project-env-scope";
+import { AppError, NotFoundError } from "@/libs/errors";
 
 function resolveAutoMode(value: unknown, fallback: boolean) {
 	const normalized = String(value ?? "auto").trim().toLowerCase();
@@ -18,63 +20,45 @@ function resolveAutoMode(value: unknown, fallback: boolean) {
 	throw new Error("Mode must be one of: auto, true, false");
 }
 
-async function resolveExportEnvType(org_id: string, app_id: string, env_type_id?: string, env_type_name?: string) {
-	if (env_type_id && env_type_name) {
-		throw new Error("Only one of env_type_id or env_type may be provided.");
-	}
-
-	if (env_type_id) {
-		const envType = await EnvTypeService.getEnvType(env_type_id);
-		if (envType.app_id !== app_id || envType.org_id !== org_id) {
-			throw new Error("Environment type does not belong to the requested app.");
-		}
-		return envType;
-	}
-
-	if (!env_type_name) {
-		throw new Error("env_type_id or env_type is required.");
-	}
-
-	const envTypes = await EnvTypeService.getEnvTypes(org_id);
-	const matches = envTypes.filter(
-		envType => envType.app_id === app_id && envType.name.toLowerCase() === env_type_name.toLowerCase(),
-	);
-
-	if (matches.length === 0) {
-		throw new Error(`Environment type "${env_type_name}" was not found for the requested app.`);
-	}
-
-	if (matches.length > 1) {
-		throw new Error(`Environment type "${env_type_name}" is ambiguous for the requested app.`);
-	}
-
-	return matches[0];
-}
-
 export class EnvController {
 	public static readonly exportEnv = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
+		const body = await c.req.json();
 		const {
-			app_id,
-			env_type_id,
 			env_type,
+			env_type_name,
 			enable_secrets = "auto",
 			is_secret_managed = "auto",
 			private_key,
-		} = await c.req.json();
+		} = body;
 
-		if (!org_id || !app_id) {
-			return c.json({ error: "org_id and app_id are required." }, 400);
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+
+		if (
+			typeof env_type === "string" &&
+			typeof env_type_name === "string" &&
+			env_type.trim() !== env_type_name.trim()
+		) {
+			return c.json({ error: "env_type and env_type_name identify different environments." }, 400);
+		}
+		if (!env_type_name && typeof env_type === "string") {
+			body.env_type_name = env_type;
 		}
 
 		try {
+			const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 			const app = await AppService.getApp({ id: app_id });
 			if (app.org_id !== org_id) {
 				return c.json({ error: "App does not belong to the organization." }, 403);
 			}
 
-			const resolvedEnvType = await resolveExportEnvType(org_id, app_id, env_type_id, env_type);
+			const resolvedEnvType = await EnvTypeService.getEnvType(env_type_id);
+			if (resolvedEnvType.app_id !== app_id || resolvedEnvType.org_id !== org_id) {
+				throw new NotFoundError("Environment", env_type_id);
+			}
 			const canView = await AuthorizationService.check(user_id, "can_view", "env_type", resolvedEnvType.id);
 			if (!canView) {
 				return c.json({ error: "You do not have permission to view this environment." }, 403);
@@ -136,6 +120,7 @@ export class EnvController {
 				environment,
 			});
 		} catch (error) {
+			if (error instanceof AppError) throw error;
 			return c.json(
 				{ error: error instanceof Error ? error.message : "Failed to export environment." },
 				400,
@@ -147,13 +132,12 @@ export class EnvController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 
-		const { key, value, app_id, env_type_id } = await c.req.json();
-
-		if (!key || !org_id || !app_id || !env_type_id) {
-			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		const { key, value } = body;
+		if (!key || !org_id) {
+			return c.json({ error: "key and org_id are required." }, 400);
 		}
-
-		// env_type_id
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		// Check if the environment variable already exists
 		const existingEnv = await EnvService.getEnv({
@@ -214,13 +198,12 @@ export class EnvController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { key } = c.req.param();
-		const { value, app_id, env_type_id } = await c.req.json();
-
-		if (!key || !org_id || !app_id || !env_type_id) {
-			return c.json({ error: "key, org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		const { value } = body;
+		if (!key || !org_id) {
+			return c.json({ error: "key and org_id are required." }, 400);
 		}
-
-		// env_type_id
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		// Get current value for tracking
 		const currentEnv = await EnvService.getEnv({
@@ -281,13 +264,12 @@ export class EnvController {
 	public static readonly deleteEnv = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, key } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id || !key) {
-			return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
+		const body = await c.req.json();
+		const { key } = body;
+		if (!org_id || !key) {
+			return c.json({ error: "org_id and key are required." }, 400);
 		}
-
-		// env_type_id
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		// Get current value for tracking
 		const currentEnv = await EnvService.getEnv({
@@ -347,11 +329,11 @@ export class EnvController {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
 		const { key } = c.req.param();
-		const { app_id, env_type_id } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id || !key) {
-			return c.json({ error: "org_id, app_id, env_type_id, and key are required." }, 400);
+		const body = await c.req.json();
+		if (!org_id || !key) {
+			return c.json({ error: "org_id and key are required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
 		if (!canView) {
@@ -385,11 +367,11 @@ export class EnvController {
 	public static readonly getEnvs = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id } = await c.req.json();
-
-		if (!org_id || !app_id || !env_type_id) {
-			return c.json({ error: "org_id, app_id, and env_type_id are required." }, 400);
+		const body = await c.req.json();
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
 		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		const canView = await AuthorizationService.check(c.get("user_id"), "can_view", "env_type", env_type_id);
 		if (!canView) {
@@ -424,7 +406,12 @@ export class EnvController {
 	public static readonly batchCreateEnvs = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, envs } = await c.req.json();
+		const body = await c.req.json();
+		const { envs } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!envs || !Array.isArray(envs)) {
 			return c.json({ error: "envs must be an array." }, 400);
@@ -433,8 +420,6 @@ export class EnvController {
 		if (envs.length > 100) {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
-
-		// env_type_id
 
 		await EnvService.batchCreateEnvs(org_id, app_id, env_type_id, envs, user_id);
 
@@ -472,7 +457,12 @@ export class EnvController {
 	public static readonly batchUpdateEnvs = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, envs } = await c.req.json();
+		const body = await c.req.json();
+		const { envs } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!envs || !Array.isArray(envs)) {
 			return c.json({ error: "envs must be an array." }, 400);
@@ -481,8 +471,6 @@ export class EnvController {
 		if (envs.length > 100) {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
-
-		// env_type_id
 
 		// Get current values for tracking changes
 		const currentEnvs = await Promise.all(
@@ -540,7 +528,12 @@ export class EnvController {
 	public static readonly batchDeleteEnvs = async (c: Context) => {
 		const org_id = c.get("org_id");
 		const user_id = c.get("user_id");
-		const { app_id, env_type_id, keys } = await c.req.json();
+		const body = await c.req.json();
+		const { keys } = body;
+		if (!org_id) {
+			return c.json({ error: "org_id is required." }, 400);
+		}
+		const { app_id, env_type_id } = await resolveProjectEnvScope(org_id, body);
 
 		if (!keys || !Array.isArray(keys)) {
 			return c.json({ error: "keys must be an array." }, 400);
@@ -549,8 +542,6 @@ export class EnvController {
 		if (keys.length > 100) {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
-
-		// env_type_id
 
 		// Get current values for tracking deletions
 		const currentEnvs = await Promise.all(

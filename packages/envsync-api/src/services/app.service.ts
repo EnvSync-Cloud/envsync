@@ -4,7 +4,8 @@ import { sql } from "kysely";
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 import { DB } from "@/libs/db";
-import { orNotFound, NotFoundError, ConflictError } from "@/libs/errors";
+import { orNotFound, NotFoundError, ConflictError, ValidationError } from "@/libs/errors";
+import { isUniqueViolation } from "@/helpers/postgres";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { appsCreated } from "@/libs/telemetry/metrics";
 import { KMSClient } from "@/libs/kms/client";
@@ -89,12 +90,17 @@ export class AppService {
 		public_key?: string | null;
 		private_key?: string | null;
 	}) => {
+		const projectName = name.trim();
+		if (!projectName) {
+			throw new ValidationError("Project name is required");
+		}
+
 		const db = await DB.getInstance();
 
 		const existing = await db
 			.selectFrom("app")
 			.select("id")
-			.where("name", "=", name)
+			.where("name", "=", projectName)
 			.where("org_id", "=", org_id)
 			.executeTakeFirst();
 
@@ -117,7 +123,8 @@ export class AppService {
 			app?: { id: string; name: string; description: string; org_id: string; enable_secrets: boolean; is_managed_secret: boolean; public_key: string | null | undefined; metadata: Record<string, unknown>; created_at: Date; updated_at: Date };
 			defaultEnvTypeId?: string;
 		} = {};
-		await runSaga("createApp", ctx, [
+		try {
+			await runSaga("createApp", ctx, [
 			{
 				name: "db-insert",
 				execute: async (c) => {
@@ -126,7 +133,7 @@ export class AppService {
 						.insertInto("app")
 						.values({
 							id: appId,
-							name,
+							name: projectName,
 							org_id,
 							description,
 							metadata,
@@ -194,7 +201,13 @@ export class AppService {
 					await invalidateCache(CacheKeys.appsByOrg(org_id));
 				},
 			},
-		]);
+			]);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw new ConflictError("Project name already exists in this organization");
+			}
+			throw error;
+		}
 
 		appsCreated.add(1);
 		return ctx.app!;
@@ -250,14 +263,39 @@ export class AppService {
 			id,
 		);
 
-		await db
-			.updateTable("app")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.execute();
+		const next = { ...data };
+		if (next.name !== undefined) {
+			next.name = next.name.trim();
+			if (!next.name) {
+				throw new ValidationError("Project name is required");
+			}
+			const clash = await db
+				.selectFrom("app")
+				.select("id")
+				.where("org_id", "=", app.org_id)
+				.where("name", "=", next.name)
+				.where("id", "!=", id)
+				.executeTakeFirst();
+			if (clash) {
+				throw new ConflictError("Project name already exists in this organization");
+			}
+		}
+
+		try {
+			await db
+				.updateTable("app")
+				.set({
+					...next,
+					updated_at: new Date(),
+				})
+				.where("id", "=", id)
+				.execute();
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw new ConflictError("Project name already exists in this organization");
+			}
+			throw error;
+		}
 
 		await invalidateCache(CacheKeys.app(id), CacheKeys.appsByOrg(app.org_id));
 	};

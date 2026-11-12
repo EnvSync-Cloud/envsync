@@ -6,6 +6,7 @@ import (
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
 	sdkclient "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/client"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/requests"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
@@ -18,25 +19,26 @@ type EnvVariableRepository interface {
 }
 
 type syncRepo struct {
-	client    *sdkclient.Client
-	appID     string
-	envTypeID string
+	client *sdkclient.Client
+	ref    domain.ProjectEnvRef
 }
 
-func NewEnvVariableRepository(appID, envTypeID string) EnvVariableRepository {
+func NewEnvVariableRepository(ref domain.ProjectEnvRef) EnvVariableRepository {
 	client := createSDKClient()
 
 	return &syncRepo{
-		client:    client,
-		appID:     appID,
-		envTypeID: envTypeID,
+		client: client,
+		ref:    ref,
 	}
 }
 
 func (s *syncRepo) GetAllEnv(ctx context.Context) ([]responses.EnvironmentVariable, error) {
+	scope := scopeFromRef(s.ref)
 	envs, err := s.client.EnvironmentVariables.GetEnvs(ctx, &sdk.GetEnvRequest{
-		AppId:     s.appID,
-		EnvTypeId: s.envTypeID,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
 	})
 	if err != nil {
 		return nil, err
@@ -68,10 +70,15 @@ func (s *syncRepo) BatchCreateEnv(ctx context.Context, env requests.BatchSyncEnv
 		}
 	}
 
+	scope := scopeFromRef(domain.ProjectEnvRef{
+		AppID: env.AppID, AppName: env.AppName, EnvTypeID: env.EnvTypeID, EnvTypeName: env.EnvTypeName,
+	})
 	_, err := s.client.EnvironmentVariables.BatchCreateEnvs(ctx, &sdk.BatchCreateEnvsRequest{
-		AppId:     env.AppID,
-		EnvTypeId: env.EnvTypeID,
-		Envs:      sdkEnvs,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
+		Envs:        sdkEnvs,
 	})
 	return err
 }
@@ -85,19 +92,29 @@ func (s *syncRepo) BatchUpdateEnv(ctx context.Context, env requests.BatchSyncEnv
 		}
 	}
 
+	scope := scopeFromRef(domain.ProjectEnvRef{
+		AppID: env.AppID, AppName: env.AppName, EnvTypeID: env.EnvTypeID, EnvTypeName: env.EnvTypeName,
+	})
 	_, err := s.client.EnvironmentVariables.BatchUpdateEnvs(ctx, &sdk.BatchCreateEnvsRequest{
-		AppId:     env.AppID,
-		EnvTypeId: env.EnvTypeID,
-		Envs:      sdkEnvs,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
+		Envs:        sdkEnvs,
 	})
 	return err
 }
 
 func (s *syncRepo) BatchDeleteEnv(ctx context.Context, env requests.BatchDeleteRequest) error {
+	scope := scopeFromRef(domain.ProjectEnvRef{
+		AppID: env.AppID, AppName: env.AppName, EnvTypeID: env.EnvTypeID, EnvTypeName: env.EnvTypeName,
+	})
 	_, err := s.client.EnvironmentVariables.DeleteBatchEnv(ctx, &sdk.BatchDeleteEnvsRequest{
-		AppId:     env.AppID,
-		EnvTypeId: env.EnvTypeID,
-		Keys:      env.Keys,
+		AppId:       scope.appID,
+		AppName:     scope.appName,
+		EnvTypeId:   scope.envTypeID,
+		EnvTypeName: scope.envTypeName,
+		Keys:        env.Keys,
 	})
 	return err
 }

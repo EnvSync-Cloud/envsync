@@ -9,51 +9,75 @@ import (
 )
 
 type CreateSecretRequest struct {
-	Key       string `json:"key" url:"-"`
-	Value     string `json:"value" url:"-"`
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
+	Key         string  `json:"key" url:"-"`
+	Value       string  `json:"value" url:"-"`
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	AppName     *string `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"-"`
 }
 
 type BatchDeleteSecretsRequest struct {
-	AppId     string   `json:"app_id" url:"-"`
-	EnvTypeId string   `json:"env_type_id" url:"-"`
-	Keys      []string `json:"keys,omitempty" url:"-"`
+	AppId       *string  `json:"app_id,omitempty" url:"-"`
+	AppName     *string  `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string  `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string  `json:"env_type_name,omitempty" url:"-"`
+	Keys        []string `json:"keys,omitempty" url:"-"`
 }
 
 type DeleteSecretRequest struct {
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
-	Key       string `json:"key" url:"-"`
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	AppName     *string `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"-"`
+	Key         string  `json:"key" url:"-"`
 }
 
 type RevealSecretsRequest struct {
-	AppId     string   `json:"app_id" url:"-"`
-	EnvTypeId string   `json:"env_type_id" url:"-"`
-	Keys      []string `json:"keys,omitempty" url:"-"`
+	AppId       *string  `json:"app_id,omitempty" url:"-"`
+	AppName     *string  `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string  `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string  `json:"env_type_name,omitempty" url:"-"`
+	Keys        []string `json:"keys,omitempty" url:"-"`
 }
 
 type BatchCreateSecretsRequest struct {
-	AppId     string                               `json:"app_id" url:"app_id"`
-	EnvTypeId string                               `json:"env_type_id" url:"env_type_id"`
-	Envs      []*BatchCreateSecretsRequestEnvsItem `json:"envs" url:"envs"`
+	AppId       *string                              `json:"app_id,omitempty" url:"app_id,omitempty"`
+	AppName     *string                              `json:"app_name,omitempty" url:"app_name,omitempty"`
+	EnvTypeId   *string                              `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	EnvTypeName *string                              `json:"env_type_name,omitempty" url:"env_type_name,omitempty"`
+	Envs        []*BatchCreateSecretsRequestEnvsItem `json:"envs" url:"envs"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (b *BatchCreateSecretsRequest) GetAppId() string {
+func (b *BatchCreateSecretsRequest) GetAppId() *string {
 	if b == nil {
-		return ""
+		return nil
 	}
 	return b.AppId
 }
 
-func (b *BatchCreateSecretsRequest) GetEnvTypeId() string {
+func (b *BatchCreateSecretsRequest) GetAppName() *string {
 	if b == nil {
-		return ""
+		return nil
+	}
+	return b.AppName
+}
+
+func (b *BatchCreateSecretsRequest) GetEnvTypeId() *string {
+	if b == nil {
+		return nil
 	}
 	return b.EnvTypeId
+}
+
+func (b *BatchCreateSecretsRequest) GetEnvTypeName() *string {
+	if b == nil {
+		return nil
+	}
+	return b.EnvTypeName
 }
 
 func (b *BatchCreateSecretsRequest) GetEnvs() []*BatchCreateSecretsRequestEnvsItem {
@@ -196,25 +220,41 @@ func (b *BatchSecretsResponse) String() string {
 }
 
 type GetSecretRequest struct {
-	AppId     string `json:"app_id" url:"app_id"`
-	EnvTypeId string `json:"env_type_id" url:"env_type_id"`
+	AppId       *string `json:"app_id,omitempty" url:"app_id,omitempty"`
+	AppName     *string `json:"app_name,omitempty" url:"app_name,omitempty"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"env_type_id,omitempty"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"env_type_name,omitempty"`
 
 	extraProperties map[string]interface{}
 	rawJSON         json.RawMessage
 }
 
-func (g *GetSecretRequest) GetAppId() string {
+func (g *GetSecretRequest) GetAppId() *string {
 	if g == nil {
-		return ""
+		return nil
 	}
 	return g.AppId
 }
 
-func (g *GetSecretRequest) GetEnvTypeId() string {
+func (g *GetSecretRequest) GetAppName() *string {
 	if g == nil {
-		return ""
+		return nil
+	}
+	return g.AppName
+}
+
+func (g *GetSecretRequest) GetEnvTypeId() *string {
+	if g == nil {
+		return nil
 	}
 	return g.EnvTypeId
+}
+
+func (g *GetSecretRequest) GetEnvTypeName() *string {
+	if g == nil {
+		return nil
+	}
+	return g.EnvTypeName
 }
 
 func (g *GetSecretRequest) GetExtraProperties() map[string]interface{} {
@@ -458,7 +498,9 @@ func (s *SecretResponse) String() string {
 type SecretsResponse = []*SecretResponse
 
 type UpdateSecretRequest struct {
-	Value     string `json:"value" url:"-"`
-	AppId     string `json:"app_id" url:"-"`
-	EnvTypeId string `json:"env_type_id" url:"-"`
+	Value       string  `json:"value" url:"-"`
+	AppId       *string `json:"app_id,omitempty" url:"-"`
+	AppName     *string `json:"app_name,omitempty" url:"-"`
+	EnvTypeId   *string `json:"env_type_id,omitempty" url:"-"`
+	EnvTypeName *string `json:"env_type_name,omitempty" url:"-"`
 }

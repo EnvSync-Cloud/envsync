@@ -30,6 +30,7 @@ import (
 	organizations "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/organizations"
 	orgfeatures "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/orgfeatures"
 	permissions "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/permissions"
+	platform "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/platform"
 	roles "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/roles"
 	rotation "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/rotation"
 	samlproviders "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/samlproviders"
@@ -77,6 +78,7 @@ type Client struct {
 	ServiceTokens                   *servicetokens.Client
 	System                          *system.Client
 	Setup                           *setup.Client
+	Platform                        *platform.Client
 	License                         *license.Client
 	Enterprise                      *enterprise.Client
 	OidcProviders                   *oidcproviders.Client
@@ -127,6 +129,7 @@ func NewClient(opts ...option.RequestOption) *Client {
 		ServiceTokens:                   servicetokens.NewClient(opts...),
 		System:                          system.NewClient(opts...),
 		Setup:                           setup.NewClient(opts...),
+		Platform:                        platform.NewClient(opts...),
 		License:                         license.NewClient(opts...),
 		Enterprise:                      enterprise.NewClient(opts...),
 		OidcProviders:                   oidcproviders.NewClient(opts...),

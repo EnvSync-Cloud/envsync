@@ -43,17 +43,12 @@ func (uc *exportUseCase) Execute(ctx context.Context, opts ExportOptions) (Expor
 		return ExportResult{}, err
 	}
 
-	appID := firstNonEmpty(opts.AppID, projectCfg.AppID)
-	if appID == "" {
-		return ExportResult{}, errors.New("app-id is required when no config fallback is available")
-	}
-
-	app, err := uc.appService.GetAppByID(ctx, appID)
+	app, err := uc.resolveApp(ctx, opts, projectCfg)
 	if err != nil {
-		return ExportResult{}, fmt.Errorf("failed to resolve application %q: %w", appID, err)
+		return ExportResult{}, err
 	}
 
-	envType, err := uc.resolveEnvType(ctx, appID, opts, projectCfg)
+	envType, err := uc.resolveEnvType(ctx, app, opts, projectCfg)
 	if err != nil {
 		return ExportResult{}, err
 	}
@@ -72,8 +67,8 @@ func (uc *exportUseCase) Execute(ctx context.Context, opts ExportOptions) (Expor
 	}
 
 	syncService := services.NewSyncServiceWithConfig(domain.SyncConfig{
-		AppID:     appID,
-		EnvTypeID: envType.ID,
+		AppName:     app.Name,
+		EnvTypeName: envType.Name,
 	})
 
 	remoteEnv, err := syncService.ReadRemoteEnv(ctx)
@@ -87,7 +82,7 @@ func (uc *exportUseCase) Execute(ctx context.Context, opts ExportOptions) (Expor
 	}
 
 	if secretsEnabled {
-		secrets, resolvedManagedSecrets, err := uc.resolveSecretsForExport(ctx, app, envType.ID, opts)
+		secrets, resolvedManagedSecrets, err := uc.resolveSecretsForExport(ctx, app, envType.Name, opts)
 		if err != nil {
 			return ExportResult{}, err
 		}
@@ -100,7 +95,7 @@ func (uc *exportUseCase) Execute(ctx context.Context, opts ExportOptions) (Expor
 
 	return ExportResult{
 		Format:              normalizeFormat(opts.Format),
-		ResolvedAppID:       appID,
+		ResolvedAppID:       app.ID,
 		ResolvedEnvTypeID:   envType.ID,
 		ResolvedEnvTypeName: envType.Name,
 		SecretsEnabled:      secretsEnabled,
@@ -112,24 +107,24 @@ func (uc *exportUseCase) Execute(ctx context.Context, opts ExportOptions) (Expor
 func (uc *exportUseCase) resolveSecretsForExport(
 	ctx context.Context,
 	app domain.Application,
-	envTypeID string,
+	envTypeName string,
 	opts ExportOptions,
 ) (map[string]string, bool, error) {
 	mode := strings.ToLower(strings.TrimSpace(firstNonEmpty(opts.IsSecretManaged, "auto")))
 
 	switch mode {
 	case "true":
-		secrets, err := uc.resolveSecrets(ctx, app.ID, envTypeID, true, "")
+		secrets, err := uc.resolveSecrets(ctx, app.Name, envTypeName, true, "")
 		return secrets, true, err
 	case "false":
 		if opts.PrivateKeyFile == "" {
 			return nil, false, errors.New("private-key-file is required when secrets are enabled and not managed")
 		}
-		secrets, err := uc.resolveSecrets(ctx, app.ID, envTypeID, false, opts.PrivateKeyFile)
+		secrets, err := uc.resolveSecrets(ctx, app.Name, envTypeName, false, opts.PrivateKeyFile)
 		return secrets, false, err
 	default:
 		if app.IsManagedSecret {
-			secrets, err := uc.resolveSecrets(ctx, app.ID, envTypeID, true, "")
+			secrets, err := uc.resolveSecrets(ctx, app.Name, envTypeName, true, "")
 			if err == nil {
 				return secrets, true, nil
 			}
@@ -139,12 +134,12 @@ func (uc *exportUseCase) resolveSecretsForExport(
 		}
 
 		if opts.PrivateKeyFile != "" {
-			secrets, err := uc.resolveSecrets(ctx, app.ID, envTypeID, false, opts.PrivateKeyFile)
+			secrets, err := uc.resolveSecrets(ctx, app.Name, envTypeName, false, opts.PrivateKeyFile)
 			if err == nil {
 				return secrets, false, nil
 			}
 			if !app.IsManagedSecret {
-				if fallbackSecrets, fallbackErr := uc.resolveSecrets(ctx, app.ID, envTypeID, true, ""); fallbackErr == nil {
+				if fallbackSecrets, fallbackErr := uc.resolveSecrets(ctx, app.Name, envTypeName, true, ""); fallbackErr == nil {
 					return fallbackSecrets, true, nil
 				}
 			}
@@ -154,7 +149,7 @@ func (uc *exportUseCase) resolveSecretsForExport(
 		// Auto mode fallback: if metadata says self-managed but the app is actually
 		// server-managed, prefer a successful managed reveal over a hard failure.
 		if !app.IsManagedSecret {
-			secrets, err := uc.resolveSecrets(ctx, app.ID, envTypeID, true, "")
+			secrets, err := uc.resolveSecrets(ctx, app.Name, envTypeName, true, "")
 			if err == nil {
 				return secrets, true, nil
 			}
@@ -170,10 +165,6 @@ func (uc *exportUseCase) validateOptions(opts ExportOptions) error {
 		return fmt.Errorf("unsupported format %q", opts.Format)
 	}
 
-	if opts.EnvTypeID != "" && opts.EnvTypeName != "" {
-		return errors.New("only one of env-type-id or env-type may be provided")
-	}
-
 	if _, err := resolveMode(opts.EnableSecrets, false); err != nil {
 		return fmt.Errorf("enable-secrets must be auto, true, or false")
 	}
@@ -186,7 +177,7 @@ func (uc *exportUseCase) validateOptions(opts ExportOptions) error {
 }
 
 func (uc *exportUseCase) resolveConfig(opts ExportOptions) (domain.SyncConfig, error) {
-	needsConfig := opts.AppID == "" || (opts.EnvTypeID == "" && opts.EnvTypeName == "")
+	needsConfig := opts.AppName == "" || opts.EnvName == ""
 	if !needsConfig {
 		return domain.SyncConfig{}, nil
 	}
@@ -210,58 +201,86 @@ func (uc *exportUseCase) resolveConfig(opts ExportOptions) (domain.SyncConfig, e
 	return cfg, nil
 }
 
+func (uc *exportUseCase) resolveApp(
+	ctx context.Context,
+	opts ExportOptions,
+	projectCfg domain.SyncConfig,
+) (domain.Application, error) {
+	if name := firstNonEmpty(opts.AppName, projectCfg.AppName); name != "" {
+		apps, err := uc.appService.GetAllApps(ctx)
+		if err != nil {
+			return domain.Application{}, fmt.Errorf("failed to resolve application %q: %w", name, err)
+		}
+		app, err := domain.FindAppByName(apps, name)
+		if err != nil {
+			return domain.Application{}, fmt.Errorf("failed to resolve application %q: %w", name, err)
+		}
+		return app, nil
+	}
+
+	if projectCfg.AppID != "" {
+		app, err := uc.appService.GetAppByID(ctx, projectCfg.AppID)
+		if err != nil {
+			return domain.Application{}, fmt.Errorf("failed to resolve application %q: %w", projectCfg.AppID, err)
+		}
+		return app, nil
+	}
+
+	return domain.Application{}, errors.New("--app is required when no config fallback is available")
+}
+
 func (uc *exportUseCase) resolveEnvType(
 	ctx context.Context,
-	appID string,
+	app domain.Application,
 	opts ExportOptions,
 	projectCfg domain.SyncConfig,
 ) (domain.EnvType, error) {
-	if envTypeID := firstNonEmpty(opts.EnvTypeID, projectCfg.EnvTypeID); envTypeID != "" && opts.EnvTypeName == "" {
-		envType, err := uc.envTypeSvc.GetEnvTypeByID(ctx, envTypeID)
+	envTypeName := firstNonEmpty(opts.EnvName, projectCfg.EnvTypeName)
+	if envTypeName == "" && projectCfg.EnvTypeID != "" {
+		envType, err := uc.envTypeSvc.GetEnvTypeByID(ctx, projectCfg.EnvTypeID)
 		if err != nil {
-			return domain.EnvType{}, fmt.Errorf("failed to resolve environment type %q: %w", envTypeID, err)
+			return domain.EnvType{}, fmt.Errorf("failed to resolve environment type %q: %w", projectCfg.EnvTypeID, err)
 		}
-		if envType.AppID != "" && envType.AppID != appID {
-			return domain.EnvType{}, fmt.Errorf("environment type %q does not belong to app %q", envTypeID, appID)
+		if envType.AppID != "" && envType.AppID != app.ID {
+			return domain.EnvType{}, fmt.Errorf("environment type %q does not belong to app %q", projectCfg.EnvTypeID, app.Name)
 		}
-		return envType, nil
+		envTypeName = envType.Name
 	}
-
-	envTypeName := strings.TrimSpace(opts.EnvTypeName)
 	if envTypeName == "" {
-		return domain.EnvType{}, errors.New("env-type-id or env-type is required when no config fallback is available")
+		return domain.EnvType{}, errors.New("--env is required when no config fallback is available")
 	}
 
-	envTypes, err := uc.envTypeSvc.GetEnvTypesByAppID(ctx, appID)
+	envTypes, err := uc.envTypeSvc.GetEnvTypesByAppID(ctx, app.ID)
 	if err != nil {
-		return domain.EnvType{}, fmt.Errorf("failed to list environment types for app %q: %w", appID, err)
+		return domain.EnvType{}, fmt.Errorf("failed to list environment types for app %q: %w", app.Name, err)
 	}
 
 	var matches []domain.EnvType
 	for _, envType := range envTypes {
-		if strings.EqualFold(envType.Name, envTypeName) {
+		if envType.Name == envTypeName {
 			matches = append(matches, envType)
 		}
 	}
 
 	switch len(matches) {
 	case 0:
-		return domain.EnvType{}, fmt.Errorf("environment type %q was not found for app %q", envTypeName, appID)
+		return domain.EnvType{}, fmt.Errorf("environment type %q was not found for app %q", envTypeName, app.Name)
 	case 1:
 		return matches[0], nil
 	default:
-		return domain.EnvType{}, fmt.Errorf("environment type %q is ambiguous for app %q", envTypeName, appID)
+		return domain.EnvType{}, fmt.Errorf("environment type %q is ambiguous for app %q", envTypeName, app.Name)
 	}
 }
 
 func (uc *exportUseCase) resolveSecrets(
 	ctx context.Context,
-	appID, envTypeID string,
+	appName, envTypeName string,
 	managedSecrets bool,
 	privateKeyFile string,
 ) (map[string]string, error) {
+	ref := domain.ProjectEnvRef{AppName: appName, EnvTypeName: envTypeName}
 	if managedSecrets {
-		rawSecrets, err := uc.secretService.GetAllSecrets(ctx, appID, envTypeID)
+		rawSecrets, err := uc.secretService.GetAllSecrets(ctx, ref)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list secrets: %w", err)
 		}
@@ -271,7 +290,7 @@ func (uc *exportUseCase) resolveSecrets(
 			keys[idx] = secret.Key
 		}
 
-		revealedSecrets, err := uc.secretService.RevelSecrets(ctx, appID, envTypeID, keys)
+		revealedSecrets, err := uc.secretService.RevelSecrets(ctx, ref, keys)
 		if err != nil {
 			return nil, fmt.Errorf("failed to reveal managed secrets: %w", err)
 		}
@@ -284,7 +303,7 @@ func (uc *exportUseCase) resolveSecrets(
 		return nil, fmt.Errorf("failed to read private key file: %w", err)
 	}
 
-	rawSecrets, err := uc.secretService.GetAllSecrets(ctx, appID, envTypeID)
+	rawSecrets, err := uc.secretService.GetAllSecrets(ctx, ref)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets: %w", err)
 	}

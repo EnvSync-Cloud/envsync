@@ -9,11 +9,7 @@ import { beforeAll, afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "fs";
 
 import { testRequest } from "../../helpers/request";
-import {
-	seedE2EOrg,
-	checkServiceHealth,
-	type E2ESeed,
-} from "../helpers/real-auth";
+import { seedE2EOrg, checkServiceHealth, type E2ESeed } from "../helpers/real-auth";
 import { startTestServer } from "../helpers/http-server";
 import { buildCLI, createProjectDir, execCLI } from "../helpers/cli-runner";
 
@@ -74,8 +70,8 @@ describe("CLI Push", () => {
 
 	beforeAll(() => {
 		projectDir = createProjectDir({
-			appId,
-			envTypeId,
+			appName: "E2E CLI Sync App",
+			envTypeName: "cli-staging",
 			envVars: {
 				DATABASE_URL: "postgres://localhost:5432/cli_test",
 				REDIS_URL: "redis://localhost:6379",
@@ -145,8 +141,8 @@ describe("CLI Pull", () => {
 
 		// Create empty project dir (no .env vars)
 		projectDir = createProjectDir({
-			appId,
-			envTypeId,
+			appName: "E2E CLI Sync App",
+			envTypeName: "cli-staging",
 			envVars: {},
 		});
 	});

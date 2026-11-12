@@ -19,11 +19,8 @@ let cachedBackendURL: string | null = null;
  * Build the CLI binary with a custom backendURL baked in via ldflags.
  * Caches the binary path so subsequent calls skip the build.
  */
-export async function buildCLI({
-	backendURL,
-}: { backendURL: string }): Promise<string> {
-	if (cachedBinaryPath && cachedBackendURL === backendURL)
-		return cachedBinaryPath;
+export async function buildCLI({ backendURL }: { backendURL: string }): Promise<string> {
+	if (cachedBinaryPath && cachedBackendURL === backendURL) return cachedBinaryPath;
 
 	const output = join(mkdtempSync(join(tmpdir(), "envsync-cli-")), "envsync");
 	const ldflags = `-X github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config.backendURL=${backendURL}`;
@@ -54,12 +51,12 @@ export async function buildCLI({
  * Create a temporary project directory with .env and envsyncrc.toml files.
  */
 export function createProjectDir({
-	appId,
-	envTypeId,
+	appName,
+	envTypeName,
 	envVars = {},
 }: {
-	appId: string;
-	envTypeId: string;
+	appName: string;
+	envTypeName: string;
 	envVars?: Record<string, string>;
 }): {
 	dir: string;
@@ -71,9 +68,10 @@ export function createProjectDir({
 
 	// Write envsyncrc.toml
 	const configPath = join(dir, "envsyncrc.toml");
+	const tomlString = (value: string) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 	writeFileSync(
 		configPath,
-		`app_id = "${appId}"\nenv_type_id = "${envTypeId}"\n`,
+		`app_name = ${tomlString(appName)}\nenv_type_name = ${tomlString(envTypeName)}\n`,
 	);
 
 	// Write .env file

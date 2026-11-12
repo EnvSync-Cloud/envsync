@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
@@ -16,15 +17,14 @@ import (
 type switchEnvUseCase struct {
 	envTypeService services.EnvTypeService
 	syncService    services.SyncService
+	appService     services.ApplicationService
 }
 
 func NewSwitchEnvUseCase() SwitchEnvUseCase {
-	envTypeService := services.NewEnvTypeService()
-	syncService := services.NewSyncService()
-
 	return &switchEnvUseCase{
-		envTypeService: envTypeService,
-		syncService:    syncService,
+		envTypeService: services.NewEnvTypeService(),
+		syncService:    services.NewSyncService(),
+		appService:     services.NewAppService(),
 	}
 }
 
@@ -42,7 +42,12 @@ func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType)
 		return domain.EnvType{}, err
 	}
 
-	envs, err := uc.fetchAvailableEnvs(ctx, syncConfig.AppID)
+	appID, err := uc.resolveAppID(ctx, syncConfig)
+	if err != nil {
+		return domain.EnvType{}, err
+	}
+
+	envs, err := uc.fetchAvailableEnvs(ctx, appID)
 	if err != nil {
 		return domain.EnvType{}, err
 	}
@@ -52,7 +57,7 @@ func (uc *switchEnvUseCase) Execute(ctx context.Context, envType domain.EnvType)
 		return domain.EnvType{}, err
 	}
 
-	if err := uc.updateSyncConfigWithEnv(syncConfig, selected.ID); err != nil {
+	if err := uc.updateSyncConfigWithEnv(syncConfig, selected); err != nil {
 		return domain.EnvType{}, err
 	}
 
@@ -104,8 +109,27 @@ func (uc *switchEnvUseCase) resolveSelection(envs []domain.EnvType, want domain.
 	return selected, nil
 }
 
-func (uc *switchEnvUseCase) updateSyncConfigWithEnv(syncConfig *domain.SyncConfig, envTypeID string) error {
-	syncConfig.EnvTypeID = envTypeID
+func (uc *switchEnvUseCase) resolveAppID(ctx context.Context, syncConfig *domain.SyncConfig) (string, error) {
+	if name := strings.TrimSpace(syncConfig.AppName); name != "" {
+		apps, err := uc.appService.GetAllApps(ctx)
+		if err != nil {
+			return "", NewServiceError("failed to resolve application "+name, err)
+		}
+		app, err := domain.FindAppByName(apps, name)
+		if err != nil {
+			return "", NewNotFoundError(err.Error(), err)
+		}
+		return app.ID, nil
+	}
+	if strings.TrimSpace(syncConfig.AppID) == "" {
+		return "", NewValidationError("envsyncrc.toml has no app_name", "", nil)
+	}
+	return syncConfig.AppID, nil
+}
+
+func (uc *switchEnvUseCase) updateSyncConfigWithEnv(syncConfig *domain.SyncConfig, envType domain.EnvType) error {
+	syncConfig.EnvTypeName = strings.TrimSpace(envType.Name)
+	syncConfig.EnvTypeID = ""
 	if err := uc.syncService.WriteConfigData(*syncConfig); err != nil {
 		return NewFileSystemError("failed to update sync config with selected environment type", err)
 	}
