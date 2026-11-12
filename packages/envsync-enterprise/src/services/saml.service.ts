@@ -432,7 +432,7 @@ export class SamlService {
 
 	/**
 	 * Find an existing user in the org by email, or create a new one with
-	 * Keycloak identity and a default Developer role.
+	 * directory identity and a default Developer role.
 	 */
 	private static resolveSamlUser = async (input: {
 		email: string;
@@ -445,12 +445,12 @@ export class SamlService {
 			return existing.id;
 		}
 
-		const keycloakId = await SamlService.ensureKeycloakIdentity(input.email, input.fullName);
+		const directoryId = await SamlService.ensureDirectoryIdentity(input.email, input.fullName);
 		const roleId = await SamlService.getDefaultMemberRoleId(input.orgId);
 		const membership = await UserService.createMembershipForExistingIdentity({
 			email: input.email,
 			full_name: input.fullName,
-			auth_service_id: keycloakId,
+			auth_service_id: directoryId,
 			org_id: input.orgId,
 			role_id: roleId,
 			is_active: true,
@@ -464,7 +464,7 @@ export class SamlService {
 	 * JIT users are created without a usable password and without the migration prompt.
 	 * Pre-existing directory users keep their credentials.
 	 */
-	private static ensureKeycloakIdentity = async (
+	private static ensureDirectoryIdentity = async (
 		email: string,
 		fullName: string,
 	): Promise<string> => {

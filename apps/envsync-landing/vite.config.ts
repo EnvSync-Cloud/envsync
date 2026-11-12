@@ -26,7 +26,6 @@ function hostedRuntimeConfigPlugin(): Plugin {
         apiBaseUrl: apiBase,
         appBaseUrl: `${proto}//app.${root}`,
         authBaseUrl: `${proto}//auth.${root}`,
-        keycloakRealm: "envsync",
         webClientId: "envsync-web",
         apiDocsUrl: `${apiBase}/docs`,
         otelEndpoint: otel,

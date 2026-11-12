@@ -122,7 +122,7 @@ envsync push --env staging
 | `apps/envsync-landing` | Marketing landing (Hosted) |
 | `packages/deploy` | Public OSS self-host CLI (`@envsync-cloud/deploy`) |
 | `packages/deploy-cli` | EE deploy entry → `@envsync-cloud/deploy-enterprise` (private) |
-| `packages/envsync-keycloak-theme` | Custom Keycloak theme |
+| `docker/atrium` | Atrium config, clients, and branded login |
 | `sdks/envsync-ts-sdk` | Generated TypeScript SDK (core + manage) |
 | `sdks/envsync-go-sdk` | Generated Go SDK (core + manage) |
 | `scripts/` | Local bootstrap and helper scripts |
@@ -158,7 +158,7 @@ bun run dev
 |---------|-----|
 | 🖥️ Dashboard | `http://app.lvh.me:8001` |
 | ⚡ API | `http://api.lvh.me:4000` |
-| 🔐 Keycloak | `http://auth.lvh.me:8080` |
+| 🔐 Atrium | `http://auth.lvh.me:8080` |
 | 📊 HyperDX | `http://localhost:8800` |
 | 📧 Mailpit | `http://localhost:8025` |
 | 🗄️ RustFS | `http://localhost:19000` |

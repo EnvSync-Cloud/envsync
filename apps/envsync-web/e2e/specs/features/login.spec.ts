@@ -18,14 +18,14 @@ test.describe("login chooser", () => {
 	test("renders /login without a session and does not loop", async ({ page }) => {
 		await stubUnauthenticatedSession(page);
 		await page.goto("/login", { waitUntil: "domcontentloaded" });
-		await expect(page.getByTestId("login-keycloak")).toBeVisible();
+		await expect(page.getByTestId("login-continue")).toBeVisible();
 		await expect(page).toHaveURL(/\/login\/?$/);
 	});
 
 	test("?sso=failed shows the generic SSO error when SSO is available", async ({ page }) => {
 		await stubUnauthenticatedSession(page);
 		await page.goto("/login?sso=failed", { waitUntil: "domcontentloaded" });
-		await expect(page.getByTestId("login-keycloak")).toBeVisible();
+		await expect(page.getByTestId("login-continue")).toBeVisible();
 
 		const ssoError = page.getByTestId("login-sso-error");
 		if (await page.getByTestId("login-sso-slug").isVisible().catch(() => false)) {

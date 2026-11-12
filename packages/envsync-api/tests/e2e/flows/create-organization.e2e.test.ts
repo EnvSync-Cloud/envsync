@@ -1,7 +1,7 @@
 /**
  * E2E: Hosted create-organization channel + removed create-workspace + selfhost deny.
  *
- * Uses real Keycloak JWTs as cookie sessions (dashboard channel requires access_token cookie).
+ * Uses real Atrium JWTs as cookie sessions (dashboard channel requires access_token cookie).
  */
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 

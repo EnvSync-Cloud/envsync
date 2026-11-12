@@ -31,31 +31,16 @@ If you previously attempted login on `localhost`, clear browser site data for bo
 Use these canonical local browser-facing URLs:
 - dashboard: `http://app.lvh.me:8001`
 - API: `http://api.lvh.me:4000`
-- Keycloak: `http://auth.lvh.me:8080`
+- Atrium: `http://auth.lvh.me:8080`
 
-Do not use `localhost` for browser login flows. Keycloak 26 can issue local auth cookies differently on `localhost`, which breaks the browser auth flow.
+Do not use `localhost` for browser login flows. Atrium issues the session cookie on the auth host, and a `localhost` login does not line up with `app.lvh.me`.
 
-## Keycloak Local Env
+## Atrium local env
 
-Canonical local auth config:
-
-```env
-KEYCLOAK_URL=http://auth.lvh.me:8080
-KEYCLOAK_REALM=envsync
-KEYCLOAK_ADMIN_USER=admin
-KEYCLOAK_ADMIN_PASSWORD=admin
-KEYCLOAK_WEB_CLIENT_ID=envsync-web
-KEYCLOAK_WEB_CLIENT_SECRET=test-web-client-secret
-KEYCLOAK_CLI_CLIENT_ID=envsync-cli
-KEYCLOAK_API_CLIENT_ID=envsync-api
-KEYCLOAK_API_CLIENT_SECRET=test-api-client-secret
-KEYCLOAK_WEB_REDIRECT_URI=http://api.lvh.me:4000/api/access/web/callback
-KEYCLOAK_WEB_CALLBACK_URL=http://app.lvh.me:8001/auth/callback
-KEYCLOAK_API_REDIRECT_URI=http://api.lvh.me:4000/api/access/api/callback
-```
+Canonical local auth config is the `ATRIUM_*` block in the repo root `.env.example`. The issuer is `http://auth.lvh.me:8080` with no realm path.
 
 The web auth flow is intentionally API-first:
-- Keycloak redirects to the API callback on `api.lvh.me:4000`
+- Atrium redirects to the API callback on `api.lvh.me:4000`
 - the API exchanges the code and redirects the browser to `app.lvh.me:8001/auth/callback#access_token=...`
 
 ## Scripts
@@ -105,5 +90,5 @@ Local observability uses ClickStack / HyperDX:
 
 - [docker-compose.yaml](../../docker-compose.yaml)
 - [packages/envsync-api/src/controllers/access.controller.ts](./src/controllers/access.controller.ts)
-- [packages/envsync-api/src/helpers/keycloak.ts](./src/helpers/keycloak.ts)
+- [packages/envsync-api/src/helpers/identity.ts](./src/helpers/identity.ts)
 - [packages/envsync-api/tests/e2e/helpers/bootstrap-env.ts](./tests/e2e/helpers/bootstrap-env.ts)

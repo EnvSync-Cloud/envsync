@@ -494,13 +494,13 @@ export class UserService {
 			}));
 	};
 
-	public static getUserByKeycloakId = async (auth_service_id: string) => {
+	public static getUserByDirectoryId = async (auth_service_id: string) => {
 		return cacheAside(CacheKeys.userByIdp(auth_service_id), CacheTTL.SHORT, async () => {
 			return UserService.resolveActiveMembershipByIdpId(auth_service_id);
 		});
 	};
 
-	public static getUserByIdpId = (idpId: string) => UserService.getUserByKeycloakId(idpId);
+	public static getUserByIdpId = (idpId: string) => UserService.getUserByDirectoryId(idpId);
 
 	public static getOrgUserByEmail = async (org_id: string, email: string) => {
 		const db = await DB.getInstance();

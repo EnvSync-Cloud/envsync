@@ -35,7 +35,7 @@ interface DeployConfig {
 	};
 	images: {
 		api: string;
-		keycloak: string;
+		atrium: string;
 		web: string;
 		landing: string;
 		clickstack: string;
@@ -50,17 +50,17 @@ interface DeployConfig {
 		clickstack_ui_port: number;
 		clickstack_otlp_http_port: number;
 		clickstack_otlp_grpc_port: number;
-		keycloak_port: number;
+		atrium_port: number;
 		rustfs_port: number;
 		rustfs_console_port: number;
 	};
 	auth: {
-		keycloak_realm: string;
 		admin_user: string;
 		admin_password: string;
 		web_client_id: string;
 		api_client_id: string;
 		cli_client_id: string;
+		management_client_id: string;
 	};
 	observability: {
 		retention_days: number;
@@ -141,9 +141,10 @@ interface DeployGeneratedState {
 	};
 	secrets: {
 		s3_secret_key: string;
-		keycloak_db_password: string;
-		keycloak_web_client_secret: string;
-		keycloak_api_client_secret: string;
+		atrium_db_password: string;
+		atrium_management_client_secret: string;
+		atrium_web_client_secret: string;
+		atrium_api_client_secret: string;
 		openfga_db_password: string;
 		minikms_root_key: string;
 		minikms_session_signing_key: string;
@@ -186,10 +187,10 @@ const NETUTILS_EXPOSE_ALL_PORTS: readonly NetutilsExposeAllSpec[] = [
 	{ service: "postgres", service_port: 5432, protocol: "tcp" },
 	{ service: "envsync_api_blue", service_port: 4000, protocol: "tcp" },
 	{ service: "envsync_api_green", service_port: 4000, protocol: "tcp" },
-	{ service: "keycloak", service_port: 8080, protocol: "tcp" },
+	{ service: "atrium", service_port: 8080, protocol: "tcp" },
 	{ service: "openfga", service_port: 8090, protocol: "tcp" },
 	{ service: "minikms", service_port: 50051, protocol: "tcp" },
-	{ service: "keycloak_db", service_port: 5432, protocol: "tcp" },
+	{ service: "atrium_db", service_port: 5432, protocol: "tcp" },
 	{ service: "openfga_db", service_port: 5432, protocol: "tcp" },
 	{ service: "minikms_db", service_port: 5432, protocol: "tcp" },
 	{ service: "redis", service_port: 6379, protocol: "tcp" },
@@ -279,7 +280,8 @@ const STACK_FILE = path.join(DEPLOY_ROOT, "docker-stack.yaml");
 const BOOTSTRAP_BASE_STACK_FILE = path.join(DEPLOY_ROOT, "docker-stack.bootstrap.base.yaml");
 const BOOTSTRAP_STACK_FILE = path.join(DEPLOY_ROOT, "docker-stack.bootstrap.yaml");
 const TRAEFIK_DYNAMIC_FILE = path.join(DEPLOY_ROOT, "traefik-dynamic.yaml");
-const KEYCLOAK_REALM_FILE = path.join(DEPLOY_ROOT, "keycloak-realm.envsync.json");
+const ATRIUM_CONFIG_FILE = path.join(DEPLOY_ROOT, "atrium-config.yaml");
+const ATRIUM_CLIENTS_FILE = path.join(DEPLOY_ROOT, "atrium-clients.json");
 const NGINX_WEB_CONF = path.join(DEPLOY_ROOT, "nginx-web.conf");
 const NGINX_LANDING_CONF = path.join(DEPLOY_ROOT, "nginx-landing.conf");
 const NGINX_API_MAINTENANCE_CONF = path.join(DEPLOY_ROOT, "nginx-api-maintenance.conf");
@@ -305,7 +307,8 @@ const DEPLOY_RENDER_PATHS = {
 	traefikStateRoot: TRAEFIK_STATE_ROOT,
 	deployRoot: DEPLOY_ROOT,
 	releasesRoot: RELEASES_ROOT,
-	keycloakRealmFile: KEYCLOAK_REALM_FILE,
+	atriumConfigFile: ATRIUM_CONFIG_FILE,
+	atriumClientsFile: ATRIUM_CLIENTS_FILE,
 	clickstackClickhouseConf: CLICKSTACK_CLICKHOUSE_CONF,
 	otelAgentConf: OTEL_AGENT_CONF,
 	nginxLandingConf: NGINX_LANDING_CONF,
@@ -338,7 +341,8 @@ const REMOVE_TARGETS = [
 	BOOTSTRAP_BASE_STACK_FILE,
 	BOOTSTRAP_STACK_FILE,
 	TRAEFIK_DYNAMIC_FILE,
-	KEYCLOAK_REALM_FILE,
+	ATRIUM_CONFIG_FILE,
+	ATRIUM_CLIENTS_FILE,
 	NGINX_WEB_CONF,
 	NGINX_LANDING_CONF,
 	NGINX_API_MAINTENANCE_CONF,
@@ -352,7 +356,7 @@ const STACK_VOLUMES = [
 	"postgres_data",
 	"redis_data",
 	"rustfs_data",
-	"keycloak_db_data",
+	"atrium_db_data",
 	"openfga_db_data",
 	"minikms_db_data",
 	"clickstack_data",
@@ -362,8 +366,9 @@ const STACK_VOLUMES = [
 
 const REQUIRED_BOOTSTRAP_ENV_KEYS = [
 	"S3_SECRET_KEY",
-	"KEYCLOAK_WEB_CLIENT_SECRET",
-	"KEYCLOAK_API_CLIENT_SECRET",
+	"ATRIUM_MANAGEMENT_CLIENT_SECRET",
+	"ATRIUM_WEB_CLIENT_SECRET",
+	"ATRIUM_API_CLIENT_SECRET",
 	"OPENFGA_DB_PASSWORD",
 	"MINIKMS_ROOT_KEY",
 	"MINIKMS_DB_PASSWORD",
@@ -403,7 +408,7 @@ const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
 const MANAGED_VERSIONED_IMAGE_PREFIXES = {
 	api: "ghcr.io/envsync-cloud/envsync-api:",
 	api_enterprise: "ghcr.io/envsync-cloud/envsync-api-enterprise:",
-	keycloak: "envsync-keycloak:",
+	atrium: "ghcr.io/bravo68web/atrium:",
 	web: "ghcr.io/envsync-cloud/envsync-web-static:",
 	web_oss: "ghcr.io/envsync-cloud/envsync-web-oss-static:",
 	landing: "ghcr.io/envsync-cloud/envsync-landing-static:",
@@ -1300,7 +1305,7 @@ function versionedImages(version: string, edition: "oss" | "enterprise" = "enter
 			: `ghcr.io/envsync-cloud/envsync-api-enterprise:${version}`;
 	return {
 		api,
-		keycloak: `envsync-keycloak:${version}`,
+		atrium: renderHelpers.ATRIUM_IMAGE,
 		web,
 		landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
 	};
@@ -1325,7 +1330,7 @@ function isOssConfig(config: DeployConfig) {
 
 function isManagedVersionedImage(
 	image: string | undefined,
-	key: keyof Pick<DeployConfig["images"], "api" | "keycloak" | "web" | "landing">,
+	key: keyof Pick<DeployConfig["images"], "api" | "atrium" | "web" | "landing">,
 ) {
 	if (typeof image !== "string") {
 		return false;
@@ -1400,9 +1405,7 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 		},
 		images: {
 			api: !raw.images?.api || isManagedVersionedImage(raw.images.api, "api") ? derivedImages.api : raw.images.api,
-			keycloak: !raw.images?.keycloak || isManagedVersionedImage(raw.images.keycloak, "keycloak")
-				? derivedImages.keycloak
-				: raw.images.keycloak,
+			atrium: raw.images?.atrium || derivedImages.atrium,
 			web: !raw.images?.web || isManagedVersionedImage(raw.images.web, "web") ? derivedImages.web : raw.images.web,
 			landing: !raw.images?.landing || isManagedVersionedImage(raw.images.landing, "landing")
 				? derivedImages.landing
@@ -1419,17 +1422,17 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			clickstack_ui_port: requireDefined(raw.services?.clickstack_ui_port, "services.clickstack_ui_port"),
 			clickstack_otlp_http_port: requireDefined(raw.services?.clickstack_otlp_http_port, "services.clickstack_otlp_http_port"),
 			clickstack_otlp_grpc_port: requireDefined(raw.services?.clickstack_otlp_grpc_port, "services.clickstack_otlp_grpc_port"),
-			keycloak_port: requireDefined(raw.services?.keycloak_port, "services.keycloak_port"),
+			atrium_port: raw.services?.atrium_port ?? 8080,
 			rustfs_port: requireDefined(raw.services?.rustfs_port, "services.rustfs_port"),
 			rustfs_console_port: requireDefined(raw.services?.rustfs_console_port, "services.rustfs_console_port"),
 		},
 		auth: {
-			keycloak_realm: requireDefined(raw.auth?.keycloak_realm, "auth.keycloak_realm"),
-			admin_user: requireDefined(raw.auth?.admin_user, "auth.admin_user"),
-			admin_password: requireDefined(raw.auth?.admin_password, "auth.admin_password"),
+			admin_user: raw.auth?.admin_user ?? "",
+			admin_password: raw.auth?.admin_password ?? "",
 			web_client_id: requireDefined(raw.auth?.web_client_id, "auth.web_client_id"),
 			api_client_id: requireDefined(raw.auth?.api_client_id, "auth.api_client_id"),
 			cli_client_id: requireDefined(raw.auth?.cli_client_id, "auth.cli_client_id"),
+			management_client_id: raw.auth?.management_client_id ?? "management",
 		},
 		observability: {
 			retention_days: requireDefined(raw.observability?.retention_days, "observability.retention_days"),
@@ -1511,9 +1514,10 @@ function emptyGeneratedState(): DeployGeneratedState {
 		},
 		secrets: {
 			s3_secret_key: "",
-			keycloak_db_password: "",
-			keycloak_web_client_secret: "",
-			keycloak_api_client_secret: "",
+			atrium_db_password: "",
+			atrium_management_client_secret: "",
+			atrium_web_client_secret: "",
+			atrium_api_client_secret: "",
 			openfga_db_password: "",
 			minikms_root_key: "",
 			minikms_session_signing_key: "",
@@ -1552,9 +1556,10 @@ function normalizeGeneratedState(raw?: Partial<DeployGeneratedState>): DeployGen
 		},
 		secrets: {
 			s3_secret_key: raw?.secrets?.s3_secret_key ?? defaults.secrets.s3_secret_key,
-			keycloak_db_password: raw?.secrets?.keycloak_db_password ?? defaults.secrets.keycloak_db_password,
-			keycloak_web_client_secret: raw?.secrets?.keycloak_web_client_secret ?? defaults.secrets.keycloak_web_client_secret,
-			keycloak_api_client_secret: raw?.secrets?.keycloak_api_client_secret ?? defaults.secrets.keycloak_api_client_secret,
+			atrium_db_password: legacyGeneratedSecret(raw, "atrium_db_password", "keycloak_db_password") ?? defaults.secrets.atrium_db_password,
+			atrium_management_client_secret: legacyGeneratedSecret(raw, "atrium_management_client_secret") ?? defaults.secrets.atrium_management_client_secret,
+			atrium_web_client_secret: legacyGeneratedSecret(raw, "atrium_web_client_secret", "keycloak_web_client_secret") ?? defaults.secrets.atrium_web_client_secret,
+			atrium_api_client_secret: legacyGeneratedSecret(raw, "atrium_api_client_secret", "keycloak_api_client_secret") ?? defaults.secrets.atrium_api_client_secret,
 			openfga_db_password: raw?.secrets?.openfga_db_password ?? defaults.secrets.openfga_db_password,
 			minikms_root_key: raw?.secrets?.minikms_root_key ?? defaults.secrets.minikms_root_key,
 			minikms_session_signing_key:
@@ -1609,9 +1614,10 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 		},
 		secrets: {
 			s3_secret_key: env.S3_SECRET_KEY ?? normalized.secrets.s3_secret_key,
-			keycloak_db_password: env.KEYCLOAK_DB_PASSWORD ?? normalized.secrets.keycloak_db_password,
-			keycloak_web_client_secret: env.KEYCLOAK_WEB_CLIENT_SECRET ?? normalized.secrets.keycloak_web_client_secret,
-			keycloak_api_client_secret: env.KEYCLOAK_API_CLIENT_SECRET ?? normalized.secrets.keycloak_api_client_secret,
+			atrium_db_password: env.ATRIUM_DB_PASSWORD ?? env.KEYCLOAK_DB_PASSWORD ?? normalized.secrets.atrium_db_password,
+			atrium_management_client_secret: env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? normalized.secrets.atrium_management_client_secret,
+			atrium_web_client_secret: env.ATRIUM_WEB_CLIENT_SECRET ?? env.KEYCLOAK_WEB_CLIENT_SECRET ?? normalized.secrets.atrium_web_client_secret,
+			atrium_api_client_secret: env.ATRIUM_API_CLIENT_SECRET ?? env.KEYCLOAK_API_CLIENT_SECRET ?? normalized.secrets.atrium_api_client_secret,
 			openfga_db_password: env.OPENFGA_DB_PASSWORD ?? normalized.secrets.openfga_db_password,
 			minikms_root_key: env.MINIKMS_ROOT_KEY ?? normalized.secrets.minikms_root_key,
 			minikms_session_signing_key:
@@ -1642,9 +1648,10 @@ function ensureGeneratedRuntimeState(config: DeployConfig, generated: DeployGene
 		},
 		secrets: {
 			s3_secret_key: generated.secrets.s3_secret_key || randomSecret(16),
-			keycloak_db_password: generated.secrets.keycloak_db_password || "",
-			keycloak_web_client_secret: generated.secrets.keycloak_web_client_secret || randomSecret(),
-			keycloak_api_client_secret: generated.secrets.keycloak_api_client_secret || randomSecret(),
+			atrium_db_password: generated.secrets.atrium_db_password || randomSecret(),
+			atrium_management_client_secret: generated.secrets.atrium_management_client_secret || randomSecret(),
+			atrium_web_client_secret: generated.secrets.atrium_web_client_secret || randomSecret(),
+			atrium_api_client_secret: generated.secrets.atrium_api_client_secret || randomSecret(),
 			openfga_db_password: generated.secrets.openfga_db_password || randomSecret(),
 			minikms_root_key: generated.secrets.minikms_root_key || randomBytes(32).toString("hex"),
 			minikms_session_signing_key:
@@ -1679,8 +1686,10 @@ function resetBootstrapGeneratedState(generated: DeployGeneratedState) {
 	});
 }
 
-function keycloakImageTag(image: string) {
-	return image.split(":").slice(1).join(":") || "local";
+function legacyGeneratedSecret(raw: Partial<DeployGeneratedState> | undefined, next: string, previous?: string) {
+	const secrets = raw?.secrets as Record<string, string> | undefined;
+	if (!secrets) return undefined;
+	return secrets[next] ?? (previous ? secrets[previous] : undefined);
 }
 
 function slotServiceName(slot: ApiSlot) {
@@ -1873,7 +1882,9 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 		JSON.stringify({ config, generated: mergeGeneratedState(runtimeEnv, generated) }, null, 2) + "\n",
 	);
 	writeFileMaybe(VERSIONS_LOCK, JSON.stringify(config.images, null, 2) + "\n");
-	writeFileMaybe(KEYCLOAK_REALM_FILE, renderHelpers.renderKeycloakRealm(config, runtimeEnv));
+	writeFileMaybe(ATRIUM_CONFIG_FILE, renderHelpers.renderAtriumConfig(config, runtimeEnv));
+	writeFileMaybe(ATRIUM_CLIENTS_FILE, renderHelpers.renderAtriumClients(config, runtimeEnv));
+	copyAtriumBranding();
 	writeFileMaybe(TRAEFIK_DYNAMIC_FILE, renderHelpers.renderTraefikDynamicConfig(config, generated));
 	writeFileMaybe(BOOTSTRAP_BASE_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "base", DEPLOY_RENDER_PATHS));
 	writeFileMaybe(BOOTSTRAP_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "bootstrap", DEPLOY_RENDER_PATHS));
@@ -2106,19 +2117,18 @@ function activateFrontendReleaseForState(config: DeployConfig, state: DeployGene
 	// Landing activation omitted on self-host (Phase 2).
 }
 
-function buildKeycloakImage(imageTag: string, repoRoot = REPO_ROOT) {
-	const buildContext = path.join(repoRoot, "packages/envsync-keycloak-theme");
-	if (!exists(path.join(buildContext, "Dockerfile"))) {
-		throw new Error(`Missing Keycloak Docker build context at ${buildContext}`);
-	}
-	logStep(`Building Keycloak image ${imageTag}`);
-	if (currentOptions.dryRun) {
-		logDryRun(`Would build ${imageTag} from ${buildContext}`);
+function copyAtriumBranding(repoRoot = REPO_ROOT) {
+	const source = path.join(repoRoot, "docker", "atrium", "branding");
+	const target = path.join(DEPLOY_ROOT, "atrium-branding");
+	if (!exists(source)) {
+		logWarn(`Atrium branding was not found at ${source}. The stock Atrium pages will be used.`);
 		return;
 	}
-	logCommand("docker", ["build", "-t", imageTag, buildContext]);
-	run("docker", ["build", "-t", imageTag, buildContext]);
-	logSuccess(`Built Keycloak image ${imageTag}`);
+	if (currentOptions.dryRun) {
+		logDryRun(`Would copy Atrium branding from ${source} to ${target}`);
+		return;
+	}
+	fs.cpSync(source, target, { recursive: true, force: true });
 }
 
 function stackNetworkName(config: DeployConfig) {
@@ -2686,10 +2696,12 @@ function hasCompleteBootstrapState(generated: DeployGeneratedState) {
 		switch (key) {
 			case "S3_SECRET_KEY":
 				return generated.secrets.s3_secret_key.length > 0;
-			case "KEYCLOAK_WEB_CLIENT_SECRET":
-				return generated.secrets.keycloak_web_client_secret.length > 0;
-			case "KEYCLOAK_API_CLIENT_SECRET":
-				return generated.secrets.keycloak_api_client_secret.length > 0;
+			case "ATRIUM_MANAGEMENT_CLIENT_SECRET":
+				return generated.secrets.atrium_management_client_secret.length > 0;
+			case "ATRIUM_WEB_CLIENT_SECRET":
+				return generated.secrets.atrium_web_client_secret.length > 0;
+			case "ATRIUM_API_CLIENT_SECRET":
+				return generated.secrets.atrium_api_client_secret.length > 0;
 			case "OPENFGA_DB_PASSWORD":
 				return generated.secrets.openfga_db_password.length > 0;
 			case "MINIKMS_ROOT_KEY":
@@ -3278,8 +3290,6 @@ async function cmdSetup() {
 	const releaseVersion = await ask("Release version", getDeployCliVersion());
 	assertSemverVersion(releaseVersion, "release version");
 	const releaseImages = versionedImages(releaseVersion, getForcedDeployEdition() ?? "enterprise");
-	const adminUser = await ask("Keycloak admin user", "admin");
-	const adminPassword = await ask("Keycloak admin password", randomSecret(12));
 	const smtpHost = await ask("SMTP host", "smtp.example.com");
 	const smtpPort = Number(await ask("SMTP port", "587"));
 	const smtpSecure = (await ask("SMTP secure (true/false)", "true")) === "true";
@@ -3306,7 +3316,7 @@ async function cmdSetup() {
 			netutilsForwards = parseNetutilsForwardsFromInput(
 				await ask(
 					"Netutils forwards (format service:service_port:host_port[:protocol], comma-separated)",
-					"postgres:5432:15432:tcp,keycloak:8080:18080:tcp",
+					"postgres:5432:15432:tcp,atrium:8080:18080:tcp",
 				),
 				"envsync",
 			);
@@ -3333,7 +3343,7 @@ async function cmdSetup() {
 		domain: { root_domain: rootDomain, acme_email: acmeEmail },
 		images: {
 			api: releaseImages.api,
-			keycloak: releaseImages.keycloak,
+			atrium: releaseImages.atrium,
 			web: releaseImages.web,
 			landing: releaseImages.landing,
 			clickstack: "clickhouse/clickstack-all-in-one:latest",
@@ -3348,17 +3358,17 @@ async function cmdSetup() {
 			clickstack_ui_port: 8080,
 			clickstack_otlp_http_port: 4318,
 			clickstack_otlp_grpc_port: 4317,
-			keycloak_port: 8080,
+			atrium_port: 8080,
 			rustfs_port: 9000,
 			rustfs_console_port: 9001,
 		},
 		auth: {
-			keycloak_realm: "envsync",
-			admin_user: adminUser,
-			admin_password: adminPassword,
+			admin_user: "",
+			admin_password: "",
 			web_client_id: "envsync-web",
 			api_client_id: "envsync-api",
 			cli_client_id: "envsync-cli",
+			management_client_id: "management",
 		},
 		observability: {
 			retention_days: retentionDays,
@@ -3428,7 +3438,6 @@ async function cmdBootstrap() {
 	cleanupBootstrapState(config);
 	ensureRepoCheckout(config);
 	writeDeployArtifacts(config, nextGenerated);
-	buildKeycloakImage(config.images.keycloak);
 	if (currentOptions.dryRun) {
 		logDryRun(`Would deploy base bootstrap stack for ${config.services.stack_name}`);
 		logCommand("docker", ["stack", "deploy", "-c", BOOTSTRAP_BASE_STACK_FILE, config.services.stack_name]);
@@ -3441,7 +3450,7 @@ async function cmdBootstrap() {
 	waitForPostgresService(config, "postgres", "postgres", "postgres", "envsync-postgres");
 	waitForRedisService(config);
 	waitForTcpService(config, "rustfs", "rustfs", 9000);
-	waitForPostgresService(config, "keycloak", "keycloak_db", "keycloak", runtimeEnv.KEYCLOAK_DB_PASSWORD);
+	waitForPostgresService(config, "atrium", "atrium_db", "atrium", runtimeEnv.ATRIUM_DB_PASSWORD);
 	waitForPostgresService(config, "openfga", "openfga_db", "openfga", runtimeEnv.OPENFGA_DB_PASSWORD);
 	waitForPostgresService(config, "minikms", "minikms_db", "postgres", runtimeEnv.MINIKMS_DB_PASSWORD);
 	runOpenFgaMigrate(config, runtimeEnv);
@@ -3455,7 +3464,7 @@ async function cmdBootstrap() {
 		run("docker", ["stack", "deploy", "-c", BOOTSTRAP_STACK_FILE, config.services.stack_name]);
 		logSuccess("Runtime bootstrap stack deployed");
 	}
-	waitForHttpService(config, "keycloak management readiness", "http://keycloak:9000/health/ready", 180);
+	waitForHttpService(config, "atrium", "http://atrium:8080/health", 180);
 	waitForHttpService(config, "openfga", "http://openfga:8090/stores");
 	waitForTcpService(config, "minikms", "minikms", 50051);
 	logStep("Running API database migrations");
@@ -3638,7 +3647,7 @@ async function cmdDeploy() {
 	if (!currentOptions.dryRun) {
 		const services = listStackServices(config);
 		if (
-			serviceHealth(services, `${config.services.stack_name}_keycloak`) === "missing" ||
+			serviceHealth(services, `${config.services.stack_name}_atrium`) === "missing" ||
 			serviceHealth(services, `${config.services.stack_name}_openfga`) === "missing" ||
 			serviceHealth(services, `${config.services.stack_name}_minikms`) === "missing"
 		) {
@@ -3648,7 +3657,6 @@ async function cmdDeploy() {
 		logDryRun("Skipping runtime bootstrap service validation");
 	}
 	ensureRepoCheckout(config);
-	buildKeycloakImage(config.images.keycloak);
 	if (!currentOptions.dryRun) {
 		ensureDir(currentReleaseDir("web"));
 	}
@@ -3754,7 +3762,7 @@ async function cmdDeploy() {
 	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
-		{ label: "keycloak", getHealth: services => serviceHealth(services, `${config.services.stack_name}_keycloak`) },
+		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },
 		{ label: "openfga", getHealth: services => serviceHealth(services, `${config.services.stack_name}_openfga`) },
 		{ label: "minikms", getHealth: services => serviceHealth(services, `${config.services.stack_name}_minikms`) },
 		{ label: "clickstack", getHealth: services => serviceHealth(services, `${config.services.stack_name}_clickstack`) },
@@ -3870,7 +3878,7 @@ async function cmdHealth(asJson: boolean) {
 		postgres: serviceHealth(services, `${stackName}_postgres`),
 		redis: serviceHealth(services, `${stackName}_redis`),
 		rustfs: serviceHealth(services, `${stackName}_rustfs`),
-		keycloak: serviceHealth(services, `${stackName}_keycloak`),
+		atrium: serviceHealth(services, `${stackName}_atrium`),
 		openfga: serviceHealth(services, `${stackName}_openfga`),
 		minikms: serviceHealth(services, `${stackName}_minikms`),
 	};
@@ -3982,7 +3990,7 @@ async function cmdHealth(asJson: boolean) {
 			...(isOssConfig(config) ? {} : { landing: publicHttpsUrl(config, hosts.landing) }),
 			app: publicHttpsUrl(config, hosts.app),
 			api: publicHttpsUrl(config, hosts.api, "/health"),
-			auth: publicHttpsUrl(config, hosts.auth, `/realms/${config.auth.keycloak_realm}/.well-known/openid-configuration`),
+			auth: publicHttpsUrl(config, hosts.auth, "/.well-known/openid-configuration"),
 			obs: publicHttpsUrl(config, hosts.obs),
 			track: publicHttpsUrl(config, hosts.track),
 		},
@@ -4431,7 +4439,8 @@ async function cmdBackup() {
 		writeFile(path.join(staged, "docker-stack.bootstrap.yaml"), fs.readFileSync(BOOTSTRAP_STACK_FILE, "utf8"));
 		writeFile(path.join(staged, "docker-stack.yaml"), fs.readFileSync(STACK_FILE, "utf8"));
 		writeFile(path.join(staged, "traefik-dynamic.yaml"), fs.readFileSync(TRAEFIK_DYNAMIC_FILE, "utf8"));
-		writeFile(path.join(staged, "keycloak-realm.envsync.json"), fs.readFileSync(KEYCLOAK_REALM_FILE, "utf8"));
+		writeFile(path.join(staged, "atrium-config.yaml"), fs.readFileSync(ATRIUM_CONFIG_FILE, "utf8"));
+		writeFile(path.join(staged, "atrium-clients.json"), fs.readFileSync(ATRIUM_CLIENTS_FILE, "utf8"));
 		writeFile(path.join(staged, "otel-agent.yaml"), fs.readFileSync(OTEL_AGENT_CONF, "utf8"));
 		writeFile(path.join(staged, "clickhouse-listen.xml"), fs.readFileSync(CLICKSTACK_CLICKHOUSE_CONF, "utf8"));
 		if (!isOssConfig(config) && exists(LICENSE_ROOT)) {
@@ -4510,7 +4519,8 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	writeFile(BOOTSTRAP_STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.bootstrap.yaml"), "utf8"));
 	writeFile(STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.yaml"), "utf8"));
 	writeFile(TRAEFIK_DYNAMIC_FILE, fs.readFileSync(path.join(restoreRoot, "traefik-dynamic.yaml"), "utf8"));
-	writeFile(KEYCLOAK_REALM_FILE, fs.readFileSync(path.join(restoreRoot, "keycloak-realm.envsync.json"), "utf8"));
+	writeFile(ATRIUM_CONFIG_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-config.yaml"), "utf8"));
+	writeFile(ATRIUM_CLIENTS_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-clients.json"), "utf8"));
 	writeFile(OTEL_AGENT_CONF, fs.readFileSync(path.join(restoreRoot, "otel-agent.yaml"), "utf8"));
 	writeFile(CLICKSTACK_CLICKHOUSE_CONF, fs.readFileSync(path.join(restoreRoot, "clickhouse-listen.xml"), "utf8"));
 	const restoredLicenseRoot = path.join(restoreRoot, "license");

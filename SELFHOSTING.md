@@ -22,7 +22,7 @@ Recommended public hosts:
 
 - `app.<root-domain>` for the dashboard
 - `api.<root-domain>` for the API (product **and** Enterprise manage at `/api/v1/manage/...`)
-- `auth.<root-domain>` for Keycloak
+- `auth.<root-domain>` for Atrium
 - `obs.<root-domain>` for ClickStack (if observability enabled)
 - `t.<root-domain>` for first-party analytics (`/ph` → PostHog, `/obs` → OTLP)
 - `s3.<root-domain>` for the S3-compatible API
@@ -172,7 +172,7 @@ bun run selfhost:smoke:oss
 
 - [packages/deploy](./packages/deploy) — public OSS CLI (`@envsync-cloud/deploy`)
 - [packages/deploy-cli](./packages/deploy-cli) — enterprise sources published as `@envsync-cloud/deploy-enterprise`
-- [packages/envsync-keycloak-theme](./packages/envsync-keycloak-theme)
+- [docker/atrium](./docker/atrium) — Atrium config, clients, and branding
 
 ## Enterprise license (self-host)
 

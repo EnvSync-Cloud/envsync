@@ -124,7 +124,7 @@ export const marketingDocs: MarketingDoc[] = [
     capabilities: [
       { title: "Roles that stick", body: "View, edit, admin. OpenFGA on every product route." },
       { title: "Machines get tokens", body: "API keys for CI. Service tokens for workloads. Not a human password in Jenkins." },
-      { title: "SSO when you’re ready", body: "OIDC or SAML on Enterprise. Keycloak on Hosted and self-host." },
+      { title: "SSO when you’re ready", body: "OIDC or SAML on Enterprise. Atrium on Hosted and self-host." },
     ],
     steps: [
       { title: "Invite the team", body: "They join the org. Roles apply immediately." },
@@ -163,7 +163,7 @@ export const marketingDocs: MarketingDoc[] = [
     illustrationAlt: "A team around an open toolbox",
     capabilities: [
       { title: "One process", body: "envsync-api serves product routes. No second management API." },
-      { title: "Deploy yourself", body: "Public @envsync-cloud/deploy. Postgres, Redis, miniKMS, Keycloak." },
+      { title: "Deploy yourself", body: "Public @envsync-cloud/deploy. Postgres, Redis, miniKMS, Atrium." },
       { title: "Honest editions", body: "OSS is one org. Hosted signup and SSO are not in the MIT graph." },
     ],
     steps: [

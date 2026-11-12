@@ -10,7 +10,7 @@ export class PlatformService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Provision a Hosted organization (SuperAdmin)
-     * Hosted platform API. existing_identity attaches a new org to a membership. fresh_tenant creates Keycloak user + org. Source is hosted_ops; per-user org caps are skipped.
+     * Hosted platform API. existing_identity attaches a new org to a membership. fresh_tenant creates an Atrium user and org. Source is hosted_ops; per-user org caps are skipped.
      * @param xEnvSyncPlatformToken
      * @param requestBody
      * @returns PlatformProvisionResponse Organization provisioned

@@ -1,7 +1,7 @@
 /**
  * E2E: Certificate flow — init CA → issue → list → revoke → OCSP → CRL
  *
- * Uses real PostgreSQL, OpenFGA, miniKMS, and Keycloak.
+ * Uses real PostgreSQL, OpenFGA, miniKMS, and Atrium.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

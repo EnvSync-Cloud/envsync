@@ -32,7 +32,7 @@ Browser / CLI / SDKs
    t.<domain>    ── /ph/*               (PostHog first-party proxy)
                  └── /obs/*             (OTLP first-party proxy)
    app.<domain>  ── dashboard
-   auth.<domain> ── Keycloak
+   auth.<domain> ── Atrium
 ```
 
 ---
@@ -60,7 +60,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
               Your API host (VPS / k8s)
          Traefik → api.*  / t.*  / auth.*  / obs.*  / s3.*
          envsync-api (+ manage /api/v1/manage)
-         Postgres, Redis, Keycloak, OpenFGA, miniKMS, RustFS, …
+         Postgres, Redis, Atrium, OpenFGA, miniKMS, RustFS, …
 ```
 
 | Surface | Where it runs | How you deploy |
@@ -68,7 +68,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
 | Dashboard | **Cloudflare** | `.github/workflows/deploy-fe.yaml` → `build:hosted` + Wrangler |
 | Landing | **Cloudflare** | same workflow, `envsync-landing` job |
 | API + infra | **Your server** | Swarm stack / compose (or `envsync-deploy*` for full self-host; for Hosted often monorepo-managed stack) |
-| Auth (Keycloak) | **Your server** (or managed IdP) | Behind `auth.<domain>` |
+| Auth (Atrium) | **Your server** (or managed IdP) | Behind `auth.<domain>` |
 
 **Do not** put the React apps on the VPS if CF is the source of truth for UI. Swarm may still run a `web_nginx` service for self-host; for Hosted hybrid you can leave it unused or remove it and point DNS only at CF.
 
@@ -80,7 +80,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
 | Apex / marketing | Cloudflare (landing) |
 | `api.envsync.example` | VPS A-record / LB → Traefik |
 | `t.envsync.example` | VPS → Traefik → API `/ph` (PostHog) and `/obs` (OTLP) |
-| `auth.envsync.example` | VPS → Keycloak |
+| `auth.envsync.example` | VPS → Atrium |
 | `obs.` / `s3.` | VPS (optional) |
 
 #### CF web build / runtime
@@ -114,7 +114,7 @@ Same table as below, plus CORS/cookie origins must include CF app/landing URLs:
 
 - `DASHBOARD_URL=https://app.<domain>`
 - `LANDING_PAGE_URL=https://<marketing-domain>`
-- Keycloak web redirect / callback URLs must use **API** callback + **CF app** callback (not localhost)
+- Atrium web redirect / callback URLs must use **API** callback + **CF app** callback (not localhost)
 
 #### Migrate off legacy management-api container
 
@@ -216,7 +216,7 @@ Does **not** pull enterprise packages or spawn `deploy-enterprise`.
 |------|------|
 | `app.<root>` | Dashboard |
 | `api.<root>` | Product API only (no manage modules on OSS) |
-| `auth.<root>` | Keycloak |
+| `auth.<root>` | Atrium |
 | `obs.<root>` | Observability (if enabled) |
 | `s3.<root>` / `console.s3.<root>` | Object storage |
 
@@ -431,7 +431,7 @@ bun run dev
 | Dashboard | `http://app.lvh.me:8001` |
 | API | `http://api.lvh.me:4000` |
 | Manage (if EE enabled locally) | `http://api.lvh.me:4000/api/v1/manage/...` |
-| Keycloak | `http://auth.lvh.me:8080` |
+| Atrium | `http://auth.lvh.me:8080` |
 
 Defaults often favor Hosted-like enterprise for DX. For self-host policy locally set:
 

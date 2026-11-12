@@ -41,7 +41,7 @@ export class AccessService {
     }
     /**
      * Web Login Callback
-     * Handle web login callback from Keycloak
+     * Handle web login callback from Atrium
      * @param code
      * @returns void
      * @throws ApiError
@@ -63,7 +63,7 @@ export class AccessService {
     }
     /**
      * Logout Web Session
-     * Clear API-managed web session cookies and return the Keycloak logout URL
+     * Clear API-managed web session cookies and return the Atrium logout URL
      * @returns LogoutUrlResponse Web logout prepared successfully
      * @throws ApiError
      */
@@ -93,7 +93,7 @@ export class AccessService {
     }
     /**
      * API Login Callback
-     * Handle API login callback from Keycloak
+     * Handle API login callback from Atrium
      * @param code
      * @returns CallbackResponse API login callback successful
      * @throws ApiError

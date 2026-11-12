@@ -183,7 +183,7 @@ export async function seedOrg(overrides?: {
 
 	// Create master user
 	const userId = randomUUID();
-	const authServiceId = `keycloak-test-${userId.slice(0, 8)}`;
+	const authServiceId = `atrium-test-${userId.slice(0, 8)}`;
 	const email = overrides?.masterEmail ?? `master-${userId.slice(0, 8)}@test.local`;
 
 	await db
@@ -229,7 +229,7 @@ export async function seedUser(
 ): Promise<{ id: string; email: string; token: string; authServiceId: string }> {
 	const db = await DB.getInstance();
 	const userId = randomUUID();
-	const authServiceId = `keycloak-test-${userId.slice(0, 8)}`;
+	const authServiceId = `atrium-test-${userId.slice(0, 8)}`;
 	const email = overrides?.email ?? `user-${userId.slice(0, 8)}@test.local`;
 
 	await db
