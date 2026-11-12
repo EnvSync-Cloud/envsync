@@ -36,7 +36,7 @@ Prefer **Organization** in product UI; org create is `POST /auth/create-organiza
 - `packages/envsync-kernel/` — Shared MIT kernel (errors, `ApiModule`, registry)
 - `packages/envsync-enterprise/` — Proprietary EE modules/routes/services
 - `packages/envsync-enterprise-web/` — Proprietary dashboard modules (injected into web)
-- `packages/envsync-keycloak-theme/` — Custom Keycloak login theme
+- `docker/atrium/` — Atrium config, clients, and branded login pages
 - `packages/deploy/` — Public OSS deploy CLI (`@envsync-cloud/deploy`)
 - `packages/deploy-cli/` — Thin EE entry → `@envsync-cloud/deploy-enterprise` (private)
 - `packages/deploy-core/` — Shared deployment primitives
@@ -59,9 +59,9 @@ Bun workspaces with Turbo for orchestration. All workspace packages defined in r
 
 ```sh
 bun install                          # install all dependencies
-docker compose up -d                 # PostgreSQL, Redis, miniKMS, RustFS, Keycloak, Mailpit, OpenFGA
+docker compose up -d                 # PostgreSQL, Redis, miniKMS, RustFS, Atrium, Mailpit, OpenFGA
 cp .env.example .env                 # configure env vars
-bun run cli init                     # initialize RustFS bucket + Keycloak clients
+bun run cli init                     # initialize RustFS bucket + Atrium clients
 bun run cli create-dev-user --seed   # create dev user + sample data
 bun run dev                          # start all services via Turbo
 ```
@@ -73,7 +73,7 @@ bun run dev                          # start all services via Turbo
 | `bun install` | Install all workspace dependencies |
 | `bun run dev` | Start all services (Turbo) |
 | `bun run build` | Build all packages (Turbo) |
-| `bun run cli init` | Initialize RustFS + Keycloak |
+| `bun run cli init` | Initialize RustFS + Atrium |
 | `bun run cli create-dev-user --seed` | Seed dev user + sample data |
 | `bun run test:mock` | Run unit tests (mocked dependencies) |
 | `bun run test:e2e` | Run e2e tests from the repo root (runs `e2e-setup init` first) |
@@ -119,7 +119,7 @@ bun run clickstack:sync
 bun run dev
 ```
 
-Keycloak is built locally from `packages/envsync-keycloak-theme` for dev and E2E. It is not pulled from GHCR in those flows.
+Atrium is the pinned upstream image `ghcr.io/bravo68web/atrium:0.2.0-rc.6`. EnvSync does not publish an Atrium image. Dev and E2E mount `docker/atrium` for config and branding.
 
 For the sim test after local is up:
 ```

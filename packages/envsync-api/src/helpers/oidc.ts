@@ -51,14 +51,14 @@ export function decodeTokenIssuer(bearerToken: string): string | null {
 
 /**
  * Check if a Bearer token looks like it might be from an external OIDC provider
- * (i.e., not from Keycloak). This is a heuristic — it decodes the JWT header
+ * (i.e., not from Atrium). This is a heuristic — it decodes the JWT header
  * without verification and checks the issuer.
  */
-export function mightBeOidcToken(bearerToken: string, keycloakIssuer: string): boolean {
+export function mightBeOidcToken(bearerToken: string, directoryIssuer: string): boolean {
 	const iss = decodeTokenIssuer(bearerToken);
 	if (!iss) return false;
-	if (iss === keycloakIssuer) return false;
-	// Any non-Keycloak issuer could be an OIDC provider
+	if (iss === directoryIssuer) return false;
+	// Any issuer other than Atrium could be a customer OIDC provider
 	return true;
 }
 

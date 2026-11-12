@@ -57,7 +57,7 @@ test.describe("onboarding journey from landing", () => {
 				};
 			}
 
-			// Some environments can redirect back to onboarding if Keycloak login is not ready.
+			// Some environments can redirect back to onboarding if Atrium login is not ready.
 			await ensureAuthenticatedPageWithCredential(page, `${state.founder.storageKey}-foundation`, {
 				email: loginCredential.email,
 				password: loginCredential.password,

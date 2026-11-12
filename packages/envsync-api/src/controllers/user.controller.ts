@@ -132,7 +132,7 @@ export class UserController {
 			try {
 				await deleteDirectoryUser(user.auth_service_id);
 			} catch (error) {
-				console.error("Failed to delete Keycloak user after org membership deletion:", error);
+				console.error("Failed to delete Atrium user after org membership deletion:", error);
 			}
 		}
 

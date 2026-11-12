@@ -119,7 +119,7 @@ func (c *Client) CreateWebLogin(
 	return response, nil
 }
 
-// Handle web login callback from Keycloak
+// Handle web login callback from Atrium
 func (c *Client) CallbackWebLogin(
 	ctx context.Context,
 	request *sdk.CallbackWebLoginRequest,
@@ -169,7 +169,7 @@ func (c *Client) CallbackWebLogin(
 	return nil
 }
 
-// Clear API-managed web session cookies and return the Keycloak logout URL
+// Clear API-managed web session cookies and return the Atrium logout URL
 func (c *Client) LogoutWebLogin(
 	ctx context.Context,
 	opts ...option.RequestOption,
@@ -257,7 +257,7 @@ func (c *Client) CreateApiLogin(
 	return response, nil
 }
 
-// Handle API login callback from Keycloak
+// Handle API login callback from Atrium
 func (c *Client) CallbackApiLogin(
 	ctx context.Context,
 	request *sdk.CallbackApiLoginRequest,

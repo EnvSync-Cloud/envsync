@@ -2,15 +2,15 @@
  * E2E test preload — zero mock.module() calls.
  *
  * All services are real:
- * - JWT verification → real Keycloak JWKS endpoint
+ * - JWT verification → real Atrium JWKS endpoint
  * - miniKMS → real miniKMS for encryption, PKI, vault, sessions
  * - OpenFGA → real OpenFGA (auto-bootstraps store+model)
  * - Mail → real Mailpit SMTP
- * - Keycloak → real Keycloak for user management + token issuance
+ * - Atrium → real Atrium for user management + token issuance
  *
  * Prerequisites:
  *   1. Run `bun run e2e:init` (or `bun run scripts/e2e-setup.ts init`) to set up services
- *   2. Docker services must be running (postgres, redis, minikms, openfga, mailpit, keycloak)
+ *   2. Docker services must be running (postgres, redis, minikms, openfga, mailpit, atrium)
  *
  * Usage: TEST_MODE=e2e bun test tests/e2e --preload tests/e2e/helpers/real-setup.ts
  */

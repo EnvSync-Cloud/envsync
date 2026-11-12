@@ -1,5 +1,5 @@
 /**
- * Keycloak bootstrap and token helpers for E2E tests.
+ * Atrium bootstrap and token helpers for E2E tests.
  */
 
 async function getAdminToken(url: string, username: string, password: string): Promise<string> {
@@ -35,7 +35,7 @@ export interface BootstrapResult {
 	clientSecret: string;
 }
 
-export async function bootstrapKeycloakClient(
+export async function bootstrapAtriumClient(
 	url: string,
 	realm: string,
 	adminUser: string,
@@ -60,12 +60,12 @@ export async function bootstrapKeycloakClient(
 }
 
 export interface TestUserResult {
-	keycloakUserId: string;
+	directoryUserId: string;
 	email: string;
 	password: string;
 }
 
-export async function createKeycloakTestUser(
+export async function createAtriumTestUser(
 	url: string,
 	realm: string,
 	adminUser: string,
@@ -93,13 +93,13 @@ export async function createKeycloakTestUser(
 	const user = (await res.json()) as { id?: string };
 	if (!user?.id) throw new Error("Created Atrium test user but could not resolve id");
 	return {
-		keycloakUserId: user.id,
+		directoryUserId: user.id,
 		email: opts.email,
 		password: opts.password,
 	};
 }
 
-export async function getKeycloakAccessToken(
+export async function getAtriumAccessToken(
 	url: string,
 	realm: string,
 	clientId: string,
@@ -122,7 +122,7 @@ export async function getKeycloakAccessToken(
 		}),
 	});
 	if (!res.ok) {
-		throw new Error(`Failed to get Keycloak access token: ${res.status} ${await res.text()}`);
+		throw new Error(`Failed to get Atrium access token: ${res.status} ${await res.text()}`);
 	}
 	const data = (await res.json()) as { access_token: string };
 	return data.access_token;

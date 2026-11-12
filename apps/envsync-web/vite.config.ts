@@ -30,7 +30,6 @@ function hostedRuntimeConfigPlugin(): Plugin {
         appBaseUrl: `${proto}//app.${root}`,
         authBaseUrl: `${proto}//auth.${root}`,
         managementApiUrl: `${apiBase}/api/v1/manage`,
-        keycloakRealm: "envsync",
         webClientId: "envsync-web",
         apiDocsUrl: `${apiBase}/docs`,
         edition,

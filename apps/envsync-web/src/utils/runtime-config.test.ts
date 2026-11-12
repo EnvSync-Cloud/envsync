@@ -11,7 +11,6 @@ function config(overrides: Partial<RuntimeConfig>): RuntimeConfig {
     apiBaseUrl: "https://api.example.com",
     appBaseUrl: "https://app.example.com",
     authBaseUrl: "https://auth.example.com",
-    keycloakRealm: "envsync",
     webClientId: "envsync-web",
     apiDocsUrl: "https://api.example.com/docs",
     edition: "enterprise",

@@ -73,7 +73,7 @@ app.get(
 	describeRoute({
 		operationId: "callbackWebLogin",
 		summary: "Web Login Callback",
-		description: "Handle web login callback from Keycloak",
+		description: "Handle web login callback from Atrium",
 		tags: ["Access"],
 		parameters: [
 			{
@@ -105,7 +105,7 @@ app.post(
 	describeRoute({
 		operationId: "logoutWebLogin",
 		summary: "Logout Web Session",
-		description: "Clear API-managed web session cookies and return the Keycloak logout URL",
+		description: "Clear API-managed web session cookies and return the Atrium logout URL",
 		tags: ["Access"],
 		responses: {
 			200: {
@@ -163,7 +163,7 @@ app.get(
 	describeRoute({
 		operationId: "callbackApiLogin",
 		summary: "API Login Callback",
-		description: "Handle API login callback from Keycloak",
+		description: "Handle API login callback from Atrium",
 		tags: ["Access"],
 		parameters: [
 			{
