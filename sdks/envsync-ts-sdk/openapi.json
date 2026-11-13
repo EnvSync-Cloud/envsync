@@ -3,7 +3,7 @@
   "info": {
     "title": "EnvSync API",
     "description": "EnvSync API documentation.\n\nEnterprise manage routes are mounted at `/api/v1/manage/{module}/...` on this same process (one OpenAPI document, one API process). Tags marked *Only available in Enterprise deployment* require an Enterprise edition.\n\nBearer-token clients can optionally send the `X-EnvSync-Org-Id` header to select an active organization for that request. Cookie sessions continue to use `envsync_active_membership`, and API-key requests ignore this header.",
-    "version": "0.23.8"
+    "version": "0.23.9"
   },
   "tags": [
     {
