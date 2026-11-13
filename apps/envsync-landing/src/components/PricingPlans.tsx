@@ -19,7 +19,7 @@ const plans = [
     cta: "Request Plus+",
     href: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
     blurb: "Hosted, billed per member. Self-host OSS includes this workflow set for one org.",
-    items: ["Change requests + recovery", "30 members, 10 API keys", "60-day audit", "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service."],
+    items: ["Change requests + recovery", "30 members, 10 API keys", "60-day audit", "Managed encryption"],
   },
   {
     name: "Enterprise",

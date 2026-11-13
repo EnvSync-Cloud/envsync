@@ -42,7 +42,7 @@ const switchFeatures = [
     icon: Lock,
     title: "Encryption at rest",
     description:
-      "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.",
+      "Encrypted at rest and in transit.",
   },
 ]
 

@@ -36,7 +36,7 @@ export const marketingDocs: MarketingDoc[] = [
     path: "/companies/msme",
     eyebrow: "For MSME",
     title: "Production changes get a review. Accidents get a rollback.",
-    lead: "Plus+ is built for small and mid-size teams: more seats, change requests, and point-in-time — without an Enterprise contract. Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.",
+    lead: "Plus+ is built for small and mid-size teams: more seats, change requests, and point-in-time — without an Enterprise contract. Secrets are encrypted at rest and in transit.",
     ctaLabel: "Request Plus+",
     ctaHref: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
     illustration: "/images/illustrations/msme.png",
@@ -44,7 +44,7 @@ export const marketingDocs: MarketingDoc[] = [
     capabilities: [
       { title: "Protect production", body: "Mark an environment type protected. Promotions wait for a change request." },
       { title: "Recover in minutes", body: "Point-in-time history on secrets and env values. Undo a bad push." },
-      { title: "Managed secrets", body: "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit." },
     ],
     steps: [
       { title: "Protect prod", body: "Turn on change requests for the production environment type." },
@@ -63,7 +63,7 @@ export const marketingDocs: MarketingDoc[] = [
     illustrationAlt: "A larger team collaborating on identity and secrets",
     capabilities: [
       { title: "One identity model", body: "Members, API keys, service tokens, and workload certificates in the same org." },
-      { title: "Managed encryption", body: "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service. Org CA and leaf keys stay in miniKMS." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit. Org CA and leaf keys stay in miniKMS." },
       { title: "Operations you can audit", body: "Rotation, dynamic secrets, log forwarding, long retention." },
     ],
     steps: [
@@ -136,19 +136,19 @@ export const marketingDocs: MarketingDoc[] = [
     path: "/product/security",
     eyebrow: "Security & operations",
     title: "Reviews before prod. A trail you can hand to audit.",
-    lead: "Change requests, point-in-time, rotation, dynamic secrets, and log forwarding. Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service. Plus+ and OSS cover the workflow. Enterprise covers the rest.",
+    lead: "Change requests, point-in-time, rotation, dynamic secrets, and log forwarding. Secrets are encrypted at rest and in transit. Plus+ and OSS cover the workflow. Enterprise covers the rest.",
     ctaLabel: "Talk to EnvSync",
     ctaHref: "mailto:hello@envsync.cloud?subject=Security%20and%20operations",
     illustration: "/images/illustrations/security.png",
     illustrationAlt: "Two people approving a change",
     capabilities: [
       { title: "Approve production", body: "Protected environments. Diffs. Apply or reject." },
-      { title: "Managed keys", body: "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit." },
       { title: "Rotate and forward", body: "Scheduled rotation, dynamic secrets, logs to your stack." },
     ],
     steps: [
       { title: "Protect the env", body: "Production requires a change request." },
-      { title: "Managed keys", body: "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service." },
+      { title: "Encrypt", body: "Encrypted at rest and in transit." },
       { title: "Watch the trail", body: "Audit log, webhooks, optional log forwarding." },
     ],
   },
@@ -202,8 +202,8 @@ export const marketingDocs: MarketingDoc[] = [
     illustration: "/images/illustrations/minikms.png",
     illustrationAlt: "Sealed envelopes entering and leaving a vault",
     capabilities: [
-      { title: "Envelope by default", body: "API → miniKMS. Org and project in the AAD. Managed mode: the API can decrypt to serve pulls. Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service." },
-      { title: "Managed wrapping", body: "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service." },
+      { title: "Envelope by default", body: "API → miniKMS. Org and project in the AAD. Managed mode: the API can decrypt to serve pulls. Values are encrypted at rest and in transit." },
+      { title: "Managed wrapping", body: "Encrypted at rest and in transit." },
       { title: "Cert keys stay put", body: "Managed leaves return a key once. Org CA private keys stay durable in miniKMS." },
     ],
     steps: [

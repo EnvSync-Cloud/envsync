@@ -255,7 +255,7 @@ export default function KeyManagement() {
               Key management
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
+              Encrypted at rest and in transit.
               This page is not a place to view PEM, KEK, DEK, or credential values.
             </p>
           </div>
@@ -346,7 +346,7 @@ export default function KeyManagement() {
             <article className="rounded-xl border border-border bg-card/50 p-6 space-y-2">
               <h2 className="text-lg font-medium">Managed by this install (miniKMS)</h2>
               <p className="text-sm text-muted-foreground">
-                Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
+                Managed encryption.
               </p>
             </article>
           ) : (
@@ -354,7 +354,7 @@ export default function KeyManagement() {
               <div>
                 <h2 className="text-lg font-medium">Wrapping source</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
+                  Managed encryption.
                 </p>
               </div>
 

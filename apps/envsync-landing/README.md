@@ -7,7 +7,7 @@ Marketing / Hosted signup site (`apps/envsync-landing`). **Hosted-only** — not
 EnvSync keeps your `.env` files, configuration secrets, and environment variables perfectly synchronized across development, staging, and production environments.
 
 **Key Benefits:**
-- 🔒 **Secure** - Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.
+- 🔒 **Secure** - Encrypted at rest and in transit
 - ⚡ **Fast** - Real-time synchronization across environments  
 - 🌐 **Web-first** - Built for modern web development workflows
 - 🔧 **Developer-friendly** - Simple CLI and intuitive web interface

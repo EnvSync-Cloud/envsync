@@ -442,8 +442,7 @@ export default function Showcase() {
                 <Shield className="w-8 h-8" />
                 <h4 className="text-h3 font-medium">Encrypted at rest</h4>
                 <p className="text-sm opacity-90">
-                  Secrets are encrypted at rest and in transit, and the keys are
-                  managed by EnvSync's key service.
+                  Encrypted at rest and in transit.
                 </p>
               </>
             }
