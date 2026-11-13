@@ -442,8 +442,7 @@ export default function Showcase() {
                 <Shield className="w-8 h-8" />
                 <h4 className="text-h3 font-medium">Encrypted at rest</h4>
                 <p className="text-sm opacity-90">
-                  AES-256 in miniKMS, per organization. TLS in transit. Managed
-                  secrets the API can serve; BYOK the operator cannot unwrap.
+                  Encrypted at rest and in transit.
                 </p>
               </>
             }

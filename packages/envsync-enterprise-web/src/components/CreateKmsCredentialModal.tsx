@@ -100,7 +100,7 @@ export function CreateKmsCredentialModal({
             <Input
               value={form.description}
               onChange={event => setForm(prev => ({ ...prev, description: event.target.value }))}
-              placeholder="AWS access key for org CMK"
+              placeholder="Credential for organization wrapping"
               className="border-border bg-card text-foreground"
             />
           </label>

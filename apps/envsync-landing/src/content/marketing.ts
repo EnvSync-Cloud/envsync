@@ -36,7 +36,7 @@ export const marketingDocs: MarketingDoc[] = [
     path: "/companies/msme",
     eyebrow: "For MSME",
     title: "Production changes get a review. Accidents get a rollback.",
-    lead: "Plus+ is built for small and mid-size teams: more seats, change requests, point-in-time, and BYOK secrets — without an Enterprise contract.",
+    lead: "Plus+ is built for small and mid-size teams: more seats, change requests, and point-in-time — without an Enterprise contract. Secrets are encrypted at rest and in transit.",
     ctaLabel: "Request Plus+",
     ctaHref: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
     illustration: "/images/illustrations/msme.png",
@@ -44,7 +44,7 @@ export const marketingDocs: MarketingDoc[] = [
     capabilities: [
       { title: "Protect production", body: "Mark an environment type protected. Promotions wait for a change request." },
       { title: "Recover in minutes", body: "Point-in-time history on secrets and env values. Undo a bad push." },
-      { title: "Your key, our workflow", body: "BYOK secrets on Plus+. Self-host OSS includes this workflow for a single org." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit." },
     ],
     steps: [
       { title: "Protect prod", body: "Turn on change requests for the production environment type." },
@@ -55,7 +55,7 @@ export const marketingDocs: MarketingDoc[] = [
   {
     path: "/companies/enterprise",
     eyebrow: "For Enterprise",
-    title: "SSO, certificates, and your own keys — provisioned for you.",
+    title: "SSO and certificates — provisioned for you.",
     lead: "Unlimited orgs and seats. OIDC or SAML. Service certificates. Rotation and log forwarding. We turn it on after we talk — not a self-serve upgrade.",
     ctaLabel: "Talk to EnvSync",
     ctaHref: "mailto:hello@envsync.cloud?subject=Enterprise%20plan",
@@ -63,7 +63,7 @@ export const marketingDocs: MarketingDoc[] = [
     illustrationAlt: "A larger team collaborating on identity and secrets",
     capabilities: [
       { title: "One identity model", body: "Members, API keys, service tokens, and workload certificates in the same org." },
-      { title: "Your encryption", body: "CMK on AWS, GCP, or Azure. Org CA and leaf keys stay in miniKMS." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit. Org CA and leaf keys stay in miniKMS." },
       { title: "Operations you can audit", body: "Rotation, dynamic secrets, log forwarding, long retention." },
     ],
     steps: [
@@ -135,20 +135,20 @@ export const marketingDocs: MarketingDoc[] = [
   {
     path: "/product/security",
     eyebrow: "Security & operations",
-    title: "Reviews before prod. Your keys. A trail you can hand to audit.",
-    lead: "Change requests, point-in-time, BYOK and CMK, rotation, dynamic secrets, log forwarding. Plus+ and OSS cover the workflow. Enterprise covers the rest.",
+    title: "Reviews before prod. A trail you can hand to audit.",
+    lead: "Change requests, point-in-time, rotation, dynamic secrets, and log forwarding. Secrets are encrypted at rest and in transit. Plus+ and OSS cover the workflow. Enterprise covers the rest.",
     ctaLabel: "Talk to EnvSync",
     ctaHref: "mailto:hello@envsync.cloud?subject=Security%20and%20operations",
     illustration: "/images/illustrations/security.png",
     illustrationAlt: "Two people approving a change",
     capabilities: [
       { title: "Approve production", body: "Protected environments. Diffs. Apply or reject." },
-      { title: "Bring your own key", body: "Plus+ BYOK secrets. Enterprise CMK on AWS, GCP, or Azure." },
+      { title: "Managed encryption", body: "Encrypted at rest and in transit." },
       { title: "Rotate and forward", body: "Scheduled rotation, dynamic secrets, logs to your stack." },
     ],
     steps: [
       { title: "Protect the env", body: "Production requires a change request." },
-      { title: "Attach your key", body: "BYOK or CMK. miniKMS still does the envelope." },
+      { title: "Encrypt", body: "Encrypted at rest and in transit." },
       { title: "Watch the trail", body: "Audit log, webhooks, optional log forwarding." },
     ],
   },
@@ -196,14 +196,14 @@ export const marketingDocs: MarketingDoc[] = [
     path: "/oss/encryption",
     eyebrow: "Encryption",
     title: "Secrets go in. Ciphertext comes out. Keys stay in the engine.",
-    lead: "EnvSync API authenticates you, then miniKMS encrypts. Postgres stores ciphertext. The operator with the miniKMS root key can serve managed secrets — that is the managed path. BYOK and CMK are how you keep the wrapping key.",
+    lead: "EnvSync API authenticates you, then miniKMS encrypts. Postgres stores ciphertext. The operator with the miniKMS root key can serve managed secrets — that is the managed path. Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.",
     ctaLabel: "Open source edition",
     ctaHref: "/oss",
     illustration: "/images/illustrations/minikms.png",
     illustrationAlt: "Sealed envelopes entering and leaving a vault",
     capabilities: [
-      { title: "Envelope by default", body: "API → miniKMS. Org and project in the AAD. Managed mode: the API can decrypt to serve pulls. BYOK: your private key never lands in EnvSync." },
-      { title: "Your CMK on top", body: "Enterprise: AWS, GCP, or Azure wrap. Same product API." },
+      { title: "Envelope by default", body: "API → miniKMS. Org and project in the AAD. Managed mode: the API can decrypt to serve pulls. Values are encrypted at rest and in transit." },
+      { title: "Managed wrapping", body: "Encrypted at rest and in transit." },
       { title: "Cert keys stay put", body: "Managed leaves return a key once. Org CA private keys stay durable in miniKMS." },
     ],
     steps: [
