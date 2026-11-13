@@ -2,9 +2,10 @@ import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 
-import { importPKCS8, SignJWT } from "jose";
+import { exportSPKI, generateKeyPair, importPKCS8, SignJWT } from "jose";
 
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { ENTITLEMENT_FIXTURE_KID, ENTITLEMENT_NEXT_KID, ENTITLEMENT_RETIRED_KID } from "@/services/entitlement-keys";
 import { EntitlementService } from "@/services/entitlement.service";
 import {
 	ALL_ENTERPRISE_FEATURES,
@@ -17,6 +18,10 @@ import { config } from "@/utils/env";
 const FIXTURE_DIR = path.join(import.meta.dir, "../fixtures/license");
 const PRIVATE_PEM = fs.readFileSync(path.join(FIXTURE_DIR, "entitlement-private.pem"), "utf8");
 const PUBLIC_PEM = fs.readFileSync(path.join(FIXTURE_DIR, "entitlement-public.pem"), "utf8");
+const RETIRED_PEM = fs.readFileSync(
+	path.join(import.meta.dir, "../../src/assets/license/envsync-entitlement-public.pem"),
+	"utf8",
+);
 
 const FINGERPRINT = "test-install-fp-p4";
 
@@ -26,7 +31,7 @@ async function signEntitlement(claims: {
 	install_fingerprint?: string;
 	exp?: number;
 	nbf?: number;
-}) {
+}, kid = ENTITLEMENT_FIXTURE_KID) {
 	const key = await importPKCS8(PRIVATE_PEM, "EdDSA");
 	const now = Math.floor(Date.now() / 1000);
 	return new SignJWT({
@@ -36,7 +41,7 @@ async function signEntitlement(claims: {
 		features: claims.features ?? ["management", "oidc", "saml"],
 		max_orgs: claims.max_orgs,
 	})
-		.setProtectedHeader({ alg: "EdDSA" })
+		.setProtectedHeader({ alg: "EdDSA", kid })
 		.setIssuer("envsync-license-server")
 		.setIssuedAt(now)
 		.setExpirationTime(claims.exp ?? now + 3600)
@@ -57,12 +62,105 @@ afterEach(() => {
 });
 
 describe("EntitlementService (Phase 4)", () => {
-	test("verifies a valid Ed25519 entitlement JWT", async () => {
+	test("rejects a fixture-signed entitlement JWT in production verification", async () => {
+		const jwt = await signEntitlement(
+			{ max_orgs: 3, features: ["management", "multi_org", "oidc"] },
+			ENTITLEMENT_FIXTURE_KID,
+		);
+		const originalPem = config.ENVSYNC_LICENSE_PUBLIC_KEY_PEM;
+		const originalKid = config.ENVSYNC_LICENSE_PUBLIC_KEY_KID;
+		config.ENVSYNC_LICENSE_PUBLIC_KEY_KID = ENTITLEMENT_FIXTURE_KID;
+		config.ENVSYNC_LICENSE_PUBLIC_KEY_PEM = PUBLIC_PEM;
+		try {
+			await expect(EntitlementService.verifyJwt(jwt)).rejects.toMatchObject({
+				code: "ENTITLEMENT_INVALID",
+			});
+		} finally {
+			config.ENVSYNC_LICENSE_PUBLIC_KEY_PEM = originalPem;
+			config.ENVSYNC_LICENSE_PUBLIC_KEY_KID = originalKid;
+		}
+	});
+
+	test("rejects a license signed with the retired verification key", async () => {
+		const originalTrusted = config.ENVSYNC_LICENSE_TRUSTED_KEYS;
+		config.ENVSYNC_LICENSE_TRUSTED_KEYS = JSON.stringify({
+			[ENTITLEMENT_RETIRED_KID]: RETIRED_PEM,
+			[ENTITLEMENT_NEXT_KID]: RETIRED_PEM,
+		});
+		try {
+			const retiredKidJwt = await signEntitlement(
+				{ max_orgs: 3, features: ["management", "oidc"] },
+				ENTITLEMENT_RETIRED_KID,
+			);
+			const renamedKidJwt = await signEntitlement(
+				{ max_orgs: 3, features: ["management", "oidc"] },
+				ENTITLEMENT_NEXT_KID,
+			);
+			await expect(EntitlementService.verifyJwt(retiredKidJwt)).rejects.toMatchObject({
+				code: "ENTITLEMENT_INVALID",
+			});
+			await expect(EntitlementService.verifyJwt(renamedKidJwt)).rejects.toMatchObject({
+				code: "ENTITLEMENT_INVALID",
+			});
+		} finally {
+			config.ENVSYNC_LICENSE_TRUSTED_KEYS = originalTrusted;
+		}
+	});
+
+	test("accepts an entitlement JWT when its kid matches a configured public key", async () => {
+		const { publicKey, privateKey } = await generateKeyPair("EdDSA", { extractable: true });
+		const pem = await exportSPKI(publicKey);
+		const kid = "envsync-entitlement-test-throwaway";
+		const now = Math.floor(Date.now() / 1000);
+		const jwt = await new SignJWT({
+			ver: 1,
+			install_fingerprint: FINGERPRINT,
+			edition: "enterprise",
+			features: ["management", "multi_org", "oidc"],
+			max_orgs: 3,
+		})
+			.setProtectedHeader({ alg: "EdDSA", kid })
+			.setIssuer("envsync-license-server")
+			.setIssuedAt(now)
+			.setExpirationTime(now + 3600)
+			.setNotBefore(now - 10)
+			.sign(privateKey);
+
+		const originalTrusted = config.ENVSYNC_LICENSE_TRUSTED_KEYS;
+		config.ENVSYNC_LICENSE_TRUSTED_KEYS = JSON.stringify({ [kid]: pem });
+		try {
+			const verified = await EntitlementService.verifyJwt(jwt);
+			expect(verified.source).toBe("jwt");
+			expect(verified.kid).toBe(kid);
+			expect(verified.claims.features).toContain("oidc");
+			expect(verified.claims.max_orgs).toBe(3);
+			expect(verified.in_grace).toBe(false);
+		} finally {
+			config.ENVSYNC_LICENSE_TRUSTED_KEYS = originalTrusted;
+		}
+	});
+
+	test("rejects a fixture-signed entitlement JWT in production mode even with the test flag", async () => {
+		const jwt = await signEntitlement({ max_orgs: 1, features: ["management"] });
+		const originalEnv = config.NODE_ENV;
+		config.NODE_ENV = "production";
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
+		try {
+			await expect(EntitlementService.verifyJwt(jwt)).rejects.toMatchObject({
+				code: "ENTITLEMENT_INVALID",
+			});
+		} finally {
+			config.NODE_ENV = originalEnv;
+		}
+	});
+
+	test("accepts a fixture-signed entitlement JWT in explicit test mode", async () => {
 		const jwt = await signEntitlement({ max_orgs: 3, features: ["management", "multi_org", "oidc"] });
-		EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 
 		const verified = await EntitlementService.verifyJwt(jwt);
 		expect(verified.source).toBe("jwt");
+		expect(verified.kid).toBe(ENTITLEMENT_FIXTURE_KID);
 		expect(verified.claims.features).toContain("oidc");
 		expect(verified.claims.max_orgs).toBe(3);
 		expect(verified.in_grace).toBe(false);
@@ -78,13 +176,13 @@ describe("EntitlementService (Phase 4)", () => {
 			install_fingerprint: FINGERPRINT,
 			features: ["management", "oidc"],
 		})
-			.setProtectedHeader({ alg: "EdDSA" })
+			.setProtectedHeader({ alg: "EdDSA", kid: ENTITLEMENT_FIXTURE_KID })
 			.setIssuer("envsync-license-server")
 			.setIssuedAt(now)
 			.setExpirationTime(now + 3600)
 			.sign(privateKey);
 
-		EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 		await expect(EntitlementService.verifyJwt(forged)).rejects.toMatchObject({
 			code: "ENTITLEMENT_INVALID",
 		});
@@ -98,7 +196,7 @@ describe("EntitlementService (Phase 4)", () => {
 		const original = config.ENVSYNC_INSTALL_FINGERPRINT;
 		config.ENVSYNC_INSTALL_FINGERPRINT = FINGERPRINT;
 		try {
-			EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+			EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 			await expect(EntitlementService.verifyJwt(jwt)).rejects.toMatchObject({
 				code: "ENTITLEMENT_FINGERPRINT_MISMATCH",
 			});
@@ -110,7 +208,7 @@ describe("EntitlementService (Phase 4)", () => {
 	test("allows grace window after exp", async () => {
 		const now = Math.floor(Date.now() / 1000);
 		const jwt = await signEntitlement({ exp: now - 60 }); // expired 1 minute ago
-		EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 		// Default grace is 72h
 		const verified = await EntitlementService.verifyJwt(jwt, { allowGrace: true });
 		expect(verified.in_grace).toBe(true);
@@ -119,7 +217,7 @@ describe("EntitlementService (Phase 4)", () => {
 	test("rejects past grace when allowGrace=false", async () => {
 		const now = Math.floor(Date.now() / 1000);
 		const jwt = await signEntitlement({ exp: now - 60 });
-		EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 		await expect(EntitlementService.verifyJwt(jwt, { allowGrace: false })).rejects.toMatchObject({
 			code: "ENTITLEMENT_INVALID",
 		});
