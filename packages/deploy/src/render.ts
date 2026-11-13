@@ -214,7 +214,7 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 	return publicHttpsOriginVariants(config, host).map(origin => `${origin}${urlPath}`);
 }
 
-export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.8";
+export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.16";
 
 function slotServiceName(slot: ApiSlot) {
 	return `envsync_api_${slot}`;

@@ -119,7 +119,7 @@ bun run clickstack:sync
 bun run dev
 ```
 
-Atrium is the pinned upstream image `ghcr.io/bravo68web/atrium:0.2.0-rc.8`. EnvSync does not publish an Atrium image. Dev and E2E mount `docker/atrium` for config and branding. Production sign-in is an email code.
+Atrium is the pinned upstream image `ghcr.io/bravo68web/atrium:0.2.0-rc.16`. EnvSync does not publish an Atrium image. Dev and E2E mount `docker/atrium` for config and branding. Production sign-in is an email code.
 
 For the sim test after local is up:
 ```

@@ -149,7 +149,7 @@ function writeConfig() {
 		},
 		images: {
 			api: localApiImage,
-			atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.8",
+			atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.16",
 			web: localWebImage,
 			landing: `ghcr.io/envsync-cloud/envsync-landing-static:${version}`,
 			clickstack: "clickhouse/clickstack-all-in-one:latest",
