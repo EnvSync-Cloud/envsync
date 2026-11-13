@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { forwardedAuditRecord } from "envsync-api/ports/audit-metadata";
 import { DB, JsonValue } from "envsync-api/ports/db";
 import { orNotFound } from "envsync-api/ports/errors";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
@@ -464,7 +465,8 @@ export class LogForwardingService {
      * Forward an audit log entry to all enabled log forwarding configs for the org.
      * Failures are logged but do not propagate — forwarding is fire-and-forget.
      */
-    public static forwardAuditLog = async (payload: AuditLogPayload): Promise<void> => {
+    public static forwardAuditLog = async (input: AuditLogPayload): Promise<void> => {
+        const payload = forwardedAuditRecord(input);
         const db = await DB.getInstance();
 
         const configs = await db
