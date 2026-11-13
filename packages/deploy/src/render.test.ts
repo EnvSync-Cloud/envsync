@@ -371,6 +371,10 @@ describe("render helpers for supporting artifacts", () => {
 	test("renderNginxConf renders for both web and landing", () => {
 		expect(renderNginxConf("web")).toContain("root /srv/web;");
 		expect(renderNginxConf("landing")).toContain("root /srv/landing;");
+		const web = renderNginxConf("web", "envsync.cloud");
+		expect(web).toContain("location /onboarding/accept-org-invite/");
+		expect(web).toContain("return 301 https://envsync.cloud$request_uri;");
+		expect(renderNginxConf("landing", "envsync.cloud")).not.toContain("accept-org-invite");
 	});
 
 	test("renderApiMaintenanceConf renders 503 error", () => {

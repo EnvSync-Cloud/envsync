@@ -693,7 +693,14 @@ export function renderTraefikDynamicConfig(config: DeployConfig, generated: Depl
 	].join("\n") + "\n";
 }
 
-export function renderNginxConf(kind: "web" | "landing") {
+export function renderNginxConf(kind: "web" | "landing", rootDomain?: string) {
+	const orgInviteRedirect = kind === "web" && rootDomain
+		? [
+			"  location /onboarding/accept-org-invite/ {",
+			`    return 301 https://${rootDomain}$request_uri;`,
+			"  }",
+		]
+		: [];
 	return [
 		"server {",
 		"  listen 8080;",
@@ -712,6 +719,7 @@ export function renderNginxConf(kind: "web" | "landing") {
 		"    add_header Expires \"0\" always;",
 		"    try_files /index.html =404;",
 		"  }",
+		...orgInviteRedirect,
 		"  location / {",
 		"    try_files $uri $uri/ /index.html;",
 		"  }",

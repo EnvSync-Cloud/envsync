@@ -1897,7 +1897,7 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	writeFileMaybe(BOOTSTRAP_BASE_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "base", DEPLOY_RENDER_PATHS));
 	writeFileMaybe(BOOTSTRAP_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "bootstrap", DEPLOY_RENDER_PATHS));
 	writeFileMaybe(STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "full", DEPLOY_RENDER_PATHS));
-	writeFileMaybe(NGINX_WEB_CONF, renderHelpers.renderNginxConf("web"));
+	writeFileMaybe(NGINX_WEB_CONF, renderHelpers.renderNginxConf("web", config.domain.root_domain));
 	// Landing nginx config omitted on self-host (Phase 2).
 	writeFileMaybe(NGINX_API_MAINTENANCE_CONF, renderHelpers.renderApiMaintenanceConf());
 	writeFileMaybe(OTEL_AGENT_CONF, renderHelpers.renderOtelAgentConfig(config));
