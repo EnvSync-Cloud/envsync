@@ -11,7 +11,7 @@ EnvSync keeps your `.env` files, configuration secrets, and environment variable
 
 **Key Benefits:**
 
-- 🔒 **Secure** - End-to-end encryption for sensitive data
+- 🔒 **Secure** - Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.
 - ⚡ **Fast** - Real-time synchronization across environments
 - 🌐 **Web-first** - Built for modern web development workflows
 - 🔧 **Developer-friendly** - Simple CLI commands for terminal lovers

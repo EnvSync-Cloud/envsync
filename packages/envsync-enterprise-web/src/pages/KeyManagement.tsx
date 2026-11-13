@@ -16,7 +16,7 @@ import {
   useVerifyOrgKms,
 } from "../api/hooks";
 import { isEnterpriseUiEnabled } from "../api/client";
-import { appDetailPath, projectsPath } from "@shell/lib/app-routes";
+import { appDetailPath } from "@shell/lib/app-routes";
 import { CreateKmsCredentialModal } from "../components/CreateKmsCredentialModal";
 import {
   applyKmsConfigToForm,
@@ -157,7 +157,7 @@ export default function KeyManagement() {
     switch (confirm) {
       case "attach":
         return {
-          title: "Attach customer-managed key?",
+          title: "Attach wrapping key?",
           body: "This starts a background rewrap of project data keys under your organization key. Ciphertexts stay in place. Raw key material is never shown.",
           action: "Attach",
         };
@@ -255,14 +255,8 @@ export default function KeyManagement() {
               Key management
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Choose who wraps this organization&apos;s tenant key. Project BYOK stays in
-              {" "}
-              <Link className="text-emerald-600 underline-offset-2 hover:underline" to={projectsPath()}>
-                project settings
-              </Link>
-              {" "}
-              (per-app RSA). This page is the organization wrapping key — never a place to view
-              PEM, KEK, DEK, or credential values.
+              Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
+              This page is not a place to view PEM, KEK, DEK, or credential values.
             </p>
           </div>
           <Button
@@ -352,8 +346,7 @@ export default function KeyManagement() {
             <article className="rounded-xl border border-border bg-card/50 p-6 space-y-2">
               <h2 className="text-lg font-medium">Managed by this install (miniKMS)</h2>
               <p className="text-sm text-muted-foreground">
-                Self-host v1 uses the install-managed wrapping key only. Cloud customer-managed
-                keys (AWS KMS, GCP Cloud KMS, Azure Key Vault) are available on Hosted.
+                Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
               </p>
             </article>
           ) : (
@@ -361,8 +354,7 @@ export default function KeyManagement() {
               <div>
                 <h2 className="text-lg font-medium">Wrapping source</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Hosted organizations can attach a customer-managed key. Credentials are created
-                  here — not under Integrations.
+                  Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
                 </p>
               </div>
 

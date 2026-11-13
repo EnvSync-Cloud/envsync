@@ -42,7 +42,7 @@ const switchFeatures = [
     icon: Lock,
     title: "Encryption at rest",
     description:
-      "AES-256 in miniKMS, isolated per organization. Managed secrets EnvSync can serve; BYOK keeps the private key on your side.",
+      "Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.",
   },
 ]
 
