@@ -193,6 +193,90 @@ describe("audit metadata fan-out", () => {
 		}
 	}
 
+	const cliSentinel = "cli-sentinel-value";
+	const cliCases = [
+		{
+			id: "cli-equals",
+			command: `envsync set KEY=${cliSentinel}`,
+			kept: ["envsync", "set", "KEY=<redacted>"],
+		},
+		{
+			id: "cli-positional-set",
+			command: `envsync set KEY ${cliSentinel}`,
+			kept: ["envsync", "set", "KEY", "<redacted>"],
+		},
+		{
+			id: "cli-import",
+			command: `envsync import ${cliSentinel}`,
+			kept: ["envsync", "import", "<redacted>"],
+		},
+		{
+			id: "cli-flag-equals",
+			command: `envsync push --env=${cliSentinel}`,
+			kept: ["envsync", "push", "--env=<redacted>"],
+		},
+		{
+			id: "cli-quoted",
+			command: `envsync set KEY "${cliSentinel}"`,
+			kept: ["envsync", "set", "KEY", "<redacted>"],
+		},
+	];
+
+	for (const fixture of cliCases) {
+		test(`${fixture.id} omits the typed command value from posthog, audit, webhook, and forwarded log`, () => {
+			const message = `Executed CLI command: ${fixture.command}`;
+			const details = { command: fixture.command };
+			const emission = prepareAuditEmission({
+				action: "cli_command_executed",
+				org_id: "org_1",
+				user_id: "user_1",
+				message,
+				details,
+			});
+			const posthog = JSON.stringify(
+				auditAnalyticsProperties({
+					action: "cli_command_executed",
+					org_id: "org_1",
+					user_id: "user_1",
+					details,
+				}),
+			);
+			const webhook = JSON.stringify(
+				auditWebhookBody({
+					event_type: "cli_command_executed",
+					org_id: "org_1",
+					user_id: "user_1",
+					message: JSON.stringify(details),
+					org_name: "Org",
+					app_name: "App",
+					user_name: "User",
+					webhook_name: "Hook",
+					linked_to_entity: "org",
+					timestamp: "2026-01-01T00:00:00.000Z",
+					url_for_entity_in_question: "https://example.test/org",
+				}),
+			);
+			const forwarded = forwardedAuditLine({
+				action: "cli_command_executed",
+				org_id: "org_1",
+				user_id: "user_1",
+				message,
+				details,
+			});
+
+			for (const serialized of [posthog, emission.detailsJson, emission.message, webhook, forwarded, emission.forwardedLine]) {
+				expect(serialized).not.toContain(cliSentinel);
+			}
+			for (const kept of fixture.kept) {
+				expect(emission.detailsJson).toContain(kept);
+				expect(emission.message).toContain(kept);
+				expect(webhook).toContain(kept);
+				expect(forwarded).toContain(kept);
+			}
+			expect(posthog).toContain("cli_command_executed");
+		});
+	}
+
 	test("posthog clients disable session recording", () => {
 		expect(POSTHOG_BROWSER_INIT.disable_session_recording).toBe(true);
 		const root = join(import.meta.dir, "../../../..");

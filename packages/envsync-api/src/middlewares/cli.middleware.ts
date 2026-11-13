@@ -1,4 +1,5 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { redactCliCommand } from "envsync-analytics";
 
 import { AuditLogService } from "@/services/audit_log.service";
 
@@ -14,15 +15,15 @@ export const cliMiddleware = (): MiddlewareHandler => {
 
 			const user_id = ctx.get("user_id");
 			const org_id = ctx.get("org_id");
+			const recorded = redactCliCommand(command);
 
-			// Log the CLI command execution
 			await AuditLogService.notifyAuditSystem({
 				user_id,
 				org_id,
 				action: "cli_command_executed",
-				message: `Executed CLI command: ${command}`,
+				message: `Executed CLI command: ${recorded}`,
 				details: {
-					command,
+					command: recorded,
 				},
 			});
 

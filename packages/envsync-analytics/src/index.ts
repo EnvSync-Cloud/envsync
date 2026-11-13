@@ -14,7 +14,9 @@ export {
 	forwardedAuditRecord,
 	metadataOnlyAuditMessage,
 	prepareAuditEmission,
+	redactCliCommand,
 	toMetadataOnlyAuditDetails,
+	tokenizeCliCommand,
 	type AuditForwardPayload,
 } from "./audit-metadata";
 
