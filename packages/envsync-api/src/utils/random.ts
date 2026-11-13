@@ -1,5 +1,7 @@
+import { randomInt } from "node:crypto";
+
 export const slugifyName = (name: string): string => {
-	const randomSuffix = crypto.randomInt(100000, 1000000).toString();
+	const randomSuffix = randomInt(100000, 1000000).toString();
 
 	return name
 		.toLowerCase()
