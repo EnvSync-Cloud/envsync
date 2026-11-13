@@ -252,7 +252,7 @@ async function generateSelfSignedCert(): Promise<SpCertificate> {
 
 	const certDer = buildSelfSignedX509Der(publicKeySpki, serialNumber, notBefore, notAfter);
 	const certPem = `-----BEGIN CERTIFICATE-----\n${formatBase64Lines(derToBase64(certDer))}\n-----END CERTIFICATE-----`;
-	const keyPem = `-----BEGIN PRIVATE KEY-----\n${formatBase64Lines(derToBase64(privateKeyPkcs8))}\n-----END PRIVATE KEY-----`;
+	const keyPem = `-----BEGIN PRIVATE KEY-----\n${formatBase64Lines(derToBase64(privateKeyPkcs8))}\n-----END PRIVATE KEY-----`; // gitleaks:allow
 
 	return { certPem, privateKeyPem: keyPem };
 }
