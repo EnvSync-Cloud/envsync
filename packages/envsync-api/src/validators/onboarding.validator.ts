@@ -6,7 +6,7 @@ import "zod-openapi/extend";
 const generatedCertificateBundleSchema = z.object({
 	root_ca_pem: z.string().openapi({ example: "-----BEGIN CERTIFICATE-----..." }),
 	member_cert_pem: z.string().openapi({ example: "-----BEGIN CERTIFICATE-----..." }),
-	member_key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }),
+	member_key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }), // gitleaks:allow
 	member_certificate_id: z.string().openapi({ example: "CERT_ID" }),
 	member_serial_hex: z.string().openapi({ example: "01AB" }),
 	is_system_generated: z.boolean().openapi({ example: true }),

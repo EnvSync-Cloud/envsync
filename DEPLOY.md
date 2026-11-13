@@ -8,6 +8,10 @@ This guide covers **how to deploy** EnvSync for every product edition:
 | **Self-host OSS** | Single-org | Customer / operator | `@envsync-cloud/deploy` (`envsync-deploy`) |
 | **Self-host Enterprise** | Licensed self-host | Customer / operator | `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) |
 
+Production Compose (`docker-compose.prod.yaml`) does not mount `docker/minikms/*.dev.pem` and does not fill in default passwords or client secrets. Copy `.env.prod.example` to `.env`, set every blank password, client secret, and key path, then start Compose. It exits with the missing variable name when one of those values is empty. Point `ATRIUM_CONFIG_PATH` and `ATRIUM_CLIENTS_PATH` at operator files (see `docker/atrium/config.prod.example.yaml` and `docker/atrium/clients.prod.example.json`), not the local Atrium config or `clients.json`.
+
+miniKMS TLS is required when `NODE_ENV` is not `development`. Set `MINIKMS_TLS_ENABLED=true` and provide CA and client certificate material. `MINIKMS_TLS_INSECURE=true` is honored only when `NODE_ENV=development`. Files named `*.dev.pem` under `docker/minikms/` are development and test fixtures: [docker/minikms/README.md](./docker/minikms/README.md).
+
 Edition matrix and package graph: [EDITIONING.md](./EDITIONING.md).  
 OSS-focused long form (legacy title): [SELFHOSTING.md](./SELFHOSTING.md).  
 Agent product facts: [AGENTS.md](./AGENTS.md).
@@ -415,7 +419,7 @@ Same subcommands as OSS (`upgrade`, `promote`, `rollback`, `backup`, `restore`, 
 
 ## 5. Local development (not production)
 
-Monorepo root — **not** a substitute for Swarm deploy:
+Monorepo root — **not** a substitute for Swarm deploy. `docker compose up` uses `docker-compose.yaml`, which may mount `docker/minikms/*.dev.pem`. Those files stay on the local and CI path only.
 
 ```bash
 cp .env.example .env

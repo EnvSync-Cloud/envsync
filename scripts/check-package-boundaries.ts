@@ -277,7 +277,7 @@ const eeMigrationsDir = path.join(root, "packages/envsync-enterprise/src/migrati
 const requiredEeMigrations = [
 	"019_enterprise_integrations_foundation.ts",
 	"022_oidc_providers.ts",
-	"023_dynamic_secrets.ts",
+	"023_dynamic_secrets.ts", // gitleaks:allow
 	"023_secret_rotation.ts",
 	"024_log_forwarding_configs.ts",
 	"024_saml_providers.ts",

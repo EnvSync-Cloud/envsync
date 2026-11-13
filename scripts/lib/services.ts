@@ -4,6 +4,7 @@
  * Extracted to avoid duplication of service health checks and env file parsing.
  */
 
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 
@@ -169,19 +170,24 @@ export async function waitForMiniKMS(host?: string, port?: number): Promise<void
 export async function waitForAtrium(url?: string): Promise<void> {
 	const base = (url ?? process.env.ATRIUM_PUBLIC_URL ?? process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080").replace(/\/$/, "");
 	const checkUrl = base.includes("atrium:") ? "http://localhost:8080" : base;
-	await waitFor(
-		"Atrium",
-		async () => {
-			try {
-				const res = await fetch(`${checkUrl}/health`, {
-					signal: AbortSignal.timeout(5000),
-				});
-				return res.ok;
-			} catch {
-				return false;
-			}
-		},
-		5000,
-		60,
-	);
+	try {
+		await waitFor(
+			"Atrium",
+			async () => {
+				try {
+					const res = await fetch(`${checkUrl}/health`, {
+						signal: AbortSignal.timeout(5000),
+					});
+					return res.ok;
+				} catch {
+					return false;
+				}
+			},
+			5000,
+			60,
+		);
+	} catch (error) {
+		spawnSync("docker", ["compose", "logs", "--no-color", "--tail", "80", "atrium"], { stdio: "inherit" });
+		throw error;
+	}
 }
