@@ -36,7 +36,7 @@
 **The solution:** EnvSync provides a single source of truth for environment variables and secrets, with:
 - 🔄 **Point-in-time rollback** — Undo any secret change to any previous state
 - ✅ **Approval workflows** — Require review before production changes
-- 🔐 **End-to-end encryption** — AES-256 at rest, TLS in transit
+- 🔐 **Encryption** — Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.
 - 🚀 **CLI-first workflow** — `envsync pull` and `envsync push` in your terminal
 - 🌐 **28+ integrations** — GitHub, GitLab, Vercel, AWS, and more
 

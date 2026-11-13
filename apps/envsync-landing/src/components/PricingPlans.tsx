@@ -19,7 +19,7 @@ const plans = [
     cta: "Request Plus+",
     href: "mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B",
     blurb: "Hosted, billed per member. Self-host OSS includes this workflow set for one org.",
-    items: ["Change requests + recovery", "30 members, 10 API keys", "60-day audit", "BYOK secrets"],
+    items: ["Change requests + recovery", "30 members, 10 API keys", "60-day audit", "Managed encryption"],
   },
   {
     name: "Enterprise",
@@ -39,7 +39,7 @@ const comparisonGroups = [
       { feature: "Workspaces (orgs)", developer: "1", plus: "3", enterprise: "Unlimited" },
       { feature: "Projects", developer: "5", plus: "Unlimited", enterprise: "Unlimited" },
       { feature: "Variables & environments", developer: "Yes", plus: "Yes", enterprise: "Yes" },
-      { feature: "Secrets", developer: "Managed", plus: "Managed + BYOK", enterprise: "Managed + BYOK + CMK" },
+      { feature: "Secrets", developer: "Managed", plus: "Managed", enterprise: "Managed" },
       { feature: "Change requests", developer: "—", plus: "Yes", enterprise: "Yes" },
       { feature: "Point in time", developer: "—", plus: "Yes", enterprise: "Yes" },
       { feature: "SDK + CLI", developer: "Yes", plus: "Yes", enterprise: "Yes" },
