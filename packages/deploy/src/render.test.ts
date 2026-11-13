@@ -37,7 +37,7 @@ const config: DeployConfig = {
 	},
 	images: {
 		api: "ghcr.io/envsync-cloud/envsync-api:0.8.7",
-		atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.8",
+		atrium: "ghcr.io/bravo68web/atrium:0.2.0-rc.16",
 		web: "ghcr.io/envsync-cloud/envsync-web-static:0.8.7",
 		landing: "ghcr.io/envsync-cloud/envsync-landing-static:0.8.7",
 		clickstack: "ghcr.io/envsync-cloud/clickstack:0.8.7",
@@ -261,7 +261,7 @@ describe("renderStack", () => {
 		expect(stackFull).not.toContain("/opt/envsync/releases/landing/current:/srv/landing:ro");
 		expect(stackFull).toContain("/opt/envsync/deploy/atrium-config.yaml");
 		expect(stackFull).toContain("name: envsync_atrium_config_0_8_7");
-		expect(stackFull).toContain("ghcr.io/bravo68web/atrium:0.2.0-rc.8");
+		expect(stackFull).toContain("ghcr.io/bravo68web/atrium:0.2.0-rc.16");
 		expect(stackFull).not.toContain("keycloak");
 		expect(stackFull).not.toContain("--override true");
 		expect(stackFull).toContain("https://s3.enterprise.example.com/envsync-bucket");

@@ -113,7 +113,7 @@ services:
     networks: [envsync_network]
 
   atrium:
-    image: ${ATRIUM_IMAGE:-ghcr.io/bravo68web/atrium:0.2.0-rc.8}
+    image: ${ATRIUM_IMAGE:-ghcr.io/bravo68web/atrium:0.2.0-rc.16}
     restart: unless-stopped
     ports:
       - "${ATRIUM_PORT:-8080}:8080"
