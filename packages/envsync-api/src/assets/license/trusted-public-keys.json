@@ -1,0 +1,4 @@
+{
+  "_comment": "Placeholder for the next entitlement verification key. Replace envsync-entitlement-next with the Ed25519 SPKI public key generated offline. Do not put a private key in this file.",
+  "envsync-entitlement-next": "PASTE_NEW_ED25519_SPKI_PUBLIC_KEY_PEM_HERE"
+}

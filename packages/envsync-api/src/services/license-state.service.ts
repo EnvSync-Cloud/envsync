@@ -238,12 +238,14 @@ export class LicenseStateService {
 			validation_mode: "lease",
 		});
 
-		// Phase 4: when license-server returns an entitlement JWT as signed_lease, verify cryptographically.
+		// When the license server returns an entitlement JWT as signed_lease, verify it.
+		// Claims are cached only when the signature matches a trusted kid.
+		// Other lease tokens stay on the lease clock.
 		if (response.status === "active" && looksLikeJwt(response.signed_lease)) {
 			try {
 				await EntitlementService.verifyJwt(response.signed_lease, { apply: true });
 			} catch {
-				// Opaque/legacy signed_lease is not an Ed25519 entitlement JWT yet.
+				// This lease is not a trusted EdDSA entitlement JWT. Leave it on the lease clock.
 			}
 		}
 
@@ -415,7 +417,7 @@ export class LicenseStateService {
 					},
 				};
 			} catch {
-				// Not an Ed25519 entitlement JWT — treat as opaque lease below.
+				// This lease is not a trusted EdDSA entitlement JWT. Use lease expiry below.
 			}
 		}
 

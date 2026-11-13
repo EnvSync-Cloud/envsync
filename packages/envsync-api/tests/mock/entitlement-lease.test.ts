@@ -5,6 +5,7 @@ import path from "node:path";
 import { importPKCS8, SignJWT } from "jose";
 
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { ENTITLEMENT_FIXTURE_KID } from "@/services/entitlement-keys";
 import { EntitlementService } from "@/services/entitlement.service";
 
 const FIXTURE_DIR = path.join(import.meta.dir, "../fixtures/license");
@@ -31,14 +32,14 @@ describe("Entitlement from license-server signed_lease shape (H4)", () => {
 			max_orgs: 2,
 			license_key: "envsync-enterprise-dev",
 		})
-			.setProtectedHeader({ alg: "EdDSA" })
+			.setProtectedHeader({ alg: "EdDSA", kid: ENTITLEMENT_FIXTURE_KID })
 			.setIssuer("envsync-license-server")
 			.setSubject("install-fp-h4")
 			.setIssuedAt(now)
 			.setExpirationTime(now + 3600)
 			.sign(key);
 
-		EntitlementService.setTestOverrides({ public_key_pem: PUBLIC_PEM });
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: PUBLIC_PEM });
 		const verified = await EntitlementService.verifyJwt(jwt);
 		expect(verified.claims.features).toContain("integrations");
 		expect(verified.claims.max_orgs).toBe(2);

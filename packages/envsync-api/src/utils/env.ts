@@ -89,12 +89,16 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_LICENSE_KEY: z.string().optional(),
 	ENVSYNC_INSTALL_FINGERPRINT: z.string().optional(),
 	ENVSYNC_LICENSE_LEASE_TTL_SECONDS: z.string().default("300"),
-	// Phase 4 Coder-style entitlement JWT (public key verify only; private key never ships)
+	// Entitlement JWTs are verified with trusted public keys selected by kid.
+	// Generate the signing key offline and configure only the public key.
 	ENVSYNC_ENTITLEMENT_JWT: z.string().optional(),
 	ENVSYNC_ENTITLEMENT_JWT_PATH: z.string().optional(),
 	ENVSYNC_ENTITLEMENT_GRACE_SECONDS: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_KID: z.string().optional(),
 	ENVSYNC_LICENSE_PUBLIC_KEY_PEM: z.string().optional(),
 	ENVSYNC_LICENSE_PUBLIC_KEY_PATH: z.string().optional(),
+	// JSON object mapping kid to an Ed25519 SPKI public key PEM.
+	ENVSYNC_LICENSE_TRUSTED_KEYS: z.string().optional(),
 	ENVSYNC_STACK_NAME: z.string().optional(),
 	ENVSYNC_RELEASE_VERSION: z.string().optional(),
 	// OpenFGA configuration
