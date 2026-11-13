@@ -18,9 +18,8 @@ security:
   disable_registration: true
   disable_social_registration: true
   hash_algo: internal/hashalgo/algo.go
-  # Atrium 0.2.0-rc.8+ will not boot without 32 bytes of standard base64.
-  # This is the public test key, for local and CI only.
-  data_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+  # Local and CI only. Atrium refuses to serve without a 32-byte key.
+  data_key: "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" # gitleaks:allow
 
 registration:
   dcr_enabled: false

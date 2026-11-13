@@ -5,7 +5,7 @@ import { projectEnvScopeFields } from "@/validators/project-env-scope";
 
 const secretBaseSchema = z.object({
 	key: z.string().openapi({ example: "API_SECRET_KEY" }),
-	value: z.string().openapi({ example: "sk_live_abc123xyz789" }),
+	value: z.string().openapi({ example: "sk_live_abc123xyz789" }), // gitleaks:allow
 	...projectEnvScopeFields,
 });
 
@@ -337,7 +337,7 @@ export const revealSecretsResponseSchema = z
 		z.object({
 			id: z.string().openapi({ example: "secret_123" }),
 			key: z.string().openapi({ example: "API_SECRET_KEY" }),
-			value: z.string().openapi({ example: "sk_live_abc123xyz789" }),
+			value: z.string().openapi({ example: "sk_live_abc123xyz789" }), // gitleaks:allow
 			app_id: z.string().openapi({ example: "app_123" }),
 			env_type_id: z.string().openapi({ example: "env_type_123" }),
 			org_id: z.string().openapi({ example: "org_123" }),

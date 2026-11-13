@@ -210,10 +210,10 @@ export const BulkImportModal = ({
       ? `# Secret variables for your application
 # Lines starting with # are comments
 
-API_SECRET_KEY=sk_live_abcd1234567890
-DATABASE_PASSWORD=super_secure_password_123
-JWT_SECRET=your-256-bit-secret
-STRIPE_SECRET_KEY=sk_test_xyz789
+API_SECRET_KEY=example_api_secret
+DATABASE_PASSWORD=example_database_password
+JWT_SECRET=example_jwt_secret
+STRIPE_SECRET_KEY=example_stripe_secret
 OAUTH_CLIENT_SECRET=oauth_secret_value`
       : BULK_IMPORT_EXAMPLE;
 

@@ -1,5 +1,6 @@
 import { z, type ZodObject, type ZodRawShape } from "zod";
 
+import { minikmsTlsIssues } from "@/libs/kms/tls-policy";
 import { collectEnvSchemaExtensions } from "@/modules/load-modules";
 
 import { loadRootEnv } from "./load-root-env";
@@ -103,7 +104,9 @@ export const BaseEnvSchema = z.object({
 	OPENFGA_MODEL_ID: z.string().optional(),
 	// miniKMS configuration
 	MINIKMS_GRPC_ADDR: z.string().default("localhost:50051"),
-	MINIKMS_TLS_ENABLED: z.string().default("false"),
+	// No default. Plaintext is refused unless development sets MINIKMS_TLS_INSECURE=true.
+	MINIKMS_TLS_ENABLED: z.string().optional(),
+	MINIKMS_TLS_INSECURE: z.string().optional(),
 	MINIKMS_TLS_CA_CERT: z.string().optional(),
 	MINIKMS_TLS_CA_CERT_FILE: z.string().optional(),
 	MINIKMS_TLS_CLIENT_CERT: z.string().optional(),
@@ -138,12 +141,28 @@ export function composeEnvSchema(extensions: ZodRawShape[] = []): ZodObject<ZodR
 }
 
 export const env = composeEnvSchema(collectEnvSchemaExtensions()).superRefine((data, ctx) => {
-	if (data.NODE_ENV !== "production") return;
-	if (!data.API_URL) {
+	if (data.NODE_ENV === "production" && !data.API_URL) {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			path: ["API_URL"],
 			message: "API_URL is required in production",
+		});
+	}
+	for (const issue of minikmsTlsIssues({
+		NODE_ENV: data.NODE_ENV,
+		MINIKMS_TLS_ENABLED: data.MINIKMS_TLS_ENABLED,
+		MINIKMS_TLS_INSECURE: data.MINIKMS_TLS_INSECURE,
+		MINIKMS_TLS_CA_CERT: data.MINIKMS_TLS_CA_CERT,
+		MINIKMS_TLS_CA_CERT_FILE: data.MINIKMS_TLS_CA_CERT_FILE,
+		MINIKMS_TLS_CLIENT_CERT: data.MINIKMS_TLS_CLIENT_CERT,
+		MINIKMS_TLS_CLIENT_CERT_FILE: data.MINIKMS_TLS_CLIENT_CERT_FILE,
+		MINIKMS_TLS_CLIENT_KEY: data.MINIKMS_TLS_CLIENT_KEY,
+		MINIKMS_TLS_CLIENT_KEY_FILE: data.MINIKMS_TLS_CLIENT_KEY_FILE,
+	})) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: [issue.path],
+			message: issue.message,
 		});
 	}
 });
