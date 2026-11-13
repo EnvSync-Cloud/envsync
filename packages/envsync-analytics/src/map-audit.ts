@@ -1,4 +1,4 @@
-import { ANALYTICS_PROPERTY_DENYLIST } from "./events";
+import { ANALYTICS_PROPERTY_ALLOWLIST } from "./events";
 
 /**
  * Audit mutations that become PostHog outcomes.
@@ -63,7 +63,7 @@ export const AUDIT_TO_ANALYTICS: Record<string, string> = {
 	enterprise_sync_run_created: "sync_run_started",
 };
 
-const DENY = new Set<string>(ANALYTICS_PROPERTY_DENYLIST);
+const ALLOW = new Set<string>(ANALYTICS_PROPERTY_ALLOWLIST);
 
 export function mapAuditActionToAnalyticsEvent(action: string): string | null {
 	return AUDIT_TO_ANALYTICS[action] ?? null;
@@ -75,7 +75,7 @@ export function sanitizeAnalyticsProperties(
 	const out: Record<string, string | number | boolean | null> = {};
 	if (!details) return out;
 	for (const [key, value] of Object.entries(details)) {
-		if (DENY.has(key.toLowerCase())) continue;
+		if (!ALLOW.has(key.toLowerCase())) continue;
 		if (value === undefined) continue;
 		if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
 			out[key] = value;

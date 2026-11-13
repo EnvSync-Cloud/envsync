@@ -17,16 +17,20 @@ describe("mapAuditActionToAnalyticsEvent", () => {
 });
 
 describe("sanitizeAnalyticsProperties", () => {
-	test("drops secret-like keys and non-scalars", () => {
+	test("keeps allowlisted metadata and drops every other field", () => {
 		expect(
 			sanitizeAnalyticsProperties({
 				app_id: "app_1",
-				value: "super-secret",
+				key: "DATABASE_URL",
+				value: "write-sentinel-value",
+				old_value: "update-old-sentinel",
+				new_value: "update-new-sentinel",
 				password: "x",
+				note: "not-on-the-allowlist",
 				nested: { nope: true },
 				count: 2,
 			}),
-		).toEqual({ app_id: "app_1", count: 2 });
+		).toEqual({ app_id: "app_1", key: "DATABASE_URL", count: 2 });
 	});
 });
 
