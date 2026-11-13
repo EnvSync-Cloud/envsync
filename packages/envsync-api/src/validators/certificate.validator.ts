@@ -128,7 +128,7 @@ export const memberCertResponseSchema = z
 	.object({
 		...baseCertificateFields,
 		cert_type: z.string().openapi({ example: "member" }),
-		key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }),
+		key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }), // gitleaks:allow
 	})
 	.openapi({ ref: "MemberCertResponse" });
 
@@ -141,7 +141,7 @@ export const myCertificateBundleResponseSchema = z
 		root_ca_pem: z.string().openapi({ example: "-----BEGIN CERTIFICATE-----..." }),
 		member_certificate: z.object({
 			...baseCertificateFields,
-			key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }),
+			key_pem: z.string().openapi({ example: "-----BEGIN PRIVATE KEY-----..." }), // gitleaks:allow
 		}),
 	})
 	.openapi({ ref: "MyCertificateBundleResponse" });
