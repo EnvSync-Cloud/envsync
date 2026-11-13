@@ -1,4 +1,4 @@
 {
-  "_comment": "Placeholder for the next entitlement verification key. Replace envsync-entitlement-next with the Ed25519 SPKI public key generated offline. Do not put a private key in this file.",
-  "envsync-entitlement-next": "PASTE_NEW_ED25519_SPKI_PUBLIC_KEY_PEM_HERE"
+  "_comment": "Trusted Ed25519 SPKI public keys for entitlement JWT verification, keyed by kid. Public keys only.",
+  "envsync-entitlement-next": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAOZOzxX+97zzJD0wVq10+LAjzDzzambt+/7+7l4F6DJ4=\n-----END PUBLIC KEY-----"
 }
