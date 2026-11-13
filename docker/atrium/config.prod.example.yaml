@@ -21,6 +21,8 @@ security:
   session_lifetime: 168h
   disable_registration: true
   disable_social_registration: true
+  # Required. 32 bytes of standard base64. Generate a new value for each install.
+  data_key: ""
 
 registration:
   dcr_enabled: false
