@@ -2,6 +2,8 @@
  * OSS-safe loader. Forwarding lives in envsync-enterprise.
  * Audit logging must not statically import the proprietary package.
  */
+import { forwardedAuditRecord } from "envsync-analytics";
+
 import infoLogs, { LogTypes } from "@/libs/logger";
 type AuditLogPayload = {
 	action: string;
@@ -19,11 +21,12 @@ type EnterpriseLogForwarding = {
 
 export class LogForwardingService {
 	public static forwardAuditLog = async (payload: AuditLogPayload): Promise<void> => {
+		const safePayload = forwardedAuditRecord(payload);
 		try {
 			const { LogForwardingService: EnterpriseForwarding } = (await import(
 				"../../../envsync-enterprise/src/services/log-forwarding.service.ts"
 			)) as EnterpriseLogForwarding;
-			return EnterpriseForwarding.forwardAuditLog(payload);
+			return EnterpriseForwarding.forwardAuditLog(safePayload);
 		} catch (error) {
 			infoLogs(
 				`Log forwarding skipped: ${error instanceof Error ? error.message : String(error)}`,

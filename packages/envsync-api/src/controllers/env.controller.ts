@@ -253,8 +253,6 @@ export class EnvController {
 				key,
 				app_id,
 				env_type_id,
-				old_value: currentEnv.value,
-				new_value: value || "",
 			},
 		});
 
@@ -318,7 +316,6 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				key,
-				deleted_value: currentEnv.value,
 			},
 		});
 
@@ -518,7 +515,6 @@ export class EnvController {
 				env_type_id,
 				env_count: envs.length,
 				keys: envs.map(env => env.key),
-				changes: changes,
 			},
 		});
 
@@ -588,9 +584,6 @@ export class EnvController {
 				app_id,
 				env_type_id,
 				keys,
-				deleted_values: currentEnvs
-					.filter(env => env)
-					.map(env => ({ key: env!.key, value: env!.value })),
 			},
 		});
 
@@ -918,7 +911,7 @@ export class EnvController {
 					env_type_id,
 					pit_id,
 					operations_count: rollbackOperations.length,
-					operations: rollbackOperations,
+					operations: rollbackOperations.map((op) => ({ key: op.key, operation: op.operation })),
 				},
 			});
 		}
@@ -1046,7 +1039,7 @@ export class EnvController {
 					env_type_id,
 					timestamp: targetTimestamp.toISOString(),
 					operations_count: rollbackOperations.length,
-					operations: rollbackOperations,
+					operations: rollbackOperations.map((op) => ({ key: op.key, operation: op.operation })),
 				},
 			});
 		}
@@ -1182,8 +1175,6 @@ export class EnvController {
 				key,
 				pit_id,
 				operation: rollbackOperation.operation,
-				previous_value: rollbackOperation.previous_value,
-				target_value: rollbackOperation.target_value,
 			},
 		});
 
@@ -1330,8 +1321,6 @@ export class EnvController {
 				key,
 				timestamp: targetTimestamp.toISOString(),
 				operation: rollbackOperation.operation,
-				previous_value: rollbackOperation.previous_value,
-				target_value: rollbackOperation.target_value,
 			},
 		});
 

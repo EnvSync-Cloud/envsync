@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 
 import { DB } from "@/libs/db";
 import infoLogs, { LogTypes } from "@/libs/logger";
+import { prepareAuditEmission } from "envsync-analytics";
+
 import { WebhookService } from "./webhook.service";
 import { LogForwardingService } from "./log-forwarding.service";
 import { z } from "zod";
@@ -90,10 +92,11 @@ export class AuditLogService {
 		message: string;
 	}) => {
 		const db = await DB.getInstance();
+		const emission = prepareAuditEmission({ action, org_id, user_id, message, details });
 
 		const now = new Date();
 		const timestamp = now.toISOString();
-		const detailsStr = JSON.stringify(details);
+		const detailsStr = emission.detailsJson;
 
 		await db.transaction().execute(async (trx) => {
 			// Lock the latest audit entry for this org to prevent concurrent hash chain forks
@@ -133,7 +136,7 @@ export class AuditLogService {
 					org_id,
 					user_id,
 					details: detailsStr,
-					message,
+					message: emission.message,
 					previous_hash: previousHash,
 					entry_hash: entryHash,
 					created_at: now,
@@ -146,17 +149,11 @@ export class AuditLogService {
 			event_type: action,
 			org_id: org_id || "",
 			user_id: user_id || "",
-			app_id: typeof details.app_id === "string" ? details.app_id : undefined,
-			message: JSON.stringify(details || {}),
+			app_id: typeof emission.details.app_id === "string" ? emission.details.app_id : undefined,
+			message: emission.webhookMessage,
 		}).catch(() => {});
 
-		LogForwardingService.forwardAuditLog({
-			action,
-			org_id,
-			user_id,
-			details,
-			message,
-		}).catch(error => {
+		LogForwardingService.forwardAuditLog(emission.forwarded).catch(error => {
 			infoLogs(
 				`Log forwarding rejected: ${error instanceof Error ? error.message : String(error)}`,
 				LogTypes.ERROR,
@@ -166,7 +163,7 @@ export class AuditLogService {
 
 		void import("@/libs/posthog")
 			.then(({ captureAuditAnalytics }) => {
-				captureAuditAnalytics({ action, org_id, user_id, details });
+				captureAuditAnalytics({ action, org_id, user_id, details: emission.details });
 			})
 			.catch(() => {});
 	};
