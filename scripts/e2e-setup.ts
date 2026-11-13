@@ -37,7 +37,7 @@ const apiDir = path.join(rootDir, "packages/envsync-api");
 const envE2EPath = path.join(apiDir, ".env.e2e.test");
 
 const E2E_DB_NAME = "envsync_e2e_test";
-const E2E_MINIKMS_ROOT_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+const E2E_MINIKMS_ROOT_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"; // gitleaks:allow
 const E2E_COMPOSE_UP_ATTEMPTS = Number(process.env.ENVSYNC_E2E_COMPOSE_UP_ATTEMPTS ?? "3");
 const E2E_ENV_OVERRIDE_KEYS = [
 	"DATABASE_HOST",

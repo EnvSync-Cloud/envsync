@@ -168,6 +168,7 @@ if (!isE2E) {
 			// miniKMS
 			MINIKMS_GRPC_ADDR: "localhost:50051",
 			MINIKMS_TLS_ENABLED: "false",
+			MINIKMS_TLS_INSECURE: "true",
 			// OpenFGA
 			OPENFGA_API_URL: "http://localhost:8090",
 			OPENFGA_STORE_ID: "test-store-id",

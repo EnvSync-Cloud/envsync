@@ -1,0 +1,16 @@
+title = "EnvSync"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Labelled development and test fixtures, generated OpenAPI examples, test files, the local env example, and build output."
+paths = [
+  '''(^|.*/)docker/minikms/[^/]+\.dev\.pem$''',
+  '''(^|.*/)packages/envsync-api/tests/fixtures/''',
+  '''(^|.*/)sdks/[^/]+/openapi\.json$''',
+  '''(^|.*/)\.env\.example$''',
+  '''_test\.go$''',
+  '''\.test\.ts$''',
+  '''(^|.*/)dist/''',
+]

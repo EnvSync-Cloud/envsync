@@ -39,7 +39,7 @@ export const exportEnvRequestSchema = z
 		private_key: z
 			.string()
 			.optional()
-			.openapi({ example: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----" }),
+			.openapi({ example: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----" }), // gitleaks:allow
 	})
 	.openapi({ ref: "ExportEnvRequest" });
 

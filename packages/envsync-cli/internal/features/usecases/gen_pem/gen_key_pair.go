@@ -64,11 +64,11 @@ func (g *genKeyPairUseCase) savePublicKey(key string, output string) error {
 
 func (g *genKeyPairUseCase) savePrivateKey(key string, output string) error {
 	if output != "" {
-		return utils.WriteFile(key, output+"/"+defaultPrivateKeyFile)
+		return utils.WritePrivateKeyFile(key, output+"/"+defaultPrivateKeyFile)
 	}
 
 	// If no output directory is specified, save to current directory
-	if err := utils.WriteFile(key, "./"+defaultPrivateKeyFile); err != nil {
+	if err := utils.WritePrivateKeyFile(key, "./"+defaultPrivateKeyFile); err != nil {
 		return err
 	}
 

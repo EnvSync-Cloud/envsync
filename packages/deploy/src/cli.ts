@@ -9,7 +9,7 @@ import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud
 import * as renderHelpers from "./render";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
-import { generateMinikmsGrpcTlsPemSet } from "./minikms-tls";
+import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
 
 // Edition is forced by package entrypoints:
 // - packages/deploy/src/index.ts → oss
@@ -275,6 +275,7 @@ const LICENSE_CERT_FILE = path.join(LICENSE_ROOT, "enterprise-cert.pem");
 const LICENSE_KEY_FILE = path.join(LICENSE_ROOT, "enterprise-key.pem");
 const LICENSE_ROOT_CA_FILE = path.join(LICENSE_ROOT, "root-ca.pem");
 const LICENSE_FILE_MODE = 0o644;
+const LICENSE_KEY_FILE_MODE = PRIVATE_KEY_FILE_MODE;
 const LICENSE_DIR_MODE = 0o755;
 const VERSIONS_LOCK = path.join(DEPLOY_ROOT, "versions.lock.json");
 const STACK_FILE = path.join(DEPLOY_ROOT, "docker-stack.yaml");
@@ -650,6 +651,14 @@ function writeFileMaybe(target: string, content: string, mode?: number) {
 	writeFile(target, content, mode);
 }
 
+function writePrivateKeyMaybe(target: string, content: string) {
+	if (currentOptions.dryRun) {
+		logDryRun(`Would write ${target}`);
+		return;
+	}
+	writePrivateKeyFile(target, content);
+}
+
 function ensureEnterpriseLicenseFilesReadable() {
 	if (exists(LICENSE_ROOT)) {
 		try {
@@ -660,7 +669,7 @@ function ensureEnterpriseLicenseFilesReadable() {
 			);
 		}
 	}
-	for (const filePath of [LICENSE_BUNDLE_FILE, LICENSE_CERT_FILE, LICENSE_KEY_FILE, LICENSE_ROOT_CA_FILE]) {
+	for (const filePath of [LICENSE_BUNDLE_FILE, LICENSE_CERT_FILE, LICENSE_ROOT_CA_FILE]) {
 		if (!exists(filePath)) continue;
 		try {
 			fs.chmodSync(filePath, LICENSE_FILE_MODE);
@@ -668,6 +677,15 @@ function ensureEnterpriseLicenseFilesReadable() {
 			// Surface a clear, actionable error so users can recover outside automation.
 			throw new Error(
 				`Cannot update file mode for ${filePath}. Fix by running: chmod ${LICENSE_FILE_MODE.toString(8)} ${filePath}`,
+			);
+		}
+	}
+	if (exists(LICENSE_KEY_FILE)) {
+		try {
+			fs.chmodSync(LICENSE_KEY_FILE, LICENSE_KEY_FILE_MODE);
+		} catch {
+			throw new Error(
+				`Cannot update file mode for ${LICENSE_KEY_FILE}. Fix by running: chmod ${LICENSE_KEY_FILE_MODE.toString(8)} ${LICENSE_KEY_FILE}`,
 			);
 		}
 	}
@@ -698,7 +716,7 @@ function writeMinikmsRootCaIfMissing() {
 	if (key.status !== 0) {
 		throw new Error(`openssl failed to generate miniKMS root CA key: ${key.stderr}`);
 	}
-	writeFileMaybe(MINIKMS_ROOT_CA_KEY_FILE, key.stdout, 0o644);
+	writePrivateKeyMaybe(MINIKMS_ROOT_CA_KEY_FILE, key.stdout);
 	const cert = spawnSync(
 		"openssl",
 		[
@@ -738,11 +756,11 @@ function writeMinikmsGrpcTlsIfMissing() {
 	}
 	logInfo("Generating missing miniKMS gRPC mTLS certificates under /opt/envsync/deploy/");
 	const pems = generateMinikmsGrpcTlsPemSet();
-	writeFileMaybe(MINIKMS_GRPC_CA_KEY_FILE, pems.caKey, 0o644);
+	writePrivateKeyMaybe(MINIKMS_GRPC_CA_KEY_FILE, pems.caKey);
 	writeFileMaybe(MINIKMS_GRPC_CA_CERT_FILE, pems.caCert, 0o644);
-	writeFileMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, pems.serverKey, 0o644);
+	writePrivateKeyMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, pems.serverKey);
 	writeFileMaybe(MINIKMS_GRPC_SERVER_CERT_FILE, pems.serverCert, 0o644);
-	writeFileMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, pems.clientKey, 0o644);
+	writePrivateKeyMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, pems.clientKey);
 	writeFileMaybe(MINIKMS_GRPC_CLIENT_CERT_FILE, pems.clientCert, 0o644);
 }
 
@@ -1616,7 +1634,7 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 			browser_api_key: env.CLICKSTACK_BROWSER_API_KEY ?? normalized.clickstack.browser_api_key,
 		},
 		secrets: {
-			s3_secret_key: env.S3_SECRET_KEY ?? normalized.secrets.s3_secret_key,
+			s3_secret_key: env.S3_SECRET_KEY ?? normalized.secrets.s3_secret_key, // gitleaks:allow
 			atrium_db_password: env.ATRIUM_DB_PASSWORD ?? env.KEYCLOAK_DB_PASSWORD ?? normalized.secrets.atrium_db_password,
 			atrium_management_client_secret: env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? normalized.secrets.atrium_management_client_secret,
 			atrium_data_key: env.ATRIUM_DATA_KEY ?? normalized.secrets.atrium_data_key,
@@ -1880,8 +1898,8 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	if (!generated.secrets.minikms_session_signing_key) {
 		generated.secrets.minikms_session_signing_key = generateMinikmsSessionSigningKey();
 	}
-	// 0644: Swarm bind-mounts keep host uid; miniKMS does not run as root.
-	writeFileMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key, 0o644);
+	// Private key files are mode 0600.
+	writePrivateKeyMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key);
 	writeMinikmsRootCaIfMissing();
 	writeMinikmsGrpcTlsIfMissing();
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
@@ -4207,10 +4225,9 @@ function writeEnterpriseLicenseBundle(bundle: EnterpriseLicenseCertificateBundle
 		bundle.certificate_pem.endsWith("\n") ? bundle.certificate_pem : `${bundle.certificate_pem}\n`,
 		LICENSE_FILE_MODE,
 	);
-	writeFileMaybe(
+	writePrivateKeyMaybe(
 		LICENSE_KEY_FILE,
 		bundle.private_key_pem.endsWith("\n") ? bundle.private_key_pem : `${bundle.private_key_pem}\n`,
-		LICENSE_FILE_MODE,
 	);
 	writeFileMaybe(LICENSE_ROOT_CA_FILE, bundle.root_ca_pem.endsWith("\n") ? bundle.root_ca_pem : `${bundle.root_ca_pem}\n`, LICENSE_FILE_MODE);
 }

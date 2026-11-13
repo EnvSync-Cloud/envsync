@@ -227,6 +227,7 @@ c := client.NewClient(option.WithBaseURL("https://api.envsync.cloud"))
 | Self-host Enterprise | `envsync-deploy-enterprise` |
 
 See **[DEPLOY.md](./DEPLOY.md)** for full instructions (DNS, CLI flow, env matrix, license, pitfalls).  
+`docker/minikms/*.dev.pem` files are development and test fixtures. Production Compose does not mount them.  
 Self-host OSS short form: [SELFHOSTING.md](./SELFHOSTING.md). Editions: [EDITIONING.md](./EDITIONING.md).
 
 ---

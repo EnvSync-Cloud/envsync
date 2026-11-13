@@ -18,6 +18,8 @@ security:
   disable_registration: true
   disable_social_registration: true
   hash_algo: internal/hashalgo/algo.go
+  # Local and CI only. Atrium refuses to serve without a 32-byte key.
+  data_key: "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" # gitleaks:allow
 
 registration:
   dcr_enabled: false
