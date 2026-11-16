@@ -1353,6 +1353,16 @@ async function backfillHostedPlans() {
 	console.log(`backfill ${dryRun ? "dry-run " : ""}complete: ${written}/${orgs.length} orgs`);
 }
 
+async function scrubStoredPlaintext() {
+	const dryRun = process.argv.slice(3).includes("--dry-run");
+	const { PlaintextScrubService } = await import("../src/services/plaintext-scrub.service");
+	const report = await PlaintextScrubService.run({ dryRun });
+	console.log(JSON.stringify(report));
+	if (report.failed > 0) {
+		process.exit(1);
+	}
+}
+
 const cmd = process.argv[2];
 if (cmd === "init") {
 	await init();
@@ -1366,6 +1376,8 @@ if (cmd === "init") {
 	await setOrgPlan();
 } else if (cmd === "backfill-hosted-plans") {
 	await backfillHostedPlans();
+} else if (cmd === "scrub-stored-plaintext") {
+	await scrubStoredPlaintext();
 } else if (cmd === "bootstrap-org") {
 	const rawArgs = process.argv.slice(3);
 	const orgName = getFlagValue(rawArgs, "org-name") ?? DEV_ORG_NAME;
@@ -1381,7 +1393,7 @@ if (cmd === "init") {
 	console.log(`Bootstrap completed for org ${org.slug} (${org.id})`);
 } else {
 	console.log(
-		"Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org|grant-org-features|set-plan|backfill-hosted-plans>",
+		"Usage: bun run scripts/cli.ts <init|create-dev-user|bootstrap-ui-harness|bootstrap-org|grant-org-features|set-plan|backfill-hosted-plans|scrub-stored-plaintext>",
 	);
 	process.exit(cmd ? 1 : 0);
 }
