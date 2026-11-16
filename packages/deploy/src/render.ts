@@ -537,6 +537,7 @@ export function renderAtriumClients(config: DeployConfig, runtimeEnv: RuntimeEnv
 					grant_types: ["urn:ietf:params:oauth:grant-type:device_code"],
 					scopes: ["openid", "profile", "email"],
 					token_endpoint_auth_method: "none",
+					dpop_bound_access_tokens: true,
 					skip_consent: true,
 				},
 			],

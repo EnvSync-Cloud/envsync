@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	sessionauth "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/auth"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
@@ -124,6 +125,9 @@ func (s *auth) Logout() error {
 	// TODO: Refactor this implementation to use a dedicated logout repository
 	// which hits logout endpoint
 
+	if path, err := sessionauth.KeyPath(); err == nil {
+		_ = sessionauth.DeleteKey(path)
+	}
 	cfg := config.New()
 	cfg.AuthConfig = config.AuthConfig{}
 

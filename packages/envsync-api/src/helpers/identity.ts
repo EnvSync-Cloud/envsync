@@ -207,10 +207,12 @@ export async function setDirectoryUserPassword(userId: string, password: string)
 	}
 }
 
-async function tokenRequest(body: URLSearchParams): Promise<IdentityTokenSet> {
+async function tokenRequest(body: URLSearchParams, dpopProof?: string): Promise<IdentityTokenSet> {
+	const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
+	if (dpopProof) headers.DPoP = dpopProof;
 	const res = await fetch(`${internalBase()}/oauth/token`, {
 		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		headers,
 		body,
 		signal: AbortSignal.timeout(10_000),
 	});
@@ -225,6 +227,7 @@ export async function exchangeAuthorizationCode(
 	redirectUri: string,
 	clientId: string,
 	clientSecret: string,
+	dpopProof?: string,
 ): Promise<IdentityTokenSet> {
 	return tokenRequest(new URLSearchParams({
 		grant_type: "authorization_code",
@@ -232,7 +235,7 @@ export async function exchangeAuthorizationCode(
 		redirect_uri: redirectUri,
 		client_id: clientId,
 		client_secret: clientSecret,
-	}));
+	}), dpopProof);
 }
 
 export async function revokeDirectoryToken(token: string, hint: "access_token" | "refresh_token" = "refresh_token") {
@@ -257,13 +260,14 @@ export async function refreshDirectoryToken(
 	refreshToken: string,
 	clientId: string,
 	clientSecret: string,
+	dpopProof?: string,
 ): Promise<IdentityTokenSet> {
 	return tokenRequest(new URLSearchParams({
 		grant_type: "refresh_token",
 		refresh_token: refreshToken,
 		client_id: clientId,
 		client_secret: clientSecret,
-	}));
+	}), dpopProof);
 }
 
 export async function passwordGrantLogin(
