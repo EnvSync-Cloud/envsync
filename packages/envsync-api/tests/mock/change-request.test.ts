@@ -1,6 +1,11 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 
+import { generateKeyPair, rsaLayerDecrypt } from "@/helpers/key-store";
+import { DB } from "@/libs/db";
 import { ChangeRequestService } from "@/services/change_request.service";
+import { EnvService } from "@/services/env.service";
+import { EnvStorePiTService } from "@/services/env_store_pit.service";
+import { SecretService } from "@/services/secret.service";
 import {
 	seedApp,
 	seedEnvType,
@@ -305,5 +310,278 @@ describe("change request compare-and-swap", () => {
 			reviewer_user_id: seed.masterUser.id,
 		});
 		expect(retried.status).toBe("approved");
+	});
+});
+
+function assertSealed(stored: string | null | undefined, ...plaintexts: string[]) {
+	expect(stored?.startsWith("KMS:v1:")).toBe(true);
+	const serialized = JSON.stringify(stored);
+	for (const plaintext of plaintexts) {
+		expect(stored).not.toContain(plaintext);
+		expect(serialized).not.toContain(plaintext);
+	}
+}
+
+async function envItemRow(changeRequestId: string) {
+	const db = await DB.getInstance();
+	return db
+		.selectFrom("change_request_env_item")
+		.selectAll()
+		.where("change_request_id", "=", changeRequestId)
+		.executeTakeFirstOrThrow();
+}
+
+async function secretItemRow(changeRequestId: string) {
+	const db = await DB.getInstance();
+	return db
+		.selectFrom("change_request_secret_item")
+		.selectAll()
+		.where("change_request_id", "=", changeRequestId)
+		.executeTakeFirstOrThrow();
+}
+
+describe("change request value storage", () => {
+	test("new rows seal env previous and proposed values and apply decrypts them", async () => {
+		const previous = `previous value ${crypto.randomUUID()}`;
+		const proposed = `proposed value ${crypto.randomUUID()}`;
+		const key = `HOST_${crypto.randomUUID().slice(0, 8)}`;
+		await EnvService.createEnv(
+			{
+				key,
+				value: previous,
+				app_id: appId,
+				org_id: seed.org.id,
+				env_type_id: productionEnvTypeId,
+				user_id: seed.masterUser.id,
+			},
+			{ allowProtected: true },
+		);
+
+		const created = await ChangeRequestService.createDirect({
+			org_id: seed.org.id,
+			app_id: appId,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: requester.id,
+			title: "Seal env values",
+			message: "Review without storing plaintext",
+			envs: [{ key, operation: "UPDATE", proposed_value: proposed }],
+		});
+		expect(created.env_items[0]?.previous_value).toBe(previous);
+		expect(created.env_items[0]?.proposed_value).toBe(proposed);
+
+		const stored = await envItemRow(created.id);
+		assertSealed(stored.previous_value, previous, proposed);
+		assertSealed(stored.proposed_value, previous, proposed);
+		expect(JSON.stringify(stored)).not.toContain(previous);
+		expect(JSON.stringify(stored)).not.toContain(proposed);
+
+		const approved = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: seed.masterUser.id,
+		});
+		expect(approved.status).toBe("approved");
+		const applied = await EnvService.getEnv({
+			key,
+			app_id: appId,
+			org_id: seed.org.id,
+			env_type_id: productionEnvTypeId,
+			user_id: seed.masterUser.id,
+		});
+		expect(applied?.value).toBe(proposed);
+
+		const afterApply = await envItemRow(created.id);
+		assertSealed(afterApply.previous_value, previous, proposed);
+		assertSealed(afterApply.proposed_value, previous, proposed);
+	});
+
+	test("promotion snapshots do not store env plaintext", async () => {
+		const proposed = `promoted value ${crypto.randomUUID()}`;
+		const key = `PROMO_${crypto.randomUUID().slice(0, 8)}`;
+		const staging = await seedEnvType(seed.org.id, appId, {
+			name: `staging-${crypto.randomUUID().slice(0, 8)}`,
+			isProtected: false,
+			isDefault: false,
+		});
+		await MockFGAClient.writeTuples([
+			{ user: `app:${appId}`, relation: "app", object: `env_type:${staging.id}` },
+			{ user: `org:${seed.org.id}`, relation: "org", object: `env_type:${staging.id}` },
+		]);
+		await EnvService.createEnv({
+			key,
+			value: proposed,
+			app_id: appId,
+			org_id: seed.org.id,
+			env_type_id: staging.id,
+			user_id: seed.masterUser.id,
+		});
+		await EnvStorePiTService.createEnvStorePiT({
+			org_id: seed.org.id,
+			app_id: appId,
+			env_type_id: staging.id,
+			change_request_message: "seed source",
+			user_id: seed.masterUser.id,
+			envs: [{ key, value: proposed, operation: "CREATE" }],
+		});
+
+		const created = await ChangeRequestService.createPromotion({
+			org_id: seed.org.id,
+			app_id: appId,
+			source_env_type_id: staging.id,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: requester.id,
+			title: "Promote sealed snapshot",
+			message: "Snapshot must not keep plaintext",
+		});
+		expect(created.env_items.find(item => item.key === key)?.proposed_value).toBe(proposed);
+
+		const stored = await envItemRow(created.id);
+		assertSealed(stored.proposed_value, proposed);
+		expect(stored.previous_value).toBeNull();
+		expect(JSON.stringify(stored)).not.toContain(proposed);
+	});
+
+	test("secret change requests do not store plaintext secret values", async () => {
+		const plaintext = `secret value ${crypto.randomUUID()}`;
+		const key = `TOKEN_${crypto.randomUUID().slice(0, 8)}`;
+		const { publicKey, privateKey } = generateKeyPair();
+		const secretApp = await seedApp(seed.org.id, {
+			name: "Sealed secret app",
+			enableSecrets: true,
+			publicKey,
+		});
+		const secretEnv = await seedEnvType(seed.org.id, secretApp.id, {
+			name: "production",
+			isProtected: true,
+			isDefault: false,
+		});
+		await MockFGAClient.writeTuples([
+			{ user: `app:${secretApp.id}`, relation: "app", object: `env_type:${secretEnv.id}` },
+			{ user: `org:${seed.org.id}`, relation: "org", object: `env_type:${secretEnv.id}` },
+			{ user: `org:${seed.org.id}`, relation: "org", object: `app:${secretApp.id}` },
+		]);
+
+		const created = await ChangeRequestService.createDirect({
+			org_id: seed.org.id,
+			app_id: secretApp.id,
+			target_env_type_id: secretEnv.id,
+			requested_by_user_id: requester.id,
+			title: "Seal secret",
+			message: "Secret value stays out of the row",
+			secrets: [{ key, operation: "CREATE", proposed_value: plaintext }],
+		});
+		expect(created.secret_items[0]?.proposed_value).toBe("[redacted]");
+		expect(JSON.stringify(created.secret_items)).not.toContain(plaintext);
+
+		const stored = await secretItemRow(created.id);
+		assertSealed(stored.proposed_value, plaintext);
+		expect(stored.previous_value).toBeNull();
+		expect(JSON.stringify(stored)).not.toContain(plaintext);
+
+		const approved = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: seed.masterUser.id,
+		});
+		expect(approved.status).toBe("approved");
+		const applied = await SecretService.getSecret({
+			key,
+			app_id: secretApp.id,
+			org_id: seed.org.id,
+			env_type_id: secretEnv.id,
+			user_id: seed.masterUser.id,
+		});
+		expect(applied?.value.startsWith("RSA:") || applied?.value.startsWith("HYB:")).toBe(true);
+		expect(rsaLayerDecrypt(applied!.value, privateKey)).toBe(plaintext);
+		const afterApply = await secretItemRow(created.id);
+		assertSealed(afterApply.proposed_value, plaintext);
+	});
+
+	test("unreadable ciphertext fails closed and does not apply", async () => {
+		const proposed = `do not apply ${crypto.randomUUID()}`;
+		const key = `FAIL_${crypto.randomUUID().slice(0, 8)}`;
+		const created = await ChangeRequestService.createDirect({
+			org_id: seed.org.id,
+			app_id: appId,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: requester.id,
+			title: "Corrupt seal",
+			message: "Apply must fail closed",
+			envs: [{ key, operation: "CREATE", proposed_value: proposed }],
+		});
+		const db = await DB.getInstance();
+		await db
+			.updateTable("change_request_env_item")
+			.set({ proposed_value: "KMS:v1:missing:bm90LWNpcGhlcnRleHQ" })
+			.where("change_request_id", "=", created.id)
+			.execute();
+
+		await expect(ChangeRequestService.getChangeRequest(created.id, seed.org.id)).rejects.toThrow(
+			/could not be decrypted/,
+		);
+		await expect(
+			ChangeRequestService.approveChangeRequest({
+				id: created.id,
+				org_id: seed.org.id,
+				reviewer_user_id: seed.masterUser.id,
+			}),
+		).rejects.toThrow(/could not be decrypted/);
+
+		const status = await db
+			.selectFrom("change_request")
+			.select("status")
+			.where("id", "=", created.id)
+			.executeTakeFirstOrThrow();
+		expect(status.status).toBe("failed");
+		const applied = await EnvService.getEnv({
+			key,
+			app_id: appId,
+			org_id: seed.org.id,
+			env_type_id: productionEnvTypeId,
+			user_id: seed.masterUser.id,
+		});
+		expect(applied).toBeUndefined();
+		const stored = await envItemRow(created.id);
+		expect(stored.proposed_value).toBe("KMS:v1:missing:bm90LWNpcGhlcnRleHQ");
+		expect(stored.proposed_value).not.toContain(proposed);
+	});
+
+	test("legacy plaintext rows still apply and are not rewritten", async () => {
+		const legacy = `legacy value ${crypto.randomUUID()}`;
+		const key = `LEGACY_${crypto.randomUUID().slice(0, 8)}`;
+		const created = await ChangeRequestService.createDirect({
+			org_id: seed.org.id,
+			app_id: appId,
+			target_env_type_id: productionEnvTypeId,
+			requested_by_user_id: requester.id,
+			title: "Legacy row",
+			message: "Old plaintext is not scrubbed here",
+			envs: [{ key, operation: "CREATE", proposed_value: "replaced-before-approve" }],
+		});
+		const db = await DB.getInstance();
+		await db
+			.updateTable("change_request_env_item")
+			.set({ proposed_value: legacy, previous_value: null })
+			.where("change_request_id", "=", created.id)
+			.execute();
+
+		const approved = await ChangeRequestService.approveChangeRequest({
+			id: created.id,
+			org_id: seed.org.id,
+			reviewer_user_id: seed.masterUser.id,
+		});
+		expect(approved.status).toBe("approved");
+		expect(approved.env_items[0]?.proposed_value).toBe(legacy);
+
+		const stored = await envItemRow(created.id);
+		expect(stored.proposed_value).toBe(legacy);
+		const applied = await EnvService.getEnv({
+			key,
+			app_id: appId,
+			org_id: seed.org.id,
+			env_type_id: productionEnvTypeId,
+			user_id: seed.masterUser.id,
+		});
+		expect(applied?.value).toBe(legacy);
 	});
 });
