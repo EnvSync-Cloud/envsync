@@ -15,12 +15,24 @@ export const apiKeyResponseSchema = z
 		org_id: z.string().openapi({ example: "org_123" }),
 		description: z.string().openapi({ example: "Production API Key" }),
 		is_active: z.boolean().openapi({ example: true }),
-		key: z.string().openapi({ example: "eVs_xxxxx" }),
+		key_hint: z.string().nullable().openapi({
+			example: "eVs_ab12…",
+			description: "Non-secret prefix used to recognize the key. Not the secret and not the hash.",
+		}),
 		created_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
 		updated_at: z.string().openapi({ example: "2023-01-01T00:00:00Z" }),
 		last_used_at: z.string().nullable().openapi({ example: "2023-01-01T00:00:00Z" }),
 	})
 	.openapi({ ref: "ApiKeyResponse" });
+
+export const createApiKeyResponseSchema = apiKeyResponseSchema
+	.extend({
+		key: z.string().openapi({
+			example: "eVs_xxxxx",
+			description: "Full API key. Returned only once, when the key is created.",
+		}),
+	})
+	.openapi({ ref: "CreateApiKeyResponse" });
 
 export const apiKeysResponseSchema = z
 	.array(apiKeyResponseSchema)

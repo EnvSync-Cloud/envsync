@@ -143,7 +143,10 @@ export interface Settings extends BaseTable {
 export interface ApiKeys extends BaseTable {
 	org_id: ColumnType<string>;
 	user_id: ColumnType<string>;
+	/** SHA-256 hex of the secret. Legacy rows may still hold the raw eVs key until first successful auth. */
 	key: ColumnType<string>;
+	/** Non-secret prefix for display. Never the full key or the hash. */
+	key_hint?: ColumnType<string | null>;
 	description?: ColumnType<string | null>;
 	is_active: ColumnType<boolean>;
 	last_used_at?: ColumnType<Date | null>;
