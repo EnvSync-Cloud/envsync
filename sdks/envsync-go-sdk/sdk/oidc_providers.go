@@ -140,10 +140,18 @@ func (o *OidcProviderResponse) String() string {
 type OidcProviderResponseProviderType string
 
 const (
-	OidcProviderResponseProviderTypeGithubActions OidcProviderResponseProviderType = "github_actions"
-	OidcProviderResponseProviderTypeGitlabCi      OidcProviderResponseProviderType = "gitlab_ci"
-	OidcProviderResponseProviderTypeKubernetes    OidcProviderResponseProviderType = "kubernetes"
-	OidcProviderResponseProviderTypeGeneric       OidcProviderResponseProviderType = "generic"
+	OidcProviderResponseProviderTypeGithubActions      OidcProviderResponseProviderType = "github_actions"
+	OidcProviderResponseProviderTypeGitlabCi           OidcProviderResponseProviderType = "gitlab_ci"
+	OidcProviderResponseProviderTypeKubernetes         OidcProviderResponseProviderType = "kubernetes"
+	OidcProviderResponseProviderTypeVercel             OidcProviderResponseProviderType = "vercel"
+	OidcProviderResponseProviderTypeCircleci           OidcProviderResponseProviderType = "circleci"
+	OidcProviderResponseProviderTypeBuildkite          OidcProviderResponseProviderType = "buildkite"
+	OidcProviderResponseProviderTypeBitbucketPipelines OidcProviderResponseProviderType = "bitbucket_pipelines"
+	OidcProviderResponseProviderTypeAzurePipelines     OidcProviderResponseProviderType = "azure_pipelines"
+	OidcProviderResponseProviderTypeTerraformCloud     OidcProviderResponseProviderType = "terraform_cloud"
+	OidcProviderResponseProviderTypeSpacelift          OidcProviderResponseProviderType = "spacelift"
+	OidcProviderResponseProviderTypePulumi             OidcProviderResponseProviderType = "pulumi"
+	OidcProviderResponseProviderTypeGeneric            OidcProviderResponseProviderType = "generic"
 )
 
 func NewOidcProviderResponseProviderTypeFromString(s string) (OidcProviderResponseProviderType, error) {
@@ -154,6 +162,22 @@ func NewOidcProviderResponseProviderTypeFromString(s string) (OidcProviderRespon
 		return OidcProviderResponseProviderTypeGitlabCi, nil
 	case "kubernetes":
 		return OidcProviderResponseProviderTypeKubernetes, nil
+	case "vercel":
+		return OidcProviderResponseProviderTypeVercel, nil
+	case "circleci":
+		return OidcProviderResponseProviderTypeCircleci, nil
+	case "buildkite":
+		return OidcProviderResponseProviderTypeBuildkite, nil
+	case "bitbucket_pipelines":
+		return OidcProviderResponseProviderTypeBitbucketPipelines, nil
+	case "azure_pipelines":
+		return OidcProviderResponseProviderTypeAzurePipelines, nil
+	case "terraform_cloud":
+		return OidcProviderResponseProviderTypeTerraformCloud, nil
+	case "spacelift":
+		return OidcProviderResponseProviderTypeSpacelift, nil
+	case "pulumi":
+		return OidcProviderResponseProviderTypePulumi, nil
 	case "generic":
 		return OidcProviderResponseProviderTypeGeneric, nil
 	}
@@ -171,10 +195,18 @@ type OidcProvidersResponse = []*OidcProviderResponse
 type CreateOidcProviderRequestProviderType string
 
 const (
-	CreateOidcProviderRequestProviderTypeGithubActions CreateOidcProviderRequestProviderType = "github_actions"
-	CreateOidcProviderRequestProviderTypeGitlabCi      CreateOidcProviderRequestProviderType = "gitlab_ci"
-	CreateOidcProviderRequestProviderTypeKubernetes    CreateOidcProviderRequestProviderType = "kubernetes"
-	CreateOidcProviderRequestProviderTypeGeneric       CreateOidcProviderRequestProviderType = "generic"
+	CreateOidcProviderRequestProviderTypeGithubActions      CreateOidcProviderRequestProviderType = "github_actions"
+	CreateOidcProviderRequestProviderTypeGitlabCi           CreateOidcProviderRequestProviderType = "gitlab_ci"
+	CreateOidcProviderRequestProviderTypeKubernetes         CreateOidcProviderRequestProviderType = "kubernetes"
+	CreateOidcProviderRequestProviderTypeVercel             CreateOidcProviderRequestProviderType = "vercel"
+	CreateOidcProviderRequestProviderTypeCircleci           CreateOidcProviderRequestProviderType = "circleci"
+	CreateOidcProviderRequestProviderTypeBuildkite          CreateOidcProviderRequestProviderType = "buildkite"
+	CreateOidcProviderRequestProviderTypeBitbucketPipelines CreateOidcProviderRequestProviderType = "bitbucket_pipelines"
+	CreateOidcProviderRequestProviderTypeAzurePipelines     CreateOidcProviderRequestProviderType = "azure_pipelines"
+	CreateOidcProviderRequestProviderTypeTerraformCloud     CreateOidcProviderRequestProviderType = "terraform_cloud"
+	CreateOidcProviderRequestProviderTypeSpacelift          CreateOidcProviderRequestProviderType = "spacelift"
+	CreateOidcProviderRequestProviderTypePulumi             CreateOidcProviderRequestProviderType = "pulumi"
+	CreateOidcProviderRequestProviderTypeGeneric            CreateOidcProviderRequestProviderType = "generic"
 )
 
 func NewCreateOidcProviderRequestProviderTypeFromString(s string) (CreateOidcProviderRequestProviderType, error) {
@@ -185,6 +217,22 @@ func NewCreateOidcProviderRequestProviderTypeFromString(s string) (CreateOidcPro
 		return CreateOidcProviderRequestProviderTypeGitlabCi, nil
 	case "kubernetes":
 		return CreateOidcProviderRequestProviderTypeKubernetes, nil
+	case "vercel":
+		return CreateOidcProviderRequestProviderTypeVercel, nil
+	case "circleci":
+		return CreateOidcProviderRequestProviderTypeCircleci, nil
+	case "buildkite":
+		return CreateOidcProviderRequestProviderTypeBuildkite, nil
+	case "bitbucket_pipelines":
+		return CreateOidcProviderRequestProviderTypeBitbucketPipelines, nil
+	case "azure_pipelines":
+		return CreateOidcProviderRequestProviderTypeAzurePipelines, nil
+	case "terraform_cloud":
+		return CreateOidcProviderRequestProviderTypeTerraformCloud, nil
+	case "spacelift":
+		return CreateOidcProviderRequestProviderTypeSpacelift, nil
+	case "pulumi":
+		return CreateOidcProviderRequestProviderTypePulumi, nil
 	case "generic":
 		return CreateOidcProviderRequestProviderTypeGeneric, nil
 	}

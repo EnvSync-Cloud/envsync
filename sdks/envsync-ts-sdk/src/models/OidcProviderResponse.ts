@@ -19,6 +19,14 @@ export namespace OidcProviderResponse {
         GITHUB_ACTIONS = 'github_actions',
         GITLAB_CI = 'gitlab_ci',
         KUBERNETES = 'kubernetes',
+        VERCEL = 'vercel',
+        CIRCLECI = 'circleci',
+        BUILDKITE = 'buildkite',
+        BITBUCKET_PIPELINES = 'bitbucket_pipelines',
+        AZURE_PIPELINES = 'azure_pipelines',
+        TERRAFORM_CLOUD = 'terraform_cloud',
+        SPACELIFT = 'spacelift',
+        PULUMI = 'pulumi',
         GENERIC = 'generic',
     }
 }

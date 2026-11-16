@@ -9,6 +9,7 @@ import { AppError, orNotFound } from "envsync-api/ports/errors";
 import { RoleService } from "envsync-api/ports/services";
 import { AuthorizationService } from "envsync-api/ports/services";
 import type { Database } from "envsync-api/ports/types-db";
+import type { OidcProviderType } from "../validators/oidc.validator";
 
 type OidcProviderRow = Selectable<Database["oidc_providers"]>;
 
@@ -20,7 +21,7 @@ export class OidcService {
 	 */
 	public static createProvider = async (data: {
 		org_id: string;
-		provider_type: "github_actions" | "gitlab_ci" | "kubernetes" | "generic";
+		provider_type: OidcProviderType;
 		issuer_url: string;
 		audience: string;
 		allowed_subjects?: string[];
