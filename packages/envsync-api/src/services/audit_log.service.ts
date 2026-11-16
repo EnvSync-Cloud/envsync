@@ -59,12 +59,24 @@ function escapeIlikeContains(query: string): string {
 }
 
 // Genesis hash for the first entry in the audit chain (Issue #11)
-const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+export const AUDIT_GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+const GENESIS_HASH = AUDIT_GENESIS_HASH;
 
 /**
  * Compute the hash for an audit entry.
  * hash = SHA256(previous_hash + timestamp + action + org_id + user_id + details)
  */
+export function computeAuditEntryHash(
+	previousHash: string,
+	timestamp: string,
+	action: string,
+	orgId: string,
+	userId: string,
+	details: string,
+) {
+	return computeEntryHash(previousHash, timestamp, action, orgId, userId, details);
+}
+
 function computeEntryHash(
 	previousHash: string,
 	timestamp: string,
