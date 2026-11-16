@@ -16,6 +16,13 @@ import { RoleService } from "@/services/role.service";
 import { SystemCertificateProvisioningService } from "@/services/system-certificate-provisioning.service";
 import { UserService } from "@/services/user.service";
 import { validateAccess, detectAuthType } from "@/helpers/access";
+import { decodeJwt } from "jose";
+
+import {
+	confirmationThumbprint,
+	sessionClientRequiresDpop,
+	verifyDpopProof,
+} from "@/helpers/dpop";
 import { refreshDirectoryToken } from "@/helpers/identity";
 import { isServiceTokenAllowedPath } from "@/middlewares/service-token-scope.middleware";
 
@@ -36,6 +43,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 		}
 
 		let token = ctx.req.header("Authorization") ?? getCookie(ctx, "access_token");
+		const presentedToken = () => (token ?? "").replace(/^(?:Bearer|DPoP)\s+/i, "");
 		const refreshToken = getCookie(ctx, "refresh_token");
 		const apiKey = ctx.req.header("X-API-Key");
 		const authorizationHeader = ctx.req.header("Authorization");
@@ -50,7 +58,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 		const verifyAs = token ? detectAuthType(token) : "API_KEY";
 
 		const resolveCredential = async (rawToken: string) => validateAccess({
-			token: rawToken.replace(/^Bearer\s+/i, ""),
+			token: rawToken.replace(/^(?:Bearer|DPoP)\s+/i, ""),
 			type: verifyAs,
 		});
 
@@ -84,7 +92,7 @@ export const authMiddleware = (): MiddlewareHandler => {
 						throw jwtError;
 					}
 
-					if (!usesCookieSession || !refreshToken) {
+					if (!usesCookieSession || !refreshToken || sessionClientRequiresDpop(decodeJwt(presentedToken()).client_id)) {
 						throw jwtError;
 					}
 
@@ -113,6 +121,29 @@ export const authMiddleware = (): MiddlewareHandler => {
 					token: apiKey ?? "",
 					type: "API_KEY",
 				});
+			}
+
+			if (verifyAs === "JWT") {
+				const payload = decodeJwt(presentedToken());
+				const jkt = confirmationThumbprint(payload as Record<string, unknown>);
+				if (sessionClientRequiresDpop(payload.client_id)) {
+					if (!jkt) {
+						return ctx.json(
+							{
+								error: "Session is not bound to a device key. Sign in again.",
+								code: "DPOP_REQUIRED",
+							},
+							401,
+						);
+					}
+					await verifyDpopProof({
+						proof: ctx.req.header("DPoP") ?? "",
+						method: ctx.req.method,
+						url: ctx.req.url,
+						accessToken: presentedToken(),
+						expectedJkt: jkt,
+					});
+				}
 			}
 
 			let user = await UserService.getUser(access_info.user_id);

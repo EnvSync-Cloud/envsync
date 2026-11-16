@@ -10,6 +10,7 @@ import (
 
 	"resty.dev/v3"
 
+	sessionauth "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/auth"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -41,18 +42,21 @@ func createSDKClient() *sdkclient.Client {
 	headers.Set("Content-Type", "application/json")
 	headers.Set("X-CLI-CMD", cliCmd)
 
+	transport := http.RoundTripper(telemetry.NewInstrumentedTransport(http.DefaultTransport))
+	if !(hasAPIKey && apiKey != "") {
+		if token := resolveAccessToken(); token != "" {
+			transport = &sessionProofTransport{base: transport, token: token}
+		}
+	}
+
 	opts := []option.RequestOption{
 		option.WithBaseURL(cfg.BackendURL),
 		option.WithHTTPHeader(headers),
-		option.WithHTTPClient(&http.Client{
-			Transport: telemetry.NewInstrumentedTransport(http.DefaultTransport),
-		}),
+		option.WithHTTPClient(&http.Client{Transport: transport}),
 	}
 
 	if hasAPIKey && apiKey != "" {
 		opts = append(opts, option.WithApiKey(apiKey))
-	} else if token := resolveAccessToken(); token != "" {
-		opts = append(opts, option.WithToken(token))
 	}
 
 	return sdkclient.NewClient(opts...)
@@ -82,7 +86,10 @@ func createHTTPClient() *resty.Client {
 	if hasAPIKey && apiKey != "" {
 		client.SetHeader("X-API-Key", apiKey)
 	} else if token := resolveAccessToken(); token != "" {
-		client.SetAuthToken("Bearer " + token)
+		client.SetTransport(&sessionProofTransport{
+			base:  telemetry.NewInstrumentedTransport(http.DefaultTransport),
+			token: token,
+		})
 	}
 
 	return client
@@ -152,10 +159,14 @@ func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, erro
 	}
 
 	var resBody responses.LoginTokenResponse
-	res, err := resty.New().
+	request := resty.New().
 		SetLoggerWarnLevel(false).
 		SetTransport(telemetry.NewInstrumentedTransport(http.DefaultTransport)).
-		R().
+		R()
+	if proof, err := sessionProof("POST", auth.TokenURL, ""); err == nil {
+		request.SetHeader("DPoP", proof)
+	}
+	res, err := request.
 		SetResult(&resBody).
 		SetFormData(map[string]string{
 			"grant_type":    "refresh_token",
@@ -178,4 +189,33 @@ func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, erro
 	auth.ExpiresAt = int(now.Add(time.Duration(resBody.ExpiresIn) * time.Second).Unix())
 
 	return auth, nil
+}
+
+func sessionProof(method, rawURL, accessToken string) (string, error) {
+	path, err := sessionauth.KeyPath()
+	if err != nil {
+		return "", err
+	}
+	key, err := sessionauth.LoadOrCreateKey(path)
+	if err != nil {
+		return "", err
+	}
+	return key.Proof(method, rawURL, accessToken)
+}
+
+type sessionProofTransport struct {
+	base  http.RoundTripper
+	token string
+}
+
+func (t *sessionProofTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	proof, err := sessionProof(req.Method, req.URL.String(), t.token)
+	if err != nil {
+		return nil, err
+	}
+	clone := req.Clone(req.Context())
+	clone.Header = req.Header.Clone()
+	clone.Header.Set("Authorization", "DPoP "+t.token)
+	clone.Header.Set("DPoP", proof)
+	return t.base.RoundTrip(clone)
 }
