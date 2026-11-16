@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { MutationOptions, sdk } from "./base";
+import { MutationOptions, apiRequest, sdk } from "./base";
 import {
   ApiKeyResponse,
   RegenerateApiKeyResponse,
@@ -22,7 +22,7 @@ export type ApiKeyRowData = {
   org_id: string;
   description: string;
   is_active: boolean;
-  key: string;
+  key_hint: string | null;
 };
 
 const useApiKeys = () => {
@@ -36,16 +36,24 @@ const useApiKeys = () => {
 
       const usersMap = new Map(usersData.map((user) => [user.id, user]));
 
-      return keysData.map((key) => ({
-        ...key,
-        created_by: {
-          name: usersMap.get(key.user_id)?.full_name || "Unknown",
-          email: usersMap.get(key.user_id)?.email || "Unknown",
-        },
-        last_used_at: key.last_used_at ? new Date(key.last_used_at) : null,
-        created_at: new Date(key.created_at),
-        updated_at: new Date(key.updated_at),
-      }));
+      return keysData.map((key) => {
+        const record = key as ApiKeyResponse & { key_hint?: string | null };
+        return {
+          id: record.id,
+          user_id: record.user_id,
+          org_id: record.org_id,
+          description: record.description,
+          is_active: record.is_active,
+          key_hint: record.key_hint ?? null,
+          created_by: {
+            name: usersMap.get(record.user_id)?.full_name || "Unknown",
+            email: usersMap.get(record.user_id)?.email || "Unknown",
+          },
+          last_used_at: record.last_used_at ? new Date(record.last_used_at) : null,
+          created_at: new Date(record.created_at),
+          updated_at: new Date(record.updated_at),
+        };
+      });
     },
     refetchInterval: 5 * 60 * 1000,
     retry: 3,
@@ -167,7 +175,11 @@ const useRegenerateApiKey = ({
   return useMutation({
     mutationFn: async (apiKeyId: string) => {
       before?.(apiKeyId);
-      return await sdk.apiKeys.regenerateApiKey(apiKeyId);
+      // Generated clients still call GET. Keep this POST until the SDK is regenerated.
+      return await apiRequest<RegenerateApiKeyResponse>(
+        `/api/api_key/${apiKeyId}/regenerate`,
+        { method: "POST" },
+      );
     },
     onSuccess: (data, variables) => {
       onSuccess?.({ data, variables });

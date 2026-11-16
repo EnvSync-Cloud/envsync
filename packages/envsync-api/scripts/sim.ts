@@ -573,7 +573,7 @@ async function apiKeyCrudLifecycle(token: string, _ctx: OrgContext): Promise<voi
 			description: `Updated ${uid()}`,
 			is_active: true,
 		});
-		await api("GET", `/api/api_key/${id}/regenerate`, token);
+		await api("POST", `/api/api_key/${id}/regenerate`, token);
 		await api("DELETE", `/api/api_key/${id}`, token);
 	}
 }

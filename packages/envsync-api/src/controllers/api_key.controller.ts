@@ -1,7 +1,6 @@
 import { type Context } from "hono";
 
 import { ApiKeyService } from "@/services/api_key.service";
-import { encapsulate } from "@/utils/encapsulate";
 import { AuditLogService } from "@/services/audit_log.service";
 
 export class ApiKeyController {
@@ -49,13 +48,11 @@ export class ApiKeyController {
 			return c.json({ error: "API key not found" }, 404);
 		}
 
-		apiKey.key = encapsulate(apiKey.key);
-
 		await AuditLogService.notifyAuditSystem({
 			action: "apikey_viewed",
 			org_id: c.get("org_id"),
 			user_id: c.get("user_id"),
-			message: `API Key viewed: ${apiKey.key}`,
+			message: `API Key viewed: ${id}`,
 			details: {
 				api_key_id: apiKey.id,
 			},
@@ -75,10 +72,6 @@ export class ApiKeyController {
 		const per_page = Math.min(100, Math.max(1, Number(c.req.query("per_page")) || 50));
 
 		const apiKeys = await ApiKeyService.getAllKeys(org_id, page, per_page);
-
-		apiKeys.forEach(key => {
-			key.key = encapsulate(key.key);
-		});
 
 		await AuditLogService.notifyAuditSystem({
 			action: "apikeys_viewed",
@@ -171,12 +164,6 @@ export class ApiKeyController {
 		if (!keys || keys.length === 0) {
 			return c.json({ error: "No API keys found for this user." }, 404);
 		}
-
-		keys.forEach(key => {
-			if ("key" in key && typeof key.key === "string") {
-				key.key = encapsulate(key.key);
-			}
-		});
 
 		await AuditLogService.notifyAuditSystem({
 			action: "apikeys_viewed",
