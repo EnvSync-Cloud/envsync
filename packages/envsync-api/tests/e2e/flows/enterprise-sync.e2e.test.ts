@@ -190,7 +190,8 @@ describe("Enterprise Sync E2E", () => {
 			token: seed.masterUser.token,
 		});
 		expect(eventsRes.status).toBe(200);
-		const events = await eventsRes.json<Array<{ action: string; result: string }>>();
+		const events = await eventsRes.json<Array<{ action: string; result: string; details?: unknown }>>();
+		expect(JSON.stringify(events)).not.toContain("super-secret-password");
 		expect(events.map(event => event.action)).toEqual([
 			"manual_sync_requested",
 			"sync_run_started",
@@ -218,9 +219,9 @@ describe("Enterprise Sync E2E", () => {
 
 		const secretRequest = providerRequests.find(request => request.body.key === "WEB_DB_PASSWORD");
 		expect(secretRequest?.body.type).toBe("encrypted");
-		expect(typeof secretRequest?.body.value).toBe("string");
-		expect(String(secretRequest?.body.value)).toStartWith("RSA:");
-		expect(secretRequest?.body.value).not.toBe("super-secret-password");
+		expect(secretRequest?.body.value).toBe("super-secret-password");
+		expect(String(secretRequest?.body.value)).not.toStartWith("RSA:");
+		expect(String(secretRequest?.body.value)).not.toStartWith("HYB:");
 
 		const envRequest = providerRequests.find(request => request.body.key === "WEB_API_URL");
 		expect(envRequest?.body.type).toBe("plain");

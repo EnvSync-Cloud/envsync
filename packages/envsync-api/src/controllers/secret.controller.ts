@@ -7,7 +7,7 @@ import { EnvTypeService } from "@/services/env_type.service";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
 import { ServiceTokenService } from "@/services/service_token.service";
-import { smartEncrypt, kmsDecrypt, rsaLayerDecrypt } from "@/helpers/key-store";
+import { smartEncrypt, kmsDecrypt } from "@/helpers/key-store";
 import { secretOperations } from "@/libs/telemetry/metrics";
 
 
@@ -1482,27 +1482,13 @@ export class SecretController {
 			return c.json({ error: "Cannot reveal secrets for non-managed apps. Decrypt client-side with your own key." }, 403);
 		}
 
-		// Get secrets from VaultService — values are RSA blobs (Layers 2+3 unwrapped by miniKMS)
-		const secrets = await SecretService.getAllSecret({
+		const filteredSecrets = await SecretService.revealManagedSecrets({
 			app_id,
 			env_type_id,
 			org_id,
 			user_id,
+			keys,
 		});
-
-		if (!secrets) {
-			return c.json({ error: "Secret not found." }, 404);
-		}
-
-		// Filter secrets by requested keys and RSA-decrypt with private key
-		const privateKey = await AppService.getManagedAppPrivateKey(app_id);
-
-		const filteredSecrets = secrets
-			.filter(secret => keys.includes(secret.key))
-			.map(secret => ({
-				...secret,
-				value: rsaLayerDecrypt(secret.value, privateKey!),
-			}));
 		secretOperations.add(filteredSecrets.length, { operation: "decrypted" });
 
 		return c.json(filteredSecrets);

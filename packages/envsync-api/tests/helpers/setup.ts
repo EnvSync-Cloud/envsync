@@ -235,7 +235,7 @@ if (!isE2E) {
 			}));
 
 		// Mock KMS — in-memory AES-256-GCM with deterministic test keys + Vault + Session mocks
-		const { MockKMSClient } = await import("./kms");
+		const { MockKMSClient, mockGetVaultSessionToken } = await import("./kms");
 
 		mock.module("@/libs/kms/client", () => ({
 			KMSClient: MockKMSClient,
@@ -248,7 +248,7 @@ if (!isE2E) {
 
 		// Mock session-manager — returns a static token for vault operations
 		mock.module("@/libs/kms/session-manager", () => ({
-			getVaultSessionToken: async () => "mock-session-token",
+			getVaultSessionToken: mockGetVaultSessionToken,
 			invalidateSessionToken: () => {},
 		}));
 
