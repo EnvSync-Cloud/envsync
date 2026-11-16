@@ -2,9 +2,9 @@ import { PutParameterCommand, SSMClient } from "@aws-sdk/client-ssm";
 import { importPKCS8, SignJWT } from "jose";
 import sodium from "libsodium-wrappers";
 
-import { DB } from "envsync-api/ports/db";
-import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import { ValidationError } from "envsync-api/ports/errors";
 
+import { EnterpriseIntegrationService } from "./enterprise-integration.service";
 import { type EnterpriseProvider } from "./enterprise-provider.service";
 
 type JsonRecord = Record<string, unknown>;
@@ -93,21 +93,7 @@ async function fetchJson(url: string, init: RequestInit, allowStatuses: number[]
 
 export class EnterpriseProviderSyncService {
 	private static async getOrgSecretValue(org_id: string, key: string) {
-		const db = await DB.getInstance();
-		const secrets = await db
-			.selectFrom("org_secret")
-			.selectAll()
-			.where("org_id", "=", org_id)
-			.where("key", "=", key)
-			.execute();
-		const secret = secrets.find(row => {
-			const metadata = row.metadata as { purpose?: unknown } | null;
-			return metadata?.purpose !== "kms";
-		});
-		if (!secret) {
-			throw new NotFoundError("OrgSecret", key, "ENTERPRISE_ORG_SECRET_NOT_FOUND");
-		}
-		return secret.value;
+		return EnterpriseIntegrationService.readOrgSecretValue(org_id, key);
 	}
 
 	private static async resolveConfigValue(org_id: string, config: JsonRecord, key: string) {

@@ -38,7 +38,7 @@ export const orgSecretSchema = z.object({
 	id: z.string(),
 	org_id: z.string(),
 	key: z.string(),
-	value: z.string(),
+	value: z.string().optional(),
 	description: z.string().nullable().optional(),
 	metadata: jsonRecordSchema,
 	created_at: z.coerce.date(),
