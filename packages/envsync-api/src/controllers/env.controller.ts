@@ -20,6 +20,17 @@ function resolveAutoMode(value: unknown, fallback: boolean) {
 	throw new Error("Mode must be one of: auto, true, false");
 }
 
+function envHistoryMessage(action: "Created" | "Updated" | "Deleted", key: string) {
+	return `${action} environment variable: ${key}`;
+}
+
+function envBatchHistoryMessage(
+	action: "Batch created" | "Batch updated" | "Batch deleted",
+	keys: string[],
+) {
+	return `${action} ${keys.length} environment variables: ${keys.join(", ")}`;
+}
+
 export class EnvController {
 	public static readonly exportEnv = async (c: Context) => {
 		const org_id = c.get("org_id");
@@ -166,7 +177,7 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
-			change_request_message: `Created environment variable: ${key}`,
+			change_request_message: envHistoryMessage("Created", key),
 			user_id,
 			envs: [
 				{
@@ -232,7 +243,7 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
-			change_request_message: `Updated environment variable: ${key} (${currentEnv.value} → ${value || ""})`,
+			change_request_message: envHistoryMessage("Updated", key),
 			user_id,
 			envs: [
 				{
@@ -295,7 +306,7 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
-			change_request_message: `Deleted environment variable: ${key} (value: ${currentEnv.value})`,
+			change_request_message: envHistoryMessage("Deleted", key),
 			user_id,
 			envs: [
 				{
@@ -425,7 +436,10 @@ export class EnvController {
 			org_id,
 			app_id,
 			env_type_id,
-			change_request_message: `Batch created ${envs.length} environment variables: ${envs.map(env => env.key).join(", ")}`,
+			change_request_message: envBatchHistoryMessage(
+				"Batch created",
+				envs.map(env => env.key),
+			),
 			user_id,
 			envs: envs.map(env => ({
 				key: env.key,
@@ -469,33 +483,16 @@ export class EnvController {
 			return c.json({ error: "Batch size exceeds maximum of 100 items" }, 400);
 		}
 
-		// Get current values for tracking changes
-		const currentEnvs = await Promise.all(
-			envs.map(env =>
-				EnvService.getEnv({
-					key: env.key,
-					org_id,
-					app_id,
-					env_type_id,
-					user_id,
-				}),
-			),
-		);
-
 		await EnvService.batchUpdateEnvs(org_id, app_id, env_type_id, envs, user_id);
 
-		// Create detailed change message
-		const changes = envs.map((env, index) => {
-			const currentEnv = currentEnvs[index];
-			return `${env.key}: ${currentEnv?.value || "undefined"} → ${env.value}`;
-		});
+		const updatedKeys = envs.map(env => env.key);
 
 		// Create Point-in-Time record for batch update
 		await EnvStorePiTService.createEnvStorePiT({
 			org_id,
 			app_id,
 			env_type_id,
-			change_request_message: `Batch updated ${envs.length} environment variables: ${changes.join(", ")}`,
+			change_request_message: envBatchHistoryMessage("Batch updated", updatedKeys),
 			user_id,
 			envs: envs.map(env => ({
 				key: env.key,
@@ -509,12 +506,12 @@ export class EnvController {
 			action: "envs_batch_updated",
 			org_id,
 			user_id,
-			message: `Batch update of environment variables in app ${app_id} for environment type ${env_type_id} for keys: ${envs.map(env => env.key).join(", ")}.`,
+			message: `Batch update of environment variables in app ${app_id} for environment type ${env_type_id} for keys: ${updatedKeys.join(", ")}.`,
 			details: {
 				app_id,
 				env_type_id,
 				env_count: envs.length,
-				keys: envs.map(env => env.key),
+				keys: updatedKeys,
 			},
 		});
 
@@ -568,7 +565,10 @@ export class EnvController {
 				org_id,
 				app_id,
 				env_type_id,
-				change_request_message: `Batch deleted ${deletedEnvs.length} environment variables: ${deletedEnvs.map(env => `${env.key} (${env.value})`).join(", ")}`,
+				change_request_message: envBatchHistoryMessage(
+					"Batch deleted",
+					deletedEnvs.map(env => env.key),
+				),
 				user_id,
 				envs: deletedEnvs,
 			});
@@ -911,7 +911,10 @@ export class EnvController {
 					env_type_id,
 					pit_id,
 					operations_count: rollbackOperations.length,
-					operations: rollbackOperations.map((op) => ({ key: op.key, operation: op.operation })),
+					operations: rollbackOperations.map(operation => ({
+						key: operation.key,
+						operation: operation.operation,
+					})),
 				},
 			});
 		}
@@ -1039,7 +1042,10 @@ export class EnvController {
 					env_type_id,
 					timestamp: targetTimestamp.toISOString(),
 					operations_count: rollbackOperations.length,
-					operations: rollbackOperations.map((op) => ({ key: op.key, operation: op.operation })),
+					operations: rollbackOperations.map(operation => ({
+						key: operation.key,
+						operation: operation.operation,
+					})),
 				},
 			});
 		}
@@ -1151,8 +1157,7 @@ export class EnvController {
 			app_id,
 			env_type_id,
 			change_request_message:
-				rollback_message ||
-				`Rollback variable ${key} to PiT ${pit_id}: ${rollbackOperation.previous_value} → ${rollbackOperation.target_value}`,
+				rollback_message || `Rollback variable ${key} to PiT ${pit_id}`,
 			user_id,
 			envs: [
 				{
@@ -1298,7 +1303,7 @@ export class EnvController {
 			env_type_id,
 			change_request_message:
 				rollback_message ||
-				`Rollback variable ${key} to ${targetTimestamp.toISOString()}: ${rollbackOperation.previous_value} → ${rollbackOperation.target_value}`,
+				`Rollback variable ${key} to ${targetTimestamp.toISOString()}`,
 			user_id,
 			envs: [
 				{

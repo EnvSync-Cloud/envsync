@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { openEnvPitValues, sealEnvPitValues } from "@/helpers/env-pit-value";
 import { DB } from "@/libs/db";
 
 function createExclusiveUpperBound(timestamp: Date) {
@@ -31,6 +32,8 @@ export class EnvStorePiTService {
 			operation: "CREATE" | "UPDATE" | "DELETE";
 		}>;
 	}) => {
+		// Seal before the transaction so a KMS failure cannot insert plaintext.
+		const sealedEnvs = await sealEnvPitValues(org_id, app_id, env_type_id, envs);
 		const db = await DB.getInstance();
 
 		return await db.transaction().execute(async (trx) => {
@@ -52,7 +55,7 @@ export class EnvStorePiTService {
 
 			// Offset each change by 1ms so a DELETE and a later CREATE in the
 			// same batch replay in request order when timestamps would otherwise tie.
-			const env_list = envs.map((env, index) => ({
+			const env_list = sealedEnvs.map((env, index) => ({
 				id: uuidv4(),
 				key: env.key,
 				value: env.value,
@@ -77,11 +80,12 @@ export class EnvStorePiTService {
 			.where("id", "=", id)
 			.executeTakeFirstOrThrow();
 
-		const envs = await db
+		const storedEnvs = await db
 			.selectFrom("env_store_pit_change_request")
 			.selectAll()
 			.where("env_store_pit_id", "=", id)
 			.execute();
+		const envs = await openEnvPitValues(pit.org_id, pit.app_id, pit.env_type_id, storedEnvs);
 
 		return { pit, envs };
 	};
@@ -192,6 +196,8 @@ export class EnvStorePiTService {
 		return pits;
 	};
 
+	// `value` is the stored history cell (ciphertext for new rows, plaintext for
+	// rows written before sealing). Live reads must use the vault, not this copy.
 	public static getCurrentEnvState = async ({
 		org_id,
 		app_id,
@@ -298,11 +304,12 @@ export class EnvStorePiTService {
 			.orderBy("env_store_pit.created_at", "asc")
 			.orderBy("env_store_pit_change_request.created_at", "asc")
 			.execute();
+		const openedChanges = await openEnvPitValues(org_id, app_id, env_type_id, allChanges);
 
 		// Replay the changes to build the state at the target point in time
 		const envState = new Map<string, { key: string; value: string; last_updated: Date, operation: string }>();
 
-		for (const change of allChanges) {
+		for (const change of openedChanges) {
 			const operation = change.operation || "UPDATE";
 
 			switch (operation) {
@@ -361,11 +368,12 @@ export class EnvStorePiTService {
 			.orderBy("env_store_pit.created_at", "asc")
 			.orderBy("env_store_pit_change_request.created_at", "asc")
 			.execute();
+		const openedChanges = await openEnvPitValues(org_id, app_id, env_type_id, allChanges);
 
 		// Replay changes to build state
 		const envState = new Map<string, { key: string; value: string; last_updated: Date, operation: string }>();
 
-		for (const change of allChanges) {
+		for (const change of openedChanges) {
 			const operation = change.operation || "UPDATE";
 
 			switch (operation) {
@@ -435,12 +443,13 @@ export class EnvStorePiTService {
 			.orderBy("env_store_pit.created_at", "asc")
 			.orderBy("env_store_pit_change_request.created_at", "asc")
 			.execute();
+		const openedChanges = await openEnvPitValues(org_id, app_id, env_type_id, allChanges);
 
 		// Replay changes once, building both snapshots in a single pass
 		const fromState = new Map<string, string>();
 		const toState = new Map<string, string>();
 
-		for (const change of allChanges) {
+		for (const change of openedChanges) {
 			const operation = change.operation || "UPDATE";
 			const isBeforeOrAtFrom = change.created_at <= fromPiT.created_at;
 
@@ -533,11 +542,12 @@ export class EnvStorePiTService {
 			.orderBy("env_store_pit.created_at", "asc")
 			.orderBy("env_store_pit_change_request.created_at", "asc")
 			.execute();
+		const openedChanges = await openEnvPitValues(org_id, app_id, env_type_id, allChanges);
 
 		const fromState = new Map<string, string>();
 		const toState = new Map<string, string>();
 
-		for (const change of allChanges) {
+		for (const change of openedChanges) {
 			const operation = change.operation || "UPDATE";
 			const isBeforeOrAtFrom = change.created_at <= from_timestamp;
 
@@ -622,6 +632,7 @@ export class EnvStorePiTService {
 				"env_store_pit.change_request_message",
 				"env_store_pit.user_id",
 				"env_store_pit.created_at",
+				"env_store_pit_change_request.key",
 				"env_store_pit_change_request.value",
 				"env_store_pit_change_request.operation",
 			])
@@ -633,6 +644,14 @@ export class EnvStorePiTService {
 			.limit(limit)
 			.execute();
 
-		return timeline;
+		const opened = await openEnvPitValues(org_id, app_id, env_type_id, timeline);
+		return opened.map(entry => ({
+			pit_id: entry.pit_id,
+			change_request_message: entry.change_request_message,
+			user_id: entry.user_id,
+			created_at: entry.created_at,
+			value: entry.value,
+			operation: entry.operation,
+		}));
 	};
 }
