@@ -1,10 +1,12 @@
-import { NotFoundError } from "@/libs/errors";
+import { BusinessRuleError, NotFoundError } from "@/libs/errors";
+import { openChangeRequestValues } from "@/services/change_request_crypto";
 import { EnvService } from "@/services/env.service";
 import { EnvStorePiTService } from "@/services/env_store_pit.service";
 import { SecretService } from "@/services/secret.service";
 import { SecretStorePiTService } from "@/services/secret_store_pit.service";
 
 type ApplyRequest = {
+	id: string;
 	app_id: string;
 	org_id: string;
 	target_env_type_id: string;
@@ -14,11 +16,39 @@ type ApplyRequest = {
 };
 
 type ApplyItem = {
+	id?: string;
 	key: string;
 	operation: string;
 	proposed_value: string | null | undefined;
 	previous_value?: string | null;
 };
+
+async function openApplyItem(request: ApplyRequest, item: ApplyItem): Promise<ApplyItem> {
+	if (!item.id) {
+		throw new BusinessRuleError(
+			"Change request value could not be decrypted.",
+			500,
+			"CHANGE_REQUEST_VALUE_UNREADABLE",
+		);
+	}
+	const opened = await openChangeRequestValues(
+		{
+			orgId: request.org_id,
+			appId: request.app_id,
+			changeRequestId: request.id,
+			itemId: item.id,
+		},
+		{
+			previous: item.previous_value,
+			proposed: item.proposed_value,
+		},
+	);
+	return {
+		...item,
+		previous_value: opened.previous_value,
+		proposed_value: opened.proposed_value,
+	};
+}
 
 function pitValue(item: ApplyItem) {
 	return item.operation === "DELETE" ? (item.previous_value ?? "") : (item.proposed_value ?? "");
@@ -139,35 +169,38 @@ export async function applyChangeRequestItems({
 		}
 		return;
 	}
-	for (const item of envItems) {
+
+	const openedEnvItems = await Promise.all(envItems.map(item => openApplyItem(request, item)));
+	const openedSecretItems = await Promise.all(secretItems.map(item => openApplyItem(request, item)));
+	for (const item of openedEnvItems) {
 		await applyEnvItem(request, item, reviewer_user_id);
 	}
-	for (const item of secretItems) {
+	for (const item of openedSecretItems) {
 		await applySecretItem(request, item, reviewer_user_id);
 	}
 
-	if (envItems.length > 0) {
+	if (openedEnvItems.length > 0) {
 		await EnvStorePiTService.createEnvStorePiT({
 			org_id: request.org_id,
 			app_id: request.app_id,
 			env_type_id: request.target_env_type_id,
 			change_request_message: request.message,
 			user_id: reviewer_user_id,
-			envs: envItems.map((item) => ({
+			envs: openedEnvItems.map((item) => ({
 				key: item.key,
 				value: pitValue(item),
 				operation: item.operation as "CREATE" | "UPDATE" | "DELETE",
 			})),
 		});
 	}
-	if (secretItems.length > 0) {
+	if (openedSecretItems.length > 0) {
 		await SecretStorePiTService.createSecretStorePiT({
 			org_id: request.org_id,
 			app_id: request.app_id,
 			env_type_id: request.target_env_type_id,
 			change_request_message: request.message,
 			user_id: reviewer_user_id,
-			envs: secretItems.map((item) => ({
+			envs: openedSecretItems.map((item) => ({
 				key: item.key,
 				value: pitValue(item),
 				operation: item.operation as "CREATE" | "UPDATE" | "DELETE",

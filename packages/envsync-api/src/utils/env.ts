@@ -1,5 +1,6 @@
 import { z, type ZodObject, type ZodRawShape } from "zod";
 
+import { minikmsTlsIssues } from "@/libs/kms/tls-policy";
 import { collectEnvSchemaExtensions } from "@/modules/load-modules";
 
 import { loadRootEnv } from "./load-root-env";
@@ -35,27 +36,22 @@ export const BaseEnvSchema = z.object({
 	SMTP_USER: z.string().optional(),
 	SMTP_PASS: z.string().optional(),
 	SMTP_FROM: z.string(),
-	// Keycloak configuration
-	KEYCLOAK_URL: z.string(),
-	KEYCLOAK_PUBLIC_URL: z.string().optional(),
-	KEYCLOAK_REALM: z.string().default("envsync"),
-	KEYCLOAK_ADMIN_USER: z.string(),
-	KEYCLOAK_ADMIN_PASSWORD: z.string(),
-	KEYCLOAK_WEB_CLIENT_ID: z.string(),
-	KEYCLOAK_WEB_CLIENT_SECRET: z.string(),
-	KEYCLOAK_CLI_CLIENT_ID: z.string(),
-	KEYCLOAK_API_CLIENT_ID: z.string(),
-	KEYCLOAK_API_CLIENT_SECRET: z.string(),
-	KEYCLOAK_ACCESS_TOKEN_LIFESPAN_SECONDS: z.string().default("3600"),
-	KEYCLOAK_SSO_SESSION_IDLE_TIMEOUT_SECONDS: z.string().default("604800"),
-	KEYCLOAK_SSO_SESSION_MAX_LIFESPAN_SECONDS: z.string().default("604800"),
-	KEYCLOAK_CLIENT_SESSION_IDLE_TIMEOUT_SECONDS: z.string().default("604800"),
-	KEYCLOAK_CLIENT_SESSION_MAX_LIFESPAN_SECONDS: z.string().default("604800"),
-	KEYCLOAK_E2E_CLIENT_ID: z.string().optional(),
-	KEYCLOAK_E2E_CLIENT_SECRET: z.string().optional(),
-	KEYCLOAK_WEB_REDIRECT_URI: z.string(),
-	KEYCLOAK_WEB_CALLBACK_URL: z.string(),
-	KEYCLOAK_API_REDIRECT_URI: z.string(),
+	// Atrium directory. Issuer is the site root, with no /realms path.
+	ATRIUM_INTERNAL_URL: z.string(),
+	ATRIUM_PUBLIC_URL: z.string(),
+	ATRIUM_ISSUER: z.string(),
+	ATRIUM_MANAGEMENT_CLIENT_ID: z.string(),
+	ATRIUM_MANAGEMENT_CLIENT_SECRET: z.string(),
+	ATRIUM_WEB_CLIENT_ID: z.string(),
+	ATRIUM_WEB_CLIENT_SECRET: z.string(),
+	ATRIUM_CLI_CLIENT_ID: z.string(),
+	ATRIUM_API_CLIENT_ID: z.string(),
+	ATRIUM_API_CLIENT_SECRET: z.string(),
+	ATRIUM_E2E_CLIENT_ID: z.string().optional(),
+	ATRIUM_E2E_CLIENT_SECRET: z.string().optional(),
+	ATRIUM_WEB_REDIRECT_URI: z.string(),
+	ATRIUM_WEB_CALLBACK_URL: z.string(),
+	ATRIUM_API_REDIRECT_URI: z.string(),
 	// Landing page configuration
 	LANDING_PAGE_URL: z.string(),
 	DASHBOARD_URL: z.string(),
@@ -94,12 +90,16 @@ export const BaseEnvSchema = z.object({
 	ENVSYNC_LICENSE_KEY: z.string().optional(),
 	ENVSYNC_INSTALL_FINGERPRINT: z.string().optional(),
 	ENVSYNC_LICENSE_LEASE_TTL_SECONDS: z.string().default("300"),
-	// Phase 4 Coder-style entitlement JWT (public key verify only; private key never ships)
+	// Entitlement JWTs are verified with trusted public keys selected by kid.
+	// Generate the signing key offline and configure only the public key.
 	ENVSYNC_ENTITLEMENT_JWT: z.string().optional(),
 	ENVSYNC_ENTITLEMENT_JWT_PATH: z.string().optional(),
 	ENVSYNC_ENTITLEMENT_GRACE_SECONDS: z.string().optional(),
+	ENVSYNC_LICENSE_PUBLIC_KEY_KID: z.string().optional(),
 	ENVSYNC_LICENSE_PUBLIC_KEY_PEM: z.string().optional(),
 	ENVSYNC_LICENSE_PUBLIC_KEY_PATH: z.string().optional(),
+	// JSON object mapping kid to an Ed25519 SPKI public key PEM.
+	ENVSYNC_LICENSE_TRUSTED_KEYS: z.string().optional(),
 	ENVSYNC_STACK_NAME: z.string().optional(),
 	ENVSYNC_RELEASE_VERSION: z.string().optional(),
 	// OpenFGA configuration
@@ -108,7 +108,9 @@ export const BaseEnvSchema = z.object({
 	OPENFGA_MODEL_ID: z.string().optional(),
 	// miniKMS configuration
 	MINIKMS_GRPC_ADDR: z.string().default("localhost:50051"),
-	MINIKMS_TLS_ENABLED: z.string().default("false"),
+	// No default. Plaintext is refused unless development sets MINIKMS_TLS_INSECURE=true.
+	MINIKMS_TLS_ENABLED: z.string().optional(),
+	MINIKMS_TLS_INSECURE: z.string().optional(),
 	MINIKMS_TLS_CA_CERT: z.string().optional(),
 	MINIKMS_TLS_CA_CERT_FILE: z.string().optional(),
 	MINIKMS_TLS_CLIENT_CERT: z.string().optional(),
@@ -143,12 +145,28 @@ export function composeEnvSchema(extensions: ZodRawShape[] = []): ZodObject<ZodR
 }
 
 export const env = composeEnvSchema(collectEnvSchemaExtensions()).superRefine((data, ctx) => {
-	if (data.NODE_ENV !== "production") return;
-	if (!data.API_URL) {
+	if (data.NODE_ENV === "production" && !data.API_URL) {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			path: ["API_URL"],
 			message: "API_URL is required in production",
+		});
+	}
+	for (const issue of minikmsTlsIssues({
+		NODE_ENV: data.NODE_ENV,
+		MINIKMS_TLS_ENABLED: data.MINIKMS_TLS_ENABLED,
+		MINIKMS_TLS_INSECURE: data.MINIKMS_TLS_INSECURE,
+		MINIKMS_TLS_CA_CERT: data.MINIKMS_TLS_CA_CERT,
+		MINIKMS_TLS_CA_CERT_FILE: data.MINIKMS_TLS_CA_CERT_FILE,
+		MINIKMS_TLS_CLIENT_CERT: data.MINIKMS_TLS_CLIENT_CERT,
+		MINIKMS_TLS_CLIENT_CERT_FILE: data.MINIKMS_TLS_CLIENT_CERT_FILE,
+		MINIKMS_TLS_CLIENT_KEY: data.MINIKMS_TLS_CLIENT_KEY,
+		MINIKMS_TLS_CLIENT_KEY_FILE: data.MINIKMS_TLS_CLIENT_KEY_FILE,
+	})) {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			path: [issue.path],
+			message: issue.message,
 		});
 	}
 });

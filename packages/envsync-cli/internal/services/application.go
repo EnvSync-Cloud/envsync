@@ -6,6 +6,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type ApplicationService interface {
@@ -30,7 +31,10 @@ func NewAppService() ApplicationService {
 	}
 }
 
-func (a *app) CreateApp(ctx context.Context, app *domain.Application) (domain.Application, error) {
+func (a *app) CreateApp(ctx context.Context, app *domain.Application) (result domain.Application, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.app.create_app")
+	defer end(&err)
+
 	req := mappers.DomainToAppRequest(app)
 
 	var appRes domain.Application
@@ -43,7 +47,10 @@ func (a *app) CreateApp(ctx context.Context, app *domain.Application) (domain.Ap
 	return appRes, nil
 }
 
-func (a *app) GetAllApps(ctx context.Context) ([]domain.Application, error) {
+func (a *app) GetAllApps(ctx context.Context) (result []domain.Application, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.app.get_all_apps")
+	defer end(&err)
+
 	res, err := a.appRepo.GetAll(ctx)
 	if err != nil {
 		return nil, err
@@ -57,7 +64,10 @@ func (a *app) GetAllApps(ctx context.Context) ([]domain.Application, error) {
 	return apps, nil
 }
 
-func (a *app) DeleteApp(ctx context.Context, app domain.Application) error {
+func (a *app) DeleteApp(ctx context.Context, app domain.Application) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.app.delete_app")
+	defer end(&err)
+
 	if err := a.appRepo.Delete(ctx, app.ID); err != nil {
 		return err
 	}
@@ -65,7 +75,10 @@ func (a *app) DeleteApp(ctx context.Context, app domain.Application) error {
 	return nil
 }
 
-func (a *app) GetAppByID(ctx context.Context, id string) (domain.Application, error) {
+func (a *app) GetAppByID(ctx context.Context, id string) (result domain.Application, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.app.get_app_by_id")
+	defer end(&err)
+
 	res, err := a.appRepo.GetByID(ctx, id)
 	if err != nil {
 		return domain.Application{}, err

@@ -5,6 +5,7 @@ import {
 	detectAnalyticsSource,
 	mapAuditActionToAnalyticsEvent,
 	sanitizeAnalyticsProperties,
+	toMetadataOnlyAuditDetails,
 	type AnalyticsSource,
 } from "envsync-analytics";
 
@@ -50,11 +51,13 @@ function getClient(): PostHog | null {
 		return null;
 	}
 	if (!client) {
-		client = new PostHog(config.POSTHOG_KEY as string, {
+		const options = {
 			host: config.POSTHOG_HOST,
 			flushAt: 20,
 			flushInterval: 10_000,
-		});
+			disable_session_recording: true,
+		};
+		client = new PostHog(config.POSTHOG_KEY as string, options);
 	}
 	return client;
 }
@@ -79,7 +82,7 @@ export function captureProductEvent(input: {
 			event: input.event,
 			groups: input.orgId ? { organization: input.orgId } : undefined,
 			properties: {
-				...input.properties,
+				...sanitizeAnalyticsProperties(input.properties),
 				edition: EditionPolicyService.getEdition(),
 				deployment_mode: EditionPolicyService.getDeploymentMode(),
 			},
@@ -90,6 +93,26 @@ export function captureProductEvent(input: {
 	}
 }
 
+export function auditAnalyticsProperties(input: {
+	action: string;
+	org_id: string;
+	user_id: string;
+	details?: Record<string, unknown>;
+}): Record<string, string | number | boolean | null> {
+	const ctx = getAnalyticsRequestContext();
+	const details = toMetadataOnlyAuditDetails(input.details ?? {}) as Record<string, unknown>;
+	return {
+		...sanitizeAnalyticsProperties(details),
+		org_id: input.org_id,
+		user_id: input.user_id || null,
+		source: ctx?.source ?? "api",
+		role_name: ctx?.role_name ?? null,
+		audit_action: input.action,
+		edition: EditionPolicyService.getEdition(),
+		deployment_mode: EditionPolicyService.getDeploymentMode(),
+	};
+}
+
 export function captureAuditAnalytics(input: {
 	action: string;
 	org_id: string;
@@ -98,19 +121,11 @@ export function captureAuditAnalytics(input: {
 }): void {
 	const event = mapAuditActionToAnalyticsEvent(input.action);
 	if (!event) return;
-	const ctx = getAnalyticsRequestContext();
 	captureProductEvent({
 		event,
 		distinctId: input.user_id || input.org_id || "anonymous",
 		orgId: input.org_id,
-		properties: {
-			...sanitizeAnalyticsProperties(input.details),
-			org_id: input.org_id,
-			user_id: input.user_id || null,
-			source: ctx?.source ?? "api",
-			role_name: ctx?.role_name ?? null,
-			audit_action: input.action,
-		},
+		properties: auditAnalyticsProperties(input),
 	});
 }
 

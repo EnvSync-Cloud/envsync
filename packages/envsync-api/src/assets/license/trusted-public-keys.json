@@ -1,0 +1,4 @@
+{
+  "_comment": "Trusted Ed25519 SPKI public keys for entitlement JWT verification, keyed by kid. Public keys only.",
+  "envsync-entitlement-next": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAOZOzxX+97zzJD0wVq10+LAjzDzzambt+/7+7l4F6DJ4=\n-----END PUBLIC KEY-----"
+}

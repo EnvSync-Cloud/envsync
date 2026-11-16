@@ -144,12 +144,12 @@ function runMigrations() {
 }
 
 async function main() {
-	log("=== Keycloak ===");
-	log(`KEYCLOAK_URL=${config.KEYCLOAK_URL}`);
-	log(`KEYCLOAK_REALM=${config.KEYCLOAK_REALM}`);
-	log(`KEYCLOAK_WEB_CLIENT_ID=${config.KEYCLOAK_WEB_CLIENT_ID}`);
-	log(`KEYCLOAK_API_CLIENT_ID=${config.KEYCLOAK_API_CLIENT_ID}`);
-	log(`KEYCLOAK_CLI_CLIENT_ID=${config.KEYCLOAK_CLI_CLIENT_ID}`);
+	log("=== Atrium ===");
+	log(`ATRIUM_INTERNAL_URL=${config.ATRIUM_INTERNAL_URL}`);
+	log(`ATRIUM_ISSUER=${config.ATRIUM_ISSUER}`);
+	log(`ATRIUM_WEB_CLIENT_ID=${config.ATRIUM_WEB_CLIENT_ID}`);
+	log(`ATRIUM_API_CLIENT_ID=${config.ATRIUM_API_CLIENT_ID}`);
+	log(`ATRIUM_CLI_CLIENT_ID=${config.ATRIUM_CLI_CLIENT_ID}`);
 
 	log("\n=== OpenFGA ===");
 	const openfga = await initOpenFGA();

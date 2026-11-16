@@ -19,9 +19,9 @@ func NewRevokeExpiredCredentialsUseCase() RevokeExpiredCredentialsUseCase {
 	}
 }
 
-func (uc *revokeExpiredCredentialsUseCase) Execute(ctx context.Context) (*sdk.RevokeOldCredentialResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "rotation.revoke-expired")
-	defer span.End()
+func (uc *revokeExpiredCredentialsUseCase) Execute(ctx context.Context) (resp *sdk.RevokeOldCredentialResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "rotation.revoke-expired")
+	defer end(&err)
 
 	result, err := uc.rotationService.RevokeExpiredCredentials(ctx)
 	if err != nil {

@@ -19,9 +19,9 @@ func NewListAppsUseCase() ListAppsUseCase {
 	}
 }
 
-func (uc *listAppsUseCase) Execute(ctx context.Context) ([]domain.Application, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "app.list")
-	defer span.End()
+func (uc *listAppsUseCase) Execute(ctx context.Context) (result []domain.Application, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "app.list")
+	defer end(&err)
 
 	apps, err := uc.appService.GetAllApps(ctx)
 	if err != nil {

@@ -4,7 +4,7 @@ export { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
 export { assertEntitled } from "@/helpers/enterprise-guard";
 export { ALL_ENTERPRISE_FEATURES } from "@/services/entitlement.types";
 export { smartEncrypt, rsaLayerDecrypt } from "@/helpers/key-store";
-export { createKeycloakUser, findKeycloakUserByUsername } from "@/helpers/keycloak";
+export { createDirectoryUser, findDirectoryUserByUsername } from "@/helpers/identity";
 export { clearJwksCache } from "@/helpers/oidc";
 export {
 	buildAuthnRequest,

@@ -1,0 +1,17 @@
+{{template "head" .}}
+    <h1>Reset your password</h1>
+    <p class="sub">If an {{.Brand.ProductName}} account uses this email, we'll send a link.</p>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    {{if .Status}}<div class="status">{{.Status}}</div>{{end}}
+    <form method="POST" action="/forgot">
+        {{template "csrf_field" .}}
+        <div class="field">
+            <label for="username">Work email</label>
+            <input class="input" id="username" name="username" type="text" autocomplete="username" required autofocus>
+        </div>
+        {{template "bot_widget" .}}
+        <button class="primary" type="submit">Email me a link</button>
+    </form>
+    <p class="hint"><a href="/login">Back to sign in</a></p>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

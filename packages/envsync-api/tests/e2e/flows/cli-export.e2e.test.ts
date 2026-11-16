@@ -179,15 +179,15 @@ afterAll(() => {
 });
 
 describe("CLI export E2E", () => {
-	test("exports env vars by env_type_id", async () => {
+	test("exports env vars by project and environment name", async () => {
 		const projectDir = createProjectDir({
-			appId: plainAppId,
-			envTypeId: plainEnvTypeId,
+			appName: "CLI Export Plain",
+			envTypeName: plainEnvTypeName,
 		});
 
 		const result = await execCLI(
 			cliBinary,
-			["export", "--app-id", plainAppId, "--env-type-id", plainEnvTypeId, "--format", "json"],
+			["export", "--app", "CLI Export Plain", "--env", plainEnvTypeName, "--format", "json"],
 			{
 				cwd: projectDir.dir,
 				env: { API_KEY: apiKey },
@@ -209,20 +209,16 @@ describe("CLI export E2E", () => {
 		expect(payload.environment.PLAIN_ONLY).toBe("plain-value");
 	});
 
-	test("exports env vars by env_type name", async () => {
+	test("exports env vars from the project file", async () => {
 		const projectDir = createProjectDir({
-			appId: "unused",
-			envTypeId: "unused",
+			appName: "CLI Export Plain",
+			envTypeName: plainEnvTypeName,
 		});
 
-		const result = await execCLI(
-			cliBinary,
-			["export", "--app-id", plainAppId, "--env-type", plainEnvTypeName, "--format", "json"],
-			{
-				cwd: projectDir.dir,
-				env: { API_KEY: apiKey },
-			},
-		);
+		const result = await execCLI(cliBinary, ["export", "--format", "json"], {
+			cwd: projectDir.dir,
+			env: { API_KEY: apiKey },
+		});
 
 		projectDir.cleanup();
 
@@ -237,13 +233,13 @@ describe("CLI export E2E", () => {
 
 	test("exports env vars plus managed secrets", async () => {
 		const projectDir = createProjectDir({
-			appId: managedAppId,
-			envTypeId: managedEnvTypeId,
+			appName: "CLI Export Managed",
+			envTypeName: "managed-ci",
 		});
 
 		const result = await execCLI(
 			cliBinary,
-			["export", "--app-id", managedAppId, "--env-type-id", managedEnvTypeId, "--format", "json"],
+			["export", "--app", "CLI Export Managed", "--env", "managed-ci", "--format", "json"],
 			{
 				cwd: projectDir.dir,
 				env: { API_KEY: apiKey },
@@ -266,8 +262,8 @@ describe("CLI export E2E", () => {
 
 	test("exports env vars plus self-managed secrets with a private key file", async () => {
 		const projectDir = createProjectDir({
-			appId: selfManagedAppId,
-			envTypeId: selfManagedEnvTypeId,
+			appName: "CLI Export Self Managed",
+			envTypeName: "self-managed-ci",
 		});
 		const privateKeyPath = join(projectDir.dir, "self-managed-private.pem");
 		writeFileSync(privateKeyPath, selfManagedPrivateKey);
@@ -276,10 +272,10 @@ describe("CLI export E2E", () => {
 			cliBinary,
 			[
 				"export",
-				"--app-id",
-				selfManagedAppId,
-				"--env-type-id",
-				selfManagedEnvTypeId,
+				"--app",
+				"CLI Export Self Managed",
+				"--env",
+				"self-managed-ci",
 				"--format",
 				"json",
 				"--private-key-file",
@@ -307,18 +303,18 @@ describe("CLI export E2E", () => {
 
 	test("fails clearly when self-managed secrets are requested without a private key", async () => {
 		const projectDir = createProjectDir({
-			appId: selfManagedAppId,
-			envTypeId: selfManagedEnvTypeId,
+			appName: "CLI Export Self Managed",
+			envTypeName: "self-managed-ci",
 		});
 
 		const result = await execCLI(
 			cliBinary,
 			[
 				"export",
-				"--app-id",
-				selfManagedAppId,
-				"--env-type-id",
-				selfManagedEnvTypeId,
+				"--app",
+				"CLI Export Self Managed",
+				"--env",
+				"self-managed-ci",
 				"--format",
 				"json",
 			],
@@ -336,13 +332,13 @@ describe("CLI export E2E", () => {
 
 	test("fails clearly for unknown app or environment", async () => {
 		const projectDir = createProjectDir({
-			appId: plainAppId,
-			envTypeId: plainEnvTypeId,
+			appName: "CLI Export Plain",
+			envTypeName: plainEnvTypeName,
 		});
 
 		const unknownAppResult = await execCLI(
 			cliBinary,
-			["export", "--app-id", "missing-app", "--env-type-id", plainEnvTypeId, "--format", "json"],
+			["export", "--app", "missing-app", "--env", plainEnvTypeName, "--format", "json"],
 			{
 				cwd: projectDir.dir,
 				env: { API_KEY: apiKey },
@@ -351,7 +347,7 @@ describe("CLI export E2E", () => {
 
 		const unknownEnvResult = await execCLI(
 			cliBinary,
-			["export", "--app-id", plainAppId, "--env-type", "does-not-exist", "--format", "json"],
+			["export", "--app", "CLI Export Plain", "--env", "does-not-exist", "--format", "json"],
 			{
 				cwd: projectDir.dir,
 				env: { API_KEY: apiKey },
@@ -367,15 +363,37 @@ describe("CLI export E2E", () => {
 		expect(unknownEnvResult.stderr).toContain("was not found");
 	});
 
+	test("rejects the old id flags and names the replacement", async () => {
+		const projectDir = createProjectDir({
+			appName: "CLI Export Plain",
+			envTypeName: plainEnvTypeName,
+		});
+
+		const result = await execCLI(
+			cliBinary,
+			["export", "--app-id", plainAppId, "--env-type-id", plainEnvTypeId, "--format", "json"],
+			{
+				cwd: projectDir.dir,
+				env: { API_KEY: apiKey },
+			},
+		);
+
+		projectDir.cleanup();
+
+		expect(result.exitCode).not.toBe(0);
+		const output = result.stderr + result.stdout;
+		expect(output).toContain("use --app");
+	});
+
 	test("honors ENVSYNC_API_URL over the baked backend URL", async () => {
 		const projectDir = createProjectDir({
-			appId: plainAppId,
-			envTypeId: plainEnvTypeId,
+			appName: "CLI Export Plain",
+			envTypeName: plainEnvTypeName,
 		});
 
 		const result = await execCLI(
 			invalidBinary,
-			["export", "--app-id", plainAppId, "--env-type-id", plainEnvTypeId, "--format", "json"],
+			["export", "--app", "CLI Export Plain", "--env", plainEnvTypeName, "--format", "json"],
 			{
 				cwd: projectDir.dir,
 				env: {

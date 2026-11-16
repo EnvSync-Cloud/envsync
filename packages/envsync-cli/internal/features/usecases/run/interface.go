@@ -11,7 +11,7 @@ type ReadConfigUseCase interface {
 }
 
 type FetchAppUseCase interface {
-	Execute(context.Context, string) (*domain.Application, error)
+	Execute(context.Context, *domain.SyncConfig) (*domain.Application, error)
 }
 
 type InjectEnvUseCase interface {

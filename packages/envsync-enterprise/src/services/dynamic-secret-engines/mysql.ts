@@ -71,11 +71,6 @@ export class MySQLEngine implements DynamicSecretEngineInterface {
 		try {
 			for (const stmt of c.creation_statements) {
 				const rendered = applyTemplate(stmt, vars);
-				infoLogs(
-					`MySQLEngine: executing: ${rendered}`,
-					LogTypes.LOGS,
-					"DynamicSecretEngine:MySQL",
-				);
 				await connection.execute(rendered);
 			}
 
@@ -140,11 +135,6 @@ export class MySQLEngine implements DynamicSecretEngineInterface {
 
 			for (const stmt of revocationStmts) {
 				const rendered = applyTemplate(stmt, vars);
-				infoLogs(
-					`MySQLEngine: executing revocation: ${rendered}`,
-					LogTypes.LOGS,
-					"DynamicSecretEngine:MySQL",
-				);
 				await connection.execute(rendered);
 			}
 

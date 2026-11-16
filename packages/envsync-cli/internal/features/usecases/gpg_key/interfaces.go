@@ -11,7 +11,7 @@ type ListKeysUseCase interface {
 }
 
 type GenerateKeyUseCase interface {
-	Execute(ctx context.Context, name, email, algorithm string, keySize, expiresInDays *int, usageFlags []string, isDefault bool) (*domain.GpgKey, error)
+	Execute(ctx context.Context, name, email, algorithm string, expiresInDays *int, usageFlags []string, isDefault bool) (*domain.GpgKey, error)
 }
 
 type SignUseCase interface {

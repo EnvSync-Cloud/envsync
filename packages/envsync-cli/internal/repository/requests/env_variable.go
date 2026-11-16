@@ -1,15 +1,19 @@
 package requests
 
 type BatchSyncEnvRequest struct {
-	AppID     string        `json:"app_id"`
-	EnvTypeID string        `json:"env_type_id"`
-	Envs      []EnvVariable `json:"envs"`
+	AppID       string        `json:"app_id,omitempty"`
+	AppName     string        `json:"app_name,omitempty"`
+	EnvTypeID   string        `json:"env_type_id,omitempty"`
+	EnvTypeName string        `json:"env_type_name,omitempty"`
+	Envs        []EnvVariable `json:"envs"`
 }
 
 type BatchDeleteRequest struct {
-	AppID     string   `json:"app_id"`
-	EnvTypeID string   `json:"env_type_id"`
-	Keys      []string `json:"keys"`
+	AppID       string   `json:"app_id,omitempty"`
+	AppName     string   `json:"app_name,omitempty"`
+	EnvTypeID   string   `json:"env_type_id,omitempty"`
+	EnvTypeName string   `json:"env_type_name,omitempty"`
+	Keys        []string `json:"keys"`
 }
 
 type EnvVariable struct {

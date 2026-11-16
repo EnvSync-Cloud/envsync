@@ -1,3 +1,5 @@
+# Production compose. Passwords, client secrets, and key paths come from the
+# environment (.env.prod.example). This file does not mount *.dev.pem fixtures.
 services:
   envsync_api:
     image: ghcr.io/envsync-cloud/envsync-api:latest
@@ -12,17 +14,33 @@ services:
       S3_ENDPOINT: http://rustfs:9000
       S3_BUCKET_URL: http://rustfs:9000
       OPENFGA_API_URL: http://openfga:8090
-      KEYCLOAK_URL: http://keycloak:8080
+      ATRIUM_INTERNAL_URL: http://atrium:8080
       MINIKMS_GRPC_ADDR: minikms:50051
+      MINIKMS_TLS_ENABLED: "true"
+      MINIKMS_TLS_INSECURE: "false"
+      MINIKMS_TLS_CA_CERT_FILE: /run/secrets/minikms-grpc-ca-cert
+      MINIKMS_TLS_CLIENT_CERT_FILE: /run/secrets/minikms-grpc-client-cert
+      MINIKMS_TLS_CLIENT_KEY_FILE: /run/secrets/minikms-grpc-client-key
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-agent:4318
+    volumes:
+      - ${MINIKMS_GRPC_CA_CERT_PATH:?Set MINIKMS_GRPC_CA_CERT_PATH to the miniKMS gRPC CA certificate}:/run/secrets/minikms-grpc-ca-cert:ro
+      - ${MINIKMS_GRPC_CLIENT_CERT_PATH:?Set MINIKMS_GRPC_CLIENT_CERT_PATH to the miniKMS gRPC client certificate}:/run/secrets/minikms-grpc-client-cert:ro
+      - ${MINIKMS_GRPC_CLIENT_KEY_PATH:?Set MINIKMS_GRPC_CLIENT_KEY_PATH to the miniKMS gRPC client key}:/run/secrets/minikms-grpc-client-key:ro
     depends_on:
-      - postgres
-      - redis
-      - rustfs
-      - openfga
-      - keycloak
-      - minikms
-      - clickstack
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rustfs:
+        condition: service_started
+      openfga:
+        condition: service_started
+      atrium-seed:
+        condition: service_completed_successfully
+      minikms:
+        condition: service_started
+      clickstack:
+        condition: service_started
     networks: [envsync_network]
 
   envsync_init:
@@ -30,20 +48,37 @@ services:
     command: ["bun", "run", "scripts/prod-init.ts"]
     env_file: [.env]
     environment:
+      NODE_ENV: production
       DATABASE_HOST: postgres
       S3_ENDPOINT: http://rustfs:9000
       OPENFGA_API_URL: http://openfga:8090
-      KEYCLOAK_URL: http://keycloak:8080
+      ATRIUM_INTERNAL_URL: http://atrium:8080
       MINIKMS_GRPC_ADDR: minikms:50051
+      MINIKMS_TLS_ENABLED: "true"
+      MINIKMS_TLS_INSECURE: "false"
+      MINIKMS_TLS_CA_CERT_FILE: /run/secrets/minikms-grpc-ca-cert
+      MINIKMS_TLS_CLIENT_CERT_FILE: /run/secrets/minikms-grpc-client-cert
+      MINIKMS_TLS_CLIENT_KEY_FILE: /run/secrets/minikms-grpc-client-key
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-agent:4318
+    volumes:
+      - ${MINIKMS_GRPC_CA_CERT_PATH:?Set MINIKMS_GRPC_CA_CERT_PATH to the miniKMS gRPC CA certificate}:/run/secrets/minikms-grpc-ca-cert:ro
+      - ${MINIKMS_GRPC_CLIENT_CERT_PATH:?Set MINIKMS_GRPC_CLIENT_CERT_PATH to the miniKMS gRPC client certificate}:/run/secrets/minikms-grpc-client-cert:ro
+      - ${MINIKMS_GRPC_CLIENT_KEY_PATH:?Set MINIKMS_GRPC_CLIENT_KEY_PATH to the miniKMS gRPC client key}:/run/secrets/minikms-grpc-client-key:ro
     depends_on:
-      - postgres
-      - redis
-      - rustfs
-      - openfga
-      - keycloak
-      - minikms
-      - clickstack
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rustfs:
+        condition: service_started
+      openfga:
+        condition: service_started
+      atrium-seed:
+        condition: service_completed_successfully
+      minikms:
+        condition: service_started
+      clickstack:
+        condition: service_started
     restart: "no"
     networks: [envsync_network]
 
@@ -52,7 +87,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:-envsync}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
@@ -80,48 +115,64 @@ services:
     restart: unless-stopped
     environment:
       RUSTFS_DATA_DIR: /data
-      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:-rustfsadmin}
-      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:-rustfsadmin}
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY:?RUSTFS_ACCESS_KEY is required}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY:?RUSTFS_SECRET_KEY is required}
       RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
       - rustfs_data:/data
     networks: [envsync_network]
 
-  keycloak_db:
+  atrium_db:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      POSTGRES_DB: keycloak
+      POSTGRES_USER: atrium
+      POSTGRES_PASSWORD: ${ATRIUM_DB_PASSWORD:?ATRIUM_DB_PASSWORD is required}
+      POSTGRES_DB: atrium
     volumes:
-      - keycloak_db_data:/var/lib/postgresql/data
+      - atrium_db_data:/var/lib/postgresql/data
     networks: [envsync_network]
 
-  keycloak:
-    image: envsync-keycloak:${KEYCLOAK_IMAGE_TAG:-local}
+  atrium:
+    image: ${ATRIUM_IMAGE:-ghcr.io/bravo68web/atrium:0.2.0-rc.16}
     restart: unless-stopped
-    entrypoint: ["/bin/sh", "-lc"]
-    command:
-      [
-        "/opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import --override true && exec /opt/keycloak/bin/kc.sh start-dev"
-      ]
     ports:
-      - "8080:8080"
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      KC_HTTP_ENABLED: "true"
-      KC_PROXY_HEADERS: xforwarded
-      KC_HOSTNAME_STRICT: "false"
+      - "${ATRIUM_PORT:-8080}:8080"
     volumes:
-      - ./docker/keycloak/realm-import:/opt/keycloak/data/import:ro
+      - ${ATRIUM_CONFIG_PATH:?Set ATRIUM_CONFIG_PATH to an Atrium config file}:/app/config.yaml:ro
+      - ./docker/atrium/branding/templates:/branding/templates:ro
+      - ./docker/atrium/branding/assets:/branding/assets:ro
+      - ./docker/atrium/branding/email:/branding/email:ro
     depends_on:
-      - keycloak_db
+      - atrium_db
+    networks: [envsync_network]
+
+  atrium-seed:
+    image: curlimages/curl:8.10.1
+    restart: "no"
+    volumes:
+      - ${ATRIUM_CLIENTS_PATH:?Set ATRIUM_CLIENTS_PATH to an Atrium clients file}:/clients.json:ro
+    environment:
+      ATRIUM_MANAGEMENT_CLIENT_ID: ${ATRIUM_MANAGEMENT_CLIENT_ID:-management}
+      ATRIUM_MANAGEMENT_CLIENT_SECRET: ${ATRIUM_MANAGEMENT_CLIENT_SECRET:?ATRIUM_MANAGEMENT_CLIENT_SECRET is required}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        until curl -fsS http://atrium:8080/health >/dev/null; do sleep 1; done
+        token=$$(curl -fsS -X POST http://atrium:8080/oauth/token \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "grant_type=client_credentials&client_id=$$ATRIUM_MANAGEMENT_CLIENT_ID&client_secret=$$ATRIUM_MANAGEMENT_CLIENT_SECRET&scope=management" \
+          | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')
+        test -n "$$token"
+        code=$$(curl -s -o /tmp/existing -w "%{http_code}" -H "Authorization: Bearer $$token" http://atrium:8080/api/clients/envsync-web || true)
+        if [ "$$code" = "200" ]; then exit 0; fi
+        curl -fsS -X POST "http://atrium:8080/api/restore?force=true" \
+          -H "Authorization: Bearer $$token" \
+          -H "Content-Type: application/json" \
+          --data-binary @/clients.json
+    depends_on:
+      - atrium
     networks: [envsync_network]
 
   openfga_db:
@@ -129,7 +180,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: openfga
-      POSTGRES_PASSWORD: ${OPENFGA_DB_PASSWORD:-openfga}
+      POSTGRES_PASSWORD: ${OPENFGA_DB_PASSWORD:?OPENFGA_DB_PASSWORD is required}
       POSTGRES_DB: openfga
     volumes:
       - openfga_db_data:/var/lib/postgresql/data
@@ -140,7 +191,7 @@ services:
     command: migrate
     environment:
       OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable
+      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD:?OPENFGA_DB_PASSWORD is required}@openfga_db:5432/openfga?sslmode=disable
     depends_on:
       - openfga_db
     networks: [envsync_network]
@@ -152,7 +203,7 @@ services:
     command: run
     environment:
       OPENFGA_DATASTORE_ENGINE: postgres
-      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD:-openfga}@openfga_db:5432/openfga?sslmode=disable
+      OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD:?OPENFGA_DB_PASSWORD is required}@openfga_db:5432/openfga?sslmode=disable
       OPENFGA_HTTP_ADDR: 0.0.0.0:8090
       OPENFGA_GRPC_ADDR: 0.0.0.0:8091
     depends_on:
@@ -164,7 +215,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${MINIKMS_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}
       POSTGRES_DB: minikms
     volumes:
       - minikms_db_data:/var/lib/postgresql/data
@@ -174,7 +225,7 @@ services:
     image: postgres:17
     command: ["sh", "-c", "psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/002_vault_storage.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/003_escrow_recovery.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/004_multi_replica_ha.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/005_leaf_cert_type.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/006_env_ca.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/007_pending_org_ca.sql"]
     environment:
-      PGPASSWORD: ${MINIKMS_DB_PASSWORD:-postgres}
+      PGPASSWORD: ${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}
     volumes:
       - ./docker/minikms/migrations:/migrations:ro
     depends_on:
@@ -189,23 +240,23 @@ services:
     command:
       - cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-ca-key && exec minikms
     environment:
-      MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY}
+      MINIKMS_ROOT_KEY: ${MINIKMS_ROOT_KEY:?MINIKMS_ROOT_KEY is required}
       MINIKMS_SESSION_SIGNING_KEY_FILE: /run/secrets/minikms-session-signing-key
       MINIKMS_ROOT_CA_CERT_FILE: /run/secrets/minikms-root-ca-cert
       MINIKMS_ROOT_CA_KEY_FILE: /tmp/minikms-root-ca-key
-      MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
+      MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_TLS_ENABLED: "true"
       MINIKMS_TLS_CERT: /run/secrets/minikms-grpc-server-cert
       MINIKMS_TLS_KEY: /run/secrets/minikms-grpc-server-key
       MINIKMS_TLS_CA_FILE: /run/secrets/minikms-grpc-ca-cert
     volumes:
-      - ./docker/minikms/session-signing-key.dev.pem:/run/secrets/minikms-session-signing-key:ro
-      - ./docker/minikms/root-ca-cert.dev.pem:/run/secrets/minikms-root-ca-cert:ro
-      - ./docker/minikms/root-ca-key.dev.pem:/run/secrets/minikms-root-ca-key:ro
-      - ./docker/minikms/grpc-ca-cert.dev.pem:/run/secrets/minikms-grpc-ca-cert:ro
-      - ./docker/minikms/grpc-server-cert.dev.pem:/run/secrets/minikms-grpc-server-cert:ro
-      - ./docker/minikms/grpc-server-key.dev.pem:/run/secrets/minikms-grpc-server-key:ro
+      - ${MINIKMS_SESSION_SIGNING_KEY_PATH:?Set MINIKMS_SESSION_SIGNING_KEY_PATH to the miniKMS session signing key}:/run/secrets/minikms-session-signing-key:ro
+      - ${MINIKMS_ROOT_CA_CERT_PATH:?Set MINIKMS_ROOT_CA_CERT_PATH to the miniKMS root CA certificate}:/run/secrets/minikms-root-ca-cert:ro
+      - ${MINIKMS_ROOT_CA_KEY_PATH:?Set MINIKMS_ROOT_CA_KEY_PATH to the miniKMS root CA key}:/run/secrets/minikms-root-ca-key:ro
+      - ${MINIKMS_GRPC_CA_CERT_PATH:?Set MINIKMS_GRPC_CA_CERT_PATH to the miniKMS gRPC CA certificate}:/run/secrets/minikms-grpc-ca-cert:ro
+      - ${MINIKMS_GRPC_SERVER_CERT_PATH:?Set MINIKMS_GRPC_SERVER_CERT_PATH to the miniKMS gRPC server certificate}:/run/secrets/minikms-grpc-server-cert:ro
+      - ${MINIKMS_GRPC_SERVER_KEY_PATH:?Set MINIKMS_GRPC_SERVER_KEY_PATH to the miniKMS gRPC server key}:/run/secrets/minikms-grpc-server-key:ro
     depends_on:
       - minikms_migrate
       - redis
@@ -245,7 +296,7 @@ volumes:
   postgres_data:
   redis_data:
   rustfs_data:
-  keycloak_db_data:
+  atrium_db_data:
   openfga_db_data:
   minikms_db_data:
   clickstack_data:

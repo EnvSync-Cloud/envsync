@@ -18,7 +18,7 @@ import { DB } from "envsync-api/ports/db";
 import { AppError, ForbiddenError, NotFoundError, orNotFound } from "envsync-api/ports/errors";
 import { config } from "envsync-api/ports/env";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
-import { createKeycloakUser, findKeycloakUserByUsername } from "envsync-api/ports/helpers";
+import { createDirectoryUser, findDirectoryUserByUsername } from "envsync-api/ports/helpers";
 import { EntitlementService, OrgService, UserService } from "envsync-api/ports/services";
 import type { Database } from "envsync-api/ports/types-db";
 
@@ -432,7 +432,7 @@ export class SamlService {
 
 	/**
 	 * Find an existing user in the org by email, or create a new one with
-	 * Keycloak identity and a default Developer role.
+	 * directory identity and a default Developer role.
 	 */
 	private static resolveSamlUser = async (input: {
 		email: string;
@@ -445,12 +445,12 @@ export class SamlService {
 			return existing.id;
 		}
 
-		const keycloakId = await SamlService.ensureKeycloakIdentity(input.email, input.fullName);
+		const directoryId = await SamlService.ensureDirectoryIdentity(input.email, input.fullName);
 		const roleId = await SamlService.getDefaultMemberRoleId(input.orgId);
 		const membership = await UserService.createMembershipForExistingIdentity({
 			email: input.email,
 			full_name: input.fullName,
-			auth_service_id: keycloakId,
+			auth_service_id: directoryId,
 			org_id: input.orgId,
 			role_id: roleId,
 			is_active: true,
@@ -460,22 +460,22 @@ export class SamlService {
 	};
 
 	/**
-	 * Ensure a Keycloak user exists for the given email. Returns the Keycloak user ID.
-	 * JIT users are created without a usable password. Pre-existing Keycloak users
-	 * keep their credentials.
+	 * Ensure a directory user exists for the given email. Returns the directory user ID.
+	 * JIT users are created without a usable password and without the migration prompt.
+	 * Pre-existing directory users keep their credentials.
 	 */
-	private static ensureKeycloakIdentity = async (
+	private static ensureDirectoryIdentity = async (
 		email: string,
 		fullName: string,
 	): Promise<string> => {
-		const existing = await findKeycloakUserByUsername(email);
+		const existing = await findDirectoryUserByUsername(email);
 		if (existing?.id) return existing.id;
 
 		const parts = fullName.trim().split(/\s+/);
 		const firstName = parts[0]?.slice(0, 200) ?? "User";
 		const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
 
-		const created = await createKeycloakUser({
+		const created = await createDirectoryUser({
 			userName: email,
 			email,
 			firstName,

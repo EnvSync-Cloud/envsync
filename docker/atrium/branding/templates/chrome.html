@@ -1,0 +1,35 @@
+{{define "head"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Brand.PageTitle}} - {{.Brand.ProductName}}</title>
+    {{if .Brand.FaviconURL}}<link rel="icon" href="{{.Brand.FaviconURL}}">{{end}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/branding/assets/styles.css">
+</head>
+<body>
+<main class="stage">
+<section class="card">
+    {{if .Brand.LogoURL}}<div class="brand"><img src="{{.Brand.LogoURL}}" alt="{{.Brand.ProductName}}"></div>{{end}}
+{{end}}
+
+{{define "brand_header"}}
+    <h1>{{.Brand.Heading}}</h1>
+{{end}}
+
+{{define "stopped"}}
+    <h1>{{if .ErrorDescription}}{{.ErrorDescription}}{{else}}Sign-in stopped{{end}}</h1>
+    <p class="hint"><span class="outcome-code">{{.Error}}</span></p>
+{{end}}
+
+{{define "card_close"}}
+</section>
+{{end}}
+
+{{define "brand_footer"}}
+</main>
+</body>
+</html>
+{{end}}

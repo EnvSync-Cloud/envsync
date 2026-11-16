@@ -2,8 +2,9 @@ import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
+import { isUniqueViolation } from "@/helpers/postgres";
 import { DB } from "@/libs/db";
-import { orNotFound, ValidationError } from "@/libs/errors";
+import { ConflictError, orNotFound, ValidationError } from "@/libs/errors";
 import { runSaga } from "@/helpers/saga";
 import { AuthorizationService } from "@/services/authorization.service";
 
@@ -23,6 +24,11 @@ export class EnvTypeService {
 		is_default: boolean;
 		is_protected: boolean;
 	}) => {
+		const trimmedName = name.trim();
+		if (!trimmedName) {
+			throw new ValidationError("Environment name is required");
+		}
+
 		const db = await DB.getInstance();
 		const appExists = await db
 			.selectFrom("app")
@@ -33,6 +39,16 @@ export class EnvTypeService {
 			throw new ValidationError(`App not found: ${app_id}`);
 		}
 
+		const existing = await db
+			.selectFrom("env_type")
+			.select("id")
+			.where("app_id", "=", app_id)
+			.where("name", "=", trimmedName)
+			.executeTakeFirst();
+		if (existing) {
+			throw new ConflictError("Environment name already exists in this project");
+		}
+
 		const ctx: {
 			envType?: {
 				id: string; name: string; org_id: string; app_id: string;
@@ -40,7 +56,8 @@ export class EnvTypeService {
 				created_at: Date; updated_at: Date;
 			};
 		} = {};
-		await runSaga("createEnvType", ctx, [
+		try {
+			await runSaga("createEnvType", ctx, [
 			{
 				name: "db-insert",
 				execute: async (c) => {
@@ -49,7 +66,7 @@ export class EnvTypeService {
 						.insertInto("env_type")
 						.values({
 							id: uuidv4(),
-							name,
+							name: trimmedName,
 							org_id,
 							app_id,
 							color,
@@ -82,7 +99,13 @@ export class EnvTypeService {
 					await invalidateCache(CacheKeys.envTypesByOrg(org_id));
 				},
 			},
-		]);
+			]);
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw new ConflictError("Environment name already exists in this project");
+			}
+			throw error;
+		}
 
 		return ctx.envType!;
 	};
@@ -143,21 +166,46 @@ export class EnvTypeService {
 		const envType = await orNotFound(
 			db
 				.selectFrom("env_type")
-				.select(["id", "org_id"])
+				.select(["id", "org_id", "app_id"])
 				.where("id", "=", id)
 				.executeTakeFirstOrThrow(),
 			"EnvType",
 			id,
 		);
 
-		await db
-			.updateTable("env_type")
-			.set({
-				...data,
-				updated_at: new Date(),
-			})
-			.where("id", "=", id)
-			.execute();
+		const next = { ...data };
+		if (next.name !== undefined) {
+			next.name = next.name.trim();
+			if (!next.name) {
+				throw new ValidationError("Environment name is required");
+			}
+			const clash = await db
+				.selectFrom("env_type")
+				.select("id")
+				.where("app_id", "=", envType.app_id)
+				.where("name", "=", next.name)
+				.where("id", "!=", id)
+				.executeTakeFirst();
+			if (clash) {
+				throw new ConflictError("Environment name already exists in this project");
+			}
+		}
+
+		try {
+			await db
+				.updateTable("env_type")
+				.set({
+					...next,
+					updated_at: new Date(),
+				})
+				.where("id", "=", id)
+				.execute();
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw new ConflictError("Environment name already exists in this project");
+			}
+			throw error;
+		}
 
 		const updatedEnvType = await orNotFound(
 			db

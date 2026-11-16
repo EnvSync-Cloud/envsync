@@ -7,9 +7,8 @@ type ExportUseCase interface {
 }
 
 type ExportOptions struct {
-	AppID           string
-	EnvTypeID       string
-	EnvTypeName     string
+	AppName         string
+	EnvName         string
 	ConfigPath      string
 	Format          string
 	EnableSecrets   string
