@@ -22,6 +22,8 @@ const SENSITIVE_KEYS = new Set([
 ]);
 
 const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+	// API key secrets. Display hints are shorter than this and are left intact.
+	{ pattern: /\beVs_[A-Za-z0-9_-]{12,}\b/g, replacement: "eVs_[REDACTED]" },
 	// Connection strings: postgres://user:pass@host
 	{ pattern: /(\w+:\/\/[^:]+:)[^@]+(@)/g, replacement: "$1[REDACTED]$2" },
 	// Key=value pairs: apiKey=xxx, password=xxx, api_key=xxx

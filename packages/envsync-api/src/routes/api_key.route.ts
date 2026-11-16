@@ -6,6 +6,7 @@ import { ApiKeyController } from "@/controllers/api_key.controller";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import {
 	createApiKeyRequestSchema,
+	createApiKeyResponseSchema,
 	apiKeyResponseSchema,
 	apiKeysResponseSchema,
 	updateApiKeyRequestSchema,
@@ -26,14 +27,14 @@ app.post(
 	describeRoute({
 		operationId: "createApiKey",
 		summary: "Create API Key",
-		description: "Create a new API key for the organization",
+		description: "Create a new API key for the organization. The full key is returned only in this response.",
 		tags: ["API Keys"],
 		responses: {
 			201: {
 				description: "API key created successfully",
 				content: {
 					"application/json": {
-						schema: resolver(apiKeyResponseSchema),
+						schema: resolver(createApiKeyResponseSchema),
 					},
 				},
 			},
@@ -56,7 +57,7 @@ app.get(
 	describeRoute({
 		operationId: "getApiKey",
 		summary: "Get API Key",
-		description: "Retrieve a specific API key",
+		description: "Retrieve API key metadata. The secret and its hash are not included.",
 		tags: ["API Keys"],
 		responses: {
 			200: {
@@ -85,7 +86,7 @@ app.get(
 	describeRoute({
 		operationId: "getAllApiKeys",
 		summary: "Get All API Keys",
-		description: "Retrieve all API keys for the organization",
+		description: "Retrieve API key metadata for the organization. Secrets and hashes are not included.",
 		tags: ["API Keys"],
 		responses: {
 			200: {
@@ -168,12 +169,12 @@ app.delete(
 	ApiKeyController.deleteApiKey,
 );
 
-app.get(
+app.post(
 	"/:id/regenerate",
 	describeRoute({
 		operationId: "regenerateApiKey",
 		summary: "Regenerate API Key",
-		description: "Generate a new value for an existing API key",
+		description: "Rotate an existing API key. The previous secret stops working immediately. The new secret is returned once.",
 		tags: ["API Keys"],
 		responses: {
 			200: {

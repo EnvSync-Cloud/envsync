@@ -55,6 +55,25 @@ describe("API Key Auth E2E", () => {
 		expect(body.user.id).toBe(seed.masterUser.id);
 	});
 
+	test("rejects a modified API key", async () => {
+		const res = await testRequest("/api/auth/me", {
+			apiKey: `${apiKey}x`,
+		});
+		expect(res.status).toBe(401);
+	});
+
+	test("does not return the secret on a later read", async () => {
+		const res = await testRequest(`/api/api_key/${apiKeyId}`, {
+			token: seed.masterUser.token,
+		});
+		expect(res.status).toBe(200);
+
+		const body = await res.json<{ key?: string; key_hint?: string }>();
+		expect(body.key).toBeUndefined();
+		expect(JSON.stringify(body)).not.toContain(apiKey);
+		expect(body.key_hint).toBe(`${apiKey.slice(0, 8)}…`);
+	});
+
 	test("viewer cannot create API keys (403)", async () => {
 		const res = await testRequest("/api/api_key", {
 			method: "POST",
@@ -73,18 +92,30 @@ describe("API Key Auth E2E", () => {
 		const body = await res.json<any[]>();
 		expect(body).toBeArray();
 		expect(body.length).toBeGreaterThan(0);
+		expect(JSON.stringify(body)).not.toContain(apiKey);
 	});
 
-	test("regenerate API key", async () => {
+	test("rejects GET regenerate and rotates on POST", async () => {
+		const previous = apiKey;
+		const getRes = await testRequest(`/api/api_key/${apiKeyId}/regenerate`, {
+			token: seed.masterUser.token,
+		});
+		expect(getRes.status).toBe(404);
+
 		const res = await testRequest(`/api/api_key/${apiKeyId}/regenerate`, {
+			method: "POST",
 			token: seed.masterUser.token,
 		});
 		expect(res.status).toBe(200);
 
 		const body = await res.json<{ newKey: string; id: string }>();
 		expect(body.newKey).toBeDefined();
-		expect(body.newKey).not.toBe(apiKey);
+		expect(body.newKey).not.toBe(previous);
+		expect(body.newKey).toStartWith("eVs");
 		apiKey = body.newKey;
+
+		const oldRes = await testRequest("/api/auth/me", { apiKey: previous });
+		expect(oldRes.status).toBe(401);
 	});
 
 	test("new key works for auth", async () => {
