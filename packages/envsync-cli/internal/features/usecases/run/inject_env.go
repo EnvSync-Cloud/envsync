@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type injectEnv struct {
@@ -18,7 +19,10 @@ func NewInjectEnv() InjectEnvUseCase {
 	}
 }
 
-func (uc *injectEnv) Execute(ctx context.Context) (map[string]string, error) {
+func (uc *injectEnv) Execute(ctx context.Context) (result map[string]string, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "run.inject_env")
+	defer end(&err)
+
 	env, err := uc.readRemoteEnv(ctx)
 	if err != nil {
 		return nil, err

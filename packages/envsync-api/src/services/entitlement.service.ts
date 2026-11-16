@@ -1,11 +1,16 @@
 import { createPublicKey, type KeyObject } from "node:crypto";
 import fs from "node:fs";
-import path from "node:path";
 
-import { importSPKI, jwtVerify, type JWTPayload } from "jose";
+import { decodeProtectedHeader, importSPKI, jwtVerify, type JWTPayload } from "jose";
 
 import { ForbiddenError } from "@/libs/errors";
 import { config } from "@/utils/env";
+import {
+	ENTITLEMENT_FIXTURE_KID,
+	ENTITLEMENT_RETIRED_KID,
+	isRetiredEntitlementPublicKey,
+	loadConfiguredTrustedKeys,
+} from "@/services/entitlement-keys";
 import {
 	ALL_ENTERPRISE_FEATURES,
 	DEFAULT_ENTERPRISE_FEATURE_SET,
@@ -22,6 +27,10 @@ const DEFAULT_GRACE_SECONDS = 72 * 60 * 60; // 72h grace after exp (Coder-like)
 type EntitlementTestOverrides = {
 	claims?: EntitlementClaims | null;
 	public_key_pem?: string;
+	public_key_kid?: string;
+	trusted_keys?: Record<string, string>;
+	/** When true, the fixture verification key may be used. Production verification leaves this unset. */
+	allow_fixture_keys?: boolean;
 	jwt?: string | null;
 	disable?: boolean;
 };
@@ -29,13 +38,6 @@ type EntitlementTestOverrides = {
 function readIfExists(filePath?: string) {
 	if (!filePath) return null;
 	return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : null;
-}
-
-function bundledPublicKeyPem() {
-	return fs.readFileSync(
-		path.join(import.meta.dir, "../assets/license/envsync-entitlement-public.pem"),
-		"utf8",
-	);
 }
 
 function normalizeFeatures(raw: unknown): EnterpriseFeature[] {
@@ -77,22 +79,20 @@ function payloadToClaims(payload: JWTPayload): EntitlementClaims {
 /**
  * Coder-style entitlement verification.
  * Authority is crypto (Ed25519 JWT), not DB status rows alone.
+ * The JWT `kid` selects the public key from the configured trust set.
  */
 export class EntitlementService {
 	static #testOverrides: EntitlementTestOverrides | null = null;
 	static #cached: VerifiedEntitlement | null = null;
-	static #publicKeyPromise: Promise<CryptoKey> | null = null;
 
 	public static setTestOverrides(overrides: EntitlementTestOverrides) {
 		this.#testOverrides = { ...overrides };
 		this.#cached = null;
-		this.#publicKeyPromise = null;
 	}
 
 	public static clearTestOverrides() {
 		this.#testOverrides = null;
 		this.#cached = null;
-		this.#publicKeyPromise = null;
 	}
 
 	public static clearCache() {
@@ -105,23 +105,52 @@ export class EntitlementService {
 		return Number.isFinite(n) && n >= 0 ? n : DEFAULT_GRACE_SECONDS;
 	}
 
-	private static loadPublicKeyPem() {
-		if (this.#testOverrides?.public_key_pem) {
-			return this.#testOverrides.public_key_pem;
-		}
-		return (
-			config.ENVSYNC_LICENSE_PUBLIC_KEY_PEM?.trim()
-			|| readIfExists(config.ENVSYNC_LICENSE_PUBLIC_KEY_PATH)
-			|| bundledPublicKeyPem()
-		);
+	/** Fixture key trust is opt-in and is ignored when NODE_ENV is production. */
+	private static fixtureKeysAllowed() {
+		return this.#testOverrides?.allow_fixture_keys === true && config.NODE_ENV !== "production";
 	}
 
-	private static async getPublicKey() {
-		if (!this.#publicKeyPromise) {
-			const pem = this.loadPublicKeyPem();
-			this.#publicKeyPromise = importSPKI(pem, "EdDSA");
+	/**
+	 * Production trust set, with the bundled key and the test fixture key removed.
+	 * Explicit test mode may add the fixture key back.
+	 */
+	private static resolveTrustedKeys() {
+		const allowFixture = this.fixtureKeysAllowed();
+		const keys = loadConfiguredTrustedKeys();
+
+		if (!allowFixture) {
+			for (const kid of [...keys.keys()]) {
+				const pem = keys.get(kid);
+				if (!pem) continue;
+				if (
+					kid === ENTITLEMENT_FIXTURE_KID
+					|| kid === ENTITLEMENT_RETIRED_KID
+					|| isRetiredEntitlementPublicKey(pem)
+				) {
+					keys.delete(kid);
+				}
+			}
 		}
-		return this.#publicKeyPromise;
+
+		if (allowFixture && this.#testOverrides?.public_key_pem?.trim()) {
+			const pem = this.#testOverrides.public_key_pem.trim();
+			keys.set(this.#testOverrides.public_key_kid?.trim() || ENTITLEMENT_FIXTURE_KID, pem);
+			if (isRetiredEntitlementPublicKey(pem)) {
+				keys.set(ENTITLEMENT_RETIRED_KID, pem);
+				keys.set(ENTITLEMENT_FIXTURE_KID, pem);
+			}
+		}
+
+		for (const [kid, pem] of Object.entries(this.#testOverrides?.trusted_keys ?? {})) {
+			if (!pem?.trim()) continue;
+			const retiredKid = kid === ENTITLEMENT_FIXTURE_KID || kid === ENTITLEMENT_RETIRED_KID;
+			if (!allowFixture && (retiredKid || isRetiredEntitlementPublicKey(pem))) {
+				continue;
+			}
+			keys.set(kid, pem.trim());
+		}
+
+		return keys;
 	}
 
 	private static loadJwtFromEnv(): string | null {
@@ -134,15 +163,33 @@ export class EntitlementService {
 	}
 
 	/**
-	 * Verify a raw entitlement JWT. Does not mutate cache unless apply=true.
+	 * Verify a raw entitlement JWT.
+	 * The protected header `kid` selects the public key.
+	 * The result is cached unless `apply` is false.
 	 */
 	public static async verifyJwt(rawJwt: string, options?: { apply?: boolean; allowGrace?: boolean }) {
 		const allowGrace = options?.allowGrace !== false;
-		const key = await this.getPublicKey();
 		const grace = this.getGraceSeconds();
 
 		let payload: JWTPayload;
+		let kid = "";
 		try {
+			const header = decodeProtectedHeader(rawJwt);
+			kid = typeof header.kid === "string" ? header.kid.trim() : "";
+			if (!kid) {
+				throw new ForbiddenError(
+					"Entitlement JWT is missing a key id.",
+					"ENTITLEMENT_INVALID",
+				);
+			}
+			const pem = this.resolveTrustedKeys().get(kid);
+			if (!pem || (!this.fixtureKeysAllowed() && isRetiredEntitlementPublicKey(pem))) {
+				throw new ForbiddenError(
+					"Entitlement key id is not trusted.",
+					"ENTITLEMENT_INVALID",
+				);
+			}
+			const key = await importSPKI(pem, "EdDSA");
 			const result = await jwtVerify(rawJwt, key, {
 				algorithms: ["EdDSA"],
 				issuer: ENTITLEMENT_ISS,
@@ -150,6 +197,7 @@ export class EntitlementService {
 			});
 			payload = result.payload;
 		} catch (error) {
+			if (error instanceof ForbiddenError) throw error;
 			const message = error instanceof Error ? error.message : String(error);
 			throw new ForbiddenError(
 				`Invalid enterprise entitlement: ${message}`,
@@ -175,6 +223,7 @@ export class EntitlementService {
 
 		const verified: VerifiedEntitlement = {
 			claims,
+			kid,
 			source: "jwt",
 			verified_at: new Date(),
 			in_grace: inGrace,
@@ -353,7 +402,12 @@ export class EntitlementService {
 	}
 
 	/** Node KeyObject for tests/tools that need crypto.verify style APIs. */
-	public static loadPublicKeyObject(): KeyObject {
-		return createPublicKey(this.loadPublicKeyPem());
+	public static loadPublicKeyObject(kid?: string): KeyObject {
+		const keys = this.resolveTrustedKeys();
+		const pem = (kid ? keys.get(kid) : [...keys.values()][0]) ?? null;
+		if (!pem || (!this.fixtureKeysAllowed() && isRetiredEntitlementPublicKey(pem))) {
+			throw new ForbiddenError("Entitlement key id is not trusted.", "ENTITLEMENT_INVALID");
+		}
+		return createPublicKey(pem);
 	}
 }

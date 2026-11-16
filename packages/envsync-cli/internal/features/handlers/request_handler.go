@@ -45,7 +45,7 @@ func (h *RequestHandler) CreateDirect(ctx context.Context, cmd *cli.Command) err
 	}
 	result, err := h.repo.CreateDirect(ctx, payload)
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, result)
@@ -62,7 +62,7 @@ func (h *RequestHandler) CreatePromotion(ctx context.Context, cmd *cli.Command) 
 		"message":            cmd.String("message"),
 	})
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, result)
@@ -73,7 +73,7 @@ func (h *RequestHandler) CreatePromotion(ctx context.Context, cmd *cli.Command) 
 func (h *RequestHandler) List(ctx context.Context, cmd *cli.Command) error {
 	items, err := h.repo.List(ctx)
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, items)
@@ -87,7 +87,7 @@ func (h *RequestHandler) List(ctx context.Context, cmd *cli.Command) error {
 func (h *RequestHandler) Get(ctx context.Context, cmd *cli.Command) error {
 	item, err := h.repo.Get(ctx, cmd.String("id"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, item)
@@ -98,7 +98,7 @@ func (h *RequestHandler) Get(ctx context.Context, cmd *cli.Command) error {
 func (h *RequestHandler) Approve(ctx context.Context, cmd *cli.Command) error {
 	item, err := h.repo.Approve(ctx, cmd.String("id"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, item)
@@ -109,7 +109,7 @@ func (h *RequestHandler) Approve(ctx context.Context, cmd *cli.Command) error {
 func (h *RequestHandler) Reject(ctx context.Context, cmd *cli.Command) error {
 	item, err := h.repo.Reject(ctx, cmd.String("id"), cmd.String("reason"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, item)
@@ -120,7 +120,7 @@ func (h *RequestHandler) Reject(ctx context.Context, cmd *cli.Command) error {
 func (h *RequestHandler) Cancel(ctx context.Context, cmd *cli.Command) error {
 	item, err := h.repo.Cancel(ctx, cmd.String("id"))
 	if err != nil {
-		return h.formatter.FormatError(cmd.Writer, err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, err.Error())
 	}
 	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, item)

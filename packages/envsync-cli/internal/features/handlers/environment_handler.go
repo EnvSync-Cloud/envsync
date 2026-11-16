@@ -3,12 +3,15 @@ package handlers
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/environment"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 )
 
 type EnvironmentHandler struct {
@@ -16,6 +19,7 @@ type EnvironmentHandler struct {
 	switchEnvUseCase environment.SwitchEnvUseCase
 	deleteEnvUseCase environment.DeleteEnvUseCase
 	formatter        *formatters.EnvFormatter
+	tui              *factory.EnvFactory
 }
 
 func NewEnvironmentHandler(
@@ -23,40 +27,56 @@ func NewEnvironmentHandler(
 	switchEnvUseCase environment.SwitchEnvUseCase,
 	deleteEnvUseCase environment.DeleteEnvUseCase,
 	formatter *formatters.EnvFormatter,
+	tui *factory.EnvFactory,
 ) *EnvironmentHandler {
 	return &EnvironmentHandler{
 		getEnvUseCase:    getEnvUseCase,
 		switchEnvUseCase: switchEnvUseCase,
 		deleteEnvUseCase: deleteEnvUseCase,
 		formatter:        formatter,
+		tui:              tui,
 	}
 }
 
 func (h *EnvironmentHandler) SwitchEnvironment(ctx context.Context, cmd *cli.Command) error {
-	if cmd.Bool("json") && (!cmd.IsSet("app-id") && cmd.IsSet("env-id")) {
-		return h.formatUseCaseError(cmd, errors.New("app-id or env-id must be provided with json flag"))
+	if cmd.Bool("json") && !cmd.IsSet("env-id") {
+		return h.formatUseCaseError(cmd, errors.New("env-id must be provided with json flag"))
 	}
 
 	env := domain.EnvType{
-		AppID: cmd.String("app-id"),
-		ID:    cmd.String("env-id"),
+		ID: cmd.String("env-id"),
 	}
 
-	if err := h.switchEnvUseCase.Execute(ctx, env); err != nil {
+	selected, err := h.switchEnvUseCase.Execute(ctx, env)
+	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	return nil
+	if cmd.Bool("json") {
+		return h.formatter.FormatJSON(cmd.Writer, map[string]any{
+			"message":     "Switched to " + selected.Name,
+			"app_id":      selected.AppID,
+			"env_type_id": selected.ID,
+			"name":        selected.Name,
+		})
+	}
+
+	return h.formatter.FormatSuccess(cmd.Writer, "Switched to "+selected.Name)
 }
 
 func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Command) error {
-	if cmd.Bool("json") && !cmd.IsSet("app-id") {
+	if cmd.Bool("json") && cmd.String("app-id") == "" {
 		return h.formatUseCaseError(cmd, errors.New("app-id must be provided with json flag"))
 	}
 
-	appID := cmd.String("app-id")
-
-	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, appID)
+	sp := spinner.New("Fetching environments…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
+	envs, err := h.getEnvUseCase.ExecuteByAppID(ctx, cmd.String("app-id"))
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
@@ -65,7 +85,13 @@ func (h *EnvironmentHandler) GetAllEnvironments(ctx context.Context, cmd *cli.Co
 		return h.formatter.FormatJSON(cmd.Writer, envs)
 	}
 
-	return h.formatter.FormatEnvList(cmd.Writer, envs)
+	// A terminal gets the interactive table. Pipes and scripts keep the plain
+	// table so existing pipelines are unaffected.
+	if len(envs) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListEnvsInteractive(envs)
+	}
+
+	return h.formatter.FormatEnvTable(cmd.Writer, envs)
 }
 
 func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Command) error {
@@ -102,31 +128,33 @@ func (h *EnvironmentHandler) DeleteEnvironment(ctx context.Context, cmd *cli.Com
 
 func (h *EnvironmentHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	if cmd.Bool("json") {
-		jsonOutput := map[string]any{
-			"error": err.Error(),
-		}
-		return h.formatter.FormatJSON(cmd.Writer, jsonOutput)
+		return h.formatter.FormatJSONError(cmd.Writer, err)
 	}
 
 	switch e := err.(type) {
 	case *environment.EnvError:
 		switch e.Code {
 		case environment.EnvErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case environment.EnvErrorCodeServiceError:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		case environment.EnvErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Environment not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Environment not found: "+e.Message)
 		case environment.EnvErrorCodeCorrupted:
-			return h.formatter.FormatError(cmd.Writer, "Environment data is corrupted: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Environment data is corrupted: "+e.Message)
 		case environment.EnvErrorCodePermission:
-			return h.formatter.FormatError(cmd.Writer, "Permission error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Permission error: "+e.Message)
 		case environment.EnvErrorCodeFileSystem:
-			return h.formatter.FormatError(cmd.Writer, "File system error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "File system error: "+e.Message)
+		case environment.EnvErrorCodeTUIError:
+			return h.formatter.FormatError(cmd.ErrWriter, "TUI error: "+e.Message)
+		case environment.EnvErrorCodeCancelled:
+			// Backing out is a choice, not a failure.
+			return h.formatter.FormatWarning(cmd.ErrWriter, e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

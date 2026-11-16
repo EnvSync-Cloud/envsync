@@ -134,7 +134,7 @@ describe("PATCH /api/env_type/:id", () => {
 			token: seed.masterUser.token,
 			body: {
 				id,
-				name: "development",
+				name: "development-renamed",
 				color: "#00FFFF",
 				is_protected: true,
 			},
@@ -148,7 +148,7 @@ describe("PATCH /api/env_type/:id", () => {
 			is_protected: boolean;
 		}>();
 		expect(body.id).toBe(id);
-		expect(body.name).toBe("development");
+		expect(body.name).toBe("development-renamed");
 		expect(body.color).toBe("#00FFFF");
 		expect(body.is_protected).toBe(true);
 	});
@@ -178,5 +178,81 @@ describe("DELETE /api/env_type/:id", () => {
 
 		const body = await res.json<{ message: string }>();
 		expect(body.message).toBe("Env type deleted successfully.");
+	});
+});
+
+describe("environment name uniqueness", () => {
+	test("returns 409 when the same project already has that name", async () => {
+		const first = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "Development",
+				app_id: appId,
+				color: "#112233",
+				is_default: false,
+				is_protected: false,
+			},
+		});
+		expect(first.status).toBe(201);
+
+		const second = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "Development",
+				app_id: appId,
+				color: "#445566",
+				is_default: false,
+				is_protected: false,
+			},
+		});
+		expect(second.status).toBe(409);
+		const body = await second.json<{ error: string }>();
+		expect(body.error).toContain("already exists");
+	});
+
+	test("allows the same name on two projects in one organization", async () => {
+		const other = await seedApp(seed.org.id, { name: `Second Project ${Date.now()}` });
+		const res = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "Development",
+				app_id: other.id,
+				color: "#778899",
+				is_default: false,
+				is_protected: false,
+			},
+		});
+		expect(res.status).toBe(201);
+	});
+
+	test("treats Development and development as different names", async () => {
+		const lower = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "qa",
+				app_id: appId,
+				color: "#abcdef",
+				is_default: false,
+				is_protected: false,
+			},
+		});
+		expect(lower.status).toBe(201);
+
+		const upper = await testRequest("/api/env_type", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				name: "QA",
+				app_id: appId,
+				color: "#fedcba",
+				is_default: false,
+				is_protected: false,
+			},
+		});
+		expect(upper.status).toBe(201);
 	});
 });

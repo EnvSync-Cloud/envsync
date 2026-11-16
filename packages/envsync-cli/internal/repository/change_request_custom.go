@@ -70,7 +70,7 @@ func (r *changeRequestRepo) List(ctx context.Context) ([]ChangeRequestResponse, 
 	if err != nil {
 		return nil, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return nil, fmt.Errorf("list change requests failed: %s", resp.String())
 	}
 	return result, nil
@@ -83,7 +83,7 @@ func (r *changeRequestRepo) Get(ctx context.Context, id string) (ChangeRequestRe
 	if err != nil {
 		return ChangeRequestResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return ChangeRequestResponse{}, fmt.Errorf("get change request failed: %s", resp.String())
 	}
 	return result, nil
@@ -112,7 +112,7 @@ func (r *changeRequestRepo) post(ctx context.Context, path string, payload any) 
 	if err != nil {
 		return ChangeRequestResponse{}, err
 	}
-	if resp.IsError() {
+	if resp.IsStatusFailure() {
 		return ChangeRequestResponse{}, fmt.Errorf("change request call failed: %s", resp.String())
 	}
 	return result, nil

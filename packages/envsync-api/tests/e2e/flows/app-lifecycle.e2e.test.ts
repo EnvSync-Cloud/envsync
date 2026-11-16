@@ -2,7 +2,7 @@
  * E2E: App lifecycle — create → list → get → update → delete
  *
  * Uses real PostgreSQL and OpenFGA (real tuple writes).
- * Keycloak is real in E2E via the real-setup preload.
+ * Atrium is real in E2E via the real-setup preload.
  */
 import { beforeAll, describe, expect, test } from "bun:test";
 

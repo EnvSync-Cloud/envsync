@@ -1,0 +1,6 @@
+Subject: Failed sign-in attempts
+{{.Count}} failed sign-in attempts for {{.Username}} in the last 15 minutes.
+
+Latest IP: {{.IP}}
+
+Reset the password at {{.Issuer}}/forgot

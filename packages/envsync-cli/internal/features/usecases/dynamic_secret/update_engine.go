@@ -4,6 +4,8 @@ import (
 	"context"
 
 	sdk "github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
@@ -19,9 +21,9 @@ func NewUpdateEngineUseCase() UpdateEngineUseCase {
 	}
 }
 
-func (uc *updateEngineUseCase) Execute(ctx context.Context, id string, req *sdk.UpdateDynamicSecretEngineRequest) (*sdk.DynamicSecretEngineResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "dynamic_secret.update_engine")
-	defer span.End()
+func (uc *updateEngineUseCase) Execute(ctx context.Context, id string, req *sdk.UpdateDynamicSecretEngineRequest) (result *sdk.DynamicSecretEngineResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "dynamic_secret.update_engine", trace.WithAttributes(attribute.String("engine.id", id)))
+	defer end(&err)
 
 	if id == "" {
 		return nil, NewValidationError("engine ID is required", ErrIDRequired)

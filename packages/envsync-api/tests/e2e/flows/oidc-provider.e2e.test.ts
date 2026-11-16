@@ -1,7 +1,7 @@
 /**
  * E2E: OIDC Provider CRUD — create → list → get → update → delete
  *
- * Uses real PostgreSQL, OpenFGA, and Keycloak.
+ * Uses real PostgreSQL, OpenFGA, and Atrium.
  * Tests the OIDC provider management surface for CI/CD machine authentication.
  */
 import { beforeAll, describe, expect, test } from "bun:test";

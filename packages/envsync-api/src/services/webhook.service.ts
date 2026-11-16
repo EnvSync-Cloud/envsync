@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { metadataOnlyAuditMessage } from "envsync-analytics";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
@@ -27,6 +28,40 @@ const urlSetMap = {
     certificates: config.DASHBOARD_URL + "/org/certificates",
     base: config.DASHBOARD_URL,
 };
+
+export function auditWebhookBody(input: {
+    event_type: AuditActions;
+    org_id: string;
+    user_id: string;
+    app_id?: string;
+    message: string;
+    org_name: string;
+    app_name?: string;
+    user_name: string;
+    webhook_name: string;
+    linked_to_entity: "org" | "app";
+    timestamp: string;
+    url_for_entity_in_question: string;
+}) {
+    const data = {
+        event_type: input.event_type,
+        org_id: input.org_id,
+        user_id: input.user_id,
+        app_id: input.app_id,
+        message: metadataOnlyAuditMessage(input.message),
+    };
+    return {
+        event_type: input.event_type,
+        org_name: input.org_name,
+        app_name: input.app_name ?? "",
+        user_name: input.user_name,
+        webhook_name: input.webhook_name,
+        linked_to_entity: input.linked_to_entity,
+        timestamp: input.timestamp,
+        url_for_entity_in_question: input.url_for_entity_in_question,
+        data,
+    };
+}
 
 export class WebhookService {
     public static createWebhook = async ({
@@ -323,37 +358,32 @@ export class WebhookService {
                         break;
                 }
 
+                const body = auditWebhookBody({
+                    event_type: payload.event_type,
+                    org_id: payload.org_id,
+                    user_id: payload.user_id,
+                    app_id: payload.app_id,
+                    message: payload.message,
+                    org_name: org.name,
+                    app_name: app?.name || "",
+                    user_name: user.full_name || user.email,
+                    webhook_name: webhook.name,
+                    linked_to_entity: webhook.linked_to,
+                    timestamp: new Date().toISOString(),
+                    url_for_entity_in_question,
+                });
+
                 if(webhook.linked_to === "app" && app?.id === webhook.app_id) {
                     await WebhookHandler.triggerWebhook(
                         webhook.url,
-                        {
-                            event_type: payload.event_type,
-                            org_name: org.name,
-                            app_name: app?.name || "",
-                            user_name: user.full_name || user.email,
-                            webhook_name: webhook.name,
-                            linked_to_entity: webhook.linked_to,
-                            timestamp: new Date().toISOString(),
-                            url_for_entity_in_question: url_for_entity_in_question,
-                            data: payload,
-                        },
+                        body,
                         webhook.webhook_type
                     )
                 }
                 else if (webhook.linked_to === "org") {
                     await WebhookHandler.triggerWebhook(
                         webhook.url,
-                        {
-                            event_type: payload.event_type,
-                            org_name: org.name,
-                            app_name: app?.name ?? "",
-                            user_name: user.full_name || user.email,
-                            webhook_name: webhook.name,
-                            linked_to_entity: webhook.linked_to,
-                            timestamp: new Date().toISOString(),
-                            url_for_entity_in_question: url_for_entity_in_question,
-                            data: payload,
-                        },
+                        body,
                         webhook.webhook_type
                     )
                 }

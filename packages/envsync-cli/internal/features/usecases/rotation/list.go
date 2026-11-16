@@ -19,9 +19,9 @@ func NewListPoliciesUseCase() ListPoliciesUseCase {
 	}
 }
 
-func (uc *listPoliciesUseCase) Execute(ctx context.Context, req *sdk.GetRotationPoliciesRequest) (sdk.RotationPoliciesResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "rotation.list")
-	defer span.End()
+func (uc *listPoliciesUseCase) Execute(ctx context.Context, req *sdk.GetRotationPoliciesRequest) (result sdk.RotationPoliciesResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "rotation.list")
+	defer end(&err)
 
 	policies, err := uc.rotationService.ListPolicies(ctx, req)
 	if err != nil {

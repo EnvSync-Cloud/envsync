@@ -2,6 +2,7 @@
  * Stable public ports for envsync-enterprise (and other peers).
  * Prefer these over monorepo `@/` path aliases into envsync-api/src.
  */
+export * from "./audit-metadata";
 export * from "./db";
 export * from "./errors";
 export * from "./logger";

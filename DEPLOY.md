@@ -8,6 +8,10 @@ This guide covers **how to deploy** EnvSync for every product edition:
 | **Self-host OSS** | Single-org | Customer / operator | `@envsync-cloud/deploy` (`envsync-deploy`) |
 | **Self-host Enterprise** | Licensed self-host | Customer / operator | `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) |
 
+Production Compose (`docker-compose.prod.yaml`) does not mount `docker/minikms/*.dev.pem` and does not fill in default passwords or client secrets. Copy `.env.prod.example` to `.env`, set every blank password, client secret, and key path, then start Compose. It exits with the missing variable name when one of those values is empty. Point `ATRIUM_CONFIG_PATH` and `ATRIUM_CLIENTS_PATH` at operator files (see `docker/atrium/config.prod.example.yaml` and `docker/atrium/clients.prod.example.json`), not the local Atrium config or `clients.json`.
+
+miniKMS TLS is required when `NODE_ENV` is not `development`. Set `MINIKMS_TLS_ENABLED=true` and provide CA and client certificate material. `MINIKMS_TLS_INSECURE=true` is honored only when `NODE_ENV=development`. Files named `*.dev.pem` under `docker/minikms/` are development and test fixtures: [docker/minikms/README.md](./docker/minikms/README.md).
+
 Edition matrix and package graph: [EDITIONING.md](./EDITIONING.md).  
 OSS-focused long form (legacy title): [SELFHOSTING.md](./SELFHOSTING.md).  
 Agent product facts: [AGENTS.md](./AGENTS.md).
@@ -32,7 +36,7 @@ Browser / CLI / SDKs
    t.<domain>    ── /ph/*               (PostHog first-party proxy)
                  └── /obs/*             (OTLP first-party proxy)
    app.<domain>  ── dashboard
-   auth.<domain> ── Keycloak
+   auth.<domain> ── Atrium
 ```
 
 ---
@@ -60,7 +64,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
               Your API host (VPS / k8s)
          Traefik → api.*  / t.*  / auth.*  / obs.*  / s3.*
          envsync-api (+ manage /api/v1/manage)
-         Postgres, Redis, Keycloak, OpenFGA, miniKMS, RustFS, …
+         Postgres, Redis, Atrium, OpenFGA, miniKMS, RustFS, …
 ```
 
 | Surface | Where it runs | How you deploy |
@@ -68,7 +72,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
 | Dashboard | **Cloudflare** | `.github/workflows/deploy-fe.yaml` → `build:hosted` + Wrangler |
 | Landing | **Cloudflare** | same workflow, `envsync-landing` job |
 | API + infra | **Your server** | Swarm stack / compose (or `envsync-deploy*` for full self-host; for Hosted often monorepo-managed stack) |
-| Auth (Keycloak) | **Your server** (or managed IdP) | Behind `auth.<domain>` |
+| Auth (Atrium) | **Your server** (or managed IdP) | Behind `auth.<domain>` |
 
 **Do not** put the React apps on the VPS if CF is the source of truth for UI. Swarm may still run a `web_nginx` service for self-host; for Hosted hybrid you can leave it unused or remove it and point DNS only at CF.
 
@@ -80,7 +84,7 @@ Most Hosted installs split **frontend** and **API/data plane**:
 | Apex / marketing | Cloudflare (landing) |
 | `api.envsync.example` | VPS A-record / LB → Traefik |
 | `t.envsync.example` | VPS → Traefik → API `/ph` (PostHog) and `/obs` (OTLP) |
-| `auth.envsync.example` | VPS → Keycloak |
+| `auth.envsync.example` | VPS → Atrium |
 | `obs.` / `s3.` | VPS (optional) |
 
 #### CF web build / runtime
@@ -114,7 +118,7 @@ Same table as below, plus CORS/cookie origins must include CF app/landing URLs:
 
 - `DASHBOARD_URL=https://app.<domain>`
 - `LANDING_PAGE_URL=https://<marketing-domain>`
-- Keycloak web redirect / callback URLs must use **API** callback + **CF app** callback (not localhost)
+- Atrium web redirect / callback URLs must use **API** callback + **CF app** callback (not localhost)
 
 #### Migrate off legacy management-api container
 
@@ -216,7 +220,7 @@ Does **not** pull enterprise packages or spawn `deploy-enterprise`.
 |------|------|
 | `app.<root>` | Dashboard |
 | `api.<root>` | Product API only (no manage modules on OSS) |
-| `auth.<root>` | Keycloak |
+| `auth.<root>` | Atrium |
 | `obs.<root>` | Observability (if enabled) |
 | `s3.<root>` / `console.s3.<root>` | Object storage |
 
@@ -415,7 +419,7 @@ Same subcommands as OSS (`upgrade`, `promote`, `rollback`, `backup`, `restore`, 
 
 ## 5. Local development (not production)
 
-Monorepo root — **not** a substitute for Swarm deploy:
+Monorepo root — **not** a substitute for Swarm deploy. `docker compose up` uses `docker-compose.yaml`, which may mount `docker/minikms/*.dev.pem`. Those files stay on the local and CI path only.
 
 ```bash
 cp .env.example .env
@@ -431,7 +435,7 @@ bun run dev
 | Dashboard | `http://app.lvh.me:8001` |
 | API | `http://api.lvh.me:4000` |
 | Manage (if EE enabled locally) | `http://api.lvh.me:4000/api/v1/manage/...` |
-| Keycloak | `http://auth.lvh.me:8080` |
+| Atrium | `http://auth.lvh.me:8080` |
 
 Defaults often favor Hosted-like enterprise for DX. For self-host policy locally set:
 

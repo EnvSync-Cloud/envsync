@@ -3,8 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ExportEnvRequest = {
-    app_id: string;
+    app_id?: string;
+    app_name?: string;
     env_type_id?: string;
+    env_type_name?: string;
     env_type?: string;
     enable_secrets?: ExportEnvRequest.enable_secrets;
     is_secret_managed?: ExportEnvRequest.is_secret_managed;

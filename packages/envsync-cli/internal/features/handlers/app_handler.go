@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli/v3"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/usecases/app"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/formatters"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/spinner"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/presentation/tui/factory"
 )
 
 type AppHandler struct {
@@ -17,6 +20,7 @@ type AppHandler struct {
 	deleteUseCase app.DeleteAppUseCase
 	listUseCase   app.ListAppsUseCase
 	formatter     *formatters.AppFormatter
+	tui           *factory.AppFactory
 }
 
 func NewAppHandler(
@@ -24,12 +28,14 @@ func NewAppHandler(
 	deleteUseCase app.DeleteAppUseCase,
 	listUseCase app.ListAppsUseCase,
 	formatter *formatters.AppFormatter,
+	tui *factory.AppFactory,
 ) *AppHandler {
 	return &AppHandler{
 		createUseCase: createUseCase,
 		deleteUseCase: deleteUseCase,
 		listUseCase:   listUseCase,
 		formatter:     formatter,
+		tui:           tui,
 	}
 }
 
@@ -41,47 +47,54 @@ func (h *AppHandler) Create(ctx context.Context, cmd *cli.Command) error {
 	if cmd.IsSet("description") {
 		application.Description = cmd.String("description")
 	}
-	if cmd.IsSet("metadata") {
-		metadata := cmd.String("metadata")
-		if metadata != "" {
-			metadataMap := make(map[string]any)
-			application.Metadata = metadataMap
-		}
-	}
 
-	setDefaultEnv := cmd.Bool("default-types")
+	metadata, err := domain.ParseMetadata(cmd.StringSlice("metadata"))
+	if err != nil {
+		return h.formatter.FormatError(cmd.ErrWriter, "Invalid metadata: "+err.Error())
+	}
+	application.Metadata = metadata
+
 	enableSecret := cmd.Bool("enable-secret")
 	publicKey := cmd.String("public-key")
 
 	application.EnableSecrets = enableSecret
 	application.PublicKey = publicKey
+	application.IsManagedSecret = enableSecret && publicKey == ""
 
-	if publicKey == "" && enableSecret {
-		application.IsManagedSecret = true
-	} else {
-		application.IsManagedSecret = false
+	if cmd.Bool("default-types") {
+		application.EnvTypes = append(application.EnvTypes, domain.DefaultEnvTypes...)
 	}
-
-	ctx = context.WithValue(ctx, "setDefaultEnv", setDefaultEnv)
 
 	createdApp, err := h.createUseCase.Execute(ctx, application)
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
 
-	if cmd.Bool("json") {
-		if application.EnableSecrets && createdApp.PublicKey == "" {
-			return h.formatter.FormatWarningJSON(cmd.Writer, "secrets are enabled but no public key was provided. A self managed key will be generated!!!")
-		}
+	// A key is only used when secrets are enabled, so say so rather than
+	// dropping it without a word.
+	if publicKey != "" && !enableSecret {
+		h.warn(cmd, "--public-key was ignored because --enable-secret is not set")
+	}
+	if application.IsManagedSecret {
+		h.warn(cmd, "secrets are enabled but no public key was provided. A self managed key will be generated!!!")
+	}
 
+	if cmd.Bool("json") {
 		return h.formatter.FormatJSON(cmd.Writer, createdApp)
 	}
 
-	if application.EnableSecrets && application.PublicKey == "" {
-		h.formatter.FormatWarning(cmd.Writer, "Secrets are enabled but no public key was provided. A self managed key will be generated!!!")
-	}
-
 	return h.formatter.FormatCreateSuccessMessage(cmd.Writer, *createdApp)
+}
+
+// warn reports a non-fatal problem. Under --json it goes to stderr so stdout
+// stays a single parseable document. A failed warning must not fail the
+// command, so the write error is deliberately dropped.
+func (h *AppHandler) warn(cmd *cli.Command, message string) {
+	out := cmd.Writer
+	if cmd.Bool("json") {
+		out = cmd.ErrWriter
+	}
+	_ = h.formatter.FormatWarning(out, message)
 }
 
 func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
@@ -121,9 +134,15 @@ func (h *AppHandler) Delete(ctx context.Context, cmd *cli.Command) error {
 }
 
 func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
-	ctx = context.WithValue(ctx, "json", cmd.Bool("json"))
-
+	// Show progress while the apps load, then hand the screen over to the view.
+	sp := spinner.New("Fetching applications…", spinner.IsTerminal(os.Stderr), os.Stderr)
+	if !cmd.Bool("json") {
+		sp.Start()
+	}
 	apps, err := h.listUseCase.Execute(ctx)
+	if !cmd.Bool("json") {
+		sp.Stop()
+	}
 	if err != nil {
 		return h.formatUseCaseError(cmd, err)
 	}
@@ -132,9 +151,13 @@ func (h *AppHandler) List(ctx context.Context, cmd *cli.Command) error {
 		return h.formatter.FormatJSON(cmd.Writer, apps)
 	}
 
-	h.formatter.FormatListTable(cmd.Writer, apps)
+	// A terminal gets the interactive list. Pipes and scripts keep the plain
+	// table so existing pipelines are unaffected.
+	if len(apps) > 0 && spinner.IsTerminal(cmd.Writer) {
+		return h.tui.ListAppsInteractive(apps)
+	}
 
-	return nil
+	return h.formatter.FormatListTable(cmd.Writer, apps)
 }
 
 func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {
@@ -146,23 +169,23 @@ func (h *AppHandler) formatUseCaseError(cmd *cli.Command, err error) error {
 	case *app.AppError:
 		switch e.Code {
 		case app.AppErrorCodeNotFound:
-			return h.formatter.FormatError(cmd.Writer, "Application not found: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Application not found: "+e.Message)
 		case app.AppErrorCodeAlreadyExists:
-			return h.formatter.FormatError(cmd.Writer, "Application already exists: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Application already exists: "+e.Message)
 		case app.AppErrorCodeValidation:
-			return h.formatter.FormatError(cmd.Writer, "Validation error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Validation error: "+e.Message)
 		case app.AppErrorCodeAccessDenied:
-			return h.formatter.FormatError(cmd.Writer, "Access denied: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Access denied: "+e.Message)
 		case app.AppErrorCodeInUse:
 			return h.formatter.FormatWarning(cmd.Writer, "Cannot complete operation: "+e.Message)
 		case app.AppErrorCodeCancelled:
 			return h.formatter.FormatWarning(cmd.Writer, "Operation cancelled: "+e.Message)
 		case app.AppErrorTUI:
-			return h.formatter.FormatError(cmd.Writer, "TUI error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "TUI error: "+e.Message)
 		default:
-			return h.formatter.FormatError(cmd.Writer, "Service error: "+e.Message)
+			return h.formatter.FormatError(cmd.ErrWriter, "Service error: "+e.Message)
 		}
 	default:
-		return h.formatter.FormatError(cmd.Writer, "Unexpected error: "+err.Error())
+		return h.formatter.FormatError(cmd.ErrWriter, "Unexpected error: "+err.Error())
 	}
 }

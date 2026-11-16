@@ -3,7 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GetEnvRequest = {
-    app_id: string;
-    env_type_id: string;
+    app_id?: string;
+    app_name?: string;
+    env_type_id?: string;
+    env_type_name?: string;
 };
 

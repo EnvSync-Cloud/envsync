@@ -2,17 +2,17 @@
  * Auth helpers for E2E tests.
  *
  * Uses the same DB seed helpers as mock tests, plus real FGA/KMS clients.
- * Tokens are real JWTs issued by the real Keycloak instance.
+ * Tokens are real JWTs issued by the real Atrium instance.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { v4 as uuidv4 } from "uuid";
 
 import {
-	bootstrapKeycloakClient,
-	createKeycloakTestUser,
-	getKeycloakAccessToken,
-} from "./keycloak-bootstrap";
+	bootstrapAtriumClient,
+	createAtriumTestUser,
+	getAtriumAccessToken,
+} from "./atrium-bootstrap";
 import { ensureE2EEnv } from "./bootstrap-env";
 
 ensureE2EEnv();
@@ -36,9 +36,9 @@ export interface E2ESeed {
 	roles: Record<string, { id: string; name: string }>;
 }
 
-// ── Keycloak credentials (cached from env) ──────────────────────────
+// ── Atrium credentials (cached from env) ──────────────────────────
 
-type KeycloakCreds = {
+type AtriumCreds = {
 	url: string;
 	realm: string;
 	adminUser: string;
@@ -47,18 +47,18 @@ type KeycloakCreds = {
 	clientSecret: string;
 };
 
-let keycloakCreds: KeycloakCreds | null = null;
-let keycloakCredsPromise: Promise<KeycloakCreds> | null = null;
+let atriumCreds: AtriumCreds | null = null;
+let atriumCredsPromise: Promise<AtriumCreds> | null = null;
 
-function getBaseKeycloakCredentials() {
-	const url = process.env.KEYCLOAK_URL;
-	const realm = process.env.KEYCLOAK_REALM;
-	const adminUser = process.env.KEYCLOAK_ADMIN_USER;
-	const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD;
+function getBaseAtriumCredentials() {
+	const url = process.env.ATRIUM_INTERNAL_URL ?? process.env.ATRIUM_PUBLIC_URL;
+	const realm = "atrium";
+	const adminUser = process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management";
+	const adminPassword = process.env.ATRIUM_MANAGEMENT_CLIENT_SECRET;
 
-	if (!url || !realm || !adminUser || !adminPassword) {
+	if (!url || !adminPassword) {
 		throw new Error(
-			"Missing Keycloak E2E admin credentials. Ensure KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_ADMIN_USER, and KEYCLOAK_ADMIN_PASSWORD are set. " +
+			"Missing Atrium E2E credentials. Ensure ATRIUM_INTERNAL_URL and ATRIUM_MANAGEMENT_CLIENT_SECRET are set. " +
 			"Run 'bun run e2e:init' first.",
 		);
 	}
@@ -82,13 +82,13 @@ function findProjectRoot(): string {
 	return path.resolve(import.meta.dir, "../../..");
 }
 
-function persistKeycloakClientCredentials(clientId: string, clientSecret: string): void {
+function persistAtriumClientCredentials(clientId: string, clientSecret: string): void {
 	const envPath = path.join(findProjectRoot(), ".env.e2e.test");
 	const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
 	const lines = existing.length > 0 ? existing.split(/\r?\n/) : [];
 	const next = new Map<string, string>([
-		["KEYCLOAK_E2E_CLIENT_ID", clientId],
-		["KEYCLOAK_E2E_CLIENT_SECRET", clientSecret],
+		["ATRIUM_E2E_CLIENT_ID", clientId],
+		["ATRIUM_E2E_CLIENT_SECRET", clientSecret],
 	]);
 
 	const updatedLines = lines.map((line) => {
@@ -108,17 +108,17 @@ function persistKeycloakClientCredentials(clientId: string, clientSecret: string
 	fs.writeFileSync(envPath, `${updatedLines.filter(Boolean).join("\n")}\n`, "utf8");
 }
 
-async function bootstrapAndPersistKeycloakClient(baseCreds: ReturnType<typeof getBaseKeycloakCredentials>): Promise<KeycloakCreds> {
-	const client = await bootstrapKeycloakClient(
+async function bootstrapAndPersistAtriumClient(baseCreds: ReturnType<typeof getBaseAtriumCredentials>): Promise<AtriumCreds> {
+	const client = await bootstrapAtriumClient(
 		baseCreds.url,
 		baseCreds.realm,
 		baseCreds.adminUser,
 		baseCreds.adminPassword,
 	);
 
-	process.env.KEYCLOAK_E2E_CLIENT_ID = client.clientId;
-	process.env.KEYCLOAK_E2E_CLIENT_SECRET = client.clientSecret;
-	persistKeycloakClientCredentials(client.clientId, client.clientSecret);
+	process.env.ATRIUM_E2E_CLIENT_ID = client.clientId;
+	process.env.ATRIUM_E2E_CLIENT_SECRET = client.clientSecret;
+	persistAtriumClientCredentials(client.clientId, client.clientSecret);
 
 	return {
 		...baseCreds,
@@ -127,14 +127,14 @@ async function bootstrapAndPersistKeycloakClient(baseCreds: ReturnType<typeof ge
 	};
 }
 
-async function ensureKeycloakCredentials(forceRefresh = false): Promise<KeycloakCreds> {
-	if (!forceRefresh && keycloakCreds) return keycloakCreds;
-	if (!forceRefresh && keycloakCredsPromise) return keycloakCredsPromise;
+async function ensureAtriumCredentials(forceRefresh = false): Promise<AtriumCreds> {
+	if (!forceRefresh && atriumCreds) return atriumCreds;
+	if (!forceRefresh && atriumCredsPromise) return atriumCredsPromise;
 
 	const promise = (async () => {
-		const baseCreds = getBaseKeycloakCredentials();
-		const clientId = process.env.KEYCLOAK_E2E_CLIENT_ID;
-		const clientSecret = process.env.KEYCLOAK_E2E_CLIENT_SECRET;
+		const baseCreds = getBaseAtriumCredentials();
+		const clientId = process.env.ATRIUM_E2E_CLIENT_ID;
+		const clientSecret = process.env.ATRIUM_E2E_CLIENT_SECRET;
 
 		if (!forceRefresh && clientId && clientSecret) {
 			return {
@@ -144,15 +144,15 @@ async function ensureKeycloakCredentials(forceRefresh = false): Promise<Keycloak
 			};
 		}
 
-		return bootstrapAndPersistKeycloakClient(baseCreds);
+		return bootstrapAndPersistAtriumClient(baseCreds);
 	})();
 
-	keycloakCredsPromise = promise;
+	atriumCredsPromise = promise;
 	try {
-		keycloakCreds = await promise;
-		return keycloakCreds;
+		atriumCreds = await promise;
+		return atriumCreds;
 	} finally {
-		keycloakCredsPromise = null;
+		atriumCredsPromise = null;
 	}
 }
 
@@ -313,13 +313,13 @@ export async function seedE2EOrg(): Promise<E2ESeed> {
 
 /**
  * Create a test user in an org with a given role.
- * Creates a real user in Keycloak and obtains a real JWT.
+ * Creates a real user in Atrium and obtains a real JWT.
  */
 export async function seedE2EUser(
 	orgId: string,
 	roleId: string,
 ): Promise<E2EUser> {
-	let creds = await ensureKeycloakCredentials();
+	let creds = await ensureAtriumCredentials();
 	const { CertificateService } = await import("@/services/certificate.service");
 	const { CertificateRoleMapper } = await import("@/services/certificate-role.mapper");
 	const { RoleService } = await import("@/services/role.service");
@@ -329,7 +329,7 @@ export async function seedE2EUser(
 	const email = `e2e-${id.slice(0, 8)}@test.local`;
 	const password = "E2eTest1!strong";
 
-	const keycloakUser = await createKeycloakTestUser(creds.url, creds.realm, creds.adminUser, creds.adminPassword, {
+	const atriumUser = await createAtriumTestUser(creds.url, creds.realm, creds.adminUser, creds.adminPassword, {
 		email,
 		firstName: "E2E",
 		lastName: `User ${id.slice(0, 8)}`,
@@ -342,7 +342,7 @@ export async function seedE2EUser(
 			id,
 			email,
 			full_name: `E2E User ${id.slice(0, 8)}`,
-			auth_service_id: keycloakUser.keycloakUserId,
+			auth_service_id: atriumUser.directoryUserId,
 			org_id: orgId,
 			role_id: roleId,
 			is_active: true,
@@ -351,10 +351,10 @@ export async function seedE2EUser(
 		})
 		.execute();
 
-	// 3. Get real JWT access token from Keycloak
+	// 3. Get real JWT access token from Atrium
 	let token: string;
 	try {
-		token = await getKeycloakAccessToken(
+		token = await getAtriumAccessToken(
 			creds.url,
 			creds.realm,
 			creds.clientId,
@@ -367,8 +367,8 @@ export async function seedE2EUser(
 			throw err;
 		}
 
-		creds = await ensureKeycloakCredentials(true);
-		token = await getKeycloakAccessToken(
+		creds = await ensureAtriumCredentials(true);
+		token = await getAtriumAccessToken(
 			creds.url,
 			creds.realm,
 			creds.clientId,
@@ -405,7 +405,7 @@ export async function seedE2EUser(
 		id,
 		token,
 		email,
-		authServiceId: keycloakUser.keycloakUserId,
+		authServiceId: atriumUser.directoryUserId,
 	};
 }
 
@@ -472,11 +472,10 @@ export async function checkServiceHealth(): Promise<void> {
 			},
 		},
 		{
-			name: "Keycloak",
+			name: "Atrium",
 			check: async () => {
-				const url = (process.env.KEYCLOAK_URL ?? "http://localhost:8080").replace(/\/$/, "");
-				const realm = process.env.KEYCLOAK_REALM ?? "envsync";
-				const res = await fetch(`${url}/realms/${realm}/.well-known/openid-configuration`, {
+				const url = (process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080").replace(/\/$/, "");
+				const res = await fetch(`${url}/health`, {
 					signal: AbortSignal.timeout(5000),
 				});
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);

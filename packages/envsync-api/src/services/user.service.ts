@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "@/helpers/cache";
 import { CacheKeys, CacheTTL } from "@/helpers/cache-keys";
-import { createKeycloakUser } from "@/helpers/keycloak";
+import { createDirectoryUser } from "@/helpers/identity";
 import { DB } from "@/libs/db";
 import { AppError, orNotFound } from "@/libs/errors";
 import { runSaga } from "@/helpers/saga";
@@ -83,7 +83,7 @@ export class UserService {
 					const firstName = parts[0]?.slice(0, 200) ?? "User";
 					const lastName = parts.slice(1).join(" ").slice(0, 200) || "-";
 
-					const zUser = await createKeycloakUser({
+					const zUser = await createDirectoryUser({
 						userName: data.email,
 						email: data.email,
 						firstName,
@@ -494,13 +494,13 @@ export class UserService {
 			}));
 	};
 
-	public static getUserByKeycloakId = async (auth_service_id: string) => {
+	public static getUserByDirectoryId = async (auth_service_id: string) => {
 		return cacheAside(CacheKeys.userByIdp(auth_service_id), CacheTTL.SHORT, async () => {
 			return UserService.resolveActiveMembershipByIdpId(auth_service_id);
 		});
 	};
 
-	public static getUserByIdpId = (idpId: string) => UserService.getUserByKeycloakId(idpId);
+	public static getUserByIdpId = (idpId: string) => UserService.getUserByDirectoryId(idpId);
 
 	public static getOrgUserByEmail = async (org_id: string, email: string) => {
 		const db = await DB.getInstance();

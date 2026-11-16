@@ -1,0 +1,26 @@
+{{template "head" .}}
+    {{if .Done}}
+    <div class="ok" aria-hidden="true">✓</div>
+    <h1>Password updated</h1>
+    <p class="sub">You can sign in with the new password.</p>
+    {{else}}
+    <h1>Choose a new password</h1>
+    <p class="sub">This link expires soon. Use at least 8 characters.</p>
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    <form method="POST" action="/reset" onsubmit="if (this.password.value !== this.password_confirm.value) { this.password_confirm.setCustomValidity('Those passwords do not match.'); this.password_confirm.reportValidity(); return false } this.password_confirm.setCustomValidity(''); return true">
+        {{template "csrf_field" .}}
+        <input type="hidden" name="token" value="{{.Token}}">
+        <div class="field">
+            <label for="password">New password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="new-password" required autofocus>
+        </div>
+        <div class="field">
+            <label for="password_confirm">Confirm password</label>
+            <input class="input" id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" required>
+        </div>
+        <button class="primary" type="submit">Update password</button>
+    </form>
+    {{end}}
+    <p class="hint"><a href="/login">Back to sign in</a></p>
+{{template "card_close" .}}
+{{template "brand_footer" .}}

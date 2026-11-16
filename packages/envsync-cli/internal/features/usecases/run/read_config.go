@@ -5,6 +5,7 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type readConfigUseCase struct {
@@ -18,7 +19,10 @@ func NewReadConfigUseCase() ReadConfigUseCase {
 	}
 }
 
-func (r *readConfigUseCase) Execute(ctx context.Context) (*domain.SyncConfig, error) {
+func (r *readConfigUseCase) Execute(ctx context.Context) (result *domain.SyncConfig, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "run.read_config")
+	defer end(&err)
+
 	config, err := r.syncService.ReadConfigData()
 	if err != nil {
 		return nil, err

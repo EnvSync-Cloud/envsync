@@ -7,6 +7,8 @@ import (
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type triggerRotationUseCase struct {
@@ -19,9 +21,10 @@ func NewTriggerRotationUseCase() TriggerRotationUseCase {
 	}
 }
 
-func (uc *triggerRotationUseCase) Execute(ctx context.Context, id string) (*sdk.TriggerRotationResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "rotation.trigger")
-	defer span.End()
+func (uc *triggerRotationUseCase) Execute(ctx context.Context, id string) (resp *sdk.TriggerRotationResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "rotation.trigger",
+		trace.WithAttributes(attribute.String("rotation.id", id)))
+	defer end(&err)
 
 	if id == "" {
 		return nil, NewValidationError("rotation policy ID is required", ErrIDRequired)

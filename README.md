@@ -36,7 +36,7 @@
 **The solution:** EnvSync provides a single source of truth for environment variables and secrets, with:
 - 🔄 **Point-in-time rollback** — Undo any secret change to any previous state
 - ✅ **Approval workflows** — Require review before production changes
-- 🔐 **End-to-end encryption** — AES-256 at rest, TLS in transit
+- 🔐 **Encryption** — Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync's key service.
 - 🚀 **CLI-first workflow** — `envsync pull` and `envsync push` in your terminal
 - 🌐 **28+ integrations** — GitHub, GitLab, Vercel, AWS, and more
 
@@ -122,7 +122,7 @@ envsync push --env staging
 | `apps/envsync-landing` | Marketing landing (Hosted) |
 | `packages/deploy` | Public OSS self-host CLI (`@envsync-cloud/deploy`) |
 | `packages/deploy-cli` | EE deploy entry → `@envsync-cloud/deploy-enterprise` (private) |
-| `packages/envsync-keycloak-theme` | Custom Keycloak theme |
+| `docker/atrium` | Atrium config, clients, and branded login |
 | `sdks/envsync-ts-sdk` | Generated TypeScript SDK (core + manage) |
 | `sdks/envsync-go-sdk` | Generated Go SDK (core + manage) |
 | `scripts/` | Local bootstrap and helper scripts |
@@ -158,7 +158,7 @@ bun run dev
 |---------|-----|
 | 🖥️ Dashboard | `http://app.lvh.me:8001` |
 | ⚡ API | `http://api.lvh.me:4000` |
-| 🔐 Keycloak | `http://auth.lvh.me:8080` |
+| 🔐 Atrium | `http://auth.lvh.me:8080` |
 | 📊 HyperDX | `http://localhost:8800` |
 | 📧 Mailpit | `http://localhost:8025` |
 | 🗄️ RustFS | `http://localhost:19000` |
@@ -227,6 +227,7 @@ c := client.NewClient(option.WithBaseURL("https://api.envsync.cloud"))
 | Self-host Enterprise | `envsync-deploy-enterprise` |
 
 See **[DEPLOY.md](./DEPLOY.md)** for full instructions (DNS, CLI flow, env matrix, license, pitfalls).  
+`docker/minikms/*.dev.pem` files are development and test fixtures. Production Compose does not mount them.  
 Self-host OSS short form: [SELFHOSTING.md](./SELFHOSTING.md). Editions: [EDITIONING.md](./EDITIONING.md).
 
 ---

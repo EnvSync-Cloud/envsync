@@ -3,7 +3,10 @@ package genpem
 import (
 	"context"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/utils"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -18,7 +21,11 @@ func NewGenKeyPairUseCase() GenKeyPairUseCase {
 }
 
 // GenerateKeyPair implements GenKeyPairUseCase.
-func (g *genKeyPairUseCase) GenerateKeyPair(ctx context.Context, output string) error {
+func (g *genKeyPairUseCase) GenerateKeyPair(ctx context.Context, output string) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "gen_pem.generate_key_pair",
+		trace.WithAttributes(attribute.String("file.path", output)))
+	defer end(&err)
+
 	keyPair, err := utils.GenerateKeyPair()
 	if err != nil {
 		return err
@@ -57,11 +64,11 @@ func (g *genKeyPairUseCase) savePublicKey(key string, output string) error {
 
 func (g *genKeyPairUseCase) savePrivateKey(key string, output string) error {
 	if output != "" {
-		return utils.WriteFile(key, output+"/"+defaultPrivateKeyFile)
+		return utils.WritePrivateKeyFile(key, output+"/"+defaultPrivateKeyFile)
 	}
 
 	// If no output directory is specified, save to current directory
-	if err := utils.WriteFile(key, "./"+defaultPrivateKeyFile); err != nil {
+	if err := utils.WritePrivateKeyFile(key, "./"+defaultPrivateKeyFile); err != nil {
 		return err
 	}
 
