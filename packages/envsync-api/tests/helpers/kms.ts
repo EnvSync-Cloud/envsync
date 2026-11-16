@@ -149,6 +149,23 @@ export function resetPKI(): void {
 
 const vaultStore = new Map<string, { value: Buffer; version: number; createdBy: string; createdAt: number }>();
 
+let mockVaultSessionFactory: (() => Promise<string>) | null = null;
+
+export function setMockVaultSessionFactory(factory: (() => Promise<string>) | null) {
+	mockVaultSessionFactory = factory;
+}
+
+export function resetMockVaultSessionFactory() {
+	mockVaultSessionFactory = null;
+}
+
+export async function mockGetVaultSessionToken(_memberId: string, _orgId: string): Promise<string> {
+	if (mockVaultSessionFactory) {
+		return mockVaultSessionFactory();
+	}
+	return "mock-session-token";
+}
+
 function vaultKey(orgId: string, scopeId: string, entryType: string, key: string, envTypeId?: string): string {
 	return `${orgId}:${scopeId}:${entryType}:${envTypeId || ""}:${key}`;
 }
@@ -156,6 +173,7 @@ function vaultKey(orgId: string, scopeId: string, entryType: string, key: string
 /** Reset all in-memory vault data between tests */
 export function resetVaultStore(): void {
 	vaultStore.clear();
+	mockVaultSessionFactory = null;
 }
 
 export const MockKMSClient = {

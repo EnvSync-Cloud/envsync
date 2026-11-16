@@ -64,6 +64,59 @@ type MappingRow = {
 let workerTimer: ReturnType<typeof setInterval> | null = null;
 let isWorkerPassRunning = false;
 
+const REDACTED_AUDIT_KEYS = new Set([
+	"value",
+	"values",
+	"items",
+	"secret",
+	"secrets",
+	"plaintext",
+	"ciphertext",
+	"encrypted_value",
+	"encryptedValue",
+	"password",
+	"private_key",
+	"authorization",
+	"credential",
+	"credentials",
+	"token",
+	"access_token",
+	"secret_access_key",
+	"auth_config",
+]);
+
+function redactSecretMaterial(value: string): string {
+	return value.replace(/(?:RSA:|HYB:|KMS:v1:)[^\s"]+/g, "[redacted]");
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof Date);
+}
+
+function sanitizeSyncAuditDetails(details: Record<string, unknown>): Record<string, unknown> {
+	const sanitized: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(details)) {
+		if (REDACTED_AUDIT_KEYS.has(key)) {
+			continue;
+		}
+		sanitized[key] = sanitizeAuditValue(value);
+	}
+	return sanitized;
+}
+
+function sanitizeAuditValue(value: unknown): unknown {
+	if (typeof value === "string") {
+		return redactSecretMaterial(value);
+	}
+	if (Array.isArray(value)) {
+		return value.map(entry => sanitizeAuditValue(entry));
+	}
+	if (isPlainRecord(value)) {
+		return sanitizeSyncAuditDetails(value);
+	}
+	return value;
+}
+
 export class EnterpriseSyncService {
 	private static readonly workerIntervalMs = 30_000;
 
@@ -200,7 +253,9 @@ export class EnterpriseSyncService {
 				details: summary,
 			});
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown enterprise sync failure";
+			const message = redactSecretMaterial(
+				error instanceof Error ? error.message : "Unknown enterprise sync failure",
+			);
 
 			await db
 				.updateTable("sync_run")
@@ -374,7 +429,7 @@ export class EnterpriseSyncService {
 					env_type_id: mapping.env_type_id,
 					user_id: run.actor_user_id,
 				}),
-				SecretService.getAllSecret({
+				SecretService.revealManagedSecrets({
 					org_id: run.org_id,
 					app_id: mapping.app_id,
 					env_type_id: mapping.env_type_id,
@@ -538,7 +593,7 @@ export class EnterpriseSyncService {
 				action: input.action,
 				result: input.result,
 				actor_user_id: input.actor_user_id,
-				details: input.details,
+				details: sanitizeSyncAuditDetails(input.details),
 				created_at: new Date(),
 				updated_at: new Date(),
 			})

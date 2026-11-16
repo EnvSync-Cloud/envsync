@@ -305,6 +305,18 @@ export class VaultEntryService {
 		);
 	};
 
+	public static requireVaultSession = async (user_id: string, org_id: string) => {
+		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		if (!sessionToken.trim()) {
+			throw new BusinessRuleError(
+				"A vault session is required to reveal secrets.",
+				409,
+				"VAULT_SESSION_UNAVAILABLE",
+			);
+		}
+		return sessionToken;
+	};
+
 	public static list = async (
 		entryType: VaultEntryType,
 		input: Omit<VaultKeyInput, "key" | "value">,
