@@ -6,7 +6,14 @@ import { RoleService } from "@/services/role.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
 import { EntitlementService } from "@/services/entitlement.service";
 import { OrganizationProvisioningService } from "@/services/organization-provisioning.service";
-import { readAccessToken, setActiveMembershipCookie } from "@/helpers/web-auth";
+import {
+	clearWebAuthCookies,
+	readAccessToken,
+	readRefreshToken,
+	setActiveMembershipCookie,
+} from "@/helpers/web-auth";
+import { AuditLogService } from "@/services/audit_log.service";
+import { SessionDeviceService } from "@/services/session-device.service";
 
 export type SessionAuthType = "jwt" | "saml" | "oidc" | "api_key";
 
@@ -18,19 +25,19 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 		user.auth_service_id
 			? UserService.listMembershipSummariesByIdpId(user.auth_service_id, user.id)
 			: Promise.resolve([
-				{
-					user_id: user.id,
-					org_id: user.org_id,
-					org_name: "",
-					org_slug: "",
-					role_id: user.role_id,
-					role_name: "",
-					is_admin: false,
-					is_master: false,
-					is_active: true,
-					is_current: true,
-				},
-			]),
+					{
+						user_id: user.id,
+						org_id: user.org_id,
+						org_name: "",
+						org_slug: "",
+						role_id: user.role_id,
+						role_name: "",
+						is_admin: false,
+						is_master: false,
+						is_active: true,
+						is_current: true,
+					},
+				]),
 	]);
 
 	const currentMembership = {
@@ -46,11 +53,12 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 		is_current: true,
 	};
 
-	const normalizedMemberships = options?.authType === "saml"
-		? [currentMembership]
-		: memberships.length > 0
-			? memberships
-			: [currentMembership];
+	const normalizedMemberships =
+		options?.authType === "saml"
+			? [currentMembership]
+			: memberships.length > 0
+				? memberships
+				: [currentMembership];
 
 	const policy = EditionPolicyService.getPolicySnapshot();
 	const [features, install_features, resolvedPlan, usage] = await Promise.all([
@@ -89,14 +97,70 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 	};
 }
 
+function hasBrowserSession(c: Context) {
+	return Boolean(readAccessToken(c) || readRefreshToken(c));
+}
+
 export class AuthController {
 	public static readonly whoami = async (c: Context) => {
-		return c.json(await buildSessionPayload(c.get("user_id"), { authType: c.get("auth_type") ?? "jwt" }));
+		return c.json(
+			await buildSessionPayload(c.get("user_id"), { authType: c.get("auth_type") ?? "jwt" }),
+		);
+	};
+
+	public static readonly listSessionDevices = async (c: Context) => {
+		const directoryUserId = c.get("directory_user_id");
+		if (!directoryUserId) {
+			return c.json({ devices: [] }, 200);
+		}
+		const devices = await SessionDeviceService.list(directoryUserId, c.get("dpop_jkt") ?? "");
+		return c.json(
+			{
+				devices: devices.map(device => ({
+					...device,
+					created_at: new Date(device.created_at).toISOString(),
+					last_used_at: new Date(device.last_used_at).toISOString(),
+				})),
+			},
+			200,
+		);
+	};
+
+	public static readonly revokeSessionDevice = async (c: Context) => {
+		const directoryUserId = c.get("directory_user_id");
+		const deviceId = c.req.param("deviceId");
+		if (!directoryUserId || !deviceId) {
+			return c.json({ error: "Device not found", code: "NOT_FOUND" }, 404);
+		}
+
+		const revoked = await SessionDeviceService.revoke(
+			directoryUserId,
+			deviceId,
+			c.get("dpop_jkt") ?? "",
+		);
+		if (revoked.current) {
+			clearWebAuthCookies(c);
+		}
+		await AuditLogService.notifyAuditSystem({
+			action: "session_device_revoked",
+			org_id: c.get("org_id"),
+			user_id: c.get("user_id"),
+			message: "Signed out a device",
+			details: {
+				device_id: revoked.id,
+				jkt: revoked.jkt,
+				label: revoked.label,
+			},
+		});
+		return c.json({ id: revoked.id, current: revoked.current }, 200);
 	};
 
 	public static readonly switchOrg = async (c: Context) => {
-		if (!readAccessToken(c)) {
-			return c.json({ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" }, 401);
+		if (!hasBrowserSession(c)) {
+			return c.json(
+				{ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" },
+				401,
+			);
 		}
 
 		if (c.get("auth_type") === "saml") {
@@ -113,11 +177,17 @@ export class AuthController {
 		const currentUser = await UserService.getUser(c.get("user_id"));
 
 		if (!currentUser.auth_service_id) {
-			return c.json({ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" }, 400);
+			return c.json(
+				{ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" },
+				400,
+			);
 		}
 
 		try {
-			const user = await UserService.switchActiveMembership(currentUser.auth_service_id, payload.org_id);
+			const user = await UserService.switchActiveMembership(
+				currentUser.auth_service_id,
+				payload.org_id,
+			);
 			setActiveMembershipCookie(c, user.id);
 			return c.json(await buildSessionPayload(user.id, { authType: c.get("auth_type") ?? "jwt" }));
 		} catch (error) {
@@ -136,8 +206,11 @@ export class AuthController {
 	 * Route: POST /auth/create-organization
 	 */
 	public static readonly createOrganization = async (c: Context) => {
-		if (!readAccessToken(c)) {
-			return c.json({ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" }, 401);
+		if (!hasBrowserSession(c)) {
+			return c.json(
+				{ error: "Cookie session required", code: "AUTH_COOKIE_SESSION_REQUIRED" },
+				401,
+			);
 		}
 
 		// Hosted-only channel (program plan §1.1a). Self-host never creates orgs via web.
@@ -155,7 +228,10 @@ export class AuthController {
 		const currentUser = await UserService.getUser(c.get("user_id"));
 
 		if (!currentUser.auth_service_id) {
-			return c.json({ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" }, 400);
+			return c.json(
+				{ error: "Active session is not backed by an identity provider", code: "AUTH_NO_IDP" },
+				400,
+			);
 		}
 
 		const result = await OrganizationProvisioningService.createOrganizationForExistingIdentity({
@@ -165,6 +241,8 @@ export class AuthController {
 			source: "hosted_dashboard",
 		});
 		setActiveMembershipCookie(c, result.user_id);
-		return c.json(await buildSessionPayload(result.user_id, { authType: c.get("auth_type") ?? "jwt" }));
+		return c.json(
+			await buildSessionPayload(result.user_id, { authType: c.get("auth_type") ?? "jwt" }),
+		);
 	};
 }

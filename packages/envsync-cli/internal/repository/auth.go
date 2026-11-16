@@ -8,6 +8,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/sdks/envsync-go-sdk/sdk/option"
 	"resty.dev/v3"
 
+	sessionauth "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/auth"
 	config "github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository/responses"
 )
@@ -77,9 +78,17 @@ func (s *authRepo) LoginDeviceCode(ctx context.Context) (responses.DeviceCodeRes
 func (s *authRepo) LoginToken(ctx context.Context, deviceCode, clientID, TokenUrl string) (responses.LoginTokenResponse, error) {
 	var resBody responses.LoginTokenResponse
 
-	res, err := s.httpClient.
+	request := s.httpClient.
 		SetBaseURL(TokenUrl).
-		R().
+		R()
+	if path, err := sessionauth.KeyPath(); err == nil {
+		if key, err := sessionauth.LoadOrCreateKey(path); err == nil {
+			if proof, err := key.Proof("POST", TokenUrl, ""); err == nil {
+				request.SetHeader("DPoP", proof)
+			}
+		}
+	}
+	res, err := request.
 		SetResult(&resBody).
 		SetFormData(map[string]string{
 			"grant_type":  "urn:ietf:params:oauth:grant-type:device_code",

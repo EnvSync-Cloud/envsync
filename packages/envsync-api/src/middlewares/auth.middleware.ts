@@ -16,6 +16,17 @@ import { RoleService } from "@/services/role.service";
 import { SystemCertificateProvisioningService } from "@/services/system-certificate-provisioning.service";
 import { UserService } from "@/services/user.service";
 import { validateAccess, detectAuthType } from "@/helpers/access";
+import { decodeJwt } from "jose";
+
+import {
+	confirmationThumbprint,
+	defaultDeviceLabel,
+	readUnverifiedClientId,
+	requestProofUrls,
+	sessionClientRequiresDpop,
+	verifyDpopProof,
+} from "@/helpers/dpop";
+import { SessionDeviceService } from "@/services/session-device.service";
 import { refreshDirectoryToken } from "@/helpers/identity";
 import { isServiceTokenAllowedPath } from "@/middlewares/service-token-scope.middleware";
 
@@ -36,11 +47,13 @@ export const authMiddleware = (): MiddlewareHandler => {
 		}
 
 		let token = ctx.req.header("Authorization") ?? getCookie(ctx, "access_token");
+		const presentedToken = () => (token ?? "").replace(/^(?:Bearer|DPoP)\s+/i, "");
 		const refreshToken = getCookie(ctx, "refresh_token");
 		const apiKey = ctx.req.header("X-API-Key");
 		const authorizationHeader = ctx.req.header("Authorization");
 		const usesCookieSession = !authorizationHeader && Boolean(token);
 		const usesBearerToken = Boolean(authorizationHeader && token);
+		const usesBrowserSession = Boolean(getCookie(ctx, "access_token") || refreshToken);
 		const requestedOrgHeader = ctx.req.header("X-EnvSync-Org-Id");
 
 		if (!token && !apiKey) {
@@ -49,10 +62,11 @@ export const authMiddleware = (): MiddlewareHandler => {
 
 		const verifyAs = token ? detectAuthType(token) : "API_KEY";
 
-		const resolveCredential = async (rawToken: string) => validateAccess({
-			token: rawToken.replace(/^Bearer\s+/i, ""),
-			type: verifyAs,
-		});
+		const resolveCredential = async (rawToken: string) =>
+			validateAccess({
+				token: rawToken.replace(/^(?:Bearer|DPoP)\s+/i, ""),
+				type: verifyAs,
+			});
 
 		try {
 			let access_info: Awaited<ReturnType<typeof validateAccess>>;
@@ -84,7 +98,11 @@ export const authMiddleware = (): MiddlewareHandler => {
 						throw jwtError;
 					}
 
-					if (!usesCookieSession || !refreshToken) {
+					if (
+						!usesCookieSession ||
+						!refreshToken ||
+						sessionClientRequiresDpop(readUnverifiedClientId(presentedToken()))
+					) {
 						throw jwtError;
 					}
 
@@ -115,8 +133,50 @@ export const authMiddleware = (): MiddlewareHandler => {
 				});
 			}
 
+			let dpopJkt = "";
+			let dpopSub = "";
+			let dpopClientId = "";
+			if (verifyAs === "JWT") {
+				// Mock suites authenticate with "test-token-..." rather than a compact JWT.
+				// Those tokens have already passed validateAccess. DPoP applies only when
+				// the presented credential is a session JWT we can read.
+				let payload: Record<string, unknown> | null = null;
+				try {
+					payload = decodeJwt(presentedToken()) as Record<string, unknown>;
+				} catch {
+					payload = null;
+				}
+				if (payload) {
+					const jkt = confirmationThumbprint(payload);
+					dpopJkt = jkt;
+					dpopSub = typeof payload.sub === "string" ? payload.sub : "";
+					dpopClientId = typeof payload.client_id === "string" ? payload.client_id : "";
+					if (sessionClientRequiresDpop(payload.client_id)) {
+						if (!jkt) {
+							return ctx.json(
+								{
+									error: "Session is not bound to a device key. Sign in again.",
+									code: "DPOP_REQUIRED",
+								},
+								401,
+							);
+						}
+						await verifyDpopProof({
+							proof: ctx.req.header("DPoP") ?? "",
+							method: ctx.req.method,
+							url: ctx.req.url,
+							urls: requestProofUrls(ctx.req.url),
+							accessToken: presentedToken(),
+							expectedJkt: jkt,
+						});
+						await SessionDeviceService.assertActive(dpopSub, jkt);
+					}
+					ctx.set("dpop_jkt", jkt);
+				}
+			}
+
 			let user = await UserService.getUser(access_info.user_id);
-			if (verifyAs !== "SAML" && usesCookieSession && access_info.auth_service_id) {
+			if (verifyAs !== "SAML" && usesBrowserSession && access_info.auth_service_id) {
 				const requestedMembershipId = readActiveMembershipCookie(ctx);
 				user = await UserService.resolveActiveMembershipByIdpId(
 					access_info.auth_service_id,
@@ -127,20 +187,40 @@ export const authMiddleware = (): MiddlewareHandler => {
 					await UserService.touchLastLogin(user.id);
 					setActiveMembershipCookie(ctx, user.id);
 				}
-			} else if (verifyAs !== "SAML" && usesBearerToken && access_info.auth_service_id && requestedOrgHeader !== undefined) {
+			} else if (
+				verifyAs !== "SAML" &&
+				usesBearerToken &&
+				access_info.auth_service_id &&
+				requestedOrgHeader !== undefined
+			) {
 				const requestedOrgId = requestedOrgHeader.trim();
 				if (!requestedOrgId) {
-					throw new AppError(
-						"X-EnvSync-Org-Id must not be blank.",
-						400,
-						"AUTH_ORG_HEADER_INVALID",
-					);
+					throw new AppError("X-EnvSync-Org-Id must not be blank.", 400, "AUTH_ORG_HEADER_INVALID");
 				}
 
 				user = await UserService.resolveMembershipByOrgId(
 					access_info.auth_service_id,
 					requestedOrgId,
 				);
+			}
+
+			if (dpopJkt && dpopSub) {
+				try {
+					await SessionDeviceService.touch({
+						directoryUserId: dpopSub,
+						userId: user.id,
+						clientId: dpopClientId,
+						jkt: dpopJkt,
+						label: defaultDeviceLabel(dpopClientId, ctx.req.header("user-agent")),
+					});
+				} catch (error) {
+					if (error instanceof AppError) throw error;
+					infoLogs(
+						`Session device touch failed: ${error instanceof Error ? error.message : String(error)}`,
+						LogTypes.ERROR,
+						"AuthMiddleware",
+					);
+				}
 			}
 
 			const [org, role] = await Promise.all([
@@ -156,13 +236,15 @@ export const authMiddleware = (): MiddlewareHandler => {
 			ctx.set("role_name", role.name);
 			ctx.set(
 				"auth_type",
-				({
-					JWT: "jwt",
-					SAML: "saml",
-					OIDC: "oidc",
-					API_KEY: "api_key",
-					SERVICE_TOKEN: "service_token",
-				} as const)[access_info.auth_type],
+				(
+					{
+						JWT: "jwt",
+						SAML: "saml",
+						OIDC: "oidc",
+						API_KEY: "api_key",
+						SERVICE_TOKEN: "service_token",
+					} as const
+				)[access_info.auth_type],
 			);
 			if (access_info.service_token) {
 				ctx.set("service_token", access_info.service_token);
@@ -212,9 +294,15 @@ export const authMiddleware = (): MiddlewareHandler => {
 			if (err instanceof Error) {
 				if (usesCookieSession) {
 					clearWebAuthCookies(ctx);
-					return ctx.json({ error: "Session invalid. Sign in again.", code: "AUTH_RELOGIN_REQUIRED" }, 401);
+					return ctx.json(
+						{ error: "Session invalid. Sign in again.", code: "AUTH_RELOGIN_REQUIRED" },
+						401,
+					);
 				}
-				return ctx.json({ error: err.message, code: token ? "AUTH_INVALID" : "AUTH_API_KEY_INVALID" }, 401);
+				return ctx.json(
+					{ error: err.message, code: token ? "AUTH_INVALID" : "AUTH_API_KEY_INVALID" },
+					401,
+				);
 			}
 			return ctx.json({ error: "Authentication failed", code: "AUTH_INVALID" }, 401);
 		}

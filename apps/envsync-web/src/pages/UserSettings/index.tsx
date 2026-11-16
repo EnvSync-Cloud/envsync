@@ -6,6 +6,7 @@ import { DangerZoneCard } from "@/components/user-settings/DangerZoneCard";
 import { PasswordResetModal } from "@/components/user-settings/PasswordResetModal";
 import { DeleteAccountModal } from "@/components/user-settings/DeleteAccountModal";
 import { MyCertificatesCard } from "@/components/user-settings/MyCertificatesCard";
+import { SignedInDevicesCard } from "@/components/user-settings/SignedInDevicesCard";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Settings } from "lucide-react";
 
@@ -67,7 +68,9 @@ export const UserSettings = () => {
           <Settings className="size-5 text-emerald-400" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">Account Settings</h1>
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">
+            Account Settings
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Manage your account configuration and preferences
           </p>
@@ -95,6 +98,7 @@ export const UserSettings = () => {
           isPasswordResetLoading={resetPasswordMutation.isPending}
         />
       </div>
+      <SignedInDevicesCard />
       <MyCertificatesCard />
       <DangerZoneCard
         onDeleteAccount={() => setIsDeleteAccountDialogOpen(true)}

@@ -295,6 +295,8 @@ describe("renderAtriumClients", () => {
 		const clients = renderAtriumClients(config, runtimeEnv);
 		const configYaml = renderAtriumConfig(config, runtimeEnv);
 		expect(clients).toContain("\"id\": \"envsync-web\"");
+		const web = JSON.parse(clients).clients.find((client: { id: string }) => client.id === "envsync-web");
+		expect(web.dpop_bound_access_tokens).toBe(true);
 		expect(clients).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(clients).toContain("https://app.enterprise.example.com/auth/callback");
 		expect(configYaml).toContain("issuer: \"https://auth.enterprise.example.com\"");

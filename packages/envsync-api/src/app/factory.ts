@@ -234,6 +234,7 @@ export async function createApiApp(surface: ApiSurface) {
 				"X-EnvSync-Org-Id",
 				"X-EnvSync-Client",
 				"X-EnvSync-Platform-Token",
+				"DPoP",
 			],
 			allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 			credentials: true,
