@@ -502,6 +502,18 @@ export interface AcmeOrder extends BaseTable {
 	expires_at: ColumnType<Date>;
 }
 
+export interface SessionDevice {
+	id: ColumnType<string>;
+	directory_user_id: ColumnType<string>;
+	user_id: ColumnType<string | null>;
+	client_id: ColumnType<string>;
+	jkt: ColumnType<string>;
+	label: ColumnType<string>;
+	created_at: ColumnType<Date>;
+	last_used_at: ColumnType<Date>;
+	revoked_at: ColumnType<Date | null>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -547,6 +559,7 @@ export interface BaseDatabase {
 	org_acme_eab: OrgAcmeEab;
 	acme_accounts: AcmeAccount;
 	acme_orders: AcmeOrder;
+	session_devices: SessionDevice;
 }
 
 /**

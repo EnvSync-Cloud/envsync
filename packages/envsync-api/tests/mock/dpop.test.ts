@@ -1,11 +1,24 @@
-import { generateKeyPair, exportJWK, SignJWT, calculateJwkThumbprint } from "jose";
+import {
+	generateKeyPair,
+	exportJWK,
+	SignJWT,
+	calculateJwkThumbprint,
+	type JWK,
+	type JWTHeaderParameters,
+} from "jose";
 import { describe, expect, test } from "bun:test";
 
-import { confirmationThumbprint, verifyDpopProof } from "@/helpers/dpop";
+import {
+	confirmationThumbprint,
+	requestProofUrls,
+	sessionClientRequiresDpop,
+	verifyDpopProof,
+} from "@/helpers/dpop";
+import { config } from "@/utils/env";
 
 async function proof(input: {
 	key: CryptoKey;
-	jwk: Record<string, unknown>;
+	jwk: JWK;
 	method: string;
 	url: string;
 	accessToken?: string;
@@ -17,11 +30,18 @@ async function proof(input: {
 		jti: input.jti ?? crypto.randomUUID(),
 	};
 	if (input.accessToken) {
-		const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input.accessToken));
+		const digest = await crypto.subtle.digest(
+			"SHA-256",
+			new TextEncoder().encode(input.accessToken),
+		);
 		claims.ath = Buffer.from(digest).toString("base64url");
 	}
 	return new SignJWT(claims)
-		.setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: input.jwk })
+		.setProtectedHeader({
+			alg: "ES256",
+			typ: "dpop+jwt",
+			jwk: input.jwk as JWTHeaderParameters["jwk"],
+		})
 		.setIssuedAt()
 		.sign(input.key);
 }
@@ -72,5 +92,49 @@ describe("DPoP proofs", () => {
 				expectedJkt: expected,
 			}),
 		).rejects.toMatchObject({ code: "DPOP_KEY_MISMATCH" });
+	});
+
+	test("accepts a token-endpoint proof without ath and an alternate public url", async () => {
+		const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
+		const jwk = await exportJWK(publicKey);
+		const jkt = await calculateJwkThumbprint(jwk, "sha256");
+		const tokenEndpoint = await proof({
+			key: privateKey,
+			jwk,
+			method: "POST",
+			url: "https://auth.envsync.cloud/oauth/token",
+		});
+		const thumbprint = await verifyDpopProof({
+			proof: tokenEndpoint,
+			method: "POST",
+			url: "https://auth.envsync.cloud/oauth/token",
+			accessToken: "",
+		});
+		expect(thumbprint).toBe(jkt);
+
+		const resource = await proof({
+			key: privateKey,
+			jwk,
+			method: "GET",
+			url: "https://api.envsync.cloud/api/auth/me",
+			accessToken: "access-token",
+		});
+		await verifyDpopProof({
+			proof: resource,
+			method: "GET",
+			url: "http://127.0.0.1:4000/api/auth/me",
+			urls: requestProofUrls("http://127.0.0.1:4000/api/auth/me").concat(
+				"https://api.envsync.cloud/api/auth/me",
+			),
+			accessToken: "access-token",
+			expectedJkt: jkt,
+		});
+	});
+
+	test("requires a device key for web and cli clients only", () => {
+		expect(sessionClientRequiresDpop(config.ATRIUM_WEB_CLIENT_ID)).toBe(true);
+		expect(sessionClientRequiresDpop(config.ATRIUM_CLI_CLIENT_ID)).toBe(true);
+		expect(sessionClientRequiresDpop(config.ATRIUM_E2E_CLIENT_ID)).toBe(false);
+		expect(sessionClientRequiresDpop("envsync-api")).toBe(false);
 	});
 });

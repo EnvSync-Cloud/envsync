@@ -3,8 +3,15 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 import { getSDK } from "@/api/base";
+import { ensureDeviceKey, rememberLoginState } from "@/lib/dpop-session";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthContext } from "@/contexts/auth";
@@ -38,7 +45,9 @@ const Login = () => {
   const { isAuthenticated, isLoading } = useAuthContext();
   const showSso = !isLoading && runtimeConfig.edition !== "oss";
   const [slug, setSlug] = useState(readStoredSlug);
-  const [ssoError, setSsoError] = useState(ssoErrorFromSearch(searchParams.get("sso")));
+  const [ssoError, setSsoError] = useState(
+    ssoErrorFromSearch(searchParams.get("sso")),
+  );
   const [signInError, setSignInError] = useState<string | null>(null);
   const [signInPending, setSignInPending] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
@@ -55,14 +64,18 @@ const Login = () => {
     setSignInError(null);
     setSignInPending(true);
     try {
+      await ensureDeviceKey();
       const response = await getSDK().access.createWebLogin();
       if (response?.loginUrl) {
+        rememberLoginState(response.loginUrl);
         window.location.href = response.loginUrl;
         return;
       }
       setSignInError("We couldn't start sign-in. Please try again.");
     } catch {
-      setSignInError("We couldn't start sign-in. Please try again.");
+      setSignInError(
+        "We couldn't start sign-in. Allow site data for this browser and try again.",
+      );
     } finally {
       setSignInPending(false);
     }
@@ -77,7 +90,10 @@ const Login = () => {
     setSsoError(null);
     setSsoPending(true);
     try {
-      const redirectUrl = await requestSsoRedirectUrl(runtimeConfig.apiBaseUrl, orgSlug);
+      const redirectUrl = await requestSsoRedirectUrl(
+        runtimeConfig.apiBaseUrl,
+        orgSlug,
+      );
       if (!redirectUrl) {
         setSsoError(SSO_START_ERROR);
         return;
@@ -95,7 +111,11 @@ const Login = () => {
       <div className="w-full max-w-md">
         <Card className="border-border shadow-lg">
           <CardHeader className="text-center">
-            <img src="/EnvSync.svg" alt="EnvSync" className="mx-auto mb-4 size-12" />
+            <img
+              src="/EnvSync.svg"
+              alt="EnvSync"
+              className="mx-auto mb-4 size-12"
+            />
             <CardTitle className="text-2xl">Sign in to EnvSync</CardTitle>
             <CardDescription>Choose how you want to continue.</CardDescription>
           </CardHeader>
@@ -135,7 +155,10 @@ const Login = () => {
                   <span className="h-px flex-1 bg-border" />
                 </div>
 
-                <form className="space-y-4" onSubmit={(event) => void handleSsoLogin(event)}>
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => void handleSsoLogin(event)}
+                >
                   <div className="space-y-2">
                     <Label htmlFor="org-slug">Organization slug</Label>
                     <Input

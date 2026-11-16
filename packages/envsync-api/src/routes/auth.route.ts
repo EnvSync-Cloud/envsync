@@ -6,6 +6,8 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { AuthController } from "@/controllers/auth.controller";
 import {
 	createOrganizationRequestSchema,
+	revokeSessionDeviceResponseSchema,
+	sessionDeviceListSchema,
 	switchOrgRequestSchema,
 	whoAmIResponseSchema,
 } from "@/validators/auth.validator";
@@ -103,6 +105,58 @@ app.post(
 	createOrganizationRoute,
 	zValidator("json", createOrganizationRequestSchema),
 	AuthController.createOrganization,
+);
+
+app.get(
+	"/sessions",
+	describeRoute({
+		operationId: "listSessionDevices",
+		summary: "List Signed-in Devices",
+		description:
+			"List browser and CLI sessions bound to the current user. The access token's device key is marked current.",
+		tags: ["Authentication"],
+		responses: {
+			200: {
+				description: "Signed-in devices",
+				content: {
+					"application/json": {
+						schema: resolver(sessionDeviceListSchema),
+					},
+				},
+			},
+		},
+	}),
+	AuthController.listSessionDevices,
+);
+
+app.delete(
+	"/sessions/:deviceId",
+	describeRoute({
+		operationId: "revokeSessionDevice",
+		summary: "Sign Out a Device",
+		description:
+			"Reject further API calls from a device key. Signing out this browser also clears its refresh cookie.",
+		tags: ["Authentication"],
+		responses: {
+			200: {
+				description: "Device signed out",
+				content: {
+					"application/json": {
+						schema: resolver(revokeSessionDeviceResponseSchema),
+					},
+				},
+			},
+			404: {
+				description: "Device not found",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+		},
+	}),
+	AuthController.revokeSessionDevice,
 );
 
 app.post(
