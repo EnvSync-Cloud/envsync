@@ -50,7 +50,7 @@ if (fs.existsSync(rootEnvPath)) {
 	console.log(`[Sim] Loaded root env from ${rootEnvPath}`);
 }
 
-// Layer E2E-specific credentials (Keycloak, OpenFGA, miniKMS)
+// Layer E2E-specific credentials (Atrium, OpenFGA, miniKMS)
 const envE2EPath = path.join(projectRoot, ".env.e2e.test");
 if (fs.existsSync(envE2EPath)) {
 	loadEnvFileSimple(envE2EPath);
@@ -61,7 +61,7 @@ if (fs.existsSync(envE2EPath)) {
 }
 
 // ── 3. Set required environment variables ────────────────────────────
-const keycloakUrl = process.env.KEYCLOAK_URL ?? "http://localhost:8080";
+const atriumUrl = process.env.ATRIUM_INTERNAL_URL ?? "http://localhost:8080";
 
 Object.assign(process.env, {
 	NODE_ENV: "development",
@@ -86,18 +86,19 @@ Object.assign(process.env, {
 	SMTP_PORT: process.env.SMTP_PORT ?? "1025",
 	SMTP_SECURE: "false",
 	SMTP_FROM: "sim@envsync.local",
-	KEYCLOAK_URL: keycloakUrl,
-	KEYCLOAK_REALM: process.env.KEYCLOAK_REALM ?? "envsync",
-	KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER ?? "admin",
-	KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD ?? "admin",
-	KEYCLOAK_WEB_CLIENT_ID: process.env.KEYCLOAK_WEB_CLIENT_ID ?? "envsync-web",
-	KEYCLOAK_WEB_CLIENT_SECRET: process.env.KEYCLOAK_WEB_CLIENT_SECRET ?? "test-web-client-secret",
-	KEYCLOAK_CLI_CLIENT_ID: process.env.KEYCLOAK_CLI_CLIENT_ID ?? "envsync-cli",
-	KEYCLOAK_API_CLIENT_ID: process.env.KEYCLOAK_API_CLIENT_ID ?? "envsync-api",
-	KEYCLOAK_API_CLIENT_SECRET: process.env.KEYCLOAK_API_CLIENT_SECRET ?? "test-api-client-secret",
-	KEYCLOAK_WEB_REDIRECT_URI: process.env.KEYCLOAK_WEB_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/web/callback",
-	KEYCLOAK_WEB_CALLBACK_URL: process.env.KEYCLOAK_WEB_CALLBACK_URL ?? "http://app.lvh.me:8001/auth/callback",
-	KEYCLOAK_API_REDIRECT_URI: process.env.KEYCLOAK_API_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/api/callback",
+	ATRIUM_INTERNAL_URL: atriumUrl,
+	ATRIUM_PUBLIC_URL: process.env.ATRIUM_PUBLIC_URL ?? atriumUrl,
+	ATRIUM_ISSUER: process.env.ATRIUM_ISSUER ?? atriumUrl,
+	ATRIUM_MANAGEMENT_CLIENT_ID: process.env.ATRIUM_MANAGEMENT_CLIENT_ID ?? "management",
+	ATRIUM_MANAGEMENT_CLIENT_SECRET: process.env.ATRIUM_MANAGEMENT_CLIENT_SECRET ?? "test-management-secret",
+	ATRIUM_WEB_CLIENT_ID: process.env.ATRIUM_WEB_CLIENT_ID ?? "envsync-web",
+	ATRIUM_WEB_CLIENT_SECRET: process.env.ATRIUM_WEB_CLIENT_SECRET ?? "test-web-client-secret",
+	ATRIUM_CLI_CLIENT_ID: process.env.ATRIUM_CLI_CLIENT_ID ?? "envsync-cli",
+	ATRIUM_API_CLIENT_ID: process.env.ATRIUM_API_CLIENT_ID ?? "envsync-api",
+	ATRIUM_API_CLIENT_SECRET: process.env.ATRIUM_API_CLIENT_SECRET ?? "test-api-client-secret",
+	ATRIUM_WEB_REDIRECT_URI: process.env.ATRIUM_WEB_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/web/callback",
+	ATRIUM_WEB_CALLBACK_URL: process.env.ATRIUM_WEB_CALLBACK_URL ?? "http://app.lvh.me:8001/auth/callback",
+	ATRIUM_API_REDIRECT_URI: process.env.ATRIUM_API_REDIRECT_URI ?? "http://api.lvh.me:4000/api/access/api/callback",
 	OPENFGA_API_URL: process.env.OPENFGA_API_URL ?? "http://localhost:8090",
 	OPENFGA_STORE_ID: process.env.OPENFGA_STORE_ID ?? "",
 	OPENFGA_MODEL_ID: process.env.OPENFGA_MODEL_ID ?? "",

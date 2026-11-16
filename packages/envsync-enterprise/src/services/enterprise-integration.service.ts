@@ -2,12 +2,24 @@ import { v4 as uuidv4 } from "uuid";
 
 import { DB } from "envsync-api/ports/db";
 import { NotFoundError, ValidationError } from "envsync-api/ports/errors";
+import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 import { AppService } from "envsync-api/ports/services";
 import { EnvTypeService } from "envsync-api/ports/services";
 import {
-	EnterpriseProviderService,
-	type EnterpriseProvider,
-} from "./enterprise-provider.service";
+	isSealedString,
+	openStringCredential,
+	sealStringCredential,
+} from "./credential-envelope";
+import { EnterpriseProviderService } from "./enterprise-provider.service";
+
+function integrationSecretAad(orgId: string, secretId: string): string {
+	return `org:${orgId}:integration-secret:${secretId}`;
+}
+
+function toPublicOrgSecret<T extends { value: string }>(row: T): Omit<T, "value"> {
+	const { value: _value, ...rest } = row;
+	return rest;
+}
 
 function isKmsPurpose(metadata: unknown): boolean {
 	if (!metadata || typeof metadata !== "object") {
@@ -94,16 +106,21 @@ export class EnterpriseIntegrationService {
 		return db.selectFrom("provider_connection").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
 	}
 
-	public static listOrgSecrets(org_id: string) {
-		return DB.getInstance().then(async db => {
-			const rows = await db
-				.selectFrom("org_secret")
-				.selectAll()
-				.where("org_id", "=", org_id)
-				.orderBy("created_at", "desc")
-				.execute();
-			return rows.filter(row => !isKmsPurpose(row.metadata));
-		});
+	public static async listOrgSecrets(org_id: string) {
+		const db = await DB.getInstance();
+		const rows = await db
+			.selectFrom("org_secret")
+			.selectAll()
+			.where("org_id", "=", org_id)
+			.orderBy("created_at", "desc")
+			.execute();
+		const visible = rows.filter(row => !isKmsPurpose(row.metadata));
+		for (const row of visible) {
+			if (!isSealedString(row.value)) {
+				await this.persistSealedOrgSecret(row.org_id, row.id, row.value);
+			}
+		}
+		return visible.map(row => toPublicOrgSecret(row));
 	}
 
 	public static async createOrgSecret(input: {
@@ -120,11 +137,12 @@ export class EnterpriseIntegrationService {
 			);
 		}
 		const db = await DB.getInstance();
+		const id = uuidv4();
 		const row = {
-			id: uuidv4(),
+			id,
 			org_id: input.org_id,
 			key: input.key,
-			value: input.value,
+			value: await sealStringCredential(input.org_id, integrationSecretAad(input.org_id, id), input.value),
 			description: input.description ?? null,
 			metadata: input.metadata ?? {},
 			created_at: new Date(),
@@ -132,7 +150,7 @@ export class EnterpriseIntegrationService {
 		};
 
 		await db.insertInto("org_secret").values(row).executeTakeFirstOrThrow();
-		return row;
+		return toPublicOrgSecret(row);
 	}
 
 	public static async updateOrgSecret(id: string, org_id: string, input: {
@@ -157,16 +175,72 @@ export class EnterpriseIntegrationService {
 			);
 		}
 
+		const updates: {
+			value?: string;
+			description?: string | null;
+			metadata?: Record<string, unknown>;
+			updated_at: Date;
+		} = { updated_at: new Date() };
+		if (input.description !== undefined) updates.description = input.description;
+		if (input.metadata !== undefined) updates.metadata = input.metadata;
+		if (input.value !== undefined) {
+			updates.value = await sealStringCredential(org_id, integrationSecretAad(org_id, id), input.value);
+		} else if (!isSealedString(existing.value)) {
+			updates.value = await sealStringCredential(org_id, integrationSecretAad(org_id, id), existing.value);
+		}
+
 		await db
 			.updateTable("org_secret")
-			.set({
-				...input,
-				updated_at: new Date(),
-			})
+			.set(updates)
 			.where("id", "=", id)
 			.executeTakeFirstOrThrow();
 
-		return db.selectFrom("org_secret").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
+		const updated = await db.selectFrom("org_secret").selectAll().where("id", "=", id).executeTakeFirstOrThrow();
+		return toPublicOrgSecret(updated);
+	}
+
+	/**
+	 * Decrypt an integration org secret at use. Plaintext legacy rows are
+	 * sealed on this read. purpose=kms rows are not integration tokens.
+	 */
+	public static async readOrgSecretValue(org_id: string, key: string): Promise<string> {
+		const db = await DB.getInstance();
+		const secrets = await db
+			.selectFrom("org_secret")
+			.selectAll()
+			.where("org_id", "=", org_id)
+			.where("key", "=", key)
+			.execute();
+		const secret = secrets.find(row => !isKmsPurpose(row.metadata));
+		if (!secret) {
+			throw new NotFoundError("OrgSecret", key, "ENTERPRISE_ORG_SECRET_NOT_FOUND");
+		}
+		if (!isSealedString(secret.value)) {
+			await this.persistSealedOrgSecret(org_id, secret.id, secret.value);
+			return secret.value;
+		}
+		return openStringCredential(org_id, integrationSecretAad(org_id, secret.id), secret.value);
+	}
+
+	private static async persistSealedOrgSecret(orgId: string, secretId: string, plaintext: string) {
+		try {
+			const db = await DB.getInstance();
+			await db
+				.updateTable("org_secret")
+				.set({
+					value: await sealStringCredential(orgId, integrationSecretAad(orgId, secretId), plaintext),
+					updated_at: new Date(),
+				})
+				.where("id", "=", secretId)
+				.where("org_id", "=", orgId)
+				.execute();
+		} catch (error) {
+			infoLogs(
+				`Failed to upgrade integration secret ${secretId}: ${error instanceof Error ? error.message : "unknown error"}`,
+				LogTypes.ERROR,
+				"EnterpriseIntegrationService",
+			);
+		}
 	}
 
 	private static async assertAppInOrg(app_id: string, org_id: string) {

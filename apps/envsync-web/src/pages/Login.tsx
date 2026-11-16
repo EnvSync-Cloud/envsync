@@ -39,10 +39,10 @@ const Login = () => {
   const showSso = !isLoading && runtimeConfig.edition !== "oss";
   const [slug, setSlug] = useState(readStoredSlug);
   const [ssoError, setSsoError] = useState(ssoErrorFromSearch(searchParams.get("sso")));
-  const [keycloakError, setKeycloakError] = useState<string | null>(null);
-  const [keycloakPending, setKeycloakPending] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const [signInPending, setSignInPending] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
-  const actionsDisabled = isLoading || keycloakPending || ssoPending;
+  const actionsDisabled = isLoading || signInPending || ssoPending;
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -50,21 +50,21 @@ const Login = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  const handleKeycloakLogin = async () => {
+  const handleSignIn = async () => {
     if (actionsDisabled) return;
-    setKeycloakError(null);
-    setKeycloakPending(true);
+    setSignInError(null);
+    setSignInPending(true);
     try {
       const response = await getSDK().access.createWebLogin();
       if (response?.loginUrl) {
         window.location.href = response.loginUrl;
         return;
       }
-      setKeycloakError("We couldn't start sign-in. Please try again.");
+      setSignInError("We couldn't start sign-in. Please try again.");
     } catch {
-      setKeycloakError("We couldn't start sign-in. Please try again.");
+      setSignInError("We couldn't start sign-in. Please try again.");
     } finally {
-      setKeycloakPending(false);
+      setSignInPending(false);
     }
   };
 
@@ -102,28 +102,28 @@ const Login = () => {
           <CardContent className="space-y-6">
             <Button
               type="button"
-              data-testid="login-keycloak"
+              data-testid="login-continue"
               className="w-full"
               disabled={actionsDisabled}
-              onClick={() => void handleKeycloakLogin()}
+              onClick={() => void handleSignIn()}
             >
-              {isLoading || keycloakPending ? (
+              {isLoading || signInPending ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  {keycloakPending ? "Redirecting…" : "Loading…"}
+                  {signInPending ? "Redirecting…" : "Loading…"}
                 </>
               ) : (
                 "Continue with EnvSync"
               )}
             </Button>
 
-            {keycloakError && (
+            {signInError && (
               <div
                 role="alert"
                 className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{keycloakError}</span>
+                <span>{signInError}</span>
               </div>
             )}
 

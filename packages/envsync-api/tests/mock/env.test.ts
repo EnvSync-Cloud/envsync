@@ -7,7 +7,9 @@ import { resetVaultStore } from "../helpers/kms";
 
 let seed: SeedOrgResult;
 let appId: string;
+let appName: string;
 let envTypeId: string;
+let envTypeName: string;
 
 beforeAll(async () => {
 	seed = await seedOrg();
@@ -23,9 +25,11 @@ beforeAll(async () => {
 
 	const app = await seedApp(seed.org.id);
 	appId = app.id;
+	appName = app.name;
 
 	const envType = await seedEnvType(seed.org.id, appId);
 	envTypeId = envType.id;
+	envTypeName = envType.name;
 
 	// Write FGA structural tuples for the env type (normally done by API on create)
 	await MockFGAClient.writeTuples([
@@ -204,6 +208,72 @@ describe("PUT /api/env/batch", () => {
 
 		const body = await res.json<{ message: string }>();
 		expect(body.message).toBe("Envs created successfully");
+	});
+});
+
+describe("POST /api/env by project and environment name", () => {
+	test("returns the same rows as the id form", async () => {
+		await testRequest("/api/env/single", {
+			method: "PUT",
+			token: seed.masterUser.token,
+			body: {
+				key: "NAME_SCOPE",
+				value: "from-name",
+				app_id: appId,
+				env_type_id: envTypeId,
+			},
+		});
+
+		const byId = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_id: appId, env_type_id: envTypeId },
+		});
+		const byName = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_name: appName, env_type_name: envTypeName },
+		});
+
+		expect(byId.status).toBe(200);
+		expect(byName.status).toBe(200);
+
+		const pick = (
+			rows: Array<{ key: string; value: string; app_id: string; env_type_id: string }>,
+		) =>
+			rows
+				.map(row => ({
+					key: row.key,
+					value: row.value,
+					app_id: row.app_id,
+					env_type_id: row.env_type_id,
+				}))
+				.sort((left, right) => left.key.localeCompare(right.key));
+
+		expect(pick(await byName.json())).toEqual(pick(await byId.json()));
+	});
+
+	test("returns 404 when the environment name does not match case", async () => {
+		const res = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: { app_name: appName, env_type_name: envTypeName.toUpperCase() },
+		});
+		expect(res.status).toBe(404);
+	});
+
+	test("returns 400 when the id and name identify different projects", async () => {
+		const other = await seedApp(seed.org.id, { name: `Other Project ${Date.now()}` });
+		const res = await testRequest("/api/env", {
+			method: "POST",
+			token: seed.masterUser.token,
+			body: {
+				app_id: appId,
+				app_name: other.name,
+				env_type_id: envTypeId,
+			},
+		});
+		expect(res.status).toBe(400);
 	});
 });
 

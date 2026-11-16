@@ -3,12 +3,26 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+export const PRIVATE_KEY_FILE_MODE = 0o600;
+
+export function writePrivateKeyFile(target: string, content: string) {
+	fs.mkdirSync(path.dirname(target), { recursive: true });
+	fs.writeFileSync(target, content, { encoding: "utf8", mode: PRIVATE_KEY_FILE_MODE });
+	fs.chmodSync(target, PRIVATE_KEY_FILE_MODE);
+}
+
 function openssl(args: string[], input?: string): string {
 	const result = spawnSync("openssl", args, { encoding: "utf8", input });
 	if (result.status !== 0) {
 		throw new Error(`openssl ${args[0]} failed: ${result.stderr || result.stdout || "unknown error"}`);
 	}
 	return result.stdout;
+}
+
+/** Generate an EC private key and restrict it to mode 0600. */
+export function generateEcPrivateKey(filePath: string, curve: string) {
+	openssl(["ecparam", "-name", curve, "-genkey", "-noout", "-out", filePath]);
+	fs.chmodSync(filePath, PRIVATE_KEY_FILE_MODE);
 }
 
 /** P-256 control-plane CA + server/client PEMs. Uses -extfile so OpenSSL 1.1.1 and LibreSSL work. */
@@ -33,13 +47,13 @@ export function generateMinikmsGrpcTlsPemSet(): {
 		const clientExtPath = path.join(tmpDir, "client.ext");
 		const clientCertPath = path.join(tmpDir, "client.crt");
 
-		openssl(["ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", caKeyPath]);
+		generateEcPrivateKey(caKeyPath, "prime256v1");
 		openssl([
 			"req", "-new", "-x509", "-key", caKeyPath, "-sha256", "-days", "3650",
 			"-subj", "/CN=EnvSync miniKMS gRPC CA", "-out", caCertPath,
 		]);
 
-		openssl(["ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", serverKeyPath]);
+		generateEcPrivateKey(serverKeyPath, "prime256v1");
 		openssl(["req", "-new", "-key", serverKeyPath, "-subj", "/CN=minikms", "-out", serverCsrPath]);
 		fs.writeFileSync(
 			serverExtPath,
@@ -50,7 +64,7 @@ export function generateMinikmsGrpcTlsPemSet(): {
 			"-CAcreateserial", "-days", "3650", "-sha256", "-extfile", serverExtPath, "-out", serverCertPath,
 		]);
 
-		openssl(["ecparam", "-name", "prime256v1", "-genkey", "-noout", "-out", clientKeyPath]);
+		generateEcPrivateKey(clientKeyPath, "prime256v1");
 		openssl(["req", "-new", "-key", clientKeyPath, "-subj", "/CN=envsync-api", "-out", clientCsrPath]);
 		fs.writeFileSync(clientExtPath, "extendedKeyUsage=clientAuth\n");
 		openssl([

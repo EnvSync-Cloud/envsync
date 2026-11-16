@@ -5,7 +5,9 @@
 export type CreateEnvRequest = {
     key: string;
     value: string;
-    app_id: string;
-    env_type_id: string;
+    app_id?: string;
+    app_name?: string;
+    env_type_id?: string;
+    env_type_name?: string;
 };
 

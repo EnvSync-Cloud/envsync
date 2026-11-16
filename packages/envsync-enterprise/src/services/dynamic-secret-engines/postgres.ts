@@ -74,11 +74,6 @@ export class PostgresEngine implements DynamicSecretEngineInterface {
 
 			for (const stmt of c.creation_statements) {
 				const rendered = applyTemplate(stmt, vars);
-				infoLogs(
-					`PostgresEngine: executing: ${rendered}`,
-					LogTypes.LOGS,
-					"DynamicSecretEngine:Postgres",
-				);
 				await client.query(rendered);
 			}
 
@@ -147,11 +142,6 @@ export class PostgresEngine implements DynamicSecretEngineInterface {
 
 			for (const stmt of revocationStmts) {
 				const rendered = applyTemplate(stmt, vars);
-				infoLogs(
-					`PostgresEngine: executing revocation: ${rendered}`,
-					LogTypes.LOGS,
-					"DynamicSecretEngine:Postgres",
-				);
 				await client.query(rendered);
 			}
 

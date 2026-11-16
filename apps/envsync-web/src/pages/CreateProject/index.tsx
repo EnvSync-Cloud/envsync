@@ -415,7 +415,7 @@ export const CreateProject = () => {
                       Enable Secrets
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Enable encryption for sensitive variables
+                      Secrets are encrypted at rest and in transit, and the keys are managed by EnvSync&apos;s key service.
                     </p>
                   </div>
                   <Switch
@@ -443,7 +443,7 @@ export const CreateProject = () => {
                         <Info className="w-4 h-4 ml-2 text-muted-foreground hover:text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Leave empty for managed secrets</p>
+                        <p>Encrypted at rest and in transit.</p>
                       </TooltipContent>
                     </Tooltip>
                   </Label>
@@ -468,7 +468,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                     </p>
                   )}
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Paste your RSA public key for secret encryption</span>
+                    <span>Encrypted at rest and in transit.</span>
                     <span>
                       {formData.publicKey.length}/{MAX_PUBLIC_KEY_LENGTH}
                     </span>
@@ -664,16 +664,10 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                     <>
                       <Badge
                         variant="outline"
-                        className={`text-xs ${
-                          formData.publicKey
-                            ? "bg-yellow-500/10 text-yellow-400 border-yellow-800"
-                            : "bg-pink-500/10 text-pink-400 border-pink-800"
-                        } px-2 py-0.5 flex items-center`}
+                        className="text-xs bg-pink-500/10 text-pink-400 border-pink-800 px-2 py-0.5 flex items-center"
                       >
                         <Key className="w-3 h-3 mr-1" />
-                        {formData.publicKey
-                          ? "Custom Encryption"
-                          : "Managed Secrets"}
+                        Managed encryption
                       </Badge>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -681,9 +675,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[220px]">
                           <p>
-                            {formData.publicKey
-                              ? "Using custom public key for encryption"
-                              : "Secrets will be managed by the platform"}
+                            Encrypted at rest and in transit.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -738,7 +730,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 )}
                 {formData.enableSecrets && (
                   <li>
-                    Secret variables will be encrypted using your public key.
+                    Managed encryption.
                   </li>
                 )}
                 <li>Team members can be given access to manage the project.</li>

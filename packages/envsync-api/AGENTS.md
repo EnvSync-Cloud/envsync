@@ -7,7 +7,7 @@ Backend API for the EnvSync platform.
 - **Framework:** Hono on Bun runtime
 - **Database:** PostgreSQL via Kysely (type-safe query builder, NOT an ORM)
 - **Secrets:** miniKMS + RustFS-backed secret storage
-- **Auth:** Keycloak OIDC (`openid-client`) + JWT verification (`jose`)
+- **Auth:** Atrium OIDC (`openid-client`) + JWT verification (`jose`)
 - **Authorization:** OpenFGA for fine-grained access control
 - **Validation:** Zod schemas + `@hono/zod-validator`
 - **API docs:** `zod-openapi` annotations, served at `/docs` via `@scalar/hono-api-reference`
@@ -53,7 +53,7 @@ OpenAPI: `GET /openapi` (unique operationIds via `libs/openapi-disambiguate.ts`)
 ## CLI scripts
 
 `scripts/cli.ts` provides setup commands (run from repo root with `bun run cli`):
-- `init` — initialize RustFS bucket + Keycloak OIDC apps
+- `init` — initialize RustFS bucket + Atrium OIDC apps
 - `create-dev-user --seed` — create dev user + sample data
 
 ## Conventions

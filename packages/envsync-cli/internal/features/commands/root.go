@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/features/handlers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/logger"
@@ -24,26 +25,23 @@ const (
 )
 
 type CommandRegistry struct {
-	appHandler            *handlers.AppHandler
-	authHandler           *handlers.AuthHandler
-	configHandler         *handlers.ConfigHandler
-	environmentHandler    *handlers.EnvironmentHandler
-	syncHandler           *handlers.SyncHandler
-	exportHandler         *handlers.ExportHandler
-	initHandler           *handlers.InitHandler
-	runHandler            *handlers.RunHandler
-	genPEMKeyHandler      *handlers.GenPEMKeyHandler
-	gpgKeyHandler         *handlers.GpgKeyHandler
-	certificateHandler    *handlers.CertificateHandler
-	teamHandler           *handlers.TeamHandler
-	accessHandler         *handlers.AccessHandler
-	requestHandler        *handlers.RequestHandler
-	serviceTokenHandler   *handlers.ServiceTokenHandler
-	oidcHandler           *handlers.OidcHandler
-	samlHandler           *handlers.SamlHandler
-	rotationHandler       *handlers.RotationHandler
-	dynamicSecretHandler  *handlers.DynamicSecretHandler
-	logForwardingHandler  *handlers.LogForwardingHandler
+	appHandler           *handlers.AppHandler
+	authHandler          *handlers.AuthHandler
+	configHandler        *handlers.ConfigHandler
+	environmentHandler   *handlers.EnvironmentHandler
+	syncHandler          *handlers.SyncHandler
+	exportHandler        *handlers.ExportHandler
+	initHandler          *handlers.InitHandler
+	runHandler           *handlers.RunHandler
+	genPEMKeyHandler     *handlers.GenPEMKeyHandler
+	gpgKeyHandler        *handlers.GpgKeyHandler
+	certificateHandler   *handlers.CertificateHandler
+	teamHandler          *handlers.TeamHandler
+	accessHandler        *handlers.AccessHandler
+	requestHandler       *handlers.RequestHandler
+	serviceTokenHandler  *handlers.ServiceTokenHandler
+	rotationHandler      *handlers.RotationHandler
+	dynamicSecretHandler *handlers.DynamicSecretHandler
 }
 
 func NewCommandRegistry(
@@ -62,40 +60,34 @@ func NewCommandRegistry(
 	accessHandler *handlers.AccessHandler,
 	requestHandler *handlers.RequestHandler,
 	serviceTokenHandler *handlers.ServiceTokenHandler,
-	oidcHandler *handlers.OidcHandler,
-	samlHandler *handlers.SamlHandler,
 	rotationHandler *handlers.RotationHandler,
 	dynamicSecretHandler *handlers.DynamicSecretHandler,
-	logForwardingHandler *handlers.LogForwardingHandler,
 ) *CommandRegistry {
 	return &CommandRegistry{
-		appHandler:            appHandler,
-		authHandler:           authHandler,
-		configHandler:         configHandler,
-		environmentHandler:    environmentHandler,
-		syncHandler:           syncHandler,
-		exportHandler:         exportHandler,
-		initHandler:           initHandler,
-		runHandler:            runHandler,
-		genPEMKeyHandler:      genPEMKeyHandler,
-		gpgKeyHandler:         gpgKeyHandler,
-		certificateHandler:    certificateHandler,
-		teamHandler:           teamHandler,
-		accessHandler:         accessHandler,
-		requestHandler:        requestHandler,
-		serviceTokenHandler:   serviceTokenHandler,
-		oidcHandler:           oidcHandler,
-		samlHandler:           samlHandler,
-		rotationHandler:       rotationHandler,
-		dynamicSecretHandler:  dynamicSecretHandler,
-		logForwardingHandler:  logForwardingHandler,
+		appHandler:           appHandler,
+		authHandler:          authHandler,
+		configHandler:        configHandler,
+		environmentHandler:   environmentHandler,
+		syncHandler:          syncHandler,
+		exportHandler:        exportHandler,
+		initHandler:          initHandler,
+		runHandler:           runHandler,
+		genPEMKeyHandler:     genPEMKeyHandler,
+		gpgKeyHandler:        gpgKeyHandler,
+		certificateHandler:   certificateHandler,
+		teamHandler:          teamHandler,
+		accessHandler:        accessHandler,
+		requestHandler:       requestHandler,
+		serviceTokenHandler:  serviceTokenHandler,
+		rotationHandler:      rotationHandler,
+		dynamicSecretHandler: dynamicSecretHandler,
 	}
 }
 
 var version = "dev"
 
 func (r *CommandRegistry) RegisterCLI() *cli.Command {
-	return &cli.Command{
+	root := &cli.Command{
 		Name:                  "envsync",
 		Usage:                 "EnvSync CLI for managing applications and configurations",
 		Version:               version,
@@ -129,42 +121,61 @@ func (r *CommandRegistry) RegisterCLI() *cli.Command {
 			AccessCommands(r.accessHandler),
 			RequestCommands(r.requestHandler),
 			ServiceTokenCommands(r.serviceTokenHandler),
-			OidcCommands(r.oidcHandler),
-			SamlCommands(r.samlHandler),
 			RotationCommands(r.rotationHandler),
 			DynamicSecretCommands(r.dynamicSecretHandler),
-			LogForwardingCommands(r.logForwardingHandler),
 		},
 	}
+	return observe(root, "")
+}
+
+// observe wraps every command action in the tree with a root span named after
+// the full command path ("cli/app/create") plus command start/finish logs, and
+// records any error the action returns on that span before it becomes the exit
+// status. Child spans created by use cases nest underneath because the span
+// context flows through the action ctx.
+func observe(c *cli.Command, parentPath string) *cli.Command {
+	full := c.Name
+	if parentPath != "" {
+		full = parentPath + "/" + c.Name
+	}
+	if c.Action != nil {
+		action := c.Action
+		c.Action = func(ctx context.Context, cmd *cli.Command) (err error) {
+			ctx, end := telemetry.StartSpan(ctx, "cli/"+full,
+				trace.WithAttributes(attribute.String("cli.command", full)))
+			defer end(&err)
+
+			l := logger.FromContext(ctx)
+			l.Info("command started", zap.String("command", full))
+			err = action(ctx, cmd)
+			if err == nil {
+				l.Info("command finished", zap.String("command", full))
+			}
+			return err
+		}
+	}
+	for _, sub := range c.Commands {
+		observe(sub, full)
+	}
+	return c
 }
 
 func (r *CommandRegistry) beforeHook(ctx context.Context, cmd *cli.Command) (context.Context, error) {
+	// Initialise app config
+	_ = config.New()
+
 	// Initialise OpenTelemetry (graceful degradation on failure)
 	shutdown, lp, _ := telemetry.Init(ctx)
 	ctx = context.WithValue(ctx, constants.TelemetryShutdownKey, shutdown)
-
-	// Start root span for the CLI command
-	cmdName := "cli"
-	if cmd.Name != "" {
-		cmdName = "cli/" + cmd.Name
-	}
-	var span trace.Span
-	ctx, span = telemetry.Tracer().Start(ctx, cmdName,
-		trace.WithAttributes(attribute.String("cli.command", cmd.Name)),
-	)
-	ctx = context.WithValue(ctx, constants.RootSpanKey, span)
 
 	l := logger.NewLogger(lp)
 	return context.WithValue(ctx, constants.LoggerKey, l), nil
 }
 
 func (r *CommandRegistry) afterHook(ctx context.Context, cmd *cli.Command) error {
-	// End root span
-	if span, ok := ctx.Value(constants.RootSpanKey).(trace.Span); ok && span != nil {
-		span.End()
-	}
-
-	// Sync logger
+	// Sync logger. This runs after the command action's span has ended, and
+	// before the exporters shut down, so nothing written on the way out is
+	// lost.
 	if l, ok := ctx.Value(constants.LoggerKey).(*zap.Logger); ok && l != nil {
 		l.Sync()
 	}

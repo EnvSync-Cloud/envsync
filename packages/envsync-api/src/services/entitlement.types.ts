@@ -58,6 +58,8 @@ export type EntitlementClaims = {
 
 export type VerifiedEntitlement = {
 	claims: EntitlementClaims;
+	/** Verification key id from the JWT protected header. */
+	kid?: string;
 	/** Raw JWT or "certificate" / "dev" source */
 	source: "jwt" | "certificate" | "test";
 	/** Wall-clock when crypto verification last succeeded */

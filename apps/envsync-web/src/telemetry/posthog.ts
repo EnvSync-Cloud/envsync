@@ -1,5 +1,5 @@
 import posthog from "posthog-js";
-import { rewritePosthogRequestUrl } from "envsync-analytics";
+import { POSTHOG_BROWSER_INIT, rewritePosthogRequestUrl } from "envsync-analytics";
 
 import { runtimeConfig } from "@/utils/runtime-config";
 
@@ -18,11 +18,8 @@ export function initPostHog(): void {
     api_host: host,
     ui_host: import.meta.env.VITE_POSTHOG_UI_HOST || "https://eu.posthog.com",
     rewriteRequestPath: rewritePosthogRequestUrl,
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: true,
-    persistence: "localStorage+cookie",
-    person_profiles: "identified_only",
+    ...POSTHOG_BROWSER_INIT,
+    disable_session_recording: true,
   });
   posthog.register({
     edition: runtimeConfig.edition,

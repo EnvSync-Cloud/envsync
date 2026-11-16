@@ -3,9 +3,14 @@ package config
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/config"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type setConfigUseCase struct{}
@@ -14,7 +19,11 @@ func NewSetConfigUseCase() SetConfigUseCase {
 	return &setConfigUseCase{}
 }
 
-func (uc *setConfigUseCase) Execute(ctx context.Context, req SetConfigRequest) error {
+func (uc *setConfigUseCase) Execute(ctx context.Context, req SetConfigRequest) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "config.set",
+		trace.WithAttributes(attribute.StringSlice("config.keys", slices.Sorted(maps.Keys(req.KeyValuePairs)))))
+	defer end(&err)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return NewValidationError("invalid set config request", "", err)
@@ -52,8 +61,14 @@ func (uc *setConfigUseCase) setConfigValue(cfg *config.AppConfig, key, value str
 	normalizedKey := strings.ToLower(key)
 
 	switch normalizedKey {
-	case "backend_url", "backendurl":
+	case "backend_url":
 		cfg.BackendURL = value
+	case "otel_config.disabled":
+		cfg.OTELConfig.OtelDisabled = value == "true"
+	case "otel_config.endpoint":
+		cfg.OTELConfig.Endpoint = value
+	case "otel_config.service_name":
+		cfg.OTELConfig.ServiceName = value
 	default:
 		return fmt.Errorf("unknown configuration key: '%s'. Valid keys are: backend_url", key)
 	}

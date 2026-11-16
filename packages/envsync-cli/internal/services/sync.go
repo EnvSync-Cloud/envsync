@@ -12,6 +12,7 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/mappers"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/repository"
+	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
 )
 
 type SyncService interface {
@@ -40,7 +41,7 @@ func NewSyncService() SyncService {
 
 func NewSyncServiceWithConfig(projCfg domain.SyncConfig) SyncService {
 	return &sync{
-		repo:       repository.NewEnvVariableRepository(projCfg.AppID, projCfg.EnvTypeID),
+		repo:       repository.NewEnvVariableRepository(projCfg.APIRef()),
 		projectCfg: projCfg,
 	}
 }
@@ -88,7 +89,10 @@ func (s *sync) WriteConfigData(cfg domain.SyncConfig) error {
 	return nil
 }
 
-func (s *sync) ReadRemoteEnv(ctx context.Context) ([]*domain.EnvironmentVariable, error) {
+func (s *sync) ReadRemoteEnv(ctx context.Context) (result []*domain.EnvironmentVariable, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.sync.read_remote_env")
+	defer end(&err)
+
 	envRes, err := s.repo.GetAllEnv(ctx)
 	if err != nil {
 		return nil, err
@@ -129,27 +133,31 @@ func (s *sync) WriteLocalEnv(env map[string]string) error {
 	return godotenv.Write(env, ".env")
 }
 
-func (s *sync) WriteRemoteEnv(ctx context.Context, env *domain.EnvironmentSync) error {
+func (s *sync) WriteRemoteEnv(ctx context.Context, env *domain.EnvironmentSync) (err error) {
+	ctx, end := telemetry.StartSpan(ctx, "svc.sync.write_remote_env")
+	defer end(&err)
+
 	toCreate := env.ToAdd
 	toUpdate := env.ToUpdate
 	toDelete := env.ToDelete
 
+	ref := s.projectCfg.APIRef()
 	if len(toCreate) != 0 {
-		batchCreateReq := mappers.EnvironmentVariableToBatchRequest(toCreate, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchCreateReq := mappers.EnvironmentVariableToBatchRequest(toCreate, ref)
 		if err := s.repo.BatchCreateEnv(ctx, batchCreateReq); err != nil {
 			return err
 		}
 	}
 
 	if len(toUpdate) != 0 {
-		batchUpdateReq := mappers.EnvironmentVariableToBatchRequest(toUpdate, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchUpdateReq := mappers.EnvironmentVariableToBatchRequest(toUpdate, ref)
 		if err := s.repo.BatchUpdateEnv(ctx, batchUpdateReq); err != nil {
 			return err
 		}
 	}
 
 	if len(toDelete) != 0 {
-		batchDeleteReq := mappers.KeysToBatchDeleteRequest(toDelete, s.projectCfg.AppID, s.projectCfg.EnvTypeID)
+		batchDeleteReq := mappers.KeysToBatchDeleteRequest(toDelete, ref)
 		if err := s.repo.BatchDeleteEnv(ctx, batchDeleteReq); err != nil {
 			return err
 		}

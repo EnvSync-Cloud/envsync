@@ -15,7 +15,7 @@ type OidcProviderRow = Selectable<Database["oidc_providers"]>;
 export class OidcService {
 	/**
 	 * Create an OIDC provider and a corresponding machine user.
-	 * The machine user is a DB-only identity (no Keycloak account) that allows
+	 * The machine user is a DB-only identity (no Atrium account) that allows
 	 * the OIDC identity to participate in the existing auth middleware flow.
 	 */
 	public static createProvider = async (data: {

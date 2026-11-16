@@ -8,6 +8,8 @@ import (
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/domain"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/services"
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type pushUseCase struct {
@@ -21,9 +23,10 @@ func NewPushUseCase() PushUseCase {
 	}
 }
 
-func (uc *pushUseCase) Execute(ctx context.Context, configPath string) (SyncResponse, error) {
-	ctx, span := telemetry.Tracer().Start(ctx, "sync.push")
-	defer span.End()
+func (uc *pushUseCase) Execute(ctx context.Context, configPath string) (result SyncResponse, err error) {
+	ctx, end := telemetry.StartSpan(ctx, "sync.push",
+		trace.WithAttributes(attribute.String("file.path", configPath)))
+	defer end(&err)
 
 	// Check if the configuration file exists
 	if err := uc.checkConfigFileExists(configPath); err != nil {

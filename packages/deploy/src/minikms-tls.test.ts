@@ -3,7 +3,32 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { generateMinikmsGrpcTlsPemSet } from "./minikms-tls";
+import { generateEcPrivateKey, generateMinikmsGrpcTlsPemSet, writePrivateKeyFile } from "./minikms-tls";
+
+describe("private key file mode", () => {
+	test("writePrivateKeyFile uses mode 0600", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "envsync-key-mode-"));
+		try {
+			const target = path.join(dir, "nested", "key.pem");
+			writePrivateKeyFile(target, "-----BEGIN PRIVATE KEY-----\nTEST\n-----END PRIVATE KEY-----\n");
+			expect(fs.statSync(target).mode & 0o777).toBe(0o600);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("generateEcPrivateKey uses mode 0600", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "envsync-ec-key-"));
+		try {
+			const target = path.join(dir, "key.pem");
+			generateEcPrivateKey(target, "prime256v1");
+			expect(fs.statSync(target).mode & 0o777).toBe(0o600);
+			expect(fs.readFileSync(target, "utf8")).toContain("PRIVATE KEY");
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
 
 describe("generateMinikmsGrpcTlsPemSet", () => {
 	test("emits matching P-256 CA, server (SAN), and client PEMs", () => {
