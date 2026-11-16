@@ -42,18 +42,31 @@ type PitValueRow = {
  * Drop env values that older history messages embedded after the variable name.
  * The key and the action stay. A message with no embedded value is unchanged.
  */
+function scrubHistoryListItem(item: string) {
+	const arrow = item.match(/^(.*?):\s[\s\S]*→[\s\S]*$/);
+	if (arrow) return arrow[1];
+	return item.replace(/\s*\(value:\s[\s\S]*\)$/, "");
+}
+
 export function scrubHistoryMessage(message: string): string {
 	if (!message.includes("→") && !message.includes("(value:")) return message;
 
-	let next = message.replace(
-		/^(Updated environment variable: [^()]+?) \([\s\S]* → [\s\S]*\)$/,
-		"$1",
-	);
-	next = next.replace(/^(Deleted environment variable: [^()]+?) \(value: [\s\S]*\)$/, "$1");
-	next = next.replace(/^(Rollback variable \S+ to [\s\S]+?): [\s\S]* → [\s\S]*$/, "$1");
-	next = next.replace(/:\s[^,]*→[^,]*/g, "");
-	next = next.replace(/\s*\(value:\s[^)]*\)/g, "");
-	return next;
+	const updated = message.match(/^Updated environment variable: ([^()]+?) \([\s\S]* → [\s\S]*\)$/);
+	if (updated) return `Updated environment variable: ${updated[1]}`;
+
+	const deleted = message.match(/^Deleted environment variable: ([^()]+?) \(value: [\s\S]*\)$/);
+	if (deleted) return `Deleted environment variable: ${deleted[1]}`;
+
+	const rollback = message.match(/^(Rollback variable \S+ to [\s\S]+?): [\s\S]* → [\s\S]*$/);
+	if (rollback) return rollback[1];
+
+	const batch = message.match(/^(Batch (?:updated|deleted) \d+ environment variables): ([\s\S]+)$/);
+	if (batch) {
+		const items = batch[2].split(", ").map(scrubHistoryListItem);
+		return `${batch[1]}: ${items.join(", ")}`;
+	}
+
+	return message;
 }
 
 function sortJson(value: unknown): unknown {
