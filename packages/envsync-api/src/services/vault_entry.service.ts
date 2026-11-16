@@ -1,3 +1,4 @@
+import { REDACTED_ENV_PIT_VALUE } from "@/helpers/env-pit-value";
 import { DB } from "@/libs/db";
 import { BusinessRuleError, ConflictError, ForbiddenError, NotFoundError } from "@/libs/errors";
 import infoLogs, { LogTypes } from "@/libs/logger";
@@ -371,13 +372,13 @@ export class VaultEntryService {
 							);
 							return null;
 						}
-						// The vault row exists in point-in-time history but Read failed
-						// (gRPC 13). Keep the key visible from the PiT value. Env values
-						// are plaintext there; secret values are the same Layer 1 blob
-						// a successful vault read returns.
+						// Vault read failed (gRPC 13). Keep the key visible.
+						// Env history is not a plaintext fallback: show a placeholder.
+						// Secret history stores the same Layer 1 blob a successful read returns.
 						const message = error instanceof Error ? error.message : "unknown vault read error";
+						const fallbackValue = entryType === "env" ? REDACTED_ENV_PIT_VALUE : candidate.value;
 						infoLogs(
-							`Vault read failed for ${entryType} ${candidate.key} in ${input.app_id}/${input.env_type_id}: ${message}; returning point-in-time value`,
+							`Vault read failed for ${entryType} ${candidate.key} in ${input.app_id}/${input.env_type_id}: ${message}; returning ${entryType === "env" ? "redacted placeholder" : "point-in-time value"}`,
 							LogTypes.ERROR,
 							"VaultEntryService",
 						);
@@ -392,7 +393,7 @@ export class VaultEntryService {
 							input.app_id,
 							input.env_type_id,
 							candidate.key,
-							candidate.value,
+							fallbackValue,
 							seconds,
 						);
 					}
