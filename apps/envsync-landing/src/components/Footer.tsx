@@ -41,9 +41,10 @@ const linkGroups = [
     links: [
       { label: "Pricing", href: "/pricing", external: false },
       { label: "About", href: "/about", external: false },
+      { label: "Docs", href: runtimeConfig.docsUrl, external: true },
       { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
       { label: "Get Started", href: "/onboarding", external: false },
-      { label: "Contact", href: "mailto:team@envsync.cloud", external: true },
+      { label: "Contact", href: runtimeConfig.contactHref, external: true },
     ],
   },
 ] as const;
@@ -64,6 +65,10 @@ const Footer = () => {
             </Link>
             <p className="mt-4 max-w-xs text-sm text-muted-foreground">
               Developer-first environment control for teams shipping across staging, CI, and production.
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              <span className="block text-foreground">EnvSync Cloud Private Limited</span>
+              Hyderabad, India
             </p>
             <div className="mt-6">
               <a
@@ -114,7 +119,7 @@ const Footer = () => {
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-[1480px] flex-col gap-2 px-4 py-6 sm:px-8 md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} EnvSync. All rights reserved.
+            &copy; {new Date().getFullYear()} EnvSync Cloud Private Limited. All rights reserved.
           </p>
           <span className="font-mono text-xs leading-4 text-tertiary">{VERSION}</span>
         </div>

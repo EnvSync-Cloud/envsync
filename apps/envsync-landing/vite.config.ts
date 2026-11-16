@@ -22,12 +22,15 @@ function hostedRuntimeConfigPlugin(): Plugin {
       const apiBase = api.replace(/\/$/, "");
       const track = `${proto}//t.${root}`;
       const otel = `${track}/obs`;
+      const docsUrl = process.env.VITE_DOCS_URL || "https://docs.envsync.cloud";
       const config = {
         apiBaseUrl: apiBase,
         appBaseUrl: `${proto}//app.${root}`,
         authBaseUrl: `${proto}//auth.${root}`,
         webClientId: "envsync-web",
-        apiDocsUrl: `${apiBase}/docs`,
+        docsUrl,
+        apiDocsUrl: process.env.VITE_API_DOCS_URL || `${docsUrl.replace(/\/$/, "")}/docs/api`,
+        contactHref: process.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud",
         otelEndpoint: otel,
         hyperdxUrl: otel,
         hyperdxApiKey: process.env.VITE_HYPERDX_API_KEY || undefined,
