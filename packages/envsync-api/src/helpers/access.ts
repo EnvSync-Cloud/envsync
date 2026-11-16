@@ -141,7 +141,7 @@ export const validateAccess = async ({
  * - Falls back to JWT (which will fail with a clear error if invalid).
  */
 export function detectAuthType(bearerToken: string): AuthTokenType {
-	const cleanToken = bearerToken.replace(/^Bearer\s+/i, "");
+	const cleanToken = bearerToken.replace(/^(?:Bearer|DPoP)\s+/i, "");
 
 	if (ServiceTokenService.isServiceTokenValue(cleanToken)) {
 		return "SERVICE_TOKEN";

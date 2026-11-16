@@ -38,7 +38,7 @@ export const useAuth = () => {
         setAuthError(null);
         if (!onPublicAuth) {
           console.error("Failed to fetch user:", error);
-          await redirectToLogin();
+          await redirectToLogin(error);
         }
         return;
       }
@@ -87,7 +87,7 @@ export const useAuth = () => {
     } catch (error) {
       console.error("Failed to switch organization:", error);
       if (isReloginError(error)) {
-        await redirectToLogin();
+        await redirectToLogin(error);
         return;
       }
       const message = error instanceof Error ? error.message : "Failed to switch organization.";
@@ -123,7 +123,7 @@ export const useAuth = () => {
     } catch (error) {
       console.error("Failed to create organization:", error);
       if (isReloginError(error)) {
-        await redirectToLogin();
+        await redirectToLogin(error);
         return;
       }
       const message = error instanceof Error ? error.message : "Failed to create organization.";

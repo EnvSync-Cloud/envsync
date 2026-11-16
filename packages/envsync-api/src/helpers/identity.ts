@@ -7,6 +7,7 @@ const issuer = () => config.ATRIUM_ISSUER.replace(/\/$/, "");
 export const getIdentityInternalBaseUrl = () => internalBase();
 export const getIdentityPublicBaseUrl = () => publicBase();
 export const getIdentityIssuer = () => issuer();
+export const publicTokenEndpoint = () => `${issuer()}/oauth/token`;
 
 export interface IdentityTokenSet {
 	id_token?: string;

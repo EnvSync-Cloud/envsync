@@ -3,7 +3,12 @@ import { describeRoute } from "hono-openapi";
 import { resolver } from "hono-openapi/zod";
 
 import { AccessController } from "@/controllers/access.controller";
-import { loginUrlResponseSchema, callbackResponseSchema, logoutUrlResponseSchema } from "@/validators/access.validator";
+import {
+	loginUrlResponseSchema,
+	callbackResponseSchema,
+	logoutUrlResponseSchema,
+	webSessionResponseSchema,
+} from "@/validators/access.validator";
 import { errorResponseSchema } from "@/validators/common";
 
 const app = new Hono();
@@ -98,6 +103,74 @@ app.get(
 		},
 	}),
 	AccessController.callbackWebLogin,
+);
+
+app.post(
+	"/web/exchange",
+	describeRoute({
+		operationId: "exchangeWebLogin",
+		summary: "Exchange Web Login Code",
+		description:
+			"Exchange an authorization code and a DPoP proof for a browser session. The access token is returned once. The refresh token is stored in an HttpOnly cookie.",
+		tags: ["Access"],
+		responses: {
+			200: {
+				description: "Browser session created",
+				content: {
+					"application/json": {
+						schema: resolver(webSessionResponseSchema),
+					},
+				},
+			},
+			400: {
+				description: "Invalid login state",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+			401: {
+				description: "DPoP proof or code exchange failed",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+		},
+	}),
+	AccessController.exchangeWebLogin,
+);
+
+app.post(
+	"/web/refresh",
+	describeRoute({
+		operationId: "refreshWebSession",
+		summary: "Refresh Web Session",
+		description:
+			"Rotate the browser refresh cookie and return a new DPoP-bound access token. The proof is signed for the identity token endpoint.",
+		tags: ["Access"],
+		responses: {
+			200: {
+				description: "Access token refreshed",
+				content: {
+					"application/json": {
+						schema: resolver(webSessionResponseSchema),
+					},
+				},
+			},
+			401: {
+				description: "Session expired",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+		},
+	}),
+	AccessController.refreshWebSession,
 );
 
 app.post(

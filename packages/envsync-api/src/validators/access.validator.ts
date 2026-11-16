@@ -7,7 +7,10 @@ export const loginUrlResponseSchema = z
 		loginUrl: z
 			.string()
 			.url()
-			.openapi({ example: "https://auth.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code" }),
+			.openapi({
+				example:
+					"https://auth.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code",
+			}),
 	})
 	.openapi({ ref: "LoginUrlResponse" });
 
@@ -17,7 +20,10 @@ export const logoutUrlResponseSchema = z
 		logoutUrl: z
 			.string()
 			.url()
-			.openapi({ example: "https://auth.example.com/realms/envsync/protocol/openid-connect/logout?client_id=envsync-web" }),
+			.openapi({
+				example:
+					"https://auth.example.com/realms/envsync/protocol/openid-connect/logout?client_id=envsync-web",
+			}),
 	})
 	.openapi({ ref: "LogoutUrlResponse" });
 
@@ -27,15 +33,31 @@ export const cliLoginResponseSchema = z
 		verification_uri_complete: z
 			.string()
 			.url()
-			.openapi({ example: "https://auth.example.com/realms/envsync/protocol/openid-connect/auth/device" }),
+			.openapi({
+				example: "https://auth.example.com/realms/envsync/protocol/openid-connect/auth/device",
+			}),
 		user_code: z.string().openapi({ example: "abc123" }),
 		device_code: z.string().openapi({ example: "def456" }),
 		expires_in: z.number().openapi({ example: 300 }),
 		client_id: z.string().openapi({ example: "envsync-cli" }),
-		token_url: z.string().url().openapi({ example: "https://auth.example.com/realms/envsync/protocol/openid-connect/token" }),
+		token_url: z
+			.string()
+			.url()
+			.openapi({
+				example: "https://auth.example.com/realms/envsync/protocol/openid-connect/token",
+			}),
 		interval: z.number().openapi({ example: 5 }),
 	})
 	.openapi({ ref: "CliLoginResponse" });
+
+export const webSessionResponseSchema = z
+	.object({
+		message: z.string().optional().openapi({ example: "Web login completed." }),
+		access_token: z.string().openapi({ example: "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..." }),
+		expires_in: z.number().optional().openapi({ example: 3600 }),
+		token_type: z.string().optional().openapi({ example: "DPoP" }),
+	})
+	.openapi({ ref: "WebSessionResponse" });
 
 export const callbackResponseSchema = z
 	.object({

@@ -9,6 +9,7 @@ const ID_TOKEN_COOKIE = "envsync_id_token";
 const CSRF_COOKIE = "envsync_csrf";
 const LOGIN_STATE_COOKIE = "envsync_login_state";
 const ACTIVE_MEMBERSHIP_COOKIE = "envsync_active_membership";
+const DPOP_COOKIE = "envsync_dpop";
 
 type SameSitePolicy = "Lax" | "Strict" | "None";
 
@@ -99,6 +100,7 @@ export function clearWebAuthCookies(c: Context) {
 		CSRF_COOKIE,
 		LOGIN_STATE_COOKIE,
 		ACTIVE_MEMBERSHIP_COOKIE,
+		DPOP_COOKIE,
 	]) {
 		deleteAuthCookie(c, cookieName);
 	}
@@ -118,14 +120,23 @@ export function setActiveMembershipCookie(c: Context, userId: string, maxAge = 7
 	});
 }
 
-export function setWebAuthCookies(c: Context, tokens: WebSessionTokens) {
+export function setWebAuthCookies(
+	c: Context,
+	tokens: WebSessionTokens,
+	options?: { includeAccessToken?: boolean },
+) {
 	const csrfToken = createCsrfToken();
 	const csrfDomain = sharedCookieDomain();
+	const includeAccessToken = options?.includeAccessToken !== false;
 
-	setCookie(c, ACCESS_TOKEN_COOKIE, tokens.access_token, {
-		...cookieBaseOptions("/api"),
-		maxAge: Math.max(tokens.expires_in ?? 900, 60),
-	});
+	if (includeAccessToken) {
+		setCookie(c, ACCESS_TOKEN_COOKIE, tokens.access_token, {
+			...cookieBaseOptions("/api"),
+			maxAge: Math.max(tokens.expires_in ?? 900, 60),
+		});
+	} else {
+		deleteAuthCookie(c, ACCESS_TOKEN_COOKIE);
+	}
 
 	if (tokens.refresh_token) {
 		setCookie(c, REFRESH_TOKEN_COOKIE, tokens.refresh_token, {
@@ -153,6 +164,19 @@ export function setWebAuthCookies(c: Context, tokens: WebSessionTokens) {
 	if (tokens.id_token) {
 		setCookie(c, ID_TOKEN_COOKIE, tokens.id_token, {
 			...cookieBaseOptions("/api"),
+			maxAge: Math.max(tokens.refresh_expires_in ?? 7 * 24 * 60 * 60, 60),
+		});
+	}
+
+	if (includeAccessToken) {
+		deleteAuthCookie(c, DPOP_COOKIE);
+	} else {
+		setCookie(c, DPOP_COOKIE, "1", {
+			httpOnly: false,
+			secure: shouldUseSecureCookies(),
+			sameSite: "Lax",
+			path: "/",
+			...(csrfDomain ? { domain: csrfDomain } : {}),
 			maxAge: Math.max(tokens.refresh_expires_in ?? 7 * 24 * 60 * 60, 60),
 		});
 	}
