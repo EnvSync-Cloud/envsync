@@ -29,6 +29,8 @@ function hostedRuntimeConfigPlugin(): Plugin {
         keycloakRealm: "envsync",
         webClientId: "envsync-web",
         apiDocsUrl: `${apiBase}/docs`,
+        docsUrl: process.env.VITE_DOCS_URL || "https://docs.envsync.cloud",
+        contactHref: process.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud",
         otelEndpoint: otel,
         hyperdxUrl: otel,
         hyperdxApiKey: process.env.VITE_HYPERDX_API_KEY || undefined,

@@ -307,6 +307,8 @@ describe("renderFrontendRuntimeConfig", () => {
 		expect(frontendRuntime).toContain("\"publicSignupEnabled\": false");
 		expect(frontendRuntime).toContain("https://t.enterprise.example.com/ph");
 		expect(frontendRuntime).toContain("https://t.enterprise.example.com/obs");
+		expect(frontendRuntime).toContain("\"docsUrl\": \"https://docs.envsync.cloud\"");
+		expect(frontendRuntime).toContain("\"contactHref\": \"mailto:team@envsync.cloud\"");
 	});
 
 	test("emits public API_URL so SAML SP metadata is not localhost", () => {

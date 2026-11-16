@@ -687,6 +687,8 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 		keycloakRealm: config.auth.keycloak_realm,
 		webClientId: config.auth.web_client_id,
 		apiDocsUrl: publicHttpsUrl(config, hosts.api, "/docs"),
+		docsUrl: "https://docs.envsync.cloud",
+		contactHref: "mailto:team@envsync.cloud",
 		edition,
 		dashboardVariant: edition,
 		managementEnabled: managementApiEnabled,

@@ -41,10 +41,10 @@ const linkGroups = [
     links: [
       { label: "Pricing", href: "/pricing", external: false },
       { label: "About", href: "/about", external: false },
-      { label: "Docs", href: "https://docs.envsync.cloud", external: true },
+      { label: "Docs", href: runtimeConfig.docsUrl, external: true },
       { label: "API Reference", href: runtimeConfig.apiDocsUrl, external: true },
       { label: "Get Started", href: "/onboarding", external: false },
-      { label: "Contact", href: "mailto:team@envsync.cloud", external: true },
+      { label: "Contact", href: runtimeConfig.contactHref, external: true },
     ],
   },
 ] as const;
