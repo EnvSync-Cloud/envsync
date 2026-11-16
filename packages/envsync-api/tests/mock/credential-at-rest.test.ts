@@ -160,7 +160,10 @@ describe("dynamic secret credentials at rest", () => {
 			org_id: seed.org.id,
 		});
 		expect(seenGenerate).toMatchObject({ superuser: { username: "dynroot", password: ENGINE_PASSWORD } });
-		expect(JSON.stringify(lease.credential_data)).not.toContain(LEASE_PASSWORD);
+		expect(lease.credential_data).toMatchObject({
+			username: "envsync_lease_user",
+			password: LEASE_PASSWORD,
+		});
 
 		const storedLease = await db.selectFrom("dynamic_secret_leases").selectAll().where("id", "=", lease.id).executeTakeFirstOrThrow();
 		expect(JSON.stringify(storedLease.credential_data)).not.toContain(LEASE_PASSWORD);

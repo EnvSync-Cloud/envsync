@@ -358,7 +358,11 @@ export class DynamicSecretService {
 			"DynamicSecretService",
 		);
 
-		return presentLease(lease);
+		// The generated credential is returned once. Later reads stay redacted.
+		return {
+			...presentLease(lease),
+			credential_data: credentials,
+		};
 	};
 
 	private static loadLease = async (id: string) => {
