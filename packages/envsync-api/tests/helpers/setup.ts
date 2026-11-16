@@ -202,6 +202,7 @@ if (!isE2E) {
 				getIdentityInternalBaseUrl: () => "http://localhost:8080",
 				getIdentityPublicBaseUrl: () => "http://localhost:8080",
 				getIdentityIssuer: () => "http://localhost:8080",
+				publicTokenEndpoint: () => "http://localhost:8080/oauth/token",
 				createDirectoryUser: async () => ({
 					id: `atrium-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 				}),
