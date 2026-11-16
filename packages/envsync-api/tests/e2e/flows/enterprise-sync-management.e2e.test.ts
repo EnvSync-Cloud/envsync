@@ -7,8 +7,8 @@ import {
 	type E2ESeed,
 } from "../helpers/real-auth";
 
-import { DB } from "@/libs/db";
 import {
+	EnterpriseIntegrationService,
 	EnterpriseProviderSyncService,
 	type EnterpriseSyncContext,
 	type EnterpriseSyncResult,
@@ -179,16 +179,10 @@ afterAll(() => {
 describe("Enterprise Sync Management E2E", () => {
 	test("manual sync run records lifecycle events and compiles env plus secret payloads", async () => {
 		EnterpriseProviderSyncService.sync = async (context: EnterpriseSyncContext): Promise<EnterpriseSyncResult> => {
-			const db = await DB.getInstance();
 			const authConfig = asRecord(context.connection.auth_config);
 			const tokenSecretRef = typeof authConfig.token_secret_ref === "string" ? authConfig.token_secret_ref : null;
-			const resolvedSecret = tokenSecretRef
-				? await db
-					.selectFrom("org_secret")
-					.select(["key", "value"])
-					.where("org_id", "=", context.org_id)
-					.where("key", "=", tokenSecretRef)
-					.executeTakeFirst()
+			const resolvedToken = tokenSecretRef
+				? await EnterpriseIntegrationService.readOrgSecretValue(context.org_id, tokenSecretRef)
 				: null;
 
 			recordedSyncCalls.push({
@@ -199,7 +193,7 @@ describe("Enterprise Sync Management E2E", () => {
 				keys: context.items.map(item => item.key).sort(),
 				envKeys: context.items.filter(item => item.kind === "env").map(item => item.key).sort(),
 				secretKeys: context.items.filter(item => item.kind === "secret").map(item => item.key).sort(),
-				resolvedToken: resolvedSecret?.value ?? null,
+				resolvedToken,
 			});
 
 			return {
@@ -208,7 +202,7 @@ describe("Enterprise Sync Management E2E", () => {
 					target_identifier: context.mapping.target_identifier,
 					branch_ref: context.mapping.branch_ref,
 					binding_metadata: context.binding.metadata,
-					resolved_token: resolvedSecret?.value ?? null,
+					resolved_token: resolvedToken,
 				},
 			};
 		};

@@ -5,7 +5,20 @@ import { DB, JsonValue } from "envsync-api/ports/db";
 import { orNotFound } from "envsync-api/ports/errors";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 
+import {
+    asJsonRecord,
+    redactSecretFields,
+    revealSecrets,
+    sealPlaintextSecrets,
+} from "./credential-envelope";
+
 export type ProviderType = "datadog" | "splunk" | "sumo-logic" | "logstash" | "fluentd" | "otlp";
+
+const LOG_SECRET_KEYS = new Set(["api_key", "token", "password", "authorization", "url", "secret", "client_secret"]);
+
+function logForwardingAad(orgId: string, configId: string) {
+    return `org:${orgId}:log-forwarding:${configId}`;
+}
 
 interface AuditLogPayload {
     readonly action: AuditActions;
@@ -15,32 +28,8 @@ interface AuditLogPayload {
     readonly message: string;
 }
 
-const SENSITIVE_CONFIG_KEYS = ["api_key", "token", "password", "authorization"] as const;
-
-function maskSecret(value: string): string {
-    if (value.length <= 4) return "****";
-    return value.slice(0, -4).replace(/./g, "*") + value.slice(-4);
-}
-
-function maskSensitiveConfig(config: Record<string, unknown>): Record<string, unknown> {
-    const masked: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(config)) {
-        if (SENSITIVE_CONFIG_KEYS.includes(key as (typeof SENSITIVE_CONFIG_KEYS)[number]) && typeof value === "string") {
-            masked[key] = maskSecret(value);
-        } else if (key === "headers" && value && typeof value === "object" && !Array.isArray(value)) {
-            masked[key] = Object.fromEntries(
-                Object.entries(value as Record<string, unknown>).map(([header, headerValue]) => [
-                    header,
-                    /authorization|password|token/i.test(header) && typeof headerValue === "string"
-                        ? maskSecret(headerValue)
-                        : headerValue,
-                ]),
-            );
-        } else {
-            masked[key] = value;
-        }
-    }
-    return masked;
+function presentConfig(config: unknown): Record<string, unknown> {
+    return redactSecretFields(asJsonRecord(config), LOG_SECRET_KEYS) as Record<string, unknown>;
 }
 
 async function forwardToDatadog(
@@ -384,6 +373,58 @@ async function forwardToProvider(
     }
 }
 
+async function persistLogConfig(id: string, config: Record<string, unknown>) {
+    try {
+        const db = await DB.getInstance();
+        await db
+            .updateTable("log_forwarding_configs")
+            .set({
+                config: new JsonValue(config),
+                updated_at: new Date(),
+            })
+            .where("id", "=", id)
+            .execute();
+    } catch (error) {
+        infoLogs(
+            `Failed to upgrade log forwarding config ${id}: ${error instanceof Error ? error.message : "unknown error"}`,
+            LogTypes.ERROR,
+            "LogForwardingService",
+        );
+    }
+}
+
+async function ensureLogConfigSealed(row: { id: string; org_id: string; config: unknown }) {
+    const sealed = await sealPlaintextSecrets(
+        row.org_id,
+        logForwardingAad(row.org_id, row.id),
+        asJsonRecord(row.config),
+        LOG_SECRET_KEYS,
+    );
+    if (sealed.changed) {
+        await persistLogConfig(row.id, sealed.value);
+    }
+    return sealed.value;
+}
+
+async function logConfigForUse(row: { id: string; org_id: string; config: unknown }) {
+    const revealed = await revealSecrets(
+        row.org_id,
+        logForwardingAad(row.org_id, row.id),
+        asJsonRecord(row.config),
+        LOG_SECRET_KEYS,
+    );
+    if (revealed.needsUpgrade) {
+        const sealed = await sealPlaintextSecrets(
+            row.org_id,
+            logForwardingAad(row.org_id, row.id),
+            revealed.value,
+            LOG_SECRET_KEYS,
+        );
+        await persistLogConfig(row.id, sealed.value);
+    }
+    return revealed.value;
+}
+
 export class LogForwardingService {
     public static createConfig = async ({
         org_id,
@@ -400,6 +441,7 @@ export class LogForwardingService {
     }): Promise<string> => {
         const id = uuidv4();
         const db = await DB.getInstance();
+        const sealed = await sealPlaintextSecrets(org_id, logForwardingAad(org_id, id), config, LOG_SECRET_KEYS);
 
         await db
             .insertInto("log_forwarding_configs")
@@ -408,7 +450,7 @@ export class LogForwardingService {
                 org_id,
                 name,
                 provider_type,
-                config: new JsonValue(config),
+                config: new JsonValue(sealed.value),
                 enabled,
                 created_at: new Date(),
                 updated_at: new Date(),
@@ -427,10 +469,12 @@ export class LogForwardingService {
             .where("org_id", "=", org_id)
             .execute();
 
-        return configs.map((row) => ({
-            ...row,
-            config: maskSensitiveConfig(row.config as Record<string, unknown>),
-        }));
+        const presented = [];
+        for (const row of configs) {
+            const config = await ensureLogConfigSealed(row);
+            presented.push({ ...row, config: presentConfig(config) });
+        }
+        return presented;
     };
 
     public static getConfigById = async (id: string) => {
@@ -445,10 +489,11 @@ export class LogForwardingService {
             "LogForwardingConfig",
             id,
         );
+        const sealed = await ensureLogConfigSealed(config);
 
         return {
             ...config,
-            config: maskSensitiveConfig(config.config as Record<string, unknown>),
+            config: presentConfig(sealed),
         };
     };
 
@@ -489,9 +534,10 @@ export class LogForwardingService {
         await Promise.allSettled(
             configs.map(async (cfg) => {
                 try {
+                    const config = await logConfigForUse(cfg);
                     await forwardToProvider(
                         cfg.provider_type as ProviderType,
-                        cfg.config as Record<string, unknown>,
+                        config,
                         payload,
                     );
                 } catch (err) {
