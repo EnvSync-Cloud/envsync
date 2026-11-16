@@ -32,6 +32,7 @@ declare global {
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 const defaultDocsUrl = import.meta.env.VITE_DOCS_URL || "https://docs.envsync.cloud";
+const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || `${defaultDocsUrl.replace(/\/$/, "")}/docs/api`;
 const defaultContactHref = import.meta.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud";
 
 function inferFallbackRuntimeConfig(): RuntimeConfig {
@@ -42,7 +43,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       authBaseUrl: "http://auth.lvh.me:8080",
       keycloakRealm: "envsync",
       webClientId: "envsync-web",
-      apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,
+      apiDocsUrl: defaultApiDocsUrl,
       docsUrl: defaultDocsUrl,
       contactHref: defaultContactHref,
       otelEndpoint: "http://localhost:14318",
@@ -72,7 +73,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     authBaseUrl: `${protocol}//auth.${rootHost}`,
     keycloakRealm: "envsync",
     webClientId: "envsync-web",
-    apiDocsUrl: `${apiBaseUrl}/docs`,
+    apiDocsUrl: defaultApiDocsUrl,
     docsUrl: defaultDocsUrl,
     contactHref: defaultContactHref,
     otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || `${protocol}//t.${rootHost}/obs`,

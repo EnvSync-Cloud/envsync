@@ -32,7 +32,7 @@ function hostedRuntimeConfigPlugin(): Plugin {
         managementApiUrl: `${apiBase}/api/v1/manage`,
         keycloakRealm: "envsync",
         webClientId: "envsync-web",
-        apiDocsUrl: `${apiBase}/docs`,
+        apiDocsUrl: process.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/docs/api",
         edition,
         dashboardVariant: edition,
         managementEnabled: edition === "enterprise",
