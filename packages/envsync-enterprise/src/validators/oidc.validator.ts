@@ -1,7 +1,24 @@
 import z from "zod";
 import "zod-openapi/extend";
 
-const providerTypeEnum = z.enum(["github_actions", "gitlab_ci", "kubernetes", "generic"]);
+export const oidcProviderTypes = [
+	"github_actions",
+	"gitlab_ci",
+	"kubernetes",
+	"vercel",
+	"circleci",
+	"buildkite",
+	"bitbucket_pipelines",
+	"azure_pipelines",
+	"terraform_cloud",
+	"spacelift",
+	"pulumi",
+	"generic",
+] as const;
+
+const providerTypeEnum = z.enum(oidcProviderTypes);
+
+export type OidcProviderType = (typeof oidcProviderTypes)[number];
 
 export const createOidcProviderRequestSchema = z
 	.object({
