@@ -6,6 +6,10 @@ import { BusinessRuleError, ValidationError, orNotFound } from "@/libs/errors";
 import { AppService } from "@/services/app.service";
 import { AuthorizationService } from "@/services/authorization.service";
 import { applyChangeRequestItems } from "@/services/change_request_apply";
+import {
+	openChangeRequestValues,
+	sealChangeRequestValues,
+} from "@/services/change_request_crypto";
 import { EnvService } from "@/services/env.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { SecretService } from "@/services/secret.service";
@@ -84,13 +88,21 @@ export class ChangeRequestService {
 					org_id,
 					user_id: requested_by_user_id,
 				});
+				const id = uuidv4();
+				const sealed = await sealChangeRequestValues(
+					{ orgId: org_id, appId: app_id, changeRequestId, itemId: id },
+					{
+						previous: existing?.value ?? null,
+						proposed: item.operation === "DELETE" ? null : (item.proposed_value ?? ""),
+					},
+				);
 
 				return {
-					id: uuidv4(),
+					id,
 					change_request_id: changeRequestId,
 					key: item.key,
-					previous_value: existing?.value ?? null,
-					proposed_value: item.operation === "DELETE" ? null : (item.proposed_value ?? ""),
+					previous_value: sealed.previous_value,
+					proposed_value: sealed.proposed_value,
 					operation: item.operation,
 					created_at: now,
 					updated_at: now,
@@ -111,13 +123,21 @@ export class ChangeRequestService {
 					item.operation === "DELETE"
 						? null
 						: smartEncrypt(item.proposed_value ?? "", app.public_key || "");
+				const id = uuidv4();
+				const sealed = await sealChangeRequestValues(
+					{ orgId: org_id, appId: app_id, changeRequestId, itemId: id },
+					{
+						previous: existing?.value ?? null,
+						proposed: encryptedValue,
+					},
+				);
 
 				return {
-					id: uuidv4(),
+					id,
 					change_request_id: changeRequestId,
 					key: item.key,
-					previous_value: existing?.value ?? null,
-					proposed_value: encryptedValue,
+					previous_value: sealed.previous_value,
+					proposed_value: sealed.proposed_value,
 					operation: item.operation,
 					created_at: now,
 					updated_at: now,
@@ -264,6 +284,50 @@ export class ChangeRequestService {
 		const db = await DB.getInstance();
 		const now = new Date();
 		const changeRequestId = uuidv4();
+		const sealRef = (itemId: string) => ({
+			orgId: org_id,
+			appId: app_id,
+			changeRequestId,
+			itemId,
+		});
+		const envRows = await Promise.all(
+			envs.map(async (item) => {
+				const id = uuidv4();
+				const sealed = await sealChangeRequestValues(sealRef(id), {
+					previous: null,
+					proposed: item.value,
+				});
+				return {
+					id,
+					change_request_id: changeRequestId,
+					key: item.key,
+					previous_value: sealed.previous_value,
+					proposed_value: sealed.proposed_value,
+					operation: "UPDATE" as const,
+					created_at: now,
+					updated_at: now,
+				};
+			}),
+		);
+		const secretRows = await Promise.all(
+			secrets.map(async (item) => {
+				const id = uuidv4();
+				const sealed = await sealChangeRequestValues(sealRef(id), {
+					previous: null,
+					proposed: item.value,
+				});
+				return {
+					id,
+					change_request_id: changeRequestId,
+					key: item.key,
+					previous_value: sealed.previous_value,
+					proposed_value: sealed.proposed_value,
+					operation: "UPDATE" as const,
+					created_at: now,
+					updated_at: now,
+				};
+			}),
+		);
 
 		await db.transaction().execute(async (trx) => {
 			await trx
@@ -284,40 +348,11 @@ export class ChangeRequestService {
 				})
 				.execute();
 
-			if (envs.length > 0) {
-				await trx
-					.insertInto("change_request_env_item")
-					.values(
-						envs.map((item) => ({
-							id: uuidv4(),
-							change_request_id: changeRequestId,
-							key: item.key,
-							previous_value: null,
-							proposed_value: item.value,
-							operation: "UPDATE" as const,
-							created_at: now,
-							updated_at: now,
-						})),
-					)
-					.execute();
+			if (envRows.length > 0) {
+				await trx.insertInto("change_request_env_item").values(envRows).execute();
 			}
-
-			if (secrets.length > 0) {
-				await trx
-					.insertInto("change_request_secret_item")
-					.values(
-						secrets.map((item) => ({
-							id: uuidv4(),
-							change_request_id: changeRequestId,
-							key: item.key,
-							previous_value: null,
-							proposed_value: item.value,
-							operation: "UPDATE" as const,
-							created_at: now,
-							updated_at: now,
-						})),
-					)
-					.execute();
+			if (secretRows.length > 0) {
+				await trx.insertInto("change_request_secret_item").values(secretRows).execute();
 			}
 		});
 
@@ -371,9 +406,29 @@ export class ChangeRequestService {
 				.execute(),
 		]);
 
+		const valueRef = (itemId: string) => ({
+			orgId: org_id,
+			appId: request.app_id,
+			changeRequestId: request.id,
+			itemId,
+		});
+		const openedEnvItems = await Promise.all(
+			envItems.map(async (item) => {
+				const opened = await openChangeRequestValues(valueRef(item.id), {
+					previous: item.previous_value,
+					proposed: item.proposed_value,
+				});
+				return {
+					...item,
+					previous_value: opened.previous_value,
+					proposed_value: opened.proposed_value,
+				};
+			}),
+		);
+
 		return {
 			...request,
-			env_items: envItems,
+			env_items: openedEnvItems,
 			secret_items: secretItems.map((item) => ({
 				...item,
 				previous_value: item.previous_value ? "[redacted]" : null,
