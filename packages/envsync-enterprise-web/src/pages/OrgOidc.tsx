@@ -72,8 +72,16 @@ export default function OrgOidc() {
   };
 
   const onCreate = async () => {
+    const allowedSubjects = subjects
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
     if (!issuerUrl.trim() || !audience.trim()) {
       toast.error("Issuer URL and audience are required.");
+      return;
+    }
+    if (allowedSubjects.length === 0) {
+      toast.error("At least one allowed subject is required. An empty list rejects every token.");
       return;
     }
     try {
@@ -81,10 +89,7 @@ export default function OrgOidc() {
         provider_type: providerType,
         issuer_url: issuerUrl.trim(),
         audience: audience.trim(),
-        allowed_subjects: subjects
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean),
+        allowed_subjects: allowedSubjects,
       });
       toast.success("Workload OIDC provider created.");
       setSheetOpen(false);
@@ -170,7 +175,7 @@ export default function OrgOidc() {
           <SheetHeader>
             <SheetTitle>Add workload OIDC provider</SheetTitle>
             <SheetDescription>
-              Machines present a JWT from this issuer. Empty subject list allows every subject.
+              Machines present a JWT from this issuer. At least one subject pattern is required; an empty list rejects every token. Only * is a wildcard.
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-4 py-4">

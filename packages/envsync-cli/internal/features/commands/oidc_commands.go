@@ -44,7 +44,7 @@ func oidcCreateCommand(handler *handlers.OidcHandler) *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  "allowed-subjects",
-				Usage: "Comma-separated subject patterns to allow (glob matching)",
+				Usage: "Comma-separated subject patterns. Only * is a wildcard; an empty list rejects every token",
 			},
 		},
 	}
@@ -94,7 +94,7 @@ func oidcUpdateCommand(handler *handlers.OidcHandler) *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  "allowed-subjects",
-				Usage: "Comma-separated subject patterns to allow",
+				Usage: "Comma-separated subject patterns. Only * is a wildcard; an empty list rejects every token",
 			},
 		},
 	}
