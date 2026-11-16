@@ -4,8 +4,13 @@
  */
 type EnabledProvider = {
 	id: string;
+	org_id: string;
+	provider_type: string;
+	issuer_url: string;
+	audience: string;
+	enabled: boolean;
+	allowed_subjects: unknown;
 	machine_user_id: string | null;
-	[key: string]: unknown;
 };
 
 type EnterpriseOidcService = {

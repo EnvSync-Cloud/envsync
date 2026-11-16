@@ -3,9 +3,9 @@ import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, invalidateCache } from "envsync-api/ports/helpers";
 import { CacheKeys, CacheTTL } from "envsync-api/ports/helpers";
-import { clearJwksCache } from "envsync-api/ports/helpers";
+import { clearJwksCache, normalizeOidcIssuerUrl } from "envsync-api/ports/helpers";
 import { DB } from "envsync-api/ports/db";
-import { orNotFound } from "envsync-api/ports/errors";
+import { AppError, orNotFound } from "envsync-api/ports/errors";
 import { RoleService } from "envsync-api/ports/services";
 import { AuthorizationService } from "envsync-api/ports/services";
 import type { Database } from "envsync-api/ports/types-db";
@@ -102,8 +102,8 @@ export class OidcService {
 	};
 
 	/**
-	 * Get all enabled providers across all orgs.
-	 * Used by the auth middleware to match an incoming OIDC token.
+	 * Enabled providers across every org. Callers must not pick the first row
+	 * when more than one enabled provider shares an issuer.
 	 */
 	public static getAllEnabledProviders = async (): Promise<OidcProviderRow[]> => {
 		return cacheAside("es:oidc:enabled", CacheTTL.SHORT, async () => {
@@ -117,21 +117,35 @@ export class OidcService {
 	};
 
 	/**
-	 * Find the provider (and its org) that matches a given issuer URL.
-	 * Returns null if no enabled provider matches.
+	 * Find the single enabled provider for an issuer.
+	 * Returns null when none match. Throws when more than one enabled row matches,
+	 * including issuers that differ only by a trailing slash.
 	 */
 	public static findProviderByIssuer = async (
 		issuerUrl: string,
 	): Promise<OidcProviderRow | null> => {
+		const issuerKey = normalizeOidcIssuerUrl(issuerUrl);
 		const db = await DB.getInstance();
-		return (
-			(await db
-				.selectFrom("oidc_providers")
-				.selectAll()
-				.where("issuer_url", "=", issuerUrl)
-				.where("enabled", "=", true)
-				.executeTakeFirst()) ?? null
-		);
+		const enabled = await db
+			.selectFrom("oidc_providers")
+			.selectAll()
+			.where("enabled", "=", true)
+			.execute();
+		const matches = enabled.filter(row => {
+			try {
+				return normalizeOidcIssuerUrl(row.issuer_url) === issuerKey;
+			} catch {
+				return false;
+			}
+		});
+		if (matches.length > 1) {
+			throw new AppError(
+				"Multiple enabled OIDC providers match this issuer",
+				401,
+				"OIDC_AMBIGUOUS_ISSUER",
+			);
+		}
+		return matches[0] ?? null;
 	};
 
 	public static updateProvider = async (

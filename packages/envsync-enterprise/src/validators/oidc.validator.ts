@@ -24,7 +24,7 @@ export const createOidcProviderRequestSchema = z
 			.openapi({
 				example: ["repo:myorg/myrepo:*"],
 				description:
-					"Subject patterns to allow (glob matching). Empty = allow all subjects from this issuer.",
+					"Subject patterns to allow. Only * is a wildcard; every other character is literal. An empty list rejects every token from this issuer.",
 			}),
 	})
 	.openapi({ ref: "CreateOidcProviderRequest" });
