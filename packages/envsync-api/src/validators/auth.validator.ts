@@ -75,7 +75,36 @@ export const whoAmIResponseSchema = z
 		plan: z.string().optional().openapi({ example: "developer" }),
 		plan_limits: z.record(z.any()).optional(),
 		plan_usage: z.record(z.number()).nullable().optional(),
-		feature_overrides: z.array(z.string()).optional().openapi({ example: ["change_requests"] }),
-		auth_type: z.enum(["jwt", "saml", "oidc", "api_key", "service_token"]).openapi({ example: "jwt" }),
+		feature_overrides: z
+			.array(z.string())
+			.optional()
+			.openapi({ example: ["change_requests"] }),
+		auth_type: z
+			.enum(["jwt", "saml", "oidc", "api_key", "service_token"])
+			.openapi({ example: "jwt" }),
 	})
 	.openapi({ ref: "WhoAmIResponse" });
+
+export const sessionDeviceSchema = z
+	.object({
+		id: z.string().openapi({ example: "6d9f0b1e-1c2a-4d3e-9f00-a1b2c3d4e5f6" }),
+		label: z.string().openapi({ example: "Chrome on macOS" }),
+		client_id: z.string().openapi({ example: "envsync-web" }),
+		created_at: z.string().openapi({ example: "2026-01-01T00:00:00.000Z" }),
+		last_used_at: z.string().openapi({ example: "2026-01-01T00:00:00.000Z" }),
+		current: z.boolean().openapi({ example: true }),
+	})
+	.openapi({ ref: "SessionDevice" });
+
+export const sessionDeviceListSchema = z
+	.object({
+		devices: z.array(sessionDeviceSchema),
+	})
+	.openapi({ ref: "SessionDeviceList" });
+
+export const revokeSessionDeviceResponseSchema = z
+	.object({
+		id: z.string().openapi({ example: "6d9f0b1e-1c2a-4d3e-9f00-a1b2c3d4e5f6" }),
+		current: z.boolean().openapi({ example: true }),
+	})
+	.openapi({ ref: "RevokeSessionDeviceResponse" });

@@ -77,7 +77,8 @@ type UserAuditActions =
 	| "user_updated"
 	| "user_deleted"
 	| "user_role_updated"
-	| "password_update_requested";
+	| "password_update_requested"
+	| "session_device_revoked";
 
 type ApiKeyAuditActions =
 	| "apikeys_viewed"

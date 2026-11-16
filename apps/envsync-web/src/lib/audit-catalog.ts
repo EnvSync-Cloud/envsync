@@ -94,7 +94,7 @@ const ACTION_CATEGORIES = {
     "user_retrieved",
     "get_audit_logs",
   ],
-  auth: ["user_invite_accepted", "password_update_requested"],
+  auth: ["user_invite_accepted", "password_update_requested", "session_device_revoked"],
   cli: ["cli_command_executed"],
 } as const;
 
@@ -133,6 +133,7 @@ export function getActionDescription(action: AuditActions): string {
     user_deleted: "Deleted user account",
     user_role_updated: "Updated user role",
     password_update_requested: "Requested password update",
+    session_device_revoked: "Signed out a device",
     org_created: "Created organization",
     org_updated: "Updated organization",
     user_invite_created: "Created user invitation",

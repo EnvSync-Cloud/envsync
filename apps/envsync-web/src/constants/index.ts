@@ -332,7 +332,8 @@ export const WEBHOOK_EVENT_CATEGORIES = [
           { value: "users_retrieved", label: "Users Retrieved" },
           { value: "user_role_updated", label: "User Role Updated" },
           { value: "user_updated", label: "User Updated" },
-          { value: "password_update_requested", label: "Password Update Requested" }
+          { value: "password_update_requested", label: "Password Update Requested" },
+          { value: "session_device_revoked", label: "Device Signed Out" }
         ]
       },
       {
@@ -358,7 +359,8 @@ export const WEBHOOK_EVENT_CATEGORIES = [
       { value: "users_retrieved", label: "Users Retrieved" },
       { value: "user_role_updated", label: "User Role Updated" },
       { value: "user_updated", label: "User Updated" },
-      { value: "password_update_requested", label: "Password Update Requested" }
+      { value: "password_update_requested", label: "Password Update Requested" },
+      { value: "session_device_revoked", label: "Device Signed Out" }
     ]
   },
   {
