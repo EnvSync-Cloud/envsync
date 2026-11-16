@@ -4,6 +4,9 @@ declare const __APP_VERSION__: string;
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
+  readonly VITE_DOCS_URL?: string;
+  readonly VITE_API_DOCS_URL?: string;
+  readonly VITE_CONTACT_HREF?: string;
   readonly VITE_OTEL_ENDPOINT: string;
   readonly VITE_OTEL_SERVICE_NAME: string;
   readonly VITE_OTEL_SDK_DISABLED: string;

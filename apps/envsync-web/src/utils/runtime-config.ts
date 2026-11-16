@@ -41,6 +41,7 @@ declare global {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/docs/api";
 /** Unified manage surface on the core API process (no separate manage-api host). */
 const MANAGE_API_PATH = "/api/v1/manage";
 const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"
@@ -73,7 +74,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       authBaseUrl: "http://localhost:8080",
       managementApiUrl: defaultManagementApiUrl(defaultApiBaseUrl),
       webClientId: "envsync-web",
-      apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,
+      apiDocsUrl: defaultApiDocsUrl,
       edition: buildEdition,
       dashboardVariant: buildEdition,
       managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
@@ -103,7 +104,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       authBaseUrl: import.meta.env.VITE_AUTH_BASE_URL || "http://auth.lvh.me:8080",
       managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
       webClientId: "envsync-web",
-      apiDocsUrl: `${apiBaseUrl.replace(/\/$/, "")}/docs`,
+      apiDocsUrl: defaultApiDocsUrl,
       edition: buildEdition,
       dashboardVariant: buildEdition,
       managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",
@@ -129,7 +130,7 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     authBaseUrl: `${protocol}//auth.${rootHost}`,
     managementApiUrl: defaultManagementApiUrl(apiBaseUrl),
     webClientId: "envsync-web",
-    apiDocsUrl: `${apiBaseUrl}/docs`,
+    apiDocsUrl: defaultApiDocsUrl,
     edition: buildEdition,
     dashboardVariant: buildEdition,
     managementEnabled: import.meta.env.VITE_ENVSYNC_MANAGEMENT_ENABLED === "true" || buildEdition === "enterprise",

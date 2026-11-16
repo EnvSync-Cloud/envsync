@@ -8,6 +8,8 @@ const runtimeConfigSchema = z.object({
   authBaseUrl: z.string().url(),
   webClientId: z.string().min(1),
   apiDocsUrl: z.string().url(),
+  docsUrl: z.string().url(),
+  contactHref: z.string().regex(/^mailto:[^\s]+$/, "Contact href must be a mailto link"),
   otelEndpoint: z.string().url().optional(),
   hyperdxApiKey: z.string().min(1).optional(),
   hyperdxUrl: z.string().url().optional(),
@@ -28,6 +30,9 @@ declare global {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const defaultDocsUrl = import.meta.env.VITE_DOCS_URL || "https://docs.envsync.cloud";
+const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || `${defaultDocsUrl.replace(/\/$/, "")}/docs/api`;
+const defaultContactHref = import.meta.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud";
 
 function inferFallbackRuntimeConfig(): RuntimeConfig {
   if (typeof window === "undefined") {
@@ -36,7 +41,9 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
       appBaseUrl: "http://app.lvh.me:8001",
       authBaseUrl: "http://auth.lvh.me:8080",
       webClientId: "envsync-web",
-      apiDocsUrl: `${defaultApiBaseUrl.replace(/\/$/, "")}/docs`,
+      apiDocsUrl: defaultApiDocsUrl,
+      docsUrl: defaultDocsUrl,
+      contactHref: defaultContactHref,
       otelEndpoint: "http://localhost:14318",
       hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
       hyperdxUrl: import.meta.env.VITE_HYPERDX_URL || undefined,
@@ -63,7 +70,9 @@ function inferFallbackRuntimeConfig(): RuntimeConfig {
     appBaseUrl: host.startsWith("app.") ? origin : `${protocol}//app.${rootHost}`,
     authBaseUrl: `${protocol}//auth.${rootHost}`,
     webClientId: "envsync-web",
-    apiDocsUrl: `${apiBaseUrl}/docs`,
+    apiDocsUrl: defaultApiDocsUrl,
+    docsUrl: defaultDocsUrl,
+    contactHref: defaultContactHref,
     otelEndpoint: firstPartyOtelUrl(import.meta.env.VITE_OTEL_ENDPOINT) || `${protocol}//t.${rootHost}/obs`,
     hyperdxApiKey: import.meta.env.VITE_HYPERDX_API_KEY || undefined,
     hyperdxUrl: firstPartyOtelUrl(import.meta.env.VITE_HYPERDX_URL) || `${protocol}//t.${rootHost}/obs`,
