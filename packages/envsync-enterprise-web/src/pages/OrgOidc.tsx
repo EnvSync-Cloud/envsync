@@ -28,10 +28,102 @@ import {
 } from "@shell/components/ui/sheet";
 
 const PROVIDER_TYPES = [
-  { value: CreateOidcProviderRequest.provider_type.GITHUB_ACTIONS, label: "GitHub Actions", issuer: "https://token.actions.githubusercontent.com" },
-  { value: CreateOidcProviderRequest.provider_type.GITLAB_CI, label: "GitLab CI", issuer: "https://gitlab.com" },
-  { value: CreateOidcProviderRequest.provider_type.KUBERNETES, label: "Kubernetes", issuer: "" },
-  { value: CreateOidcProviderRequest.provider_type.GENERIC, label: "Generic", issuer: "" },
+  {
+    value: CreateOidcProviderRequest.provider_type.GITHUB_ACTIONS,
+    label: "GitHub Actions",
+    issuer: "https://token.actions.githubusercontent.com",
+    audience: "https://api.envsync.cloud",
+    subject: "repo:ORG/REPO:*",
+    hint: "Request this audience from the job. Replace ORG and REPO.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.GITLAB_CI,
+    label: "GitLab CI",
+    issuer: "https://gitlab.com",
+    audience: "https://api.envsync.cloud",
+    subject: "project_path:GROUP/PROJECT:ref_type:branch:ref:main",
+    hint: "For a self-managed GitLab, replace the issuer with that GitLab origin.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.KUBERNETES,
+    label: "Kubernetes",
+    issuer: "",
+    audience: "https://api.envsync.cloud",
+    subject: "system:serviceaccount:NAMESPACE:NAME",
+    hint: "Use the cluster issuer. It is not a single public URL.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.VERCEL,
+    label: "Vercel",
+    issuer: "https://oidc.vercel.com/TEAM",
+    audience: "https://vercel.com/TEAM",
+    subject: "owner:TEAM:project:PROJECT:environment:production",
+    hint: "Team issuer mode. Global mode uses https://oidc.vercel.com. Replace TEAM and PROJECT.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.CIRCLECI,
+    label: "CircleCI",
+    issuer: "https://oidc.circleci.com/org/ORGANIZATION_ID",
+    audience: "ORGANIZATION_ID",
+    subject: "org/ORGANIZATION_ID/project/PROJECT_ID/*",
+    hint: "The default audience is the organization id. Use a v2 or v3 token when the subject must include the repository.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.BUILDKITE,
+    label: "Buildkite",
+    issuer: "https://agent.buildkite.com",
+    audience: "https://buildkite.com/ORG",
+    subject: "organization:ORG:pipeline:PIPELINE:ref:refs/heads/main:commit:*:step:*",
+    hint: "Pass the same audience to buildkite-agent oidc request-token.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.BITBUCKET_PIPELINES,
+    label: "Bitbucket Pipelines",
+    issuer: "https://api.bitbucket.org/2.0/workspaces/WORKSPACE/pipelines-config/identity/oidc",
+    audience: "ari:cloud:bitbucket::workspace/WORKSPACE_UUID",
+    subject: "{REPOSITORY_UUID}:*",
+    hint: "Copy the issuer and audience from repository settings, OpenID Connect. Keep the braces around the repository UUID.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.AZURE_PIPELINES,
+    label: "Azure Pipelines",
+    issuer: "https://vstoken.dev.azure.com/ORGANIZATION_ID",
+    audience: "api://AzureADTokenExchange",
+    subject: "sc://ORG/PROJECT/SERVICE_CONNECTION",
+    hint: "This matches a service-connection token. A newer connection may use a Microsoft Entra issuer instead.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.TERRAFORM_CLOUD,
+    label: "HCP Terraform",
+    issuer: "https://app.terraform.io",
+    audience: "https://api.envsync.cloud",
+    subject: "organization:ORG:project:PROJECT:workspace:WORKSPACE:run_phase:apply",
+    hint: "Set the workspace workload identity audience to this same audience.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.SPACELIFT,
+    label: "Spacelift",
+    issuer: "https://ACCOUNT.app.spacelift.io",
+    audience: "ACCOUNT.app.spacelift.io",
+    subject: "space:SPACE_ID:stack:STACK_ID:run_type:TRACKED:scope:read",
+    hint: "Issuer and audience are your Spacelift account hostname.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.PULUMI,
+    label: "Pulumi",
+    issuer: "https://api.pulumi.com/oidc",
+    audience: "ORG",
+    subject: "pulumi:deploy:org:ORG:project:PROJECT:stack:STACK:operation:update:scope:write",
+    hint: "The audience is the Pulumi organization name.",
+  },
+  {
+    value: CreateOidcProviderRequest.provider_type.GENERIC,
+    label: "Generic",
+    issuer: "",
+    audience: "https://api.envsync.cloud",
+    subject: "",
+    hint: "Any issuer that publishes OpenID discovery. Replace the audience with the one the job requests.",
+  },
 ] as const;
 
 type OidcProviderType = CreateOidcProviderRequest.provider_type;
@@ -57,18 +149,24 @@ export default function OrgOidc() {
     CreateOidcProviderRequest.provider_type.GITHUB_ACTIONS,
   );
   const [issuerUrl, setIssuerUrl] = useState<string>(PROVIDER_TYPES[0].issuer);
-  const [audience, setAudience] = useState("");
-  const [subjects, setSubjects] = useState("");
+  const [audience, setAudience] = useState(PROVIDER_TYPES[0].audience);
+  const [subjects, setSubjects] = useState(PROVIDER_TYPES[0].subject);
 
   const enabledCount = useMemo(
     () => providers.filter((provider) => provider.enabled).length,
     [providers],
   );
 
+  const selectedPreset = PROVIDER_TYPES.find((item) => item.value === providerType);
+
   const onTypeChange = (next: OidcProviderType) => {
-    setProviderType(next);
+    const previous = PROVIDER_TYPES.find((item) => item.value === providerType);
     const preset = PROVIDER_TYPES.find((item) => item.value === next);
-    if (preset?.issuer) setIssuerUrl(preset.issuer);
+    setProviderType(next);
+    if (!preset) return;
+    if (!issuerUrl || issuerUrl === previous?.issuer) setIssuerUrl(preset.issuer);
+    if (!audience || audience === previous?.audience) setAudience(preset.audience);
+    if (!subjects || subjects === previous?.subject) setSubjects(preset.subject);
   };
 
   const onCreate = async () => {
@@ -103,7 +201,7 @@ export default function OrgOidc() {
   return (
     <EnterprisePageFrame
       title="Workload OIDC"
-      description="Trust CI and cluster identities (GitHub Actions, GitLab, Kubernetes) without long-lived service tokens. Human SAML login stays on SSO."
+      description="Trust a CI or cluster identity without a long-lived service token. Pick a platform to fill the issuer, audience, and subject, then replace the placeholders. Human SAML login stays on SSO."
       icon={<Fingerprint className="size-7" />}
       enabled={enabled}
       isError={isError}
@@ -193,6 +291,9 @@ export default function OrgOidc() {
                   </option>
                 ))}
               </select>
+              {selectedPreset?.hint ? (
+                <p className="text-xs text-muted-foreground">{selectedPreset.hint}</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="oidc-issuer">Issuer URL</Label>
