@@ -6,6 +6,7 @@ import { ValidationError } from "envsync-api/ports/errors";
 
 import { EnterpriseIntegrationService } from "./enterprise-integration.service";
 import { type EnterpriseProvider } from "./enterprise-provider.service";
+import { collapseSlashes, sanitizeGoogleSecretId, sanitizeSecretKey, trimSlashes } from "./provider-sync-names";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -54,15 +55,6 @@ function asStringArray(value: unknown): string[] | undefined {
 	if (!Array.isArray(value)) return undefined;
 	const strings = value.filter(item => typeof item === "string" && item.trim().length > 0).map(item => item.trim());
 	return strings.length > 0 ? strings : undefined;
-}
-
-function sanitizeSecretKey(key: string) {
-	return key.replace(/[^A-Za-z0-9_]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "").toUpperCase();
-}
-
-function sanitizeGoogleSecretId(key: string) {
-	const normalized = key.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
-	return normalized || "ENVSYNC_SECRET";
 }
 
 async function fetchJson(url: string, init: RequestInit, allowStatuses: number[] = []) {
@@ -347,13 +339,13 @@ export class EnterpriseProviderSyncService {
 
 		const prefix = context.mapping.path_prefix ?? "/";
 		const normalizedPrefix = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
-		const targetPrefix = context.mapping.target_identifier.replace(/^\/+|\/+$/g, "");
+		const targetPrefix = trimSlashes(context.mapping.target_identifier);
 		const kmsKeyId = asString(context.mapping.metadata.kms_key_id)
 			?? asString(context.binding.metadata.kms_key_id)
 			?? asString(context.connection.auth_config.kms_key_id);
 
 		for (const item of context.items) {
-			const name = `${normalizedPrefix}/${targetPrefix}/${this.buildRemoteKey(item, context)}`.replace(/\/+/g, "/");
+			const name = collapseSlashes(`${normalizedPrefix}/${targetPrefix}/${this.buildRemoteKey(item, context)}`);
 			await client.send(new PutParameterCommand({
 				Name: name,
 				Value: item.value,
@@ -428,7 +420,7 @@ export class EnterpriseProviderSyncService {
 
 		const accessToken = await this.getGoogleAccessToken(serviceAccountJson);
 		const projectId = context.mapping.target_identifier;
-		const prefix = (context.mapping.path_prefix ?? "").replace(/^\/+|\/+$/g, "");
+		const prefix = trimSlashes(context.mapping.path_prefix ?? "");
 
 		for (const item of context.items) {
 			const secretId = sanitizeGoogleSecretId(prefix ? `${prefix}-${this.buildRemoteKey(item, context)}` : this.buildRemoteKey(item, context));
