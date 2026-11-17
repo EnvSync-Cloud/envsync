@@ -41,6 +41,7 @@
     "oss"
   ],
   "dependencies": {
+    "age-encryption": "^0.3.1",
     "chalk": "^5.6.2",
     "yaml": "^1.10.2",
     "zod": "^3.25.76"

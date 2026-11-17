@@ -290,8 +290,8 @@ envsync-deploy promote
 envsync-deploy rollback
 
 envsync-deploy backup
-envsync-deploy restore /path/to/envsync-backup.tar.gz
-envsync-deploy restore /path/to/envsync-backup.tar.gz --deploy
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age --identity /path/to/envsync-backup.identity
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age --deploy
 
 envsync-deploy health
 envsync-deploy health --json
