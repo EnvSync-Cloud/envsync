@@ -10,6 +10,14 @@ import * as renderHelpers from "./render";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
+import {
+	assertBackupMode,
+	decryptBackup,
+	identityPathForArchive,
+	isAgeCiphertext,
+	sealPlaintextArchiveFile,
+	sealPlaintextBackupArchives,
+} from "./backup-archive";
 
 // Edition is forced by package entrypoints:
 // - packages/deploy/src/index.ts → oss
@@ -170,7 +178,7 @@ type ApiSlotState = {
 };
 type RuntimeEnv = Record<string, string>;
 type ServiceHealth = "healthy" | "missing" | "degraded";
-type CommandOptions = { dryRun: boolean; force: boolean };
+type CommandOptions = { dryRun: boolean; force: boolean; insecureUnencrypted: boolean; identityPath?: string };
 type NetutilsForward = {
 	service: string;
 	service_port: number;
@@ -404,7 +412,7 @@ const REQUIRED_CLICKSTACK_TAGS = [
 const CLICKSTACK_SELFHOST_TEAM_NAME = "EnvSync Self-Hosted Team";
 
 const SEMVER_VERSION_RE = /^\d+\.\d+\.\d+$/;
-let currentOptions: CommandOptions = { dryRun: false, force: false };
+let currentOptions: CommandOptions = { dryRun: false, force: false, insecureUnencrypted: false };
 const DEFAULT_SOURCE_REPO_URL = "https://github.com/EnvSync-Cloud/envsync.git";
 const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
 const MANAGED_VERSIONED_IMAGE_PREFIXES = {
@@ -1176,13 +1184,15 @@ function renderHelpBlock() {
 	lines.push(
 		"  org create           Create organization via setup token (self-host; first org + further if allowed)",
 		"  org status           Show setup/org readiness via setup token",
-		"  backup               Create a managed self-host backup archive",
-		"  restore <archive>    Restore a backup archive into the managed self-host roots",
+		"  backup               Create an age-encrypted backup. The identity file is written beside the archive",
+		"  restore <archive>    Restore a .tar.gz.age archive (pass --identity when it is not beside the archive)",
 		"",
 		`${chalk.dim("Options")}`,
 		"  --dry-run            Preview mutating work without changing the host",
 		"  --force              Skip destructive confirmations where supported",
 		"  --deploy             Used with restore to start services after restore",
+		"  --identity <file>    Age identity for restore. Defaults to the .identity file beside the archive",
+		"  --insecure-unencrypted  Write a plaintext .tar.gz. Allowed only when backup.encrypted is false",
 		"  --name/--email/--password  Non-interactive org create flags",
 		"  --interactive / -i   Prompt for org create fields",
 	);
@@ -4421,10 +4431,13 @@ function restoreDockerVolume(volumeName: string, sourceDir: string) {
 async function cmdBackup() {
 	logSection("Backup");
 	const { config } = loadState();
+	const backupMode = assertBackupMode(config.backup.encrypted, currentOptions.insecureUnencrypted);
 	const timestamp = new Date().toISOString().replace(/[:]/g, "-");
 	const archiveBase = path.join(config.backup.output_dir, `envsync-backup-${timestamp}`);
 	const manifestPath = `${archiveBase}.manifest.json`;
-	const tarPath = `${archiveBase}.tar.gz`;
+	let tarPath = `${archiveBase}.tar.gz`;
+	let identityPath = "";
+	let recipient = "";
 	const staged = path.join(BACKUPS_ROOT, `staging-${timestamp}`);
 	logInfo(`Backup archive target: ${tarPath}`);
 	if (currentOptions.dryRun) {
@@ -4441,9 +4454,14 @@ async function cmdBackup() {
 			logDryRun(`Would include Enterprise license material from ${LICENSE_ROOT}`);
 		}
 		logDryRun(`Would write manifest ${manifestPath}`);
-		logDryRun(`Would create archive ${tarPath}`);
+		if (backupMode === "age") {
+			logDryRun(`Would encrypt the archive with age and write the identity to ${identityPathForArchive(`${tarPath}.age`)}`);
+			logDryRun("Would encrypt any existing plaintext envsync-backup-*.tar.gz files in the output directory and remove them");
+		} else {
+			logDryRun("Would write a plaintext archive because --insecure-unencrypted was set and backup.encrypted is false");
+		}
 		logSuccess("Backup dry-run completed");
-		console.log(tarPath);
+		console.log(backupMode === "age" ? `${tarPath}.age` : tarPath);
 		return;
 	}
 	ensureDir(config.backup.output_dir);
@@ -4476,12 +4494,25 @@ async function cmdBackup() {
 			backupDockerVolume(stackVolumeName(config, volume), path.join(volumesDir, volume));
 		}
 		run("bash", ["-lc", `tar -czf ${JSON.stringify(tarPath)} -C ${JSON.stringify(staged)} .`]);
+		fs.rmSync(staged, { recursive: true, force: true });
+		if (backupMode === "age") {
+			const sealed = await sealPlaintextArchiveFile(tarPath);
+			tarPath = sealed.archivePath;
+			identityPath = sealed.identityPath;
+			recipient = sealed.recipient;
+			const leftovers = await sealPlaintextBackupArchives(config.backup.output_dir);
+			if (leftovers.length > 0) {
+				logInfo(`Encrypted ${leftovers.length} existing plaintext backup archive(s) and removed the plaintext files`);
+			}
+		}
 		const manifest = {
 			archive: path.basename(tarPath),
+			format: backupMode,
 			sha256: sha256File(tarPath),
 			created_at: new Date().toISOString(),
 			stack_name: config.services.stack_name,
 			volumes: STACK_VOLUMES.map(volume => stackVolumeName(config, volume)),
+			...(recipient ? { recipient } : {}),
 		};
 		writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 		backupCompleted = true;
@@ -4512,14 +4543,20 @@ async function cmdBackup() {
 	}
 	logSuccess("Backup completed");
 	console.log(tarPath);
+	if (identityPath) {
+		logInfo(`Age identity (stored outside the archive): ${identityPath}`);
+	}
 }
 
 async function cmdRestore(archivePath: string, autoDeploy = false) {
-	if (!archivePath) throw new Error("restore requires a .tar.gz path");
+	if (!archivePath) throw new Error("restore requires a .tar.gz or .tar.gz.age path");
 	logSection("Restore");
 	const restoreRoot = path.join(BACKUPS_ROOT, `restore-${Date.now()}`);
 	logInfo(`Restore archive: ${archivePath}`);
 	if (currentOptions.dryRun) {
+		if (archivePath.endsWith(".age")) {
+			logDryRun(`Would decrypt ${archivePath} with ${currentOptions.identityPath ?? identityPathForArchive(archivePath)}`);
+		}
 		logDryRun(`Would extract ${archivePath} into ${restoreRoot}`);
 		logDryRun(`Would restore deploy files into ${DEPLOY_ROOT} and ${ETC_ROOT}`);
 		if (hasManagedRuntime(loadState().config)) {
@@ -4535,7 +4572,19 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 		stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
 	}
 	ensureDir(restoreRoot);
-	run("bash", ["-lc", `tar -xzf ${JSON.stringify(archivePath)} -C ${JSON.stringify(restoreRoot)}`]);
+	let extractPath = archivePath;
+	const archiveBytes = fs.readFileSync(archivePath);
+	if (isAgeCiphertext(archiveBytes)) {
+		const identityPath = currentOptions.identityPath ?? identityPathForArchive(archivePath);
+		if (!exists(identityPath)) {
+			throw new Error(`Age identity not found at ${identityPath}. Pass --identity <file>.`);
+		}
+		const plaintext = await decryptBackup(archiveBytes, fs.readFileSync(identityPath, "utf8"));
+		extractPath = path.join(restoreRoot, "archive.tar.gz");
+		fs.writeFileSync(extractPath, plaintext, { mode: 0o600 });
+		fs.chmodSync(extractPath, 0o600);
+	}
+	run("bash", ["-lc", `tar -xzf ${JSON.stringify(extractPath)} -C ${JSON.stringify(restoreRoot)}`]);
 	writeFile(DEPLOY_ENV, fs.readFileSync(path.join(restoreRoot, "deploy.env"), "utf8"), 0o600);
 	writeFile(DEPLOY_YAML, fs.readFileSync(path.join(restoreRoot, "deploy.yaml"), "utf8"));
 	writeFile(INTERNAL_CONFIG_JSON, fs.readFileSync(path.join(restoreRoot, "config.json"), "utf8"));
@@ -4761,11 +4810,29 @@ async function main() {
 	const argv = process.argv.slice(2);
 	const command = argv[0];
 	const args = argv.slice(1);
+	let identityPath: string | undefined;
+	const positionals: string[] = [];
+	for (let index = 0; index < args.length; index++) {
+		const arg = args[index];
+		if (arg === "--dry-run" || arg === "--force" || arg === "--deploy" || arg === "--insecure-unencrypted") {
+			continue;
+		}
+		if (arg === "--identity") {
+			identityPath = args[index + 1];
+			if (!identityPath || identityPath.startsWith("--")) {
+				throw new Error("--identity requires a file path");
+			}
+			index += 1;
+			continue;
+		}
+		positionals.push(arg);
+	}
 	currentOptions = {
 		dryRun: args.includes("--dry-run"),
 		force: args.includes("--force"),
+		insecureUnencrypted: args.includes("--insecure-unencrypted"),
+		identityPath,
 	};
-	const positionals = args.filter(arg => arg !== "--dry-run" && arg !== "--force" && arg !== "--deploy");
 	if (!command) {
 		printOperatorOverview();
 		process.exit(0);
