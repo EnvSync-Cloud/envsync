@@ -4,7 +4,7 @@ This guide covers **how to deploy** EnvSync for every product edition:
 
 | Edition | Mode | Who deploys | Tooling |
 |---------|------|-------------|---------|
-| **Hosted Enterprise** | SaaS multi-tenant | EnvSync platform operators | CI/CD + secrets (not public deploy CLI) |
+| **Hosted Enterprise** | SaaS multi-tenant | EnvSync platform operators | Cloudflare frontend workflow and operator Compose on the API host |
 | **Self-host OSS** | Single-org | Customer / operator | `@envsync-cloud/deploy` (`envsync-deploy`) |
 | **Self-host Enterprise** | Licensed self-host | Customer / operator | `@envsync-cloud/deploy-enterprise` (`envsync-deploy-enterprise`) |
 
