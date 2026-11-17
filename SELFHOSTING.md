@@ -120,22 +120,30 @@ envsync-deploy rollback
 
 ## Backup / restore
 
-Create a backup archive:
+Create an encrypted backup. The default is age. The archive is `envsync-backup-<time>.tar.gz.age`. The identity file is written beside it as `envsync-backup-<time>.identity` and is not inside the archive. Keep that identity file with your other operator secrets. The file mode is `0600`.
 
 ```bash
 envsync-deploy backup
 ```
 
-Restore a backup archive:
+`backup.encrypted` defaults to `true`. A plaintext `.tar.gz` is refused. To write one anyway, set `backup.encrypted: false` in the deploy config and pass the insecure flag:
 
 ```bash
-envsync-deploy restore /path/to/envsync-backup.tar.gz
+envsync-deploy backup --insecure-unencrypted
+```
+
+A normal backup also encrypts any older `envsync-backup-*.tar.gz` files in the output directory and deletes the plaintext copies. Each of those gets its own `.identity` file beside the new `.age` archive.
+
+Restore an encrypted archive. If the identity file is next to the archive, you can omit `--identity`.
+
+```bash
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age --identity /path/to/envsync-backup.identity
 ```
 
 Restore and start services immediately:
 
 ```bash
-envsync-deploy restore /path/to/envsync-backup.tar.gz --deploy
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age --deploy
 ```
 
 ## Troubleshooting / health
