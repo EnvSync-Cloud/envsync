@@ -111,40 +111,39 @@ export class EntitlementService {
 	}
 
 	/**
-	 * Production trust set, with the bundled key and the test fixture key removed.
-	 * Explicit test mode may add the fixture key back.
+	 * Production trust set. The retired bundled key is never trusted.
+	 * Explicit test mode may add a non-retired fixture public key.
 	 */
 	private static resolveTrustedKeys() {
 		const allowFixture = this.fixtureKeysAllowed();
 		const keys = loadConfiguredTrustedKeys();
 
-		if (!allowFixture) {
-			for (const kid of [...keys.keys()]) {
-				const pem = keys.get(kid);
-				if (!pem) continue;
-				if (
-					kid === ENTITLEMENT_FIXTURE_KID
-					|| kid === ENTITLEMENT_RETIRED_KID
-					|| isRetiredEntitlementPublicKey(pem)
-				) {
-					keys.delete(kid);
-				}
+		for (const kid of [...keys.keys()]) {
+			const pem = keys.get(kid);
+			if (!pem) continue;
+			if (
+				kid === ENTITLEMENT_FIXTURE_KID
+				|| kid === ENTITLEMENT_RETIRED_KID
+				|| isRetiredEntitlementPublicKey(pem)
+			) {
+				keys.delete(kid);
 			}
 		}
 
 		if (allowFixture && this.#testOverrides?.public_key_pem?.trim()) {
 			const pem = this.#testOverrides.public_key_pem.trim();
-			keys.set(this.#testOverrides.public_key_kid?.trim() || ENTITLEMENT_FIXTURE_KID, pem);
-			if (isRetiredEntitlementPublicKey(pem)) {
-				keys.set(ENTITLEMENT_RETIRED_KID, pem);
-				keys.set(ENTITLEMENT_FIXTURE_KID, pem);
+			if (!isRetiredEntitlementPublicKey(pem)) {
+				keys.set(this.#testOverrides.public_key_kid?.trim() || ENTITLEMENT_FIXTURE_KID, pem);
 			}
 		}
 
 		for (const [kid, pem] of Object.entries(this.#testOverrides?.trusted_keys ?? {})) {
 			if (!pem?.trim()) continue;
-			const retiredKid = kid === ENTITLEMENT_FIXTURE_KID || kid === ENTITLEMENT_RETIRED_KID;
-			if (!allowFixture && (retiredKid || isRetiredEntitlementPublicKey(pem))) {
+			if (
+				kid === ENTITLEMENT_FIXTURE_KID
+				|| kid === ENTITLEMENT_RETIRED_KID
+				|| isRetiredEntitlementPublicKey(pem)
+			) {
 				continue;
 			}
 			keys.set(kid, pem.trim());
