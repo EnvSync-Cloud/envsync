@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minikms-db
+  namespace: envsync
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minikms-db
+  template:
+    metadata:
+      labels:
+        app: minikms-db
+    spec:
+      containers:
+        - name: minikms-db
+          image: postgres:17
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POSTGRES_DB
+              value: minikms
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minikms-db
+  namespace: envsync
+spec:
+  selector:
+    app: minikms-db
+  ports:
+    - port: 5432
+      targetPort: 5432 
