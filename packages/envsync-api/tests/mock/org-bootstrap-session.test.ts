@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
 	bootstrapSessionFromMetadata,
+	bootstrapSessionUsable,
 	peekOrgBootstrapSession,
 	rememberOrgBootstrapSession,
 } from "@/libs/kms/org-session";
@@ -39,5 +40,16 @@ describe("miniKMS org bootstrap session", () => {
 		});
 		expect(rememberOrgBootstrapSession(orgId, "second-token", "serial-3")).toBe(true);
 		expect(peekOrgBootstrapSession(orgId)?.token).toBe("second-token");
+	});
+
+	test("drops a bootstrap session that expires within a minute", () => {
+		const expired = `h.${Buffer.from(JSON.stringify({ exp: 1 })).toString("base64url")}.s`;
+		const fresh = `h.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.s`;
+		expect(bootstrapSessionUsable(expired)).toBe(false);
+		expect(bootstrapSessionUsable(fresh)).toBe(true);
+		expect(bootstrapSessionUsable("not-a-jwt")).toBe(true);
+		const orgId = "org-bootstrap-session-expired";
+		expect(rememberOrgBootstrapSession(orgId, expired, "serial")).toBe(true);
+		expect(peekOrgBootstrapSession(orgId)).toBeUndefined();
 	});
 });

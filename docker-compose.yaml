@@ -173,7 +173,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-e8722a6
+    image: ghcr.io/envsync-cloud/minikms:sha-cf531ee
     ports:
       - "${MINIKMS_GRPC_PORT:-50051}:50051"
     restart: unless-stopped
@@ -188,7 +188,7 @@ services:
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_GRPC_ADDR: 0.0.0.0:50051
-      # sha-e8722a6 mints the org admin session only when this is set.
+      # sha-cf531ee refreshes the org admin session on CreateOrgCA.
       # TLS stays on because MINIKMS_TLS_ENABLED is true.
       MINIKMS_ALLOW_INSECURE: "true"
       MINIKMS_TLS_ENABLED: "true"

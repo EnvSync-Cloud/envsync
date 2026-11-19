@@ -41,6 +41,24 @@ export function bootstrapSessionFromMetadata(metadata: MetadataLookup | undefine
 	};
 }
 
+/** A token with no exp claim is kept. An exp within the next minute is treated as missing. */
+export function bootstrapSessionUsable(token: string, nowMs = Date.now()): boolean {
+	const exp = readJwtExp(token);
+	if (exp === undefined) return true;
+	return exp * 1000 > nowMs + 60_000;
+}
+
+function readJwtExp(token: string): number | undefined {
+	const part = token.split(".")[1];
+	if (!part) return undefined;
+	try {
+		const payload = JSON.parse(Buffer.from(part, "base64url").toString("utf8")) as { exp?: unknown };
+		return typeof payload.exp === "number" ? payload.exp : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 /** Remember a session for this process. A blank token does not replace a stored one. */
 export function rememberOrgBootstrapSession(orgId: string, token: string, memberSerial: string): boolean {
 	if (!orgId || !token.trim()) {
@@ -51,7 +69,11 @@ export function rememberOrgBootstrapSession(orgId: string, token: string, member
 }
 
 export function peekOrgBootstrapSession(orgId: string): OrgBootstrapSession | undefined {
-	return sessions.get(orgId);
+	const session = sessions.get(orgId);
+	if (!session || !bootstrapSessionUsable(session.token)) {
+		return undefined;
+	}
+	return session;
 }
 
 export async function orgBootstrapSession(orgId: string): Promise<OrgBootstrapSession | undefined> {
@@ -60,12 +82,13 @@ export async function orgBootstrapSession(orgId: string): Promise<OrgBootstrapSe
 	}
 	const cached = sessions.get(orgId);
 	if (cached) {
-		return cached;
+		if (bootstrapSessionUsable(cached.token)) return cached;
+		sessions.delete(orgId);
 	}
 	try {
 		const store = await import("./org-session-store");
 		const loaded = await store.loadOrgBootstrapSession(orgId);
-		if (!loaded?.token) {
+		if (!loaded?.token || !bootstrapSessionUsable(loaded.token)) {
 			return undefined;
 		}
 		sessions.set(orgId, loaded);
