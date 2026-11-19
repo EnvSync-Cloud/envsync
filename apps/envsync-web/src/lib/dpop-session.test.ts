@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   clearAccessToken,
   proofUrl,
+  resourceRequestUrl,
   setAccessToken,
   signProof,
   type DeviceKey,
@@ -83,5 +84,14 @@ describe("dashboard DPoP session", () => {
     const claims = decodePart(proof.split(".")[1]);
     expect(claims.htu).toBe("https://auth.envsync.cloud/oauth/token");
     expect(claims.ath).toBeUndefined();
+  });
+
+  test("fills path parameters before the proof URL is signed", () => {
+    expect(
+      resourceRequestUrl("https://api.envsync.cloud/", "/api/apps/{app_id}/env/{env_type_id}", {
+        app_id: "app 1",
+        env_type_id: "env/1",
+      }),
+    ).toBe("https://api.envsync.cloud/api/apps/app%201/env/env/1");
   });
 });

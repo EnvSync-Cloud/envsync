@@ -63,6 +63,23 @@ export function proofUrl(url: string) {
   return parsed.toString();
 }
 
+/** Fill `{param}` the same way the generated SDK builds the request URL. */
+export function resourceRequestUrl(
+  base: string,
+  url: string,
+  path?: Record<string, unknown>,
+) {
+  const resolved = url.replace(/{(.*?)}/g, (substring, group: string) => {
+    if (path && Object.prototype.hasOwnProperty.call(path, group)) {
+      return encodeURI(String(path[group]));
+    }
+    return substring;
+  });
+  const origin = base.replace(/\/$/, "");
+  const relative = resolved.startsWith("/") ? resolved : `/${resolved}`;
+  return `${origin}${relative}`;
+}
+
 function bytesToBase64Url(bytes: Uint8Array) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
