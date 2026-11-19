@@ -1445,6 +1445,30 @@ export class KMSClient {
 
 	// ─── Private helpers ──────────────────────────────────────
 
+	private readonly orgSessionEnsures = new Map<string, Promise<void>>();
+
+	/**
+	 * Organizations created before the session was stored have no admin credential.
+	 * CreateOrgCA refreshes one for an existing organization. One refresh runs at a time.
+	 */
+	private ensureOrgBootstrapSession(orgId: string): Promise<void> {
+		if (!orgId) return Promise.resolve();
+		const pending = this.orgSessionEnsures.get(orgId);
+		if (pending) return pending;
+		const next = (async () => {
+			if (await orgBootstrapSession(orgId)) return;
+			try {
+				await this.createOrgCA(orgId, orgId);
+			} catch {
+				// createOrgCA already logged the transport error.
+			}
+		})().finally(() => {
+			this.orgSessionEnsures.delete(orgId);
+		});
+		this.orgSessionEnsures.set(orgId, next);
+		return next;
+	}
+
 	/**
 	 * Use the organization admin session from CreateOrgCA when this process has one.
 	 * Older miniKMS images ignore a missing session and still accept the RPC.
@@ -1456,6 +1480,7 @@ export class KMSClient {
 		orgId: string,
 		timeoutMs = 10_000,
 	): Promise<TRes> {
+		await this.ensureOrgBootstrapSession(orgId);
 		const session = await orgBootstrapSession(orgId);
 		if (session?.token) {
 			return this.rpcCallWithAuth(stub, method, request, session.token, timeoutMs);
