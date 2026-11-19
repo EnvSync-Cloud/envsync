@@ -858,10 +858,10 @@ export class CertificateService {
 			throw new NotFoundError("Certificate bundle", user_id, "NOT_FOUND");
 		}
 
-		const [rootCA, key_pem] = await Promise.all([
-			this.getRootCA(org_id),
-			this.decryptSystemPrivateKey(cert),
-		]);
+		const rootCA = await this.getRootCA(org_id);
+		// sha-e8722a6 keeps managed member keys on the server, so the bundle
+		// still returns the certificate when no client-held key was stored.
+		const key_pem = cert.encrypted_key_pem ? await this.decryptSystemPrivateKey(cert) : "";
 
 		return {
 			root_ca_pem: rootCA.cert_pem,
