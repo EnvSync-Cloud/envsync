@@ -234,7 +234,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-4280c5e
+    image: ghcr.io/envsync-cloud/minikms:sha-e8722a6
     restart: unless-stopped
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -246,6 +246,9 @@ services:
       MINIKMS_ROOT_CA_KEY_FILE: /tmp/minikms-root-ca-key
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
+      # sha-e8722a6 mints the org admin session only when this is set.
+      # TLS stays on because MINIKMS_TLS_ENABLED is true.
+      MINIKMS_ALLOW_INSECURE: "true"
       MINIKMS_TLS_ENABLED: "true"
       MINIKMS_TLS_CERT: /run/secrets/minikms-grpc-server-cert
       MINIKMS_TLS_KEY: /run/secrets/minikms-grpc-server-key

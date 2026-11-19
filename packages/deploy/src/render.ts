@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import { omitProtectedEnv, renderServiceSecretBlock, renderSwarmSecretsBlock, type ProtectedService } from "./protected-secrets";
 
 export interface DeployConfig {
 	edition?: "oss" | "enterprise";
@@ -139,6 +140,8 @@ export interface DeployGeneratedState {
 		minikms_session_signing_key: string;
 		minikms_db_password: string;
 		saml_session_secret: string;
+		/** Secret names and paths only. Raw root and session-signing keys are not persisted. */
+		protected_secrets?: Array<{ id: string; file: string; secret?: string }>;
 	};
 	bootstrap: {
 		completed_at: string;
@@ -343,7 +346,6 @@ export function buildRuntimeEnv(
 		MINIKMS_TLS_CA_CERT_FILE: "/run/secrets/minikms-grpc-ca-cert",
 		MINIKMS_TLS_CLIENT_CERT_FILE: "/run/secrets/minikms-grpc-client-cert",
 		MINIKMS_TLS_CLIENT_KEY_FILE: "/run/secrets/minikms-grpc-client-key",
-		MINIKMS_ROOT_KEY: generated.secrets.minikms_root_key,
 		MINIKMS_DB_USER: "postgres",
 		MINIKMS_DB_PASSWORD: generated.secrets.minikms_db_password,
 		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
@@ -978,6 +980,22 @@ export function renderClickstackClickHouseConfig() {
 	].join("\n") + "\n";
 }
 
+/** API container env. Root and session-signing private keys are never included. */
+export function buildApiServiceEnvironment(
+	runtimeEnv: RuntimeEnv,
+	overrides: RuntimeEnv = {},
+): RuntimeEnv {
+	return omitProtectedEnv({
+		...runtimeEnv,
+		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
+		ATRIUM_INTERNAL_URL: "http://atrium:8080",
+		OPENFGA_API_URL: "http://openfga:8090",
+		MINIKMS_GRPC_ADDR: "minikms:50051",
+		S3_ENDPOINT: "http://rustfs:9000",
+		...overrides,
+	});
+}
+
 export function renderStack(
 	config: DeployConfig,
 	runtimeEnv: RuntimeEnv,
@@ -995,9 +1013,9 @@ export function renderStack(
 		managementEnabled ? "      - /etc/envsync/license:/etc/envsync/license:ro" : "",
 		`      - ${paths.deployRoot}/minikms-grpc-ca-cert.pem:/run/secrets/minikms-grpc-ca-cert:ro`,
 		`      - ${paths.deployRoot}/minikms-grpc-client-cert.pem:/run/secrets/minikms-grpc-client-cert:ro`,
-		`      - ${paths.deployRoot}/minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro`,
 	].filter(Boolean);
 	const apiLicenseVolume = `\n    volumes:\n${apiVolumeLines.join("\n")}`;
+	const apiSecretBlock = renderServiceSecretBlock("api");
 	const deployment = createSteadyApiDeploymentState(config, generated);
 	const stackName = config.services.stack_name;
 	const configName = (logical: string, filePath: string) =>
@@ -1008,15 +1026,13 @@ export function renderStack(
 	const s3ConsoleServiceName = `${stackName}-s3-console-service`;
 	const netutilsService = renderNetutilsService(config);
 	const vpnResult = renderVpnService(config, paths, runtimeEnv);
-	const apiEnvironment = {
-		...runtimeEnv,
-		OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-agent:4318",
-		ATRIUM_INTERNAL_URL: "http://atrium:8080",
-		OPENFGA_API_URL: "http://openfga:8090",
-		MINIKMS_GRPC_ADDR: "minikms:50051",
-		S3_ENDPOINT: "http://rustfs:9000",
+	const apiEnvironment = buildApiServiceEnvironment(runtimeEnv, {
 		S3_BUCKET_URL: publicBucketUrl(config, hosts.s3, runtimeEnv.S3_BUCKET),
-	};
+	});
+	const protectedServices: ProtectedService[] = [];
+	if (includeRuntimeInfra) protectedServices.push("minikms");
+	if (includeAppServices) protectedServices.push("api");
+	const swarmSecretsBlock = renderSwarmSecretsBlock(stackName, protectedServices);
 
 	return `
 version: "3.9"
@@ -1188,33 +1204,33 @@ ${renderEnvList({
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-4280c5e
+    image: ghcr.io/envsync-cloud/minikms:sha-e8722a6
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-ca-key && exec minikms
+      - umask 077 && cp /run/secrets/minikms-root-key /tmp/minikms-root-key && cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-key /tmp/minikms-root-ca-key && exec minikms
     environment:
 ${renderEnvList({
-		MINIKMS_ROOT_KEY: runtimeEnv.MINIKMS_ROOT_KEY,
+		MINIKMS_ROOT_KEY_FILE: "/tmp/minikms-root-key",
 		MINIKMS_SESSION_SIGNING_KEY_FILE: "/run/secrets/minikms-session-signing-key",
 		MINIKMS_ROOT_CA_CERT_FILE: "/run/secrets/minikms-root-ca-cert",
 		MINIKMS_ROOT_CA_KEY_FILE: "/tmp/minikms-root-ca-key",
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
+		// sha-e8722a6 mints the org admin session only when this is set.
+		// TLS stays on because MINIKMS_TLS_ENABLED is true.
+		MINIKMS_ALLOW_INSECURE: "true",
 		MINIKMS_TLS_ENABLED: "true",
 		MINIKMS_TLS_CERT: "/run/secrets/minikms-grpc-server-cert",
 		MINIKMS_TLS_KEY: "/run/secrets/minikms-grpc-server-key",
 		MINIKMS_TLS_CA_FILE: "/run/secrets/minikms-grpc-ca-cert",
 	})}
+${renderServiceSecretBlock("minikms")}
     volumes:
-      - ${paths.deployRoot}/minikms-session-signing-key.pem:/run/secrets/minikms-session-signing-key:ro
       - ${paths.deployRoot}/minikms-root-ca-cert.pem:/run/secrets/minikms-root-ca-cert:ro
-      - ${paths.deployRoot}/minikms-root-ca-key.pem:/run/secrets/minikms-root-ca-key:ro
       - ${paths.deployRoot}/minikms-grpc-ca-cert.pem:/run/secrets/minikms-grpc-ca-cert:ro
       - ${paths.deployRoot}/minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro
-      - ${paths.deployRoot}/minikms-grpc-server-key.pem:/run/secrets/minikms-grpc-server-key:ro
       - ${paths.deployRoot}/minikms-grpc-client-cert.pem:/run/secrets/minikms-grpc-client-cert:ro
-      - ${paths.deployRoot}/minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro
     networks: [envsync]` : ""}
 
   clickstack:
@@ -1280,6 +1296,7 @@ ${renderEnvList({
 		ENVSYNC_DEPLOY_RELEASE_VERSION: deployment.slots.blue.release_version || config.release.version,
 	})}
 ${apiLicenseVolume}
+${apiSecretBlock}
     networks: [envsync]
     healthcheck:
       disable: true
@@ -1295,6 +1312,7 @@ ${renderEnvList({
 		ENVSYNC_DEPLOY_RELEASE_VERSION: deployment.slots.green.release_version || config.release.version,
 	})}
 ${apiLicenseVolume}
+${apiSecretBlock}
     networks: [envsync]
     healthcheck:
       disable: true
@@ -1342,5 +1360,5 @@ ${landingEnabled ? `  nginx_landing_conf:
   nginx_api_maintenance_conf:
     name: ${configName("nginx_api_maintenance_conf", paths.nginxApiMaintenanceConf)}
     file: ${paths.nginxApiMaintenanceConf}
-`.trimStart();
+${swarmSecretsBlock ? `\n${swarmSecretsBlock}\n` : ""}`.trimStart();
 }

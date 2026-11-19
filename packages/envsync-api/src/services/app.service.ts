@@ -409,7 +409,7 @@ export class AppService {
 
 		try {
 			const kms = await KMSClient.getInstance();
-			const sessionToken = await getVaultSessionToken(user_id, org_id);
+			const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:read");
 			const counts = await Promise.all(
 				envTypes.map(async et => {
 					const entries = await kms.vaultList(org_id, app_id, "env", et.id, sessionToken);
@@ -453,7 +453,7 @@ export class AppService {
 
 		try {
 			const kms = await KMSClient.getInstance();
-			const sessionToken = await getVaultSessionToken(user_id, org_id);
+			const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:read");
 			const counts = await Promise.all(
 				envTypes.map(async et => {
 					const entries = await kms.vaultList(org_id, app_id, "secret", et.id, sessionToken);

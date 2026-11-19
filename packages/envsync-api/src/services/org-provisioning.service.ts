@@ -148,7 +148,7 @@ export class OrgProvisioningService {
 								issued_source: input.source,
 							},
 						});
-						const rootCA = await CertificateService.getRootCA();
+						const rootCA = await CertificateService.getRootCA(ctx.org_id);
 						generatedBundle = {
 							root_ca_pem: rootCA.cert_pem,
 							member_cert_pem: cert.cert_pem ?? "",

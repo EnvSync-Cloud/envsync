@@ -256,7 +256,7 @@ export class OnboardingController {
 						issued_source: "user_invite_accept",
 					},
 				});
-				const rootCA = await CertificateService.getRootCA();
+				const rootCA = await CertificateService.getRootCA(invite.org_id);
 				generatedCertificateBundle = {
 					root_ca_pem: rootCA.cert_pem,
 					member_cert_pem: cert.cert_pem ?? "",

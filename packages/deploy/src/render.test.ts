@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+	buildApiServiceEnvironment,
 	buildRuntimeEnv,
 	renderApiMaintenanceConf,
 	renderClickstackClickHouseConfig,
@@ -160,8 +161,8 @@ const generated: DeployGeneratedState = {
 		atrium_web_client_secret: "web-client-secret",
 		atrium_api_client_secret: "api-client-secret",
 		openfga_db_password: "openfga-db-pass",
-		minikms_root_key: "minikms-root-key",
-		minikms_session_signing_key: "-----BEGIN PRIVATE KEY-----\nDEV\n-----END PRIVATE KEY-----\n",
+		minikms_root_key: "SENTINEL_ROOT_KEY_DO_NOT_LEAK",
+		minikms_session_signing_key: "SENTINEL_SESSION_SIGNING_KEY_DO_NOT_LEAK",
 		minikms_db_password: "minikms-db-pass",
 		saml_session_secret: "a".repeat(64),
 	},
@@ -207,6 +208,10 @@ describe("buildRuntimeEnv", () => {
 		expect(runtimeEnv.MINIKMS_TLS_CA_CERT_FILE).toBe("/run/secrets/minikms-grpc-ca-cert");
 		expect(runtimeEnv.MINIKMS_TLS_CLIENT_CERT_FILE).toBe("/run/secrets/minikms-grpc-client-cert");
 		expect(runtimeEnv.MINIKMS_TLS_CLIENT_KEY_FILE).toBe("/run/secrets/minikms-grpc-client-key");
+		expect(runtimeEnv.MINIKMS_ROOT_KEY).toBeUndefined();
+		expect(runtimeEnv.MINIKMS_SESSION_SIGNING_KEY).toBeUndefined();
+		expect(JSON.stringify(runtimeEnv)).not.toContain("SENTINEL_ROOT_KEY_DO_NOT_LEAK");
+		expect(JSON.stringify(runtimeEnv)).not.toContain("SENTINEL_SESSION_SIGNING_KEY_DO_NOT_LEAK");
 	});
 });
 
@@ -234,27 +239,61 @@ describe("swarmConfigObjectName", () => {
 });
 
 describe("renderStack", () => {
-	test("base mode omits landing and api services", () => {
+	test("base mode omits landing, api services, and swarm secrets", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
 		const stackBase = renderStack(config, runtimeEnv, generated, "base", paths);
 		expect(stackBase).not.toContain("landing_nginx");
 		expect(stackBase).not.toContain("envsync_api_blue");
+		expect(stackBase).not.toContain("minikms_root_key:");
+		expect(stackBase).not.toContain("SENTINEL_ROOT_KEY_DO_NOT_LEAK");
 	});
 
 	test("full mode includes web, api, and netutils", () => {
-		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const sentinelRoot = generated.secrets.minikms_root_key;
+		const sentinelSession = generated.secrets.minikms_session_signing_key;
+		const runtimeEnv = {
+			...buildRuntimeEnv(config, generated),
+			MINIKMS_ROOT_KEY: sentinelRoot,
+			MINIKMS_SESSION_SIGNING_KEY: sentinelSession,
+		};
+		const apiEnv = buildApiServiceEnvironment(runtimeEnv, {
+			ENVSYNC_DEPLOY_SLOT: "blue",
+		});
+		expect(apiEnv.MINIKMS_ROOT_KEY).toBeUndefined();
+		expect(apiEnv.MINIKMS_SESSION_SIGNING_KEY).toBeUndefined();
+		expect(JSON.stringify(apiEnv)).not.toContain(sentinelRoot);
+		expect(JSON.stringify(apiEnv)).not.toContain(sentinelSession);
 		const stackFull = renderStack(configWithNetutils, runtimeEnv, generated, "full", paths);
 		// Phase 2: self-host omits landing service
 		expect(stackFull).not.toContain("landing_nginx");
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
-		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-4280c5e");
+		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-e8722a6");
+		expect(stackFull).toContain("MINIKMS_ROOT_KEY_FILE=/tmp/minikms-root-key");
 		expect(stackFull).toContain("MINIKMS_SESSION_SIGNING_KEY_FILE=/run/secrets/minikms-session-signing-key");
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_CERT_FILE=/run/secrets/minikms-root-ca-cert");
+		expect(stackFull).toContain("MINIKMS_ROOT_CA_KEY_FILE=/tmp/minikms-root-ca-key");
 		expect(stackFull).toContain("MINIKMS_TLS_ENABLED=true");
+		expect(stackFull).toContain("MINIKMS_ALLOW_INSECURE=true");
 		expect(stackFull).toContain("minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro");
-		expect(stackFull).toContain("minikms-grpc-client-key.pem:/run/secrets/minikms-grpc-client-key:ro");
+		expect(stackFull).not.toContain("minikms-grpc-client-key.pem:");
+		expect(stackFull).not.toContain("minikms-grpc-server-key.pem:");
+		expect(stackFull).not.toContain("minikms-root-ca-key.pem:");
+		expect(stackFull).not.toContain("minikms-session-signing-key.pem:");
+		expect(stackFull).toContain("source: minikms_root_key");
+		expect(stackFull).toContain("target: minikms-root-key");
+		expect(stackFull).toContain("source: minikms_session_signing_key");
+		expect(stackFull).toContain("source: minikms_grpc_client_key");
+		expect(stackFull).toContain("target: minikms-grpc-client-key");
+		expect(stackFull).toContain("external: true");
+		expect(stackFull).toContain("name: envsync_minikms_root_key");
+		expect(stackFull).toContain("name: envsync_minikms_session_signing_key");
+		expect(stackFull).toContain("name: envsync_minikms_grpc_client_key");
+		expect(stackFull).not.toContain("MINIKMS_ROOT_KEY=");
+		expect(stackFull).not.toContain("MINIKMS_SESSION_SIGNING_KEY=");
+		expect(stackFull).not.toContain(sentinelRoot);
+		expect(stackFull).not.toContain(sentinelSession);
 		expect(stackFull).not.toContain("envsync-management-api");
 		expect(stackFull).toContain("/etc/envsync/license:/etc/envsync/license:ro");
 		expect(stackFull).toContain("/opt/envsync/releases/web/current:/srv/web:ro");

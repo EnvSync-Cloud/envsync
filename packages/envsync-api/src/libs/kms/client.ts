@@ -5,6 +5,13 @@ import * as protoLoader from "@grpc/proto-loader";
 
 import { AppError } from "@/libs/errors";
 import { loadMinikmsGrpcCredentials as buildMinikmsGrpcCredentials } from "@/libs/kms/grpc-credentials";
+import {
+	bootstrapSessionFromMetadata,
+	orgBootstrapSession,
+	peekOrgBootstrapSession,
+	rememberOrgBootstrapSession,
+	saveOrgBootstrapSession,
+} from "@/libs/kms/org-session";
 import { resolveKmsProtoDir } from "@/libs/kms/proto-path";
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
@@ -504,6 +511,7 @@ export class KMSClient {
 		method: string,
 		request: Record<string, unknown>,
 		timeoutMs = 10_000,
+		onMetadata?: (metadata: grpc.Metadata) => void,
 	): Promise<TRes> {
 		const serviceNameMap = new Map<grpc.Client, string>([
 			[this.kmsStub, "minikms.v1.KMSService"],
@@ -535,7 +543,7 @@ export class KMSClient {
 				try {
 					return await new Promise<TRes>((resolve, reject) => {
 						const deadline = new Date(Date.now() + timeoutMs);
-						(stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
+						const call = (stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => { on?: (event: "metadata", listener: (metadata: grpc.Metadata) => void) => void }>)[method](
 							request,
 							{ deadline },
 							(err: grpc.ServiceError | null, response: TRes) => {
@@ -543,6 +551,7 @@ export class KMSClient {
 								else resolve(response);
 							},
 						);
+						call?.on?.("metadata", metadata => onMetadata?.(metadata));
 					});
 				} catch (error) {
 					recordGrpcFailure(span, serviceName, method, request, error);
@@ -565,12 +574,12 @@ export class KMSClient {
 	): Promise<EncryptResult> {
 		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
-			const response = await this.rpcCall<GrpcEncryptResponse>(this.kmsStub, "Encrypt", {
+			const response = await this.callForOrg<GrpcEncryptResponse>(this.kmsStub, "Encrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				plaintext: Buffer.from(plaintext, "utf-8"),
 				aad,
-			});
+			}, orgId);
 
 			return {
 				ciphertext: response.ciphertext,
@@ -600,13 +609,13 @@ export class KMSClient {
 	): Promise<DecryptResult> {
 		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
-			const response = await this.rpcCall<GrpcDecryptResponse>(this.kmsStub, "Decrypt", {
+			const response = await this.callForOrg<GrpcDecryptResponse>(this.kmsStub, "Decrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				ciphertext,
 				aad,
 				key_version_id: keyVersionId,
-			});
+			}, orgId);
 
 			return {
 				plaintext: Buffer.from(response.plaintext).toString("utf-8"),
@@ -633,14 +642,14 @@ export class KMSClient {
 	): Promise<EncryptResult[]> {
 		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
-			const response = await this.rpcCall<GrpcBatchEncryptResponse>(this.kmsStub, "BatchEncrypt", {
+			const response = await this.callForOrg<GrpcBatchEncryptResponse>(this.kmsStub, "BatchEncrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				items: items.map((item) => ({
 					plaintext: Buffer.from(item.plaintext, "utf-8"),
 					aad: item.aad,
 				})),
-			});
+			}, orgId);
 
 			return response.items.map((item) => ({
 				ciphertext: item.ciphertext,
@@ -668,7 +677,7 @@ export class KMSClient {
 	): Promise<DecryptResult[]> {
 		await KMSClient.beforeTenantOp(orgId, appId);
 		try {
-			const response = await this.rpcCall<GrpcBatchDecryptResponse>(this.kmsStub, "BatchDecrypt", {
+			const response = await this.callForOrg<GrpcBatchDecryptResponse>(this.kmsStub, "BatchDecrypt", {
 				tenant_id: orgId,
 				scope_id: appId,
 				items: items.map((item) => ({
@@ -676,7 +685,7 @@ export class KMSClient {
 					aad: item.aad,
 					key_version_id: item.keyVersionId,
 				})),
-			});
+			}, orgId);
 
 			return response.items.map((item) => ({
 				plaintext: Buffer.from(item.plaintext).toString("utf-8"),
@@ -715,10 +724,31 @@ export class KMSClient {
 	public async createOrgCA(orgId: string, orgName: string): Promise<CreateOrgCAResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
+			let headers: grpc.Metadata | undefined;
 			const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateOrgCA", {
 				org_id: orgId,
 				org_name: orgName,
+			}, 10_000, metadata => {
+				headers = metadata;
 			});
+			const bootstrap = bootstrapSessionFromMetadata(headers);
+			if (bootstrap && rememberOrgBootstrapSession(orgId, bootstrap.token, bootstrap.memberSerial)) {
+				try {
+					await saveOrgBootstrapSession(orgId);
+				} catch {
+					infoLogs(
+						`miniKMS org session kept in memory for org ${orgId}`,
+						LogTypes.ERROR,
+						"KMSClient",
+					);
+				}
+			} else if (!peekOrgBootstrapSession(orgId)) {
+				infoLogs(
+					`PKI CreateOrgCA returned no bootstrap session for org ${orgId}`,
+					LogTypes.ERROR,
+					"KMSClient",
+				);
+			}
 			return {
 				certPem: response.cert_pem,
 				serialHex: response.serial_hex,
@@ -742,12 +772,12 @@ export class KMSClient {
 	): Promise<IssueMemberCertResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcIssueMemberCertResponse>(this.pkiStub, "IssueMemberCert", {
+			const response = await this.callForOrg<GrpcIssueMemberCertResponse>(this.pkiStub, "IssueMemberCert", {
 				member_id: memberId,
 				member_email: memberEmail,
 				org_id: orgId,
 				role,
-			});
+			}, orgId);
 			return {
 				certPem: response.cert_pem,
 				keyPem: response.key_pem,
@@ -763,30 +793,30 @@ export class KMSClient {
 
 	public async createOrgCACSR(orgId: string, orgName: string): Promise<{ csrPem: string }> {
 		await KMSClient.beforeTenantOp(orgId, "");
-		const response = await this.rpcCall<{ csr_pem: string }>(this.pkiStub, "CreateOrgCACSR", {
+		const response = await this.callForOrg<{ csr_pem: string }>(this.pkiStub, "CreateOrgCACSR", {
 			org_id: orgId,
 			org_name: orgName,
-		});
+		}, orgId);
 		return { csrPem: response.csr_pem };
 	}
 
 	public async installOrgCA(orgId: string, certPem: string, chainPem: string): Promise<CreateOrgCAResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
-		const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "InstallOrgCA", {
+		const response = await this.callForOrg<GrpcCreateOrgCAResponse>(this.pkiStub, "InstallOrgCA", {
 			org_id: orgId,
 			cert_pem: certPem,
 			chain_pem: chainPem,
-		});
+		}, orgId);
 		return { certPem: response.cert_pem, serialHex: response.serial_hex };
 	}
 
 	public async createEnvCA(orgId: string, envId: string, name: string): Promise<CreateOrgCAResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
-		const response = await this.rpcCall<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateEnvCA", {
+		const response = await this.callForOrg<GrpcCreateOrgCAResponse>(this.pkiStub, "CreateEnvCA", {
 			org_id: orgId,
 			env_id: envId,
 			name,
-		});
+		}, orgId);
 		return {
 			certPem: response.cert_pem,
 			serialHex: response.serial_hex,
@@ -803,14 +833,14 @@ export class KMSClient {
 	}): Promise<IssueLeafCertResult> {
 		await KMSClient.beforeTenantOp(input.orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcIssueLeafCertResponse>(this.pkiStub, "IssueLeafCert", {
+			const response = await this.callForOrg<GrpcIssueLeafCertResponse>(this.pkiStub, "IssueLeafCert", {
 				org_id: input.orgId,
 				common_name: input.commonName,
 				dns_sans: input.dnsSans,
 				ttl_days: input.ttlDays,
 				key_algorithm: input.keyAlgorithm,
 				env_id: input.envId ?? "",
-			});
+			}, input.orgId);
 			return {
 				certPem: response.cert_pem,
 				keyPem: response.key_pem,
@@ -832,12 +862,12 @@ export class KMSClient {
 	}): Promise<SignCSRResult> {
 		await KMSClient.beforeTenantOp(input.orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcSignCSRResponse>(this.pkiStub, "SignCSR", {
+			const response = await this.callForOrg<GrpcSignCSRResponse>(this.pkiStub, "SignCSR", {
 				org_id: input.orgId,
 				csr_pem: input.csrPem,
 				ttl_days: input.ttlDays,
 				env_id: input.envId ?? "",
-			});
+			}, input.orgId);
 			return {
 				certPem: response.cert_pem,
 				serialHex: response.serial_hex,
@@ -856,11 +886,11 @@ export class KMSClient {
 	public async revokeCert(serialHex: string, orgId: string, reason: number): Promise<RevokeCertResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcRevokeCertResponse>(this.pkiStub, "RevokeCert", {
+			const response = await this.callForOrg<GrpcRevokeCertResponse>(this.pkiStub, "RevokeCert", {
 				serial_hex: serialHex,
 				org_id: orgId,
 				reason,
-			});
+			}, orgId);
 			return { success: response.success };
 		} catch (error) {
 			if (error instanceof Error) {
@@ -876,10 +906,10 @@ export class KMSClient {
 	public async getCRL(orgId: string, deltaOnly: boolean): Promise<GetCRLResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcGetCRLResponse>(this.pkiStub, "GetCRL", {
+			const response = await this.callForOrg<GrpcGetCRLResponse>(this.pkiStub, "GetCRL", {
 				org_id: orgId,
 				delta_only: deltaOnly,
-			});
+			}, orgId);
 			return {
 				crlDer: Buffer.from(response.crl_der),
 				crlNumber: Number(response.crl_number),
@@ -899,10 +929,10 @@ export class KMSClient {
 	public async checkOCSP(serialHex: string, orgId: string): Promise<CheckOCSPResult> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcCheckOCSPResponse>(this.pkiStub, "CheckOCSP", {
+			const response = await this.callForOrg<GrpcCheckOCSPResponse>(this.pkiStub, "CheckOCSP", {
 				serial_hex: serialHex,
 				org_id: orgId,
-			});
+			}, orgId);
 			return {
 				status: response.status,
 				revokedAt: response.revoked_at || "",
@@ -918,9 +948,9 @@ export class KMSClient {
 	/**
 	 * Get the root CA certificate via miniKMS PKI.
 	 */
-	public async getRootCA(): Promise<GetRootCAResult> {
+	public async getRootCA(orgId?: string): Promise<GetRootCAResult> {
 		try {
-			const response = await this.rpcCall<GrpcGetRootCAResponse>(this.pkiStub, "GetRootCA", {});
+			const response = await this.callForOrg<GrpcGetRootCAResponse>(this.pkiStub, "GetRootCA", {}, orgId ?? "");
 			return { certPem: response.cert_pem };
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1201,9 +1231,9 @@ export class KMSClient {
 	 */
 	public async validateSession(sessionToken: string): Promise<ValidateSessionResult> {
 		try {
-			const response = await this.rpcCall<GrpcValidateSessionResponse>(this.sessionStub, "ValidateSession", {
+			const response = await this.rpcCallWithAuth<GrpcValidateSessionResponse>(this.sessionStub, "ValidateSession", {
 				session_token: sessionToken,
-			});
+			}, sessionToken);
 			return {
 				valid: response.valid,
 				memberId: response.member_id,
@@ -1226,9 +1256,9 @@ export class KMSClient {
 	 */
 	public async revokeSession(sessionToken: string): Promise<boolean> {
 		try {
-			const response = await this.rpcCall<GrpcRevokeSessionResponse>(this.sessionStub, "RevokeSession", {
+			const response = await this.rpcCallWithAuth<GrpcRevokeSessionResponse>(this.sessionStub, "RevokeSession", {
 				session_token: sessionToken,
-			});
+			}, sessionToken);
 			return response.success;
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1244,10 +1274,10 @@ export class KMSClient {
 	public async revokeMemberSessions(memberId: string, orgId: string): Promise<number> {
 		await KMSClient.beforeTenantOp(orgId, "");
 		try {
-			const response = await this.rpcCall<GrpcRevokeMemberSessionsResponse>(this.sessionStub, "RevokeMemberSessions", {
+			const response = await this.callForOrg<GrpcRevokeMemberSessionsResponse>(this.sessionStub, "RevokeMemberSessions", {
 				member_id: memberId,
 				org_id: orgId,
-			});
+			}, orgId);
 			return response.revoked_count;
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1262,10 +1292,10 @@ export class KMSClient {
 	public async createDataKey(orgId: string, scopeId: string): Promise<CreateDataKeyResult> {
 		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
-			const response = await this.rpcCall<GrpcCreateDataKeyResponse>(this.kmsStub, "CreateDataKey", {
+			const response = await this.callForOrg<GrpcCreateDataKeyResponse>(this.kmsStub, "CreateDataKey", {
 				tenant_id: orgId,
 				scope_id: scopeId,
-			});
+			}, orgId);
 			return { keyVersionId: response.key_version_id, version: response.version };
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1278,10 +1308,10 @@ export class KMSClient {
 	public async rotateDataKey(orgId: string, scopeId: string): Promise<RotateDataKeyResult> {
 		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
-			const response = await this.rpcCall<GrpcRotateDataKeyResponse>(this.kmsStub, "RotateDataKey", {
+			const response = await this.callForOrg<GrpcRotateDataKeyResponse>(this.kmsStub, "RotateDataKey", {
 				tenant_id: orgId,
 				scope_id: scopeId,
-			});
+			}, orgId);
 			return { newKeyVersionId: response.new_key_version_id };
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1301,14 +1331,14 @@ export class KMSClient {
 	): Promise<ReEncryptResult> {
 		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
-			const response = await this.rpcCall<GrpcReEncryptResponse>(this.kmsStub, "ReEncrypt", {
+			const response = await this.callForOrg<GrpcReEncryptResponse>(this.kmsStub, "ReEncrypt", {
 				tenant_id: orgId,
 				scope_id: scopeId,
 				ciphertext,
 				source_aad: sourceAad,
 				target_aad: targetAad,
 				source_key_version_id: sourceKeyVersionId,
-			});
+			}, orgId);
 			return { ciphertext: response.ciphertext, keyVersionId: response.key_version_id };
 		} catch (error) {
 			if (error instanceof Error) {
@@ -1321,10 +1351,10 @@ export class KMSClient {
 	public async getKeyInfo(orgId: string, scopeId: string): Promise<KeyInfoResult> {
 		await KMSClient.beforeTenantOp(orgId, scopeId);
 		try {
-			const response = await this.rpcCall<GrpcGetKeyInfoResponse>(this.kmsStub, "GetKeyInfo", {
+			const response = await this.callForOrg<GrpcGetKeyInfoResponse>(this.kmsStub, "GetKeyInfo", {
 				tenant_id: orgId,
 				scope_id: scopeId,
-			});
+			}, orgId);
 			return {
 				keyVersionId: response.key_version_id,
 				version: response.version,
@@ -1354,12 +1384,12 @@ export class KMSClient {
 			);
 		}
 		try {
-			await this.rpcCall(this.kmsStub, "SetTenantWrappingKey", {
+			await this.callForOrg(this.kmsStub, "SetTenantWrappingKey", {
 				tenant_id: input.tenantId,
 				kek: input.kek,
 				kek_version: input.kekVersion,
 				allow_root_unwrap: input.allowRootUnwrap ?? false,
-			}, 30_000);
+			}, input.tenantId, 30_000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS SetTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
@@ -1377,7 +1407,7 @@ export class KMSClient {
 			);
 		}
 		try {
-			await this.rpcCall(this.kmsStub, "ClearTenantWrappingKey", { tenant_id: tenantId }, 30_000);
+			await this.callForOrg(this.kmsStub, "ClearTenantWrappingKey", { tenant_id: tenantId }, tenantId, 30_000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS ClearTenantWrappingKey error: ${error.message}`, LogTypes.ERROR, "KMSClient");
@@ -1400,11 +1430,11 @@ export class KMSClient {
 		}
 		try {
 			// Minutes-scale: first attach/detach of a large tenant cannot finish in 10s.
-			await this.rpcCall(this.kmsStub, "RewrapTenantDataKeys", {
+			await this.callForOrg(this.kmsStub, "RewrapTenantDataKeys", {
 				tenant_id: input.tenantId,
 				target: input.target,
 				allow_root_unwrap: input.allowRootUnwrap ?? false,
-			}, 5 * 60 * 1000);
+			}, input.tenantId, 5 * 60 * 1000);
 		} catch (error) {
 			if (error instanceof Error) {
 				infoLogs(`KMS RewrapTenantDataKeys error: ${error.message}`, LogTypes.ERROR, "KMSClient");
@@ -1416,13 +1446,30 @@ export class KMSClient {
 	// ─── Private helpers ──────────────────────────────────────
 
 	/**
-	 * Promisify a unary gRPC call with a session token in metadata.
+	 * Use the organization admin session from CreateOrgCA when this process has one.
+	 * Older miniKMS images ignore a missing session and still accept the RPC.
 	 */
+	private async callForOrg<TRes>(
+		stub: grpc.Client,
+		method: string,
+		request: Record<string, unknown>,
+		orgId: string,
+		timeoutMs = 10_000,
+	): Promise<TRes> {
+		const session = await orgBootstrapSession(orgId);
+		if (session?.token) {
+			return this.rpcCallWithAuth(stub, method, request, session.token, timeoutMs);
+		}
+		return this.rpcCall(stub, method, request, timeoutMs);
+	}
+
+	/** Promisify a unary gRPC call with a session token in metadata. */
 	private rpcCallWithAuth<TRes>(
 		stub: grpc.Client,
 		method: string,
 		request: Record<string, unknown>,
 		sessionToken: string,
+		timeoutMs = 10_000,
 	): Promise<TRes> {
 		const serviceNameMap = new Map<grpc.Client, string>([
 			[this.kmsStub, "minikms.v1.KMSService"],
@@ -1448,7 +1495,7 @@ export class KMSClient {
 				span.addEvent("minikms.grpc.request", operation);
 				try {
 					return await new Promise<TRes>((resolve, reject) => {
-						const deadline = new Date(Date.now() + 10_000);
+						const deadline = new Date(Date.now() + timeoutMs);
 						const metadata = new grpc.Metadata();
 						metadata.set("authorization", `Bearer ${sessionToken}`);
 						(stub as unknown as Record<string, (req: Record<string, unknown>, md: grpc.Metadata, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](

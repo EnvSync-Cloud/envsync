@@ -25,7 +25,7 @@ export class KeyValidationService {
 		excludeTable?: "env_store" | "secret_store";
 	}) {
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:read");
 
 		// Check env path unless excluded
 		if (excludeTable !== "env_store") {
@@ -93,7 +93,7 @@ export class KeyValidationService {
 		excludeTable?: "env_store" | "secret_store";
 	}) {
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:read");
 		const conflicts: { key: string; type: string | null; message: string | null }[] = [];
 
 		// Fetch existing keys via LIST (much more efficient than N individual reads)
