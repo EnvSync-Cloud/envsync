@@ -188,6 +188,9 @@ services:
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:-postgres}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
       MINIKMS_GRPC_ADDR: 0.0.0.0:50051
+      # sha-e8722a6 mints the org admin session only when this is set.
+      # TLS stays on because MINIKMS_TLS_ENABLED is true.
+      MINIKMS_ALLOW_INSECURE: "true"
       MINIKMS_TLS_ENABLED: "true"
       MINIKMS_TLS_CERT: /run/secrets/minikms-grpc-server-cert
       MINIKMS_TLS_KEY: /run/secrets/minikms-grpc-server-key

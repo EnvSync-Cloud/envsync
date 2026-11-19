@@ -8,6 +8,7 @@ import { loadMinikmsGrpcCredentials as buildMinikmsGrpcCredentials } from "@/lib
 import {
 	bootstrapSessionFromMetadata,
 	orgBootstrapSession,
+	peekOrgBootstrapSession,
 	rememberOrgBootstrapSession,
 	saveOrgBootstrapSession,
 } from "@/libs/kms/org-session";
@@ -741,6 +742,12 @@ export class KMSClient {
 						"KMSClient",
 					);
 				}
+			} else if (!peekOrgBootstrapSession(orgId)) {
+				infoLogs(
+					`PKI CreateOrgCA returned no bootstrap session for org ${orgId}`,
+					LogTypes.ERROR,
+					"KMSClient",
+				);
 			}
 			return {
 				certPem: response.cert_pem,

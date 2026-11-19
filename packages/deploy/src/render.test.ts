@@ -275,6 +275,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_CERT_FILE=/run/secrets/minikms-root-ca-cert");
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_KEY_FILE=/tmp/minikms-root-ca-key");
 		expect(stackFull).toContain("MINIKMS_TLS_ENABLED=true");
+		expect(stackFull).toContain("MINIKMS_ALLOW_INSECURE=true");
 		expect(stackFull).toContain("minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro");
 		expect(stackFull).not.toContain("minikms-grpc-client-key.pem:");
 		expect(stackFull).not.toContain("minikms-grpc-server-key.pem:");
