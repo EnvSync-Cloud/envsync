@@ -1,8 +1,10 @@
 import { mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve, join } from "node:path";
-import pino from "pino";
+import pino, { type LoggerOptions } from "pino";
 import { trace, isSpanContextValid, context } from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+
+import { redactLogPayload, redactWrittenLog } from "./redact";
 
 export enum LogTypes {
 	LOGS = "logs",
@@ -10,52 +12,19 @@ export enum LogTypes {
 	CUSTOMOBJ = "customObj",
 }
 
-const SENSITIVE_KEYS = new Set([
-	"apiKey", "api_key", "apikey",
-	"password", "passwd", "pwd",
-	"secret", "secretKey", "secret_key",
-	"token", "accessToken", "access_token",
-	"refreshToken", "refresh_token",
-	"authorization", "Authorization",
-	"privateKey", "private_key",
-	"superuser",
-]);
+export { LOG_REDACTED, redactLogPayload, redactWrittenLog } from "./redact";
 
-const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
-	// API key secrets. Display hints are shorter than this and are left intact.
-	{ pattern: /\beVs_[A-Za-z0-9_-]{12,}\b/g, replacement: "eVs_[REDACTED]" },
-	// Connection strings: postgres://user:pass@host
-	{ pattern: /(\w+:\/\/[^:]+:)[^@]+(@)/g, replacement: "$1[REDACTED]$2" },
-	// Key=value pairs: apiKey=xxx, password=xxx, api_key=xxx
-	{ pattern: /(api[_-]?key|password|secret|token|authorization)\s*[=:]\s*\S+/gi, replacement: "$1=[REDACTED]" },
-	// Bearer tokens
-	{ pattern: /Bearer\s+\S+/gi, replacement: "Bearer [REDACTED]" },
-];
-
-function redactString(str: string): string {
-	let result = str;
-	for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
-		result = result.replace(pattern, replacement);
-	}
-	return result;
-}
-
-function redactSensitive(obj: unknown): unknown {
-	if (obj === null || obj === undefined) return obj;
-	if (typeof obj !== "object") return obj;
-	if (Array.isArray(obj)) return obj.map(redactSensitive);
-
-	const redacted: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-		if (SENSITIVE_KEYS.has(key)) {
-			redacted[key] = "[REDACTED]";
-		} else if (typeof value === "object" && value !== null) {
-			redacted[key] = redactSensitive(value);
-		} else {
-			redacted[key] = value;
-		}
-	}
-	return redacted;
+function withRedaction(options: LoggerOptions): LoggerOptions {
+	return {
+		...options,
+		hooks: {
+			logMethod(args, method) {
+				const redactedArgs = Array.from(args, arg => redactLogPayload(arg));
+				method.apply(this, redactedArgs as unknown as typeof args);
+			},
+			streamWrite: redactWrittenLog,
+		},
+	};
 }
 
 const LOGS_DIR = join(resolve(import.meta.dir, "../../../../.."), "logs");
@@ -76,33 +45,41 @@ const appLogDestination = createFileDestination("app.log");
 const apiResponseLogDestination = createFileDestination("api-responses.log");
 
 // Singleton Pino instance with trace context mixin for OTEL log-trace correlation
-const logger = pino({
-	mixin() {
-		const span = trace.getActiveSpan();
-		if (span) {
-			const ctx = span.spanContext();
-			if (isSpanContextValid(ctx)) {
-				return {
-					trace_id: ctx.traceId,
-					span_id: ctx.spanId,
-					trace_flags: `0${ctx.traceFlags.toString(16)}`,
-				};
+const logger = pino(
+	withRedaction({
+		mixin() {
+			const span = trace.getActiveSpan();
+			if (span) {
+				const ctx = span.spanContext();
+				if (isSpanContextValid(ctx)) {
+					return {
+						trace_id: ctx.traceId,
+						span_id: ctx.spanId,
+						trace_flags: `0${ctx.traceFlags.toString(16)}`,
+					};
+				}
 			}
-		}
-		return {};
-	},
-}, pino.multistream([
-	{ stream: process.stdout },
-	...(appLogDestination ? [{ stream: appLogDestination }] : []),
-]));
+			return {};
+		},
+	}),
+	pino.multistream([
+		{ stream: process.stdout },
+		...(appLogDestination ? [{ stream: appLogDestination }] : []),
+	]),
+);
 
 // API response logger: file only
 export const apiResponseLogger = pino(
-	{},
+	withRedaction({}),
 	apiResponseLogDestination ?? process.stdout,
 );
 
-function emitOtelLog(body: string, severityNumber: SeverityNumber, severityText: string, generatedBy: string) {
+function emitOtelLog(
+	body: string,
+	severityNumber: SeverityNumber,
+	severityText: string,
+	generatedBy: string,
+) {
 	const otelLogger = logs.getLogger("envsync-api");
 	const span = trace.getSpan(context.active());
 	const isError = severityText === "ERROR";
@@ -146,16 +123,18 @@ const infoLogs = (msg: unknown, logType: LogTypes, generated_by: string) => {
 		msg = `[${generated_by}] ` + msg;
 	}
 	if (logType === LogTypes.LOGS && typeof msg === "string") {
-		const safe = redactString(msg);
-		emitOtelLog(safe, SeverityNumber.INFO, "INFO", generated_by);
-		return logger.info(safe);
+		const safe = redactLogPayload(msg);
+		const text = typeof safe === "string" ? safe : JSON.stringify(safe);
+		emitOtelLog(text, SeverityNumber.INFO, "INFO", generated_by);
+		return logger.info(text);
 	}
 	if (logType === LogTypes.ERROR && typeof msg === "string") {
-		const safe = redactString(msg);
-		emitOtelLog(safe, SeverityNumber.ERROR, "ERROR", generated_by);
-		return logger.error(safe);
+		const safe = redactLogPayload(msg);
+		const text = typeof safe === "string" ? safe : JSON.stringify(safe);
+		emitOtelLog(text, SeverityNumber.ERROR, "ERROR", generated_by);
+		return logger.error(text);
 	}
-	const safe = redactSensitive(msg);
+	const safe = redactLogPayload(msg);
 	if (logType === LogTypes.CUSTOMOBJ) {
 		if (typeof safe === "string") {
 			return logger.info({ generated_by }, safe);
