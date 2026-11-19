@@ -1,4 +1,5 @@
 import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
+import { resourceProofHeaders, resourceRequestUrl } from "@shell/lib/dpop-session";
 import { runtimeConfig } from "@shell/utils/runtime-config";
 
 let apiSdk: EnvSyncAPISDK | null = null;
@@ -41,10 +42,21 @@ export function enterpriseErrorMessage(error: unknown) {
  */
 export function getEnterpriseSDK(): EnvSyncAPISDK {
   if (!apiSdk) {
-    const resolveHeaders = async (options: { method: string }) => {
-      if (!isUnsafeMethod(options.method)) return {};
-      const csrfToken = readCookie("envsync_csrf");
-      return csrfToken ? { "X-CSRF-Token": csrfToken } : {};
+    const resolveHeaders = async (options: {
+      method: string;
+      url: string;
+      path?: Record<string, unknown>;
+    }) => {
+      const headers: Record<string, string> = {};
+      if (isUnsafeMethod(options.method)) {
+        const csrfToken = readCookie("envsync_csrf");
+        if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+      }
+      const session = await resourceProofHeaders(
+        options.method,
+        resourceRequestUrl(runtimeConfig.apiBaseUrl, options.url, options.path),
+      );
+      return { ...headers, ...session };
     };
 
     apiSdk = new EnvSyncAPISDK({

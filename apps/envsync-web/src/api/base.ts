@@ -1,5 +1,5 @@
 import { EnvSyncAPISDK } from "@envsync-cloud/envsync-ts-sdk";
-import { deleteDeviceKey, resourceProofHeaders } from "@/lib/dpop-session";
+import { deleteDeviceKey, resourceProofHeaders, resourceRequestUrl } from "@/lib/dpop-session";
 import { isPublicAuthPath } from "@/lib/login-auth";
 import { env, type Function } from "@/utils/env";
 import { runtimeConfig } from "@/utils/runtime-config";
@@ -106,16 +106,19 @@ export async function logoutWebSession() {
  * The refresh token stays in an HttpOnly cookie. SAML sessions still use that cookie.
  */
 export const getSDK = () => {
-  const resolveHeaders = async (options: { method: string; url: string }) => {
+  const resolveHeaders = async (options: {
+    method: string;
+    url: string;
+    path?: Record<string, unknown>;
+  }) => {
     const headers: Record<string, string> = {};
     if (isUnsafeMethod(options.method)) {
       const csrfToken = readCookie(CSRF_COOKIE);
       if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
     }
-    const path = options.url.startsWith("/") ? options.url : `/${options.url}`;
     const session = await resourceProofHeaders(
       options.method,
-      `${env.VITE_API_BASE_URL.replace(/\/$/, "")}${path}`,
+      resourceRequestUrl(env.VITE_API_BASE_URL, options.url, options.path),
     );
     return { ...headers, ...session };
   };
