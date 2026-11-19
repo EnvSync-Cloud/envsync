@@ -22,6 +22,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
 import { getDefaultEnvironmentType } from "@/lib/utils";
 import { appEnvironmentsPath, appPointInTimePath } from "@/lib/app-routes";
+import { planFlagEnabled } from "@/lib/plan";
 
 export const ProjectEnvironments = () => {
   const navigate = useNavigate();
@@ -327,11 +328,15 @@ export const ProjectEnvironments = () => {
           onRefresh={handleRetry}
           onBulkImport={() => setShowBulkImportModal(true)}
           onExport={handleExport}
-          onRollback={() => {
-            const env = environmentTypes.find((entry) => entry.id === selectedEnvironment);
-            const query = env?.name?.toLowerCase() || selectedEnvironment;
-            navigate(`${appPointInTimePath(appId ?? "")}?env=${encodeURIComponent(query)}`);
-          }}
+          onRollback={
+            planFlagEnabled(user, "point_in_time")
+              ? () => {
+                  const env = environmentTypes.find((entry) => entry.id === selectedEnvironment);
+                  const query = env?.name?.toLowerCase() || selectedEnvironment;
+                  navigate(`${appPointInTimePath(appId ?? "")}?env=${encodeURIComponent(query)}`);
+                }
+              : undefined
+          }
           onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
         />
       </div>

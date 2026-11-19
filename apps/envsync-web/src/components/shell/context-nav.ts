@@ -67,13 +67,13 @@ export function buildProjectNavItems(
   appId: string,
   allowedScopes: string[],
   permissions?: EffectivePermissions,
+  options?: { pointInTime?: boolean },
 ): WebNavItem[] {
   const projectItems: WebNavItem[] = [
     { id: "project-variables", name: "Variables", href: appDetailPath(appId), icon: Database },
     { id: "project-secrets", name: "Secrets", href: appSecretsPath(appId), icon: Shield },
     { id: "project-environments", name: "Environments", href: appEnvironmentsPath(appId), icon: Settings },
     { id: "project-access", name: "Access", href: appAccessPath(appId), icon: LockKeyhole },
-    { id: "project-recovery", name: "Recovery", href: appPointInTimePath(appId), icon: DatabaseBackup },
     {
       id: "project-settings",
       name: "Settings",
@@ -82,6 +82,16 @@ export function buildProjectNavItems(
       requiredPermission: "can_manage_api_keys",
     },
   ];
+
+  if (options?.pointInTime !== false) {
+    const accessIndex = projectItems.findIndex((item) => item.id === "project-access");
+    projectItems.splice(accessIndex + 1, 0, {
+      id: "project-recovery",
+      name: "Recovery",
+      href: appPointInTimePath(appId),
+      icon: DatabaseBackup,
+    });
+  }
 
   if (allowedScopes.includes("change-requests")) {
     projectItems.splice(4, 0, {

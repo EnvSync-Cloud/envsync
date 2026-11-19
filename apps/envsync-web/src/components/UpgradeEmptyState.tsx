@@ -10,13 +10,20 @@ const FEATURE_LABELS: Record<string, string> = {
   log_forwarding: "Log forwarding",
   management: "Enterprise management",
   multi_org: "Multiple organizations",
+  point_in_time: "Point in time recovery",
 };
 
 function featureLabel(feature: string) {
   return FEATURE_LABELS[feature] ?? feature.replaceAll("_", " ");
 }
 
-export function UpgradeEmptyState({ feature }: { feature: string }) {
+export function UpgradeEmptyState({
+  feature,
+  title,
+}: {
+  feature: string;
+  title?: string;
+}) {
   const label = featureLabel(feature);
 
   return (
@@ -28,7 +35,9 @@ export function UpgradeEmptyState({ feature }: { feature: string }) {
         <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300/80">
           Upgrade
         </p>
-        <h1 className="mt-3 text-2xl font-semibold text-foreground">{label} is not on this plan</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-foreground">
+          {title ?? `${label} is not on this plan`}
+        </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           {feature === "kms"
             ? "Key management is not on this plan. Existing encryption continues. Contact support to detach to managed."

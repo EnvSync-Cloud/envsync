@@ -7,6 +7,7 @@ import type { EffectivePermissions } from "@/api/permissions.api";
 import { navGroups } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { projectsPath } from "@/lib/app-routes";
+import { planFlagEnabled } from "@/lib/plan";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 import type { WebNavGroup, WebNavItem } from "@/modules/types";
@@ -127,7 +128,7 @@ function filterGroups(
 
 export function ContextNav({ expanded, product, appId, allowedScopes }: ContextNavProps) {
   const { pathname } = useLocation();
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
+  const { isLoading: isAuthLoading, isAuthenticated, user } = useAuthContext();
   const { data: permissions } = api.permissions.getMyPermissions({
     enabled: !isAuthLoading && isAuthenticated,
   });
@@ -145,7 +146,9 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       return [
         {
           label: "Project",
-          items: buildProjectNavItems(appId, allowedScopes, permissions),
+          items: buildProjectNavItems(appId, allowedScopes, permissions, {
+            pointInTime: planFlagEnabled(user, "point_in_time"),
+          }),
         },
       ];
     }
@@ -156,7 +159,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       (item) => item.id === "dashboard" || item.id === "applications",
       permissions,
     );
-  }, [allowedScopes, appId, permissions, product]);
+  }, [allowedScopes, appId, permissions, product, user]);
 
   const fallbackGroups = useMemo(() => {
     if (groups.length > 0) return groups;
