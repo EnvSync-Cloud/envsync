@@ -1204,7 +1204,7 @@ ${renderEnvList({
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-e8722a6
+    image: ghcr.io/envsync-cloud/minikms:sha-cf531ee
     entrypoint: ["/bin/sh", "-c"]
     command:
       - umask 077 && cp /run/secrets/minikms-root-key /tmp/minikms-root-key && cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-key /tmp/minikms-root-ca-key && exec minikms
@@ -1217,7 +1217,7 @@ ${renderEnvList({
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
-		// sha-e8722a6 mints the org admin session only when this is set.
+		// sha-cf531ee refreshes the org admin session on CreateOrgCA.
 		// TLS stays on because MINIKMS_TLS_ENABLED is true.
 		MINIKMS_ALLOW_INSECURE: "true",
 		MINIKMS_TLS_ENABLED: "true",
