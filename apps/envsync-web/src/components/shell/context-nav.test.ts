@@ -66,6 +66,16 @@ describe("buildProjectNavItems", () => {
     );
   });
 
+  test("hides Recovery when point in time is not on the plan", () => {
+    const included = buildProjectNavItems("app-1", ["applications"], adminPermissions);
+    expect(included.map((item) => item.name)).toContain("Recovery");
+
+    const hidden = buildProjectNavItems("app-1", ["applications"], adminPermissions, {
+      pointInTime: false,
+    });
+    expect(hidden.map((item) => item.id)).not.toContain("project-recovery");
+  });
+
   test("adds Approvals only when change-requests is in scope", () => {
     const without = buildProjectNavItems("app-1", ["applications"], adminPermissions);
     expect(without.map((item) => item.id)).not.toContain("project-approvals");
