@@ -2,9 +2,12 @@ import { createPrivateKey, sign as cryptoSign } from "node:crypto";
 
 import { BusinessRuleError } from "@/libs/errors";
 import { KMSClient } from "@/libs/kms/client";
+import { orgBootstrapSession } from "@/libs/kms/org-session";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { AuthorizationService } from "@/services/authorization.service";
 import { CertificateService } from "@/services/certificate.service";
+
+export type VaultAccessScope = "vault:read" | "vault:write" | "vault:delete";
 
 interface CachedSession {
 	token: string;
@@ -93,28 +96,38 @@ function getRequiredScopes(permissions: Awaited<ReturnType<typeof AuthorizationS
 
 /**
  * Get a vault session token for a (memberId, orgId) pair.
- * Caches tokens and refreshes when <60s TTL remains.
+ * Caches member-certificate tokens and refreshes when <60s TTL remains.
+ *
+ * sha-e8722a6 does not return member private keys. After CreateOrgCA, vault
+ * calls reuse that org admin session, but only when `access` is already
+ * allowed for this member. The token stays on the server for this call.
  */
-export async function getVaultSessionToken(memberId: string, orgId: string): Promise<string> {
-	const [proof, permissions] = await Promise.all([
-		CertificateService.loadSystemMemberProof(orgId, memberId),
-		AuthorizationService.getUserOrgPermissions(memberId, orgId),
-	]);
+export async function getVaultSessionToken(
+	memberId: string,
+	orgId: string,
+	access: VaultAccessScope,
+): Promise<string> {
+	const permissions = await AuthorizationService.getUserOrgPermissions(memberId, orgId);
+	const scopes = getRequiredScopes(permissions);
+	if (!scopes.includes(access)) {
+		throw new BusinessRuleError(
+			"User does not have permission to access vault resources.",
+			403,
+			"VAULT_SESSION_SCOPE_INSUFFICIENT",
+		);
+	}
 
+	const orgSession = await orgBootstrapSession(orgId);
+	if (orgSession?.token) {
+		return orgSession.token;
+	}
+
+	const proof = await CertificateService.loadSystemMemberProof(orgId, memberId);
 	if (!proof) {
 		throw new BusinessRuleError(
 			"No system member certificate with a durable private key is available for vault access.",
 			409,
 			"MEMBER_KEY_UNAVAILABLE",
-		);
-	}
-
-	const scopes = getRequiredScopes(permissions);
-	if (scopes.length === 0) {
-		throw new BusinessRuleError(
-			"User does not have permission to access vault resources.",
-			403,
-			"VAULT_SESSION_SCOPE_INSUFFICIENT",
 		);
 	}
 

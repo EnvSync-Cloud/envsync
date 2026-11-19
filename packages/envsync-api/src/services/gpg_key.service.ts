@@ -96,7 +96,7 @@ export class GpgKeyService {
 				name: "vault-write",
 				execute: async () => {
 					const kms = await KMSClient.getInstance();
-					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:write");
 					const blob = JSON.stringify({ armored_private_key: privateKey, passphrase });
 					await kms.vaultWrite(
 						{
@@ -112,7 +112,7 @@ export class GpgKeyService {
 				},
 				compensate: async () => {
 					const kms = await KMSClient.getInstance();
-					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:delete");
 					await kms.vaultDestroy(org_id, "gpg", "gpg", fingerprint, undefined, 0, sessionToken);
 				},
 			},
@@ -247,7 +247,7 @@ export class GpgKeyService {
 				name: "vault-write",
 				execute: async () => {
 					const kms = await KMSClient.getInstance();
-					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:write");
 					const blob = JSON.stringify({ armored_private_key: reEncryptedArmor!, passphrase: newPassphrase! });
 					await kms.vaultWrite(
 						{
@@ -263,7 +263,7 @@ export class GpgKeyService {
 				},
 				compensate: async () => {
 					const kms = await KMSClient.getInstance();
-					const sessionToken = await getVaultSessionToken(user_id, org_id);
+					const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:delete");
 					await kms.vaultDestroy(org_id, "gpg", "gpg", fingerprint, undefined, 0, sessionToken);
 				},
 			});
@@ -368,7 +368,7 @@ export class GpgKeyService {
 						const parsed = parsePrivateKeyRef(key.private_key_ref);
 						if (parsed) {
 							const kms = await KMSClient.getInstance();
-							const sessionToken = await getVaultSessionToken(user_id, parsed.orgId);
+							const sessionToken = await getVaultSessionToken(user_id, parsed.orgId, "vault:delete");
 							await kms.vaultDestroy(parsed.orgId, "gpg", "gpg", parsed.fingerprint, undefined, 0, sessionToken);
 						}
 					}
@@ -456,7 +456,7 @@ export class GpgKeyService {
 		}
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(user_id, parsed.orgId);
+		const sessionToken = await getVaultSessionToken(user_id, parsed.orgId, "vault:read");
 		const result = await kms.vaultRead(
 			{ orgId: parsed.orgId, scopeId: "gpg", entryType: "gpg", key: parsed.fingerprint, clientSideDecrypt: false },
 			sessionToken,

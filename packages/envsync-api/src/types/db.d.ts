@@ -514,6 +514,13 @@ export interface SessionDevice {
 	revoked_at: ColumnType<Date | null>;
 }
 
+export interface MinikmsOrgSession {
+	org_id: ColumnType<string>;
+	session_token: ColumnType<string>;
+	member_serial: ColumnType<string>;
+	created_at: ColumnType<Date>;
+}
+
 export interface BaseDatabase {
 	invite_org: InviteOrg;
 	invite_user: InviteUser;
@@ -560,6 +567,7 @@ export interface BaseDatabase {
 	acme_accounts: AcmeAccount;
 	acme_orders: AcmeOrder;
 	session_devices: SessionDevice;
+	minikms_org_sessions: MinikmsOrgSession;
 }
 
 /**

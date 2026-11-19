@@ -16,6 +16,8 @@ const EXTRA_SENSITIVE_KEYS = [
 	"secret_key",
 	"accessToken",
 	"refreshToken",
+	"sessionToken",
+	"session_token",
 	"authorization",
 	"privateKey",
 	"superuser",
