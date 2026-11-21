@@ -26,6 +26,9 @@ type CachedApiKeyAuth = ApiKeyAuthRecord & {
 };
 
 function hashApiKey(apiKey: string): string {
+	// API keys are 256-bit secrets from SecretKeyGenerator. SHA-256 is the lookup
+	// key. A slow password hash would not add a secret and would break indexed lookup.
+	// codeql[js/insufficient-password-hash]
 	return createHash("sha256").update(apiKey).digest("hex");
 }
 
