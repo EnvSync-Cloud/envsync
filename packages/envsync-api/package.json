@@ -84,7 +84,7 @@
   },
   "devDependencies": {
     "@bravo68web/prettier-config": "^1.2.6",
-    "@types/bun": "latest",
+    "@types/bun": "1.4.5",
     "@types/glob": "^8.1.0",
     "@types/mustache": "^4.2.6",
     "@types/nodemailer": "^7.0.9",

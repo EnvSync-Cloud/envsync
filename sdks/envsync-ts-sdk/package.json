@@ -27,7 +27,7 @@
     "generate:local": "bun run scripts/gen.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.4.5",
     "openapi-typescript-codegen": "^0.29.0",
     "tsup": "^8.5.0"
   },

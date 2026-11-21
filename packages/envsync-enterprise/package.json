@@ -32,7 +32,7 @@
     "envsync-api": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.4.5",
     "envsync-api": "workspace:*",
     "typescript": "^5.0.0"
   }
