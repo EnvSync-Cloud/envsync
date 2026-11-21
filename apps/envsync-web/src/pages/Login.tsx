@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -16,12 +16,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthContext } from "@/contexts/auth";
 import {
+  rememberLoginMethod,
   requestSsoRedirectUrl,
   SSO_SLUG_KEY,
   SSO_START_ERROR,
   ssoErrorFromSearch,
 } from "@/lib/login-auth";
+import { trackAction } from "@/telemetry";
 import { runtimeConfig } from "@/utils/runtime-config";
+
+function trackLoginFailed(method: "envsync" | "sso", reason: string) {
+  trackAction("login_failed", {
+    "envsync.event_name": "login_failed",
+    "envsync.event_category": "auth",
+    "envsync.surface": "web",
+    "envsync.success": false,
+    method,
+    reason,
+  });
+}
 
 function readStoredSlug() {
   try {
@@ -52,12 +65,19 @@ const Login = () => {
   const [signInPending, setSignInPending] = useState(false);
   const [ssoPending, setSsoPending] = useState(false);
   const actionsDisabled = isLoading || signInPending || ssoPending;
+  const reportedSsoReturn = useRef(false);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       navigate("/", { replace: true });
     }
   }, [isAuthenticated, isLoading, navigate]);
+
+  useEffect(() => {
+    if (reportedSsoReturn.current || searchParams.get("sso") !== "failed") return;
+    reportedSsoReturn.current = true;
+    trackLoginFailed("sso", "sso_returned");
+  }, [searchParams]);
 
   const handleSignIn = async () => {
     if (actionsDisabled) return;
@@ -68,11 +88,14 @@ const Login = () => {
       const response = await getSDK().access.createWebLogin();
       if (response?.loginUrl) {
         rememberLoginState(response.loginUrl);
+        rememberLoginMethod("envsync");
         window.location.href = response.loginUrl;
         return;
       }
+      trackLoginFailed("envsync", "missing_login_url");
       setSignInError("We couldn't start sign-in. Please try again.");
     } catch {
+      trackLoginFailed("envsync", "start_failed");
       setSignInError(
         "We couldn't start sign-in. Allow site data for this browser and try again.",
       );
@@ -95,11 +118,14 @@ const Login = () => {
         orgSlug,
       );
       if (!redirectUrl) {
+        trackLoginFailed("sso", "sso_start_failed");
         setSsoError(SSO_START_ERROR);
         return;
       }
+      rememberLoginMethod("sso");
       window.location.assign(redirectUrl);
     } catch {
+      trackLoginFailed("sso", "sso_start_failed");
       setSsoError(SSO_START_ERROR);
     } finally {
       setSsoPending(false);

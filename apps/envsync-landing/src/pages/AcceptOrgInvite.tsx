@@ -21,6 +21,18 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Something went wrong. Please try again.";
 }
 
+function signupFailureReason(error: unknown) {
+  if (typeof error === "object" && error && "body" in error) {
+    const code = (error as { body?: { code?: unknown } }).body?.code;
+    if (typeof code === "string" && /^[a-z0-9_]{1,64}$/i.test(code)) return code;
+  }
+  if (typeof error === "object" && error && "status" in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number") return `http_${status}`;
+  }
+  return "request_failed";
+}
+
 function copyToClipboard(value: string) {
   navigator.clipboard.writeText(value);
 }
@@ -105,6 +117,13 @@ const AcceptOrgInvite = () => {
     },
     onError: (error) => {
       console.error("Failed to accept organization invite:", error);
+      trackAction("org_signup_failed", {
+        "envsync.event_name": "org_signup_failed",
+        "envsync.event_category": "onboarding",
+        "envsync.surface": "landing",
+        "envsync.success": false,
+        reason: signupFailureReason(error),
+      });
     }
   });
   const generatedBundle = (acceptOrgInviteMutation.data as {

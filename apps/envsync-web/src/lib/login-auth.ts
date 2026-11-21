@@ -1,5 +1,25 @@
 export const SSO_START_ERROR = "We couldn't start SSO for that organization.";
 export const SSO_SLUG_KEY = "envsync_sso_slug";
+export const LOGIN_METHOD_KEY = "envsync_login_method";
+
+export type LoginMethod = "envsync" | "sso";
+
+export function rememberLoginMethod(method: LoginMethod) {
+  try {
+    sessionStorage.setItem(LOGIN_METHOD_KEY, method);
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
+}
+
+export function readLoginMethod(): LoginMethod | "unknown" {
+  try {
+    const value = sessionStorage.getItem(LOGIN_METHOD_KEY);
+    return value === "envsync" || value === "sso" ? value : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 export function isPublicAuthPath(pathname: string) {
   return (
