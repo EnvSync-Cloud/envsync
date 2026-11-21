@@ -3,6 +3,8 @@ import { describe, expect, test } from "bun:test";
 import {
   isPublicAuthPath,
   isSafeHttpRedirectUrl,
+  readLoginMethod,
+  rememberLoginMethod,
   requestSsoRedirectUrl,
   SSO_START_ERROR,
   ssoErrorFromSearch,
@@ -19,6 +21,30 @@ describe("isPublicAuthPath", () => {
     expect(isPublicAuthPath("/")).toBe(false);
     expect(isPublicAuthPath("/dashboard")).toBe(false);
     expect(isPublicAuthPath("/organisation")).toBe(false);
+  });
+});
+
+describe("readLoginMethod", () => {
+  test("stores envsync or sso and ignores anything else", () => {
+    const store = new Map<string, string>();
+    const previous = globalThis.sessionStorage;
+    globalThis.sessionStorage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+    } as Storage;
+    try {
+      expect(readLoginMethod()).toBe("unknown");
+      rememberLoginMethod("sso");
+      expect(readLoginMethod()).toBe("sso");
+      rememberLoginMethod("envsync");
+      expect(readLoginMethod()).toBe("envsync");
+      store.set("envsync_login_method", "password");
+      expect(readLoginMethod()).toBe("unknown");
+    } finally {
+      globalThis.sessionStorage = previous;
+    }
   });
 });
 
