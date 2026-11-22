@@ -249,6 +249,7 @@ const ChangeRequests = () => {
           )
         }
       >
+        <div className="space-y-6">
         {activeView === "create" ? (
             <Card data-testid="change-requests-create-panel" className="max-w-3xl border-border bg-card/70">
               <CardHeader className="pb-2">
@@ -433,7 +434,7 @@ const ChangeRequests = () => {
                 </Button>
               </CardContent>
             </Card>
-        ) : (
+        ) : null}
             <Card data-testid="change-requests-list" className="border-border bg-card/70">
               <CardContent className="pt-6">
                 {requestRows.length === 0 ? (
@@ -512,7 +513,7 @@ const ChangeRequests = () => {
                                 </Button>
                               )}
                             {request.status === "pending" &&
-                              request.requested_by_user_id === user?.user.id && (
+                              request.requested_by_user_id === user?.user?.id && (
                                 <Button
                                   variant="ghost"
                                   className="text-muted-foreground hover:bg-muted"
@@ -537,7 +538,7 @@ const ChangeRequests = () => {
                 )}
               </CardContent>
             </Card>
-        )}
+        </div>
       </PageShell>
 
       <Dialog

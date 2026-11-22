@@ -209,14 +209,7 @@ export async function switchUsersTab(page: Page, section: "members" | "invitatio
 
 export async function switchChangeRequestsTab(page: Page, section: "list" | "create") {
 	if (section === "list") {
-		const list = page.getByTestId("change-requests-list");
-		const showList = page.getByTestId("change-requests-tab-list");
-		// A pointer click retries when this button is replaced by "Create Request",
-		// and that retry lands on the new button and switches the view back.
-		if (!(await list.isVisible().catch(() => false))) {
-			await showList.evaluate((button: HTMLButtonElement) => button.click());
-		}
-		await expect(list).toBeVisible();
+		await expect(page.getByTestId("change-requests-list")).toBeVisible();
 		return;
 	}
 
