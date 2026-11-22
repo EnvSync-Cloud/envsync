@@ -92,6 +92,8 @@ jobs:
       - run: bun i
       - name: Package boundary checks (Phase 5)
         run: bun run check:boundaries
+      - name: Run release workflow tests
+        run: bun test scripts/release-workflow.test.ts
       - name: Run deploy planner tests
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core
