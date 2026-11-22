@@ -593,7 +593,7 @@ export const EnvironmentVariablesTable = ({
                       </td>
                       
                       {/* Key column */}
-                      <td className="py-4 px-4">
+                      <td className="whitespace-nowrap px-4 py-4">
                         {isEditing ? (
                           <div className="flex items-start space-x-2">
                             <div className="flex-1">
