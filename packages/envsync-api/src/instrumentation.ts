@@ -14,7 +14,7 @@ import {
 	JsonMetricsSerializer,
 	JsonLogsSerializer,
 } from "@opentelemetry/otlp-transformer";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchLogRecordProcessor, LoggerProvider } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader, MeterProvider } from "@opentelemetry/sdk-metrics";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
@@ -80,7 +80,7 @@ if (!OTEL_SDK_DISABLED) {
 	const serviceName = process.env.OTEL_SERVICE_NAME || "envsync-api";
 	const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://localhost:14318";
 
-	const resource = new Resource({
+	const resource = resourceFromAttributes({
 		"service.name": serviceName,
 		"service.version": process.env.npm_package_version || "0.6.1",
 		"deployment.environment": process.env.NODE_ENV || "development",
@@ -98,12 +98,16 @@ if (!OTEL_SDK_DISABLED) {
 	const traceTransport = new FetchTransport(`${endpoint}/v1/traces`, jsonHeaders);
 	const traceDelegate = createOtlpNetworkExportDelegate(sharedConfig, JsonTraceSerializer, traceTransport);
 	const traceExporter = new OTLPExporterBase(traceDelegate);
-	const tracerProvider = new NodeTracerProvider({ resource });
-	tracerProvider.addSpanProcessor(new BatchSpanProcessor(traceExporter, {
-		maxExportBatchSize: 512,
-		scheduledDelayMillis: 2000,
-		maxQueueSize: 4096,
-	}));
+	const tracerProvider = new NodeTracerProvider({
+		resource,
+		spanProcessors: [
+			new BatchSpanProcessor(traceExporter, {
+				maxExportBatchSize: 512,
+				scheduledDelayMillis: 2000,
+				maxQueueSize: 4096,
+			}),
+		],
+	});
 	tracerProvider.register({
 		propagator: new CompositePropagator({
 			propagators: [
@@ -132,8 +136,10 @@ if (!OTEL_SDK_DISABLED) {
 	const logTransport = new FetchTransport(`${endpoint}/v1/logs`, jsonHeaders);
 	const logDelegate = createOtlpNetworkExportDelegate(sharedConfig, JsonLogsSerializer, logTransport);
 	const logExporter = new OTLPExporterBase(logDelegate);
-	const loggerProvider = new LoggerProvider({ resource });
-	loggerProvider.addLogRecordProcessor(new BatchLogRecordProcessor(logExporter));
+	const loggerProvider = new LoggerProvider({
+		resource,
+		processors: [new BatchLogRecordProcessor(logExporter)],
+	});
 	logs.setGlobalLoggerProvider(loggerProvider);
 
 	// Graceful shutdown
