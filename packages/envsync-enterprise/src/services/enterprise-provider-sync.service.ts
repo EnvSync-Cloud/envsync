@@ -476,8 +476,7 @@ export class EnterpriseProviderSyncService {
 
 		const contextId = asString(context.mapping.metadata.context_id)
 			?? asString(context.binding.metadata.context_id)
-			?? asString(context.connection.auth_config.context_id)
-			?? asString(context.connection.auth_config.org_id);
+			?? asString(context.connection.auth_config.context_id);
 		const projectSlug = context.mapping.target_identifier;
 
 		for (const item of context.items) {
@@ -493,7 +492,6 @@ export class EnterpriseProviderSyncService {
 						},
 						body: JSON.stringify({ value: item.value }),
 					},
-					[404],
 				);
 				continue;
 			}

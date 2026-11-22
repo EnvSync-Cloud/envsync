@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sdk } from "@/api";
 import { useAuthContext } from "@/contexts/auth";
@@ -26,7 +27,8 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export const useProjectEnvironments = (appId?: string) => {
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
+  const { isLoading: isAuthLoading, isAuthenticated, user } = useAuthContext();
+  const userId = user?.user?.id;
   const queryClient = useQueryClient();
   const authEnabled = !isAuthLoading && isAuthenticated;
   const refetchProjectEnvironments = async () => {
@@ -45,7 +47,7 @@ export const useProjectEnvironments = (appId?: string) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["project-environments", appId],
+    queryKey: ["project-environments", appId, userId],
     queryFn: async () => {
       const projectResponse = await sdk.applications.getApp(appId);
       const usersList = await sdk.users.getUsers();
@@ -63,6 +65,7 @@ export const useProjectEnvironments = (appId?: string) => {
         })
       ).then((vars) => vars.flat());
 
+      let secretRevealError: string | null = null;
       const secretsResponse = await Promise.all(
         envTypes.map(async (envType) => {
           const listed = await sdk.secrets.getSecrets({
@@ -75,11 +78,25 @@ export const useProjectEnvironments = (appId?: string) => {
           if (!projectResponse.is_managed_secret || listed.length === 0) {
             return listed;
           }
-          return sdk.secrets.revealSecrets({
-            app_id: appId,
-            env_type_id: envType.id,
-            keys: listed.map((secret) => secret.key),
-          });
+          try {
+            return await sdk.secrets.revealSecrets({
+              app_id: appId,
+              env_type_id: envType.id,
+              keys: listed.map((secret) => secret.key),
+            });
+          } catch (error) {
+            secretRevealError = getApiErrorMessage(
+              error,
+              "Some secrets could not be revealed.",
+            );
+            return listed.map((secret) => ({
+              ...secret,
+              value:
+                secret.value.startsWith("RSA:") || secret.value.startsWith("HYB:")
+                  ? ""
+                  : secret.value,
+            }));
+          }
         })
       ).then((vars) => vars.flat());
 
@@ -133,12 +150,19 @@ export const useProjectEnvironments = (appId?: string) => {
         environmentVariables,
         secrets,
         enableSecrets: projectResponse.enable_secrets ?? false,
+        secretRevealError,
       };
     },
-    enabled: authEnabled && Boolean(appId),
+    enabled: authEnabled && Boolean(appId) && Boolean(userId),
     staleTime: 30 * 1000, // 30 seconds
     retry: 3,
   });
+
+  useEffect(() => {
+    if (projectData?.secretRevealError) {
+      toast.error(projectData.secretRevealError);
+    }
+  }, [projectData?.secretRevealError]);
 
   // Create environment variable
   const createVariable = useMutation({

@@ -14,6 +14,8 @@ interface TwoFactorCardProps {
   onSetup: () => void;
   onConfirm: () => void;
   onCancel: () => void;
+  disablePassword: string;
+  onDisablePassword: (value: string) => void;
   onDisable: () => void;
 }
 
@@ -27,6 +29,8 @@ export const TwoFactorCard = ({
   onSetup,
   onConfirm,
   onCancel,
+  disablePassword,
+  onDisablePassword,
   onDisable,
 }: TwoFactorCardProps) => {
   return (
@@ -40,9 +44,22 @@ export const TwoFactorCard = ({
           two-factor authentication.
         </p>
         {enabled ? (
-          <Button variant="outline" onClick={onDisable} disabled={isWorking}>
-            {isWorking ? "Turning off..." : "Turn off authenticator"}
-          </Button>
+          <div className="max-w-xs space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="mfa-disable-password">Current password</Label>
+              <Input
+                id="mfa-disable-password"
+                type="password"
+                autoComplete="current-password"
+                value={disablePassword}
+                onChange={(event) => onDisablePassword(event.target.value)}
+              />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <Button variant="outline" onClick={onDisable} disabled={isWorking || disablePassword.length === 0}>
+              {isWorking ? "Turning off..." : "Turn off authenticator"}
+            </Button>
+          </div>
         ) : enrollment ? (
           <div className="space-y-4">
             {enrollment.qr_image ? (

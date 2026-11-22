@@ -66,6 +66,12 @@ export const setOwnPasswordRequestSchema = z
 	})
 	.openapi({ ref: "SetOwnPasswordRequest" });
 
+export const disableMfaRequestSchema = z
+	.object({
+		password: z.string().min(1).max(128).openapi({ example: "current-password" }),
+	})
+	.openapi({ ref: "DisableMfaRequest" });
+
 export const confirmMfaRequestSchema = z
 	.object({
 		code: z

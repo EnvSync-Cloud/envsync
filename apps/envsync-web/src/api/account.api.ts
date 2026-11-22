@@ -35,6 +35,9 @@ export const accountApi = {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
-  disableMfa: () =>
-    apiRequest<{ message: string }>("/api/user/me/mfa/disable", { method: "POST" }),
+  disableMfa: (password: string) =>
+    apiRequest<{ message: string }>("/api/user/me/mfa/disable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 };

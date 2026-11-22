@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import type { Context, Next } from "hono";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import { UserController } from "@/controllers/user.controller";
@@ -15,12 +15,27 @@ import {
 	accountMessageResponseSchema,
 	setOwnPasswordRequestSchema,
 	confirmMfaRequestSchema,
+	disableMfaRequestSchema,
 	mfaSetupResponseSchema,
 } from "@/validators/user.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
 
 const app = new Hono();
+
+const interactiveSession: MiddlewareHandler = async (c, next) => {
+	const authType = c.get("auth_type");
+	if (authType === "api_key" || authType === "service_token") {
+		return c.json(
+			{
+				error: "Sign-in settings require an interactive session.",
+				code: "INTERACTIVE_SESSION_REQUIRED",
+			},
+			403,
+		);
+	}
+	await next();
+};
 
 app.use(authMiddleware());
 app.use(cliMiddleware());
@@ -39,6 +54,7 @@ app.get(
 			},
 		},
 	}),
+	interactiveSession,
 	UserController.getAccountSecurity,
 );
 
@@ -55,6 +71,7 @@ app.post(
 			},
 		},
 	}),
+	interactiveSession,
 	zValidator("json", setOwnPasswordRequestSchema),
 	UserController.setOwnPassword,
 );
@@ -73,6 +90,7 @@ app.post(
 			},
 		},
 	}),
+	interactiveSession,
 	UserController.setupMfa,
 );
 
@@ -89,6 +107,7 @@ app.post(
 			},
 		},
 	}),
+	interactiveSession,
 	zValidator("json", confirmMfaRequestSchema),
 	UserController.confirmMfa,
 );
@@ -106,6 +125,8 @@ app.post(
 			},
 		},
 	}),
+	interactiveSession,
+	zValidator("json", disableMfaRequestSchema),
 	UserController.disableMfa,
 );
 

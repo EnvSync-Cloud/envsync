@@ -135,6 +135,8 @@ export const UserSettings = () => {
               onSetup={account.startMfa}
               onConfirm={account.confirmMfaCode}
               onCancel={account.cancelMfa}
+              disablePassword={account.disablePassword}
+              onDisablePassword={account.setDisablePassword}
               onDisable={account.disableMfa}
             />
           </div>

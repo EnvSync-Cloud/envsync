@@ -18,6 +18,7 @@ export function useAccountSecurity(enabled: boolean) {
   const [enrollment, setEnrollment] = useState<MfaEnrollment | null>(null);
   const [code, setCode] = useState("");
   const [mfaError, setMfaError] = useState<string>();
+  const [disablePassword, setDisablePassword] = useState("");
 
   const security = useQuery({
     queryKey: ["account-security"],
@@ -61,8 +62,9 @@ export function useAccountSecurity(enabled: boolean) {
   });
 
   const disableMfa = useMutation({
-    mutationFn: () => accountApi.disableMfa(),
+    mutationFn: () => accountApi.disableMfa(disablePassword),
     onSuccess: async () => {
+      setDisablePassword("");
       setMfaError(undefined);
       toast.success("Authenticator is off");
       await queryClient.invalidateQueries({ queryKey: ["account-security"] });
@@ -105,7 +107,18 @@ export function useAccountSecurity(enabled: boolean) {
       setCode("");
       setMfaError(undefined);
     },
-    disableMfa: () => disableMfa.mutate(),
+    disablePassword,
+    setDisablePassword: (value: string) => {
+      setDisablePassword(value);
+      setMfaError(undefined);
+    },
+    disableMfa: () => {
+      if (!disablePassword) {
+        setMfaError("Enter your password.");
+        return;
+      }
+      disableMfa.mutate();
+    },
     isMfaWorking: setupMfa.isPending || confirmMfa.isPending || disableMfa.isPending,
   };
 }

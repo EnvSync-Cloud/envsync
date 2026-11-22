@@ -2,13 +2,19 @@ import { describe, expect, test } from "bun:test";
 
 import { generateKeyPair, smartEncrypt } from "@/helpers/key-store";
 
-import { revealSecretValue } from "./secret.service";
+import { revealSecretValue, selectionNeedsManagedPrivateKey } from "./secret.service";
 
 describe("revealSecretValue", () => {
 	test("returns a stored plaintext value unchanged", () => {
 		expect(revealSecretValue("DATABASE_URL", "postgres://localhost/app", "unused")).toBe(
 			"postgres://localhost/app",
 		);
+	});
+
+	test("loads a private key only when a selected value is app-layer ciphertext", () => {
+		expect(selectionNeedsManagedPrivateKey(["postgres://localhost/app", "plain"])).toBe(false);
+		expect(selectionNeedsManagedPrivateKey(["postgres://localhost/app", "RSA:abc"])).toBe(true);
+		expect(selectionNeedsManagedPrivateKey(["HYB:abc"])).toBe(true);
 	});
 
 	test("decrypts an RSA value with the app private key", () => {

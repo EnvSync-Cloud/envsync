@@ -56,6 +56,12 @@ function enterpriseManageOpenApiTags() {
 	}));
 }
 
+function isHttpException(err: unknown): err is { getResponse: () => Response } {
+	if (typeof err !== "object" || err === null) return false;
+	const candidate = err as { getResponse?: unknown; status?: unknown };
+	return typeof candidate.getResponse === "function" && typeof candidate.status === "number";
+}
+
 export async function createApiApp(surface: ApiSurface) {
 	const app = new Hono();
 	const isManagement = surface === "management";
@@ -93,6 +99,10 @@ export async function createApiApp(surface: ApiSurface) {
 	].join("\n");
 
 	app.onError((err, c) => {
+		if (isHttpException(err)) {
+			return err.getResponse();
+		}
+
 		if (err instanceof AppError) {
 			return c.json({ error: err.message, code: err.code }, err.statusCode as ContentfulStatusCode);
 		}

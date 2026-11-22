@@ -555,7 +555,7 @@ export function renderAtriumClients(config: DeployConfig, runtimeEnv: RuntimeEnv
 					secret: runtimeEnv.ATRIUM_API_CLIENT_SECRET,
 					name: "EnvSync API",
 					redirect_uris: [...new Set(apiRedirectUris)],
-					grant_types: ["authorization_code", "refresh_token"],
+					grant_types: ["authorization_code", "refresh_token", "password"],
 					scopes: ["openid", "profile", "email"],
 					token_endpoint_auth_method: "client_secret_post",
 					skip_consent: true,

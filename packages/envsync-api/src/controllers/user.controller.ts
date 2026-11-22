@@ -10,11 +10,14 @@ import {
 	beginDirectoryMfa,
 	confirmDirectoryMfa,
 	disableDirectoryMfa,
+	getDirectoryUserById,
+	passwordGrantLogin,
 } from "@/helpers/identity";
 import { composeProfileName, splitProfileName } from "@/helpers/profile-name";
 import { UserService } from "@/services/user.service";
 import { AuditLogService } from "@/services/audit_log.service";
 import { OrgAdminGuardService } from "@/services/org-admin-guard.service";
+import { config } from "@/utils/env";
 
 async function ownUser(c: Context) {
 	const id = c.get("user_id") as string | undefined;
@@ -363,6 +366,29 @@ export class UserController {
 		const user = await ownUser(c);
 		if (!user?.auth_service_id) {
 			return c.json({ error: "This account has no sign-in directory.", code: "NO_DIRECTORY" }, 409);
+		}
+		const { password } = c.req.valid("json" as never) as { password: string };
+		const directoryUser = await getDirectoryUserById(user.auth_service_id);
+		const username = directoryUser?.username || user.email;
+		if (!username) {
+			return c.json({ error: "This account has no sign-in name.", code: "NO_DIRECTORY" }, 409);
+		}
+		try {
+			await passwordGrantLogin(
+				username,
+				password,
+				config.ATRIUM_API_CLIENT_ID,
+				config.ATRIUM_API_CLIENT_SECRET,
+			);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "";
+			if (message.includes("unauthorized_client") || message.includes("unsupported_grant")) {
+				return c.json(
+					{ error: "Password check is not available.", code: "STEP_UP_UNAVAILABLE" },
+					503,
+				);
+			}
+			return c.json({ error: "Password is not valid.", code: "STEP_UP_FAILED" }, 401);
 		}
 		try {
 			await disableDirectoryMfa(user.auth_service_id);
