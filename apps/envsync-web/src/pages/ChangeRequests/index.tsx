@@ -257,12 +257,12 @@ const ChangeRequests = () => {
           className="space-y-6"
         >
           <TabsContent value="create" className="mt-0">
-            <Card data-testid="change-requests-create-panel" className="border-border bg-card/70">
+            <Card data-testid="change-requests-create-panel" className="max-w-3xl border-border bg-card/70">
               <CardHeader>
                 <CardTitle className="text-foreground">Create Request</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className={isProjectScoped ? "space-y-2" : "grid gap-4 md:grid-cols-2"}>
                   <div className="space-y-2">
                     <Label className="text-foreground">Request type</Label>
                     <Select
@@ -307,24 +307,20 @@ const ChangeRequests = () => {
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-                  <div className="space-y-2">
-                    <Label className="text-foreground">Title *</Label>
-                    <Input
-                      data-testid="change-request-title-input"
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      className="border-border bg-card text-foreground"
-                    />
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground">Request summary</p>
-                    <p className="mt-2">
-                      {mode === "promotion"
-                        ? "Promote values from a lower environment into a protected target."
-                        : "Propose env or secret changes directly against a protected environment."}
-                    </p>
-                  </div>
+                <p className="text-sm text-muted-foreground">
+                  {mode === "promotion"
+                    ? "Move values from one environment into a protected one."
+                    : "Propose a change to a protected environment."}
+                </p>
+
+                <div className="space-y-2">
+                  <Label className="text-foreground">Title *</Label>
+                  <Input
+                    data-testid="change-request-title-input"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    className="border-border bg-card text-foreground"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -333,11 +329,12 @@ const ChangeRequests = () => {
                     data-testid="change-request-message-input"
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    className="border-border bg-card text-foreground"
+                    rows={3}
+                    className="min-h-0 border-border bg-card text-foreground"
                   />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className={mode === "promotion" ? "grid gap-4 md:grid-cols-2" : "space-y-2"}>
                   {mode === "promotion" && (
                     <div className="space-y-2">
                       <Label className="text-foreground">Source environment *</Label>
@@ -410,7 +407,8 @@ const ChangeRequests = () => {
                         value={envValue}
                         onChange={(event) => setEnvValue(event.target.value)}
                         placeholder="postgres://..."
-                        className="border-border bg-card text-foreground"
+                        rows={2}
+                        className="min-h-0 border-border bg-card text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
@@ -427,15 +425,12 @@ const ChangeRequests = () => {
                         value={secretValue}
                         onChange={(event) => setSecretValue(event.target.value)}
                         placeholder="secret value"
-                        className="border-border bg-card text-foreground"
+                        rows={2}
+                        className="min-h-0 border-border bg-card text-foreground"
                       />
                     </div>
                   </div>
                 )}
-
-                <div className="rounded-lg border border-border bg-card/60 p-4 text-sm text-muted-foreground">
-                  Requesters can propose the change. Org admins can approve or reject, including their own requests.
-                </div>
 
                 <Button
                   className="bg-emerald-500 hover:bg-emerald-600"
