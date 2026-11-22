@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
@@ -15,7 +15,7 @@ import { errorResponseSchema } from "envsync-api/ports/validators-common";
 import { authMiddleware } from "envsync-api/ports/middlewares";
 import { cliMiddleware } from "envsync-api/ports/middlewares";
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 app.use(authMiddleware());
 app.use(cliMiddleware());

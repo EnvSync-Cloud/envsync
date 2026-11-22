@@ -213,6 +213,14 @@ if (!isE2E) {
 				getDirectoryUserById: async () => null,
 				setDirectoryUserPassword: async () => {},
 				directoryUserHasPassword: async () => true,
+				getDirectoryMfaEnabled: async () => false,
+				beginDirectoryMfa: async () => ({
+					otpauth_url: "otpauth://totp/EnvSync:test?secret=TESTSECRET",
+					qr_image: "",
+					secret: "TESTSECRET",
+				}),
+				confirmDirectoryMfa: async () => {},
+				disableDirectoryMfa: async () => {},
 				exchangeAuthorizationCode: async (code: string) => ({
 					access_token: `mock-access-token-${code}`,
 					id_token: `mock-id-token-${code}`,

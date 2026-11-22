@@ -13,9 +13,7 @@ import {
 	type OpenApiDocument,
 } from "@/libs/openapi-disambiguate";
 
-import { NoResultError } from "kysely";
-
-import { AppError } from "@/libs/errors";
+import { AppError, isNoResultError } from "@/libs/errors";
 import log, { LogTypes, apiResponseLogger } from "@/libs/logger";
 import { getTracer } from "@/libs/telemetry";
 import { httpRequestDuration } from "@/libs/telemetry/metrics";
@@ -99,7 +97,7 @@ export async function createApiApp(surface: ApiSurface) {
 			return c.json({ error: err.message, code: err.code }, err.statusCode as ContentfulStatusCode);
 		}
 
-		if (err instanceof NoResultError) {
+		if (isNoResultError(err)) {
 			return c.json({ error: "Resource not found", code: "NOT_FOUND" }, 404);
 		}
 

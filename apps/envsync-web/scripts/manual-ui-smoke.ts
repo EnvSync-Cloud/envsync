@@ -199,9 +199,9 @@ async function createProject(page: Page) {
     expectedStatus: 201,
   });
 
-  await page.getByRole("button", { name: /Create Project with 3 Environments?/ }).click();
+  await page.locator("form").getByRole("button", { name: "Create Project" }).click();
   const trackedResponse = await trackedResponsePromise;
-  await page.waitForURL(/\/applications\/[^/]+$/);
+  await page.waitForURL(/\/projects\/[^/]+$/);
 
   assertObjectBody(trackedResponse.responseBody, "Create project response");
   const appId = trackedResponse.responseBody.id;

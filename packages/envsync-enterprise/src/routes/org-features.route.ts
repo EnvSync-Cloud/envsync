@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
@@ -11,7 +11,7 @@ import {
 	putOrgFeatureGrantRequestSchema,
 } from "../validators/org-features.validator";
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 app.use(platformAdminMiddleware());
 

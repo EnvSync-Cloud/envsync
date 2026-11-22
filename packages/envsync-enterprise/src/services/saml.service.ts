@@ -1,4 +1,4 @@
-import { NoResultError, type Selectable } from "kysely";
+import { type Selectable } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 
 import { cacheAside, cacheGetDel, cacheSetJson, invalidateCache } from "envsync-api/ports/helpers";
@@ -15,7 +15,7 @@ import {
 } from "envsync-api/ports/helpers";
 import { samlSessionSecret } from "envsync-api/ports/helpers";
 import { DB } from "envsync-api/ports/db";
-import { AppError, ForbiddenError, NotFoundError, orNotFound } from "envsync-api/ports/errors";
+import { AppError, ForbiddenError, NotFoundError, isNoResultError, orNotFound } from "envsync-api/ports/errors";
 import { config } from "envsync-api/ports/env";
 import infoLogs, { LogTypes } from "envsync-api/ports/logger";
 import { createDirectoryUser, findDirectoryUserByUsername } from "envsync-api/ports/helpers";
@@ -318,7 +318,7 @@ export class SamlService {
 			if (
 				err instanceof ForbiddenError
 				|| err instanceof NotFoundError
-				|| err instanceof NoResultError
+				|| isNoResultError(err)
 				|| (err instanceof AppError && (err.statusCode === 403 || err.statusCode === 404))
 			) {
 				throw SSO_NOT_AVAILABLE();

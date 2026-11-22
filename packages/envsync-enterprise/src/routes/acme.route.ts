@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 import { describeRoute } from "hono-openapi";
 
 import { authMiddleware } from "envsync-api/ports/middlewares";
@@ -7,7 +7,7 @@ import { requirePermission } from "envsync-api/ports/middlewares";
 
 import { AcmeController } from "../controllers/acme.controller";
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 app.use(authMiddleware());
 app.use(enterpriseGuard("management"));

@@ -237,7 +237,7 @@ export async function createProject(page: Page, projectName: string) {
 		failOnUnexpectedStatus: true,
 	});
 
-	await page.getByRole("button", { name: /Create Project with 3 Environments?/ }).click();
+	await page.locator("form").getByRole("button", { name: "Create Project" }).click();
 	const trackedResponse = await createResponse;
 	expectObjectBody(trackedResponse.responseBody, "Create project response");
 	expect(typeof trackedResponse.responseBody.id).toBe("string");
