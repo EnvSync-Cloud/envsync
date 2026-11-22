@@ -65,13 +65,21 @@ export const useProjectEnvironments = (appId?: string) => {
 
       const secretsResponse = await Promise.all(
         envTypes.map(async (envType) => {
-          const envVars = await sdk.secrets.getSecrets({
+          const listed = await sdk.secrets.getSecrets({
             app_id: appId,
             env_type_id: envType.id,
           });
-
-
-          return envVars;
+          // The list keeps the stored form: RSA/HYB for values written with the
+          // app key, plaintext for rows written before that. Managed apps hold
+          // the private key, so reveal both into the value the table shows.
+          if (!projectResponse.is_managed_secret || listed.length === 0) {
+            return listed;
+          }
+          return sdk.secrets.revealSecrets({
+            app_id: appId,
+            env_type_id: envType.id,
+            keys: listed.map((secret) => secret.key),
+          });
         })
       ).then((vars) => vars.flat());
 
