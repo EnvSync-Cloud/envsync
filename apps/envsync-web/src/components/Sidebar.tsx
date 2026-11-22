@@ -51,8 +51,6 @@ export const Sidebar = ({
         expanded ? "w-64" : "w-16",
       )}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent" />
-
       <div className="flex-shrink-0 border-b border-border px-3 py-4">
         <div className={cn("flex items-center", expanded ? "justify-between" : "flex-col gap-2")}>
           <div className={cn("flex items-center", expanded ? "gap-3" : "justify-center")}>

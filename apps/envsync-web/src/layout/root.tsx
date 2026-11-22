@@ -109,11 +109,6 @@ export const RootLayout = () => {
   return (
     <>
       <div data-testid="app-shell" className="flex h-screen overflow-hidden bg-background text-foreground">
-        <div className="pointer-events-none fixed inset-0">
-          <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-primary/[0.035] blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-primary/[0.025] blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_45%)]" />
-        </div>
         <div
           className={`fixed left-0 top-0 z-30 h-full transition-all duration-300 ease-in-out ${
             sidebarExpanded ? "w-64" : "w-16"
