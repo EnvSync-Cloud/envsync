@@ -530,11 +530,11 @@ export const EnvironmentVariablesTable = ({
             <table className="w-full table-fixed">
               <colgroup>
                 <col className="w-12" />
+                <col className="w-56" />
                 <col />
-                <col className="w-72" />
                 {showEnvironmentColumn ? <col className="w-36" /> : null}
-                <col className="w-44" />
-                {canEdit ? <col className="w-14" /> : null}
+                <col className="w-56" />
+                {canEdit ? <col className="w-24" /> : null}
               </colgroup>
               <thead>
                 <tr className="border-b border-border">
@@ -556,11 +556,11 @@ export const EnvironmentVariablesTable = ({
                       Environment
                     </th>
                   )}
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
+                  <th className="whitespace-nowrap py-3 px-4 text-left font-medium text-muted-foreground">
                     Updated
                   </th>
                   {canEdit && (
-                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                    <th className="whitespace-nowrap py-3 px-4 text-right font-medium text-muted-foreground">
                       Actions
                     </th>
                   )}
@@ -713,9 +713,9 @@ export const EnvironmentVariablesTable = ({
                         </td>
                       )}
 
-                      <td className="py-4 px-4">
+                      <td className="whitespace-nowrap px-4 py-4">
                         <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
+                          <Calendar className="w-3 h-3 shrink-0" />
                           <span>{formatDate(variable.updated_at)}</span>
                         </div>
                         {variable.created_by && (
