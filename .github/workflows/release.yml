@@ -487,3 +487,68 @@ jobs:
       - name: Publish to npm
         working-directory: sdks/envsync-ts-sdk
         run: npm publish --provenance --access public
+
+  # Runs only after every publish job succeeds. GitHub pauses the job until a
+  # reviewer approves the production environment. The backup is uploaded before
+  # the host upgrade or the hosted frontend deploy.
+  deploy-production:
+    name: Deploy production
+    needs:
+      - goreleaser
+      - build-api-image
+      - build-api-enterprise-image
+      - build-frontend-static-images
+      - publish-oss-deploy
+      - publish-deploy-core
+      - publish-enterprise-deploy-cli
+      - publish-ts-sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    concurrency:
+      group: production-release-deploy
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://app.envsync.cloud
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          if [ -z "$PROD_SSH_KEY" ]; then
+            echo "Missing production secret PROD_SSH_KEY"
+            exit 1
+          fi
+          install -m 600 /dev/null "$RUNNER_TEMP/prod_ssh_key"
+          printf '%s\n' "$PROD_SSH_KEY" > "$RUNNER_TEMP/prod_ssh_key"
+          echo "PROD_SSH_KEY_FILE=$RUNNER_TEMP/prod_ssh_key" >> "$GITHUB_ENV"
+
+      - name: Back up production to Cloudflare R2
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          CLOUDFLARE_R2_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_ID }}
+          CLOUDFLARE_R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          CLOUDFLARE_R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
+          CLOUDFLARE_R2_PREFIX: ${{ secrets.CLOUDFLARE_R2_PREFIX }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash .github/scripts/production-backup-r2.sh
+
+      - name: Upgrade production API
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash .github/scripts/production-upgrade.sh
+
+      - name: Deploy hosted frontend
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/production-deploy-frontend.sh
