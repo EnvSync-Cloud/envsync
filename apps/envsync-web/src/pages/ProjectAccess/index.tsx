@@ -119,7 +119,6 @@ const ProjectAccess = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Project Access"
-        description="Who can open this project, and where that access comes from."
         icon={LockKeyhole}
         actions={
           <Button asChild variant="outline" className="border-border text-foreground">
@@ -127,10 +126,25 @@ const ProjectAccess = () => {
           </Button>
         }
         stats={[
-          { label: "direct users", value: <span data-testid="project-access-summary-direct-users">{grantSummary.directUsers}</span> },
-          { label: "team grants", value: <span data-testid="project-access-summary-team-grants">{grantSummary.directTeams}</span> },
-          { label: "inherited", value: <span data-testid="project-access-summary-inherited-users">{grantSummary.inherited}</span> },
-        ]}
+          grantSummary.directUsers > 0
+            ? {
+                label: grantSummary.directUsers === 1 ? "direct user" : "direct users",
+                value: <span data-testid="project-access-summary-direct-users">{grantSummary.directUsers}</span>,
+              }
+            : null,
+          grantSummary.directTeams > 0
+            ? {
+                label: grantSummary.directTeams === 1 ? "team grant" : "team grants",
+                value: <span data-testid="project-access-summary-team-grants">{grantSummary.directTeams}</span>,
+              }
+            : null,
+          grantSummary.inherited > 0
+            ? {
+                label: grantSummary.inherited === 1 ? "inherited user" : "inherited users",
+                value: <span data-testid="project-access-summary-inherited-users">{grantSummary.inherited}</span>,
+              }
+            : null,
+        ].filter((stat): stat is NonNullable<typeof stat> => stat !== null)}
         secondaryNav={
           <Tabs data-testid="project-access-tabs" value={activeSection} onValueChange={handleSectionChange}>
             <TabsList className="h-auto bg-transparent p-0">

@@ -325,7 +325,7 @@ export const CreateProject = () => {
       <div className="mx-auto w-full max-w-2xl">
         <Card className="border-border bg-card">
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {submitError && (
                 <ErrorAlert
                   error={submitError}
@@ -334,10 +334,15 @@ export const CreateProject = () => {
               )}
 
               {/* Project Name */}
-              <div className="space-y-2">
-                <Label htmlFor="project-name" className="text-foreground">
-                  Project Name *
-                </Label>
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="project-name" className="text-foreground">
+                    Project Name *
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.name.length}/{MAX_NAME_LENGTH}
+                  </span>
+                </div>
                 <Input
                   id="project-name"
                   value={formData.name}
@@ -352,28 +357,29 @@ export const CreateProject = () => {
                 {formErrors.name && (
                   <p className="text-red-400 text-sm">{formErrors.name}</p>
                 )}
-                <div className="flex justify-end text-xs text-muted-foreground">
-                  <span>
-                    {formData.name.length}/{MAX_NAME_LENGTH}
-                  </span>
-                </div>
               </div>
 
               {/* Project Description */}
-              <div className="space-y-2">
-                <Label htmlFor="project-description" className="text-foreground">
-                  Description *
-                </Label>
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="project-description" className="text-foreground">
+                    Description *
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
+                  </span>
+                </div>
                 <Textarea
                   id="project-description"
                   value={formData.description}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
-                  className={`bg-muted max-h-[120px] border-border text-foreground min-h-[72px] ${
+                  rows={2}
+                  className={`min-h-0 resize-none bg-muted border-border text-foreground ${
                     formErrors.description ? "border-red-500" : ""
                   }`}
-                  placeholder="Describe what this project is for..."
+                  placeholder="What this project is for"
                   disabled={isCreating}
                   maxLength={MAX_DESCRIPTION_LENGTH}
                 />
@@ -382,11 +388,6 @@ export const CreateProject = () => {
                     {formErrors.description}
                   </p>
                 )}
-                <div className="flex justify-end text-xs text-muted-foreground">
-                  <span>
-                    {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
-                  </span>
-                </div>
               </div>
 
               {/* Enable Secrets */}
@@ -460,7 +461,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
               )}
 
               {/* Environment Types Section */}
-              <div className="space-y-4 border-t border-border pt-6">
+              <div className="space-y-3 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-foreground flex items-center">
                     <Layers className="w-4 h-4 mr-2 text-cyan-500" />
@@ -479,8 +480,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Optional. A Development environment is created for you. Add
-                  Staging, Production, or others if you want them now.
+                  Development is added for you. Add others only if you need them now.
                 </p>
 
                 {/* List of added env types */}
