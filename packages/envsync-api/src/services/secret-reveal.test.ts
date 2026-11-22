@@ -17,4 +17,22 @@ describe("revealSecretValue", () => {
 		expect(stored.startsWith("RSA:")).toBe(true);
 		expect(revealSecretValue("API_KEY", stored, privateKey)).toBe("sk_live_example");
 	});
+
+	test("decrypts a hybrid-encrypted value too large for an RSA block", () => {
+		const { publicKey, privateKey } = generateKeyPair();
+		const value = "example-value-".repeat(100);
+		const stored = smartEncrypt(value, publicKey);
+		expect(stored.startsWith("HYB:")).toBe(true);
+		expect(revealSecretValue("CERTIFICATE", stored, privateKey)).toBe(value);
+	});
+
+	test.each(["RSA:", "HYB:"])("rejects malformed %s ciphertext as a decryption conflict", prefix => {
+		expect(() => revealSecretValue("API_KEY", prefix + "invalid", "unused")).toThrow(
+			expect.objectContaining({
+				code: "SECRET_DECRYPT_FAILED",
+				statusCode: 409,
+				message: "Failed to decrypt secret API_KEY.",
+			}),
+		);
+	});
 });

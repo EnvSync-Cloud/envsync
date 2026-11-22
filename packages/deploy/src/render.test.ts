@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parse } from "yaml";
 
 import {
 	buildApiServiceEnvironment,
@@ -480,5 +481,28 @@ describe("VPN Configuration (Netbird)", () => {
 		expect(vpnConf).toContain("server_name openfga.envsync.local;");
 		expect(vpnConf).toContain("server_name clickstack.envsync.local;");
 		expect(vpnConf).toContain("server_name rustfs.envsync.local;");
+	});
+});
+
+describe("Atrium social provider configuration", () => {
+	test.each([
+		["", "", false],
+		["client-id", "", false],
+		["", "client-secret", false],
+		["client-id", 'value: "#quoted"', true],
+	] as const)("enables GitHub only when both credentials are set (%#)", (id, secret, enabled) => {
+		const configured = {
+			...config,
+			auth: {
+				...config.auth,
+				github_client_id: id,
+				github_client_secret: secret,
+			},
+		};
+		const yaml = parse(renderAtriumConfig(configured, buildRuntimeEnv(configured, generated)));
+		expect(yaml.social.providers).toEqual([
+			{ id: "github", type: "github", name: "GitHub", enabled, client_id: id, client_secret: secret },
+			{ id: "gitlab", type: "gitlab", name: "GitLab", enabled: false, client_id: "", client_secret: "" },
+		]);
 	});
 });

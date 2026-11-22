@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 
 import { p256 } from "@noble/curves/nist.js";
 
@@ -110,15 +111,31 @@ describe("dashboard DPoP session", () => {
         y: bytesToBase64Url(uncompressed.slice(33, 65)),
       },
     };
-    const proof = await signProof({
-      key,
-      method: "POST",
-      url: "http://auth.lvh.me:8080/oauth/token",
-    });
+    const browserCrypto = globalThis.crypto;
+    const accessToken = "fixture-access-token";
+    const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto")!;
+    let proof: string;
+    try {
+      Object.defineProperty(globalThis, "crypto", {
+        configurable: true,
+        value: { getRandomValues: browserCrypto.getRandomValues.bind(browserCrypto) },
+      });
+      proof = await signProof({
+        key,
+        method: "GET",
+        url: "http://api.lvh.me:4000/api/auth/me",
+        accessToken,
+      });
+    } finally {
+      Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+    }
     const [encodedHeader, encodedClaims, encodedSignature] = proof.split(".");
     const header = decodePart(encodedHeader);
     expect(header.alg).toBe("ES256");
     expect(header.jwk).toEqual(key.publicJwk);
+    const claims = decodePart(encodedClaims);
+    expect(claims.ath).toBe(createHash("sha256").update(accessToken).digest("base64url"));
+    expect(claims.jti).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     const signingInput = new TextEncoder().encode(`${encodedHeader}.${encodedClaims}`);
     const paddedSignature = encodedSignature.replace(/-/g, "+").replace(/_/g, "/")
       + "=".repeat((4 - (encodedSignature.length % 4)) % 4);
