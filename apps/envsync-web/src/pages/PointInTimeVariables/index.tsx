@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarRange, Clock3, GitBranch, MessageSquare, User } from "lucide-react";
+import { CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 
 import { sdk } from "@/api";
@@ -20,7 +20,7 @@ import { PitTimeRangePanel } from "@/components/env-vars/PitTimeRangePanel";
 import { PointInTimeHeader } from "@/components/env-vars/PointInTimeHeader";
 import { ViewPitChangesModal } from "@/components/env-vars/ViewPitChangesModal";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEnvironments } from "@/hooks/useProjectEnvironments";
 import {
 	createDefaultTimeRange,
@@ -417,45 +417,20 @@ const PointInTime = () => {
 				</div>
 
 				<Card className="border-border bg-card">
-					<CardHeader>
-						<CardTitle className="text-base text-foreground">Selected context</CardTitle>
-					</CardHeader>
-					<CardContent>
+					<CardContent className="flex flex-wrap items-center gap-x-4 gap-y-1 py-4 text-sm">
 						{activeMode === "snapshots" ? selectedSnapshotPit ? (
-							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
-										<GitBranch className="size-3.5" />
-										PIT ID
-									</p>
-									<p className="font-mono text-sm text-foreground">{selectedSnapshotPit.id}</p>
-								</div>
-								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
-										<Clock3 className="size-3.5" />
-										Created at
-									</p>
-									<p className="text-sm text-foreground">{formatDateTime(selectedSnapshotPit.created_at)}</p>
-								</div>
-								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
-										<User className="size-3.5" />
-										Created by
-									</p>
-									<p className="text-sm text-foreground">{getUserLabel(selectedSnapshotPit.user_id)}</p>
-								</div>
-								<div className="space-y-1">
-									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
-										<MessageSquare className="size-3.5" />
-										Message
-									</p>
-									<p className="text-sm text-foreground">{selectedSnapshotPit.change_request_message}</p>
-								</div>
-								<div className="space-y-1">
-									<p className="text-xs uppercase tracking-wide text-tertiary">{kindLabel} changes</p>
-									<p className="text-sm text-foreground">{selectedSnapshotPit.changes_count}</p>
-								</div>
-							</div>
+							<>
+								<span className="text-muted-foreground">Selected</span>
+								<span className="whitespace-nowrap text-foreground">{formatDateTime(selectedSnapshotPit.created_at)}</span>
+								<span className="truncate text-foreground">{getUserLabel(selectedSnapshotPit.user_id)}</span>
+								<span className="min-w-0 flex-1 truncate text-muted-foreground">{selectedSnapshotPit.change_request_message}</span>
+								<span className="whitespace-nowrap text-muted-foreground">
+									{selectedSnapshotPit.changes_count} {selectedSnapshotPit.changes_count === 1 ? "change" : "changes"}
+								</span>
+								<span className="font-mono text-xs text-muted-foreground" title={selectedSnapshotPit.id}>
+									{selectedSnapshotPit.id.slice(0, 8)}
+								</span>
+							</>
 						) : (
 							<p className="text-sm text-muted-foreground">
 								No snapshots are available yet for this environment&apos;s {itemLabel}s.
@@ -509,8 +484,8 @@ const PointInTime = () => {
 					title={activeMode === "snapshots" ? `${kindLabel} snapshot history` : "Snapshots in selected range"}
 					description={
 						activeMode === "snapshots"
-							? `Browse the full PiT history for ${selectedEnvironment.name} ${itemLabel}s.`
-							: "Use the selected time window to narrow rollback candidates and jump back into snapshot compare."
+							? `${selectedEnvironment.name} ${itemLabel}s.`
+							: "Snapshots inside the selected time window."
 					}
 					history={activeMode === "snapshots" ? snapshotHistory : rangeHistory}
 					selectedPitId={activeMode === "snapshots" ? selectedSnapshotPitId : selectedRangePitId}

@@ -58,9 +58,9 @@ export const PitSnapshotComparePanel = ({
 		return (
 			<span
 				className="block min-w-0 truncate text-left"
-				title={`${formatDateTime(pit.created_at)} · ${getUserLabel(pit.user_id)} · ${pit.change_request_message} · ${pit.id}`}
+				title={`${formatDateTime(pit.created_at)} · ${getUserLabel(pit.user_id)} · ${pit.change_request_message}`}
 			>
-				{formatDateTime(pit.created_at)} · {truncateMessage(pit.change_request_message, 42)} · {truncatePitId(pit.id)}
+				{formatDateTime(pit.created_at)}
 			</span>
 		);
 	};
@@ -73,8 +73,8 @@ export const PitSnapshotComparePanel = ({
 					{kindLabel} snapshot compare
 				</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-4 lg:grid-cols-2">
+			<CardContent>
+				<div className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
 					<div className="min-w-0 space-y-2">
 						<Label className="text-muted-foreground">Compare from</Label>
 						<Select
@@ -130,22 +130,20 @@ export const PitSnapshotComparePanel = ({
 							</SelectContent>
 						</Select>
 					</div>
-				</div>
-
-				<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-					<p className="text-sm text-muted-foreground">
-						{history.length < 2
-							? "At least two snapshots are required before you can preview a comparison."
-							: "Compare two concrete PiT snapshots and review the diff inline."}
-					</p>
-					<Button
-						onClick={onPreview}
-						disabled={!canCompare || isPreviewPending}
-						className="bg-emerald-600 text-foreground hover:bg-emerald-500"
-					>
-						<GitCompareArrows className="mr-2 size-4" />
-						{isPreviewPending ? "Loading..." : "Preview comparison"}
-					</Button>
+					<div className="min-w-0 space-y-2">
+						<Label className="sr-only">Preview</Label>
+						<Button
+							onClick={onPreview}
+							disabled={!canCompare || isPreviewPending}
+							className="bg-emerald-600 text-foreground hover:bg-emerald-500"
+						>
+							<GitCompareArrows className="mr-2 size-4" />
+							{isPreviewPending ? "Loading..." : "Preview comparison"}
+						</Button>
+						{history.length < 2 ? (
+							<p className="text-xs text-muted-foreground">Need two snapshots.</p>
+						) : null}
+					</div>
 				</div>
 			</CardContent>
 		</Card>
