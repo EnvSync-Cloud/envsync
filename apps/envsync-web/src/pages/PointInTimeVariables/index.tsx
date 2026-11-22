@@ -1,7 +1,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-
+import { CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 
 import { sdk } from "@/api";
@@ -20,6 +20,7 @@ import { PitTimeRangePanel } from "@/components/env-vars/PitTimeRangePanel";
 import { PointInTimeHeader } from "@/components/env-vars/PointInTimeHeader";
 import { ViewPitChangesModal } from "@/components/env-vars/ViewPitChangesModal";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEnvironments } from "@/hooks/useProjectEnvironments";
 import {
 	createDefaultTimeRange,
@@ -28,6 +29,7 @@ import {
 	getPitItemLabel,
 	getPitKindFromPathname,
 	getPitKindLabel,
+	getPitRangeSummary,
 	type PitDataKind,
 	type PitHistoryItem,
 	type PitMode,
@@ -150,6 +152,7 @@ const PointInTime = () => {
 		null;
 	const selectedRangePit =
 		(selectedRangePitId ? allKnownPits.get(selectedRangePitId) : null) ?? null;
+	const rangeSummary = getPitRangeSummary(rangeHistory);
 	const timezoneLabel =
 		Intl.DateTimeFormat().resolvedOptions().timeZone || "Local time";
 
@@ -363,7 +366,8 @@ const PointInTime = () => {
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="min-h-full bg-card p-6">
+			<div className="mx-auto flex max-w-7xl flex-col gap-6">
 				<PointInTimeHeader
 					projectName={project?.name || appId || ""}
 					environmentTypes={environmentTypes || []}
@@ -384,23 +388,14 @@ const PointInTime = () => {
 
 					{activeMode === "snapshots" ? (
 						<PitSnapshotComparePanel
+							kind={kind}
 							history={snapshotHistory}
-							environmentTypes={environmentTypes || []}
-							selectedEnvironmentId={selectedEnvironment.id}
-							onEnvironmentChange={handleEnvironmentChange}
 							compareFromPitId={compareFromPitId}
 							compareToPitId={compareToPitId}
 							onCompareFromChange={setCompareFromPitId}
-							onCompareToChange={(pitId) => {
-								setCompareToPitId(pitId);
-								setSelectedSnapshotPitId(pitId);
-							}}
+							onCompareToChange={setCompareToPitId}
 							onPreview={handlePreviewSnapshotDiff}
-							onRestore={() => {
-								if (selectedSnapshotPit) handleRollbackRequest(selectedSnapshotPit);
-							}}
 							isPreviewPending={snapshotDiff.isPending}
-							isRestorePending={rollbackToPit.isPending}
 							getUserLabel={getUserLabel}
 							formatDateTime={formatDateTime}
 						/>
@@ -420,6 +415,62 @@ const PointInTime = () => {
 						/>
 					)}
 				</div>
+
+				<Card className="border-border bg-card">
+					<CardContent className="flex flex-wrap items-center gap-x-4 gap-y-1 py-4 text-sm">
+						{activeMode === "snapshots" ? selectedSnapshotPit ? (
+							<>
+								<span className="text-muted-foreground">Selected</span>
+								<span className="whitespace-nowrap text-foreground">{formatDateTime(selectedSnapshotPit.created_at)}</span>
+								<span className="truncate text-foreground">{getUserLabel(selectedSnapshotPit.user_id)}</span>
+								<span className="min-w-0 flex-1 truncate text-muted-foreground">{selectedSnapshotPit.change_request_message}</span>
+								<span className="whitespace-nowrap text-muted-foreground">
+									{selectedSnapshotPit.changes_count} {selectedSnapshotPit.changes_count === 1 ? "change" : "changes"}
+								</span>
+								<span className="font-mono text-xs text-muted-foreground" title={selectedSnapshotPit.id}>
+									{selectedSnapshotPit.id.slice(0, 8)}
+								</span>
+							</>
+						) : (
+							<p className="text-sm text-muted-foreground">
+								No snapshots are available yet for this environment&apos;s {itemLabel}s.
+							</p>
+						) : (
+							<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+								<div className="space-y-1">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+										<CalendarRange className="size-3.5" />
+										Range start
+									</p>
+									<p className="text-sm text-foreground">{formatDateTime(timeRange.start)}</p>
+								</div>
+								<div className="space-y-1">
+									<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+										<CalendarRange className="size-3.5" />
+										Range end
+									</p>
+									<p className="text-sm text-foreground">{formatDateTime(timeRange.end)}</p>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs uppercase tracking-wide text-tertiary">Total PiTs found</p>
+									<p className="text-sm text-foreground">{rangeSummary.total}</p>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs uppercase tracking-wide text-tertiary">Earliest PiT</p>
+									<p className="text-sm text-foreground">
+										{rangeSummary.earliest ? formatDateTime(rangeSummary.earliest.created_at) : "None"}
+									</p>
+								</div>
+								<div className="space-y-1">
+									<p className="text-xs uppercase tracking-wide text-tertiary">Latest PiT</p>
+									<p className="text-sm text-foreground">
+										{rangeSummary.latest ? formatDateTime(rangeSummary.latest.created_at) : "None"}
+									</p>
+								</div>
+							</div>
+						)}
+					</CardContent>
+				</Card>
 
 				{activeMode === "time-range" && rangeHistory.length === 1 && !selectedRangePitId && (
 					<Badge className="w-fit border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">
@@ -515,6 +566,7 @@ const PointInTime = () => {
 					onRollbackMessageChange={setRollbackMessage}
 					onConfirm={handleConfirmRollback}
 				/>
+			</div>
 		</div>
 	);
 };

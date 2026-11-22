@@ -1,3 +1,5 @@
+import { GitCompareArrows, History } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,28 +10,25 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import type { EnvironmentType } from "@/constants";
 import type {
+	PitDataKind,
 	PitHistoryItem,
 } from "@/pages/PointInTimeVariables/pit.utils";
 import {
+	getPitKindLabel,
 	truncateMessage,
 	truncatePitId,
 } from "@/pages/PointInTimeVariables/pit.utils";
 
 interface PitSnapshotComparePanelProps {
+	kind: PitDataKind;
 	history: PitHistoryItem[];
-	environmentTypes: EnvironmentType[];
-	selectedEnvironmentId?: string;
-	onEnvironmentChange?: (environmentId: string) => void;
 	compareFromPitId: string | null;
 	compareToPitId: string | null;
 	onCompareFromChange: (pitId: string) => void;
 	onCompareToChange: (pitId: string) => void;
 	onPreview: () => void;
-	onRestore?: () => void;
 	isPreviewPending: boolean;
-	isRestorePending?: boolean;
 	getUserLabel: (userId: string) => string;
 	formatDateTime: (value: string) => string;
 }
@@ -37,23 +36,19 @@ interface PitSnapshotComparePanelProps {
 export const PitSnapshotComparePanel = ({
 	kind,
 	history,
-	environmentTypes,
-	selectedEnvironmentId,
-	onEnvironmentChange,
 	compareFromPitId,
 	compareToPitId,
 	onCompareFromChange,
 	onCompareToChange,
 	onPreview,
-	onRestore,
 	isPreviewPending,
-	isRestorePending,
 	getUserLabel,
 	formatDateTime,
 }: PitSnapshotComparePanelProps) => {
 	const canCompare = history.length >= 2 && compareFromPitId && compareToPitId && compareFromPitId !== compareToPitId;
 	const compareFromPit = history.find((pit) => pit.id === compareFromPitId) ?? null;
 	const compareToPit = history.find((pit) => pit.id === compareToPitId) ?? null;
+	const kindLabel = getPitKindLabel(kind);
 
 	const renderSelectedSnapshot = (pit: PitHistoryItem | null, placeholder: string) => {
 		if (!pit) {
@@ -63,105 +58,93 @@ export const PitSnapshotComparePanel = ({
 		return (
 			<span
 				className="block min-w-0 truncate text-left"
-				title={`${formatDateTime(pit.created_at)} · ${getUserLabel(pit.user_id)} · ${pit.change_request_message} · ${pit.id}`}
+				title={`${formatDateTime(pit.created_at)} · ${getUserLabel(pit.user_id)} · ${pit.change_request_message}`}
 			>
-				{formatDateTime(pit.created_at)} · {truncateMessage(pit.change_request_message, 42)} · {truncatePitId(pit.id)}
+				{formatDateTime(pit.created_at)}
 			</span>
 		);
 	};
 
 	return (
 		<Card className="border-border bg-card">
-			<CardHeader className="pb-3">
-				<CardTitle className="text-base text-foreground">Restore from history</CardTitle>
-				<p className="text-sm text-muted-foreground">
-					{history.length === 0
-						? "No snapshots yet."
-						: "Pick a snapshot, preview the change, or restore it."}
-				</p>
+			<CardHeader className="pb-4">
+				<CardTitle className="flex items-center gap-2 text-base text-foreground">
+					<History className="size-4 text-emerald-400" />
+					{kindLabel} snapshot compare
+				</CardTitle>
 			</CardHeader>
-			<CardContent className="space-y-4">
-				<div className="grid gap-3 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_auto] lg:items-end">
+			<CardContent>
+				<div className="grid items-end gap-3 md:grid-cols-[1fr_1fr_auto]">
 					<div className="min-w-0 space-y-2">
-						<Label className="text-muted-foreground">Environment</Label>
-						<Select
-							value={selectedEnvironmentId}
-							onValueChange={onEnvironmentChange}
-							disabled={!onEnvironmentChange || environmentTypes.length === 0}
-						>
-							<SelectTrigger className="border-border bg-background text-foreground">
-								<SelectValue placeholder="Select environment" />
-							</SelectTrigger>
-							<SelectContent className="border-border bg-card text-foreground">
-								{environmentTypes.map((environment) => (
-									<SelectItem key={environment.id} value={environment.id}>
-										{environment.name}
-										{environment.is_default ? " · Default" : ""}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="min-w-0 space-y-2">
-						<Label className="text-muted-foreground">Point in time</Label>
-						<Select
-							value={compareToPitId ?? undefined}
-							onValueChange={onCompareToChange}
-							disabled={history.length === 0}
-						>
-							<SelectTrigger className="overflow-hidden border-border bg-background text-foreground">
-								{renderSelectedSnapshot(compareToPit, "No snapshots")}
-							</SelectTrigger>
-							<SelectContent className="border-border bg-card text-foreground">
-								{history.map((pit) => (
-									<SelectItem key={pit.id} value={pit.id}>
-										{formatDateTime(pit.created_at)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="flex gap-2">
-						<Button
-							variant="outline"
-							onClick={onPreview}
-							disabled={!canCompare || isPreviewPending}
-						>
-							{isPreviewPending ? "Loading..." : "Preview comparison"}
-						</Button>
-						<Button
-							onClick={onRestore}
-							disabled={!compareToPit || isRestorePending}
-						>
-							Restore
-						</Button>
-					</div>
-				</div>
-				{compareToPit ? (
-					<p className="text-xs text-muted-foreground">
-						{getUserLabel(compareToPit.user_id)} · {truncateMessage(compareToPit.change_request_message, 80)} · {compareToPit.changes_count} change{compareToPit.changes_count === 1 ? "" : "s"}
-					</p>
-				) : null}
-				{history.length >= 2 ? (
-					<div className="max-w-md space-y-2">
-						<Label className="text-muted-foreground">Compare with</Label>
+						<Label className="text-muted-foreground">Compare from</Label>
 						<Select
 							value={compareFromPitId ?? undefined}
 							onValueChange={onCompareFromChange}
+							disabled={history.length < 2}
 						>
-							<SelectTrigger className="overflow-hidden border-border bg-background text-foreground">
-								{renderSelectedSnapshot(compareFromPit, "Earlier snapshot")}
+							<SelectTrigger className="overflow-hidden border-border bg-card text-foreground">
+								{renderSelectedSnapshot(compareFromPit, "Choose an earlier snapshot")}
 							</SelectTrigger>
 							<SelectContent className="border-border bg-card text-foreground">
 								{history.map((pit) => (
 									<SelectItem key={pit.id} value={pit.id}>
-										{formatDateTime(pit.created_at)} · {truncatePitId(pit.id)}
+										<div className="flex max-w-[320px] flex-col gap-0.5 py-1">
+											<span className="text-sm text-foreground">{formatDateTime(pit.created_at)}</span>
+											<span className="text-xs text-muted-foreground">
+												{getUserLabel(pit.user_id)} · {truncateMessage(pit.change_request_message, 40)}
+											</span>
+											<span className="font-mono text-[11px] text-tertiary">
+												{truncatePitId(pit.id)}
+											</span>
+										</div>
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
 					</div>
-				) : null}
+
+					<div className="min-w-0 space-y-2">
+						<Label className="text-muted-foreground">Compare to</Label>
+						<Select
+							value={compareToPitId ?? undefined}
+							onValueChange={onCompareToChange}
+							disabled={history.length < 2}
+						>
+							<SelectTrigger className="overflow-hidden border-border bg-card text-foreground">
+								{renderSelectedSnapshot(compareToPit, "Choose a target snapshot")}
+							</SelectTrigger>
+							<SelectContent className="border-border bg-card text-foreground">
+								{history.map((pit) => (
+									<SelectItem key={pit.id} value={pit.id}>
+										<div className="flex max-w-[320px] flex-col gap-0.5 py-1">
+											<span className="text-sm text-foreground">{formatDateTime(pit.created_at)}</span>
+											<span className="text-xs text-muted-foreground">
+												{getUserLabel(pit.user_id)} · {truncateMessage(pit.change_request_message, 40)}
+											</span>
+											<span className="font-mono text-[11px] text-tertiary">
+												{truncatePitId(pit.id)}
+											</span>
+										</div>
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="min-w-0 space-y-2">
+						<Label className="sr-only">Preview</Label>
+						<Button
+							onClick={onPreview}
+							disabled={!canCompare || isPreviewPending}
+							className="bg-emerald-600 text-foreground hover:bg-emerald-500"
+						>
+							<GitCompareArrows className="mr-2 size-4" />
+							{isPreviewPending ? "Loading..." : "Preview comparison"}
+						</Button>
+						{history.length < 2 ? (
+							<p className="text-xs text-muted-foreground">Need two snapshots.</p>
+						) : null}
+					</div>
+				</div>
 			</CardContent>
 		</Card>
 	);
