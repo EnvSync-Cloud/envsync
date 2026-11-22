@@ -32,6 +32,10 @@ this engine with enterprise edition forced. Open-core direction: **EE → OSS**,
 
 Enterprise stacks run a **single API service** with manage routes at `/api/v1/manage/...` on the API host (no separate management-api container). Frontend `managementApiUrl` points at `{apiBaseUrl}/api/v1/manage`.
 
+## Backup and key custody
+
+`envsync-deploy backup` writes an age-encrypted data backup. MiniKMS private keys are excluded. `envsync-deploy export-keys` writes a separate age-encrypted key bundle (mode `0600`) and identity file (mode `0600`) for offline storage. Restore a data backup with `--keys` and `--keys-identity`. Upgrade DB snapshots are age-encrypted and pruned after `upgrade.snapshot_retention_days` (default 7).
+
 ## Build
 
 ```bash

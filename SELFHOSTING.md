@@ -120,30 +120,42 @@ envsync-deploy rollback
 
 ## Backup / restore
 
-Create an encrypted backup. The default is age. The archive is `envsync-backup-<time>.tar.gz.age`. The identity file is written beside it as `envsync-backup-<time>.identity` and is not inside the archive. Keep that identity file with your other operator secrets. The file mode is `0600`.
+Create an encrypted data backup. The default is age. The archive is `envsync-backup-<time>.tar.gz.age`. The identity file is written beside it as `envsync-backup-<time>.identity` and is not inside the archive. Keep that identity file with your other operator secrets. The file mode is `0600`.
+
+A data backup does not include the miniKMS root key, session-signing key, or private PEMs. Those stay in a separate key bundle. The archive manifest records that keys were excluded.
 
 ```bash
 envsync-deploy backup
+envsync-deploy export-keys
 ```
 
-`backup.encrypted` defaults to `true`. A plaintext `.tar.gz` is refused. To write one anyway, set `backup.encrypted: false` in the deploy config and pass the insecure flag:
+`export-keys` writes `envsync-keys-<time>.tar.gz.age` (mode `0600`) and a separate identity file (mode `0600`). Store the bundle and its identity offline, apart from the data backup. Optional `backup.recipients` in the deploy config adds extra age recipients. Pass `--output` and `--identity` to choose the paths. `--dry-run` prints paths only.
+
+To put keys inside a data backup anyway, pass `--include-keys`. That still requires age encryption.
+
+`backup.encrypted` defaults to `true`. An unencrypted `.tar.gz` is refused. To write one anyway, set `backup.encrypted: false` in the deploy config and pass the insecure flag:
 
 ```bash
 envsync-deploy backup --insecure-unencrypted
 ```
 
-A normal backup also encrypts any older `envsync-backup-*.tar.gz` files in the output directory and deletes the plaintext copies. Each of those gets its own `.identity` file beside the new `.age` archive.
+A normal backup also encrypts any older `envsync-backup-*.tar.gz` files in the output directory and removes the unencrypted copies. Each of those gets its own `.identity` file beside the new `.age` archive. The same run seals unencrypted `envsync-db-preupgrade-*.dump` files and deletes upgrade snapshots older than `upgrade.snapshot_retention_days` (default 7).
 
-Restore an encrypted archive. If the identity file is next to the archive, you can omit `--identity`.
+Upgrade snapshots are age-encrypted after `pg_dump` (file mode `0600`, directory mode `0700`). A successful upgrade deletes the snapshot and its identity.
+
+Restore an encrypted archive. If the identity file is next to the archive, you can omit `--identity`. When the data backup excluded keys, pass the export-keys bundle. Restore fails if those keys are in neither the archive nor the bundle.
 
 ```bash
-envsync-deploy restore /path/to/envsync-backup.tar.gz.age --identity /path/to/envsync-backup.identity
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age \
+  --identity /path/to/envsync-backup.identity \
+  --keys /path/to/envsync-keys.tar.gz.age \
+  --keys-identity /path/to/envsync-keys.identity
 ```
 
 Restore and start services immediately:
 
 ```bash
-envsync-deploy restore /path/to/envsync-backup.tar.gz.age --deploy
+envsync-deploy restore /path/to/envsync-backup.tar.gz.age --keys /path/to/envsync-keys.tar.gz.age --deploy
 ```
 
 ## Troubleshooting / health
