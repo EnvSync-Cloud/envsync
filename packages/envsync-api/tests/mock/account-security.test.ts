@@ -148,20 +148,56 @@ describe("account security routes", () => {
 		expect(audit).not.toHaveBeenCalled();
 	});
 
-	test("disables MFA for the signed-in user", async () => {
-		const disable = track(spyOn(identity, "disableDirectoryMfa")).mockResolvedValue(undefined);
+	test("rejects MFA disable without a password", async () => {
+		const disable = track(spyOn(identity, "disableDirectoryMfa"));
 		const response = await account("mfa/disable");
-		expect(response.status).toBe(200);
-		expect(disable).toHaveBeenCalledWith(user.authServiceId);
+		expect(response.status).toBe(400);
+		expect(disable).not.toHaveBeenCalled();
 	});
 
-	test.each([
-		["mfa/setup", "beginDirectoryMfa", "Authenticator setup could not start."],
-		["mfa/disable", "disableDirectoryMfa", "The authenticator could not be turned off."],
-	] as const)("returns a public error when %s fails", async (path, operation, error) => {
-		track(spyOn(identity, operation)).mockRejectedValue(new Error("directory unavailable"));
-		const response = await account(path);
+	test("does not disable MFA when the password is rejected", async () => {
+		track(spyOn(identity, "passwordGrantLogin")).mockRejectedValue(new Error("invalid_grant"));
+		const disable = track(spyOn(identity, "disableDirectoryMfa"));
+		const response = await account("mfa/disable", { password: "wrong-password" });
+		expect(response.status).toBe(401);
+		expect(await response.json()).toMatchObject({ code: "STEP_UP_FAILED" });
+		expect(disable).not.toHaveBeenCalled();
+	});
+
+	test("disables MFA after the current password checks out", async () => {
+		const currentPassword = "current-password";
+		const login = track(spyOn(identity, "passwordGrantLogin")).mockResolvedValue({
+			access_token: "step-up",
+		} as Awaited<ReturnType<typeof identity.passwordGrantLogin>>);
+		const disable = track(spyOn(identity, "disableDirectoryMfa")).mockResolvedValue(undefined);
+		const audit = track(spyOn(AuditLogService, "notifyAuditSystem"));
+		const response = await account("mfa/disable", { password: currentPassword });
+		expect(response.status).toBe(200);
+		expect(login).toHaveBeenCalledWith(
+			user.email,
+			currentPassword,
+			expect.any(String),
+			expect.any(String),
+		);
+		expect(disable).toHaveBeenCalledWith(user.authServiceId);
+		expect(audit).toHaveBeenCalledWith(expect.objectContaining({ action: "mfa_disabled", user_id: user.id }));
+		expect(JSON.stringify(audit.mock.calls)).not.toContain(currentPassword);
+	});
+
+	test("returns a public error when authenticator setup fails", async () => {
+		track(spyOn(identity, "beginDirectoryMfa")).mockRejectedValue(new Error("directory unavailable"));
+		const response = await account("mfa/setup");
 		expect(response.status).toBe(502);
-		expect(await response.json()).toEqual({ error });
+		expect(await response.json()).toEqual({ error: "Authenticator setup could not start." });
+	});
+
+	test("returns a public error when MFA disable fails after the password check", async () => {
+		track(spyOn(identity, "passwordGrantLogin")).mockResolvedValue({
+			access_token: "step-up",
+		} as Awaited<ReturnType<typeof identity.passwordGrantLogin>>);
+		track(spyOn(identity, "disableDirectoryMfa")).mockRejectedValue(new Error("directory unavailable"));
+		const response = await account("mfa/disable", { password: "current-password" });
+		expect(response.status).toBe(502);
+		expect(await response.json()).toEqual({ error: "The authenticator could not be turned off." });
 	});
 });

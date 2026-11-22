@@ -46,7 +46,6 @@ test.each([
 	["mapping", "binding", "connection", "legacy", "mapping"],
 	[" ", "binding", "connection", "legacy", "binding"],
 	[undefined, undefined, "connection", "legacy", "connection"],
-	[undefined, undefined, undefined, "legacy", "legacy"],
 ])("writes to the highest-priority configured CircleCI context (%#)", async (mapping, binding, connection, legacy, expected) => {
 	const input = context();
 	input.mapping.metadata.context_id = mapping;
@@ -68,6 +67,31 @@ test.each([
 			body: JSON.stringify({ value: "example-value" }),
 		}),
 	);
+});
+
+test("does not treat an organization id as a CircleCI context id", async () => {
+	const input = context();
+	input.connection.auth_config.org_id = "legacy-org";
+	const fetch = stubFetch(201);
+
+	expect(await EnterpriseProviderSyncService.sync(input)).toEqual({
+		written_count: 1,
+		target: { project: "gh/team/repo", context: null },
+	});
+	expect(fetch).toHaveBeenCalledWith(
+		"https://circleci.com/api/v2/project/gh%2Fteam%2Frepo/envvar",
+		expect.objectContaining({ method: "POST" }),
+	);
+});
+
+test("propagates a failed CircleCI context write", async () => {
+	const input = context();
+	input.mapping.metadata.context_id = "context-1";
+	const fetch = stubFetch(404);
+	await expect(EnterpriseProviderSyncService.sync(input)).rejects.toMatchObject({
+		code: "ENTERPRISE_PROVIDER_SYNC_FAILED",
+	});
+	expect(fetch).toHaveBeenCalledTimes(1);
 });
 
 test("writes project variables when no context is provided and resolves token references", async () => {
