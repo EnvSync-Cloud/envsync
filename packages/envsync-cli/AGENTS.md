@@ -42,7 +42,7 @@ internal/
 ## Config
 
 - User config: `~/.envsyncrc.toml` (auth tokens and preferences)
-- Backend URL: compile-time injected via ldflags (`BACKEND_URL` make variable). Override in `~/.envsyncrc.toml`. Default local API is typically `http://localhost:4000` (origin only — no path prefix).
+- Backend URL: compile-time injected via ldflags (`BACKEND_URL` make variable). The Makefile default is `http://localhost:8600`. For this repo's Compose API, build with `BACKEND_URL=http://api.lvh.me:4000`. `ENVSYNC_API_URL` overrides the baked-in origin at runtime. The value is the origin only, with no `/api` prefix.
 
 ## Logging & telemetry
 

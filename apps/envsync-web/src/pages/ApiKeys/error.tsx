@@ -9,7 +9,7 @@ export const ApiKeysErrorPage = () => {
       fullScreen
       title="Failed to load API keys"
       onRetry={refreshApiKeys}
-      retryClassName="bg-emerald-500 hover:bg-emerald-600 text-white"
+      retryClassName=""
     />
   );
 };

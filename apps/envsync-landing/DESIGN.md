@@ -1,17 +1,14 @@
 # EnvSync Landing Design System
 
-Cloudflare's design language replicated for EnvSync: hairline blueprint structure, editorial grotesk type at weight 500, one disciplined accent (EnvSync green), and product storytelling through faux UI, blueprint diagrams, and mono annotations. Extracted from runtime truth on cloudflare.com (home + /products/workers), 2026-07-23.
+The home page follows the Workers product-page rhythm: a diagram over a centered headline, then a benefit grid, a comparison, use-case cards, a code panel, a scroll-linked ship list, a pricing strip, a directory, and a closing band. Motion timings live in `src/components/home/home.css`. The reference capture notes are local-only under `.reanimate/` (gitignored).
 
-## 0. Research Log
+The landing app forces the dark theme (`forcedTheme="dark"` in `src/main.tsx`). The page floor is near-black, type is light, and primary buttons are white with dark text (`--primary` in `.dark`). Green is the diagram stroke, status color, and the closing band (`#0f7a45`, so white type on that band stays readable). Fonts are Inter and JetBrains Mono.
 
-- Live reference (clone-from-url): runtime `getComputedStyle` extraction on cloudflare.com home + /products/workers at 1440/768/390, hover/active states driven, full scroll-through; evidence in `docs/audit/cloudflare/**` → picked as the visual contract per user direction.
-- Librarian lane: public CF design references (brand oranges, cf-ui/kumo, color-system blog) → cross-validated extraction; browser won all conflicts (see `docs/audit/gap-analysis.md` §8).
-- Current-state lane: envsync.cloud captured with the same matrix (`docs/audit/envsync-current/**`) + code audit (`docs/audit/code-audit.md`).
-- Decisions: D1 light+dark both · D2 EnvSync green in CF structure · D3 Index+Integrations+About+NotFound · D4 Inter + JetBrains Mono (CF uses licensed FT Kunst Grotesk / Apercu Mono Pro — free-fidelity substitutes).
+Shared token values below still describe `envsync-ui`. On this app, do not paint a full-bleed green hero with white type: dark `--primary` is near-white, and an earlier green canvas used the wrong token pairing.
 
 ## 1. Atmosphere & Identity
 
-An engineering blueprint for your secrets. Quiet, precise, structural — surfaces separated by 1px hairlines, technical panels marked with crop-mark corners, every technical label in monospace. The signature is the **accent canvas**: a full-bleed EnvSync-green field inset in the white page frame, carrying a single editorial headline — the moment a visitor remembers. Depth comes from surface contrast and tint, never from shadow stacks.
+Quiet and structural. Hairline borders, crop-mark corners on panels, monospace for commands and ids. The home page does not use a green hero canvas. The closing section is the only saturated green field.
 
 ## 2. Color
 
@@ -106,13 +103,13 @@ The codebase implements this palette with shadcn-compatible CSS variable names (
 
 ### Button
 - **Structure**: `<a>/<button>` pill, inline-flex, gap-2, font 16px/500.
-- **Variants**: `primary` (accent fill, accent-foreground text, 9999px radius), `hero` (white fill #FFF, #1F1F1F text, on accent canvas), `outline` (transparent, 1px border-default, 9999px), `nav-cta` (primary at `scale(0.92)`, 35px h), `ghost-inverse` (transparent + white 1px border + white text — hero hover state).
+- **Variants**: `primary` and `nav-cta` follow the theme `--primary`. On this app that is a white pill with dark text, because the theme is forced dark. `outline` is a transparent pill with a hairline border. `hero` is the old white-on-green canvas button and is not used on the home page.
 - **Spacing**: sm `6px 12px` (nav, 36px h) · default `8px 16px` · lg `12px 24px` (46px h).
 - **States**: default / hover `opacity: 0.95` (hero button: inverts to ghost-inverse) / active `translate-y-[1px]` / focus-visible `ring 3px accent/35% + 0.5px outline offset-2` / disabled `opacity-50 pointer-events-none`.
 - **Motion**: `0.16s cubic-bezier(0.25,0.46,0.45,0.94)` on scale/translate/opacity.
 
 ### Nav
-- 72px header, white (light) / surface-primary (dark), hairline bottom border; logo left; center links 16px/500, `6px 12px`, 6px radius, hover opens mega-menu (no color change); right cluster: outline pills + accent nav-cta.
+- 72px header on the dark page floor, hairline bottom border. Logo left, center links, outline **Sign In**, white **Get Started**. Hover opens the group menu.
 
 ### Announcement pill
 - Outline pill, 14px, mono separators (·), 1px border at accent/35% over canvas or border-default on white; optional trailing mono link.

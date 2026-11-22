@@ -15,7 +15,9 @@ function normalizeActionAttributes(attributes: Record<string, SearchableValue>) 
 export function initSessionReplay(): void {
   const apiKey = runtimeConfig.hyperdxApiKey || import.meta.env.VITE_HYPERDX_API_KEY;
   const url = runtimeConfig.hyperdxUrl || runtimeConfig.otelEndpoint || import.meta.env.VITE_HYPERDX_URL;
-  const disabled = runtimeConfig.hyperdxDisabled ?? (import.meta.env.VITE_HYPERDX_DISABLED === "true");
+  const disabled = runtimeConfig.hyperdxDisabled === true
+    || import.meta.env.VITE_HYPERDX_DISABLED === "true"
+    || import.meta.env.VITE_OTEL_SDK_DISABLED === "true";
   const apiBaseUrl = runtimeConfig.apiBaseUrl;
   if (!apiKey || !url || disabled) return;
 

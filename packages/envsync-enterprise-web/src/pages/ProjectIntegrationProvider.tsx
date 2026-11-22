@@ -29,6 +29,7 @@ import { appIntegrationsPath, orgIntegrationsPath } from "@shell/lib/app-routes"
 import {
   emptyFieldValues,
   enterpriseProviderUi,
+  providerLogo,
   extractKnownFieldValues,
   mergeFieldValuesIntoRecord,
   omitKnownFields,
@@ -127,7 +128,7 @@ function ProviderFieldEditor({
 export default function ProjectIntegrationProvider() {
   const { appId = "" } = useParams();
   const location = useLocation();
-  const providerId = (location.pathname.split("/").filter(Boolean).at(-1) ?? "github") as EnterpriseProvider;
+  const providerId = (location.pathname.split("/").filter(Boolean).at(-1) ?? "") as EnterpriseProvider;
   const copy = enterpriseProviderUi[providerId];
 
   const { data: project } = useQuery({
@@ -165,7 +166,7 @@ export default function ProjectIntegrationProvider() {
 
   const [bindingForm, setBindingForm] = useState({
     provider_connection_id: "",
-    metadataFields: emptyFieldValues(copy.bindingFields),
+    metadataFields: emptyFieldValues(copy?.bindingFields ?? []),
     metadataRaw: "{}",
   });
   const [mappingForm, setMappingForm] = useState({
@@ -174,7 +175,7 @@ export default function ProjectIntegrationProvider() {
     target_identifier: "",
     branch_ref: "",
     path_prefix: "",
-    metadataFields: emptyFieldValues(copy.mappingFields),
+    metadataFields: emptyFieldValues(copy?.mappingFields ?? []),
     metadataRaw: "{}",
   });
   const [bindingDrafts, setBindingDrafts] = useState<Record<string, BindingDraft>>({});
@@ -200,15 +201,15 @@ export default function ProjectIntegrationProvider() {
   useEffect(() => {
     setBindingForm((prev) => ({
       ...prev,
-      metadataFields: emptyFieldValues(copy.bindingFields),
+      metadataFields: emptyFieldValues(copy?.bindingFields ?? []),
       metadataRaw: "{}",
     }));
     setMappingForm((prev) => ({
       ...prev,
-      metadataFields: emptyFieldValues(copy.mappingFields),
+      metadataFields: emptyFieldValues(copy?.mappingFields ?? []),
       metadataRaw: "{}",
     }));
-  }, [copy.bindingFields, copy.mappingFields]);
+  }, [copy]);
 
   useEffect(() => {
     if (!bindingForm.provider_connection_id && eligibleConnections.length > 0) {
@@ -365,6 +366,17 @@ export default function ProjectIntegrationProvider() {
     window.location.href = appIntegrationsPath(appId);
   };
 
+  if (!copy) {
+    return (
+      <div className="space-y-3">
+        <h1 className="text-lg font-medium text-foreground">Integration not found</h1>
+        <Link to={appIntegrationsPath(appId)} className="text-sm text-muted-foreground">
+          Back to integrations
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -375,12 +387,15 @@ export default function ProjectIntegrationProvider() {
             Integrations
           </Button>
           <span className="text-zinc-600">/</span>
+          {providerLogo(providerId) ? (
+            <img src={providerLogo(providerId)} alt="" className="size-8 rounded-md" />
+          ) : null}
           <h1 className="text-lg font-medium text-foreground">
             {copy.name} {project?.name ? `— ${project.name}` : ""}
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={onRequestSync} size="sm" className="bg-emerald-600 text-foreground hover:bg-emerald-700">
+          <Button onClick={onRequestSync} size="sm">
             <RefreshCw className="mr-1.5 h-4 w-4" />
             Trigger Sync
           </Button>
@@ -412,19 +427,19 @@ export default function ProjectIntegrationProvider() {
         <TabsList className="h-auto rounded-none border-b border-border bg-transparent p-0 w-full justify-start gap-0">
           <TabsTrigger
             value="bindings"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Bindings
           </TabsTrigger>
           <TabsTrigger
             value="mappings"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Mappings
           </TabsTrigger>
           <TabsTrigger
             value="syncs"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Sync Runs
           </TabsTrigger>
@@ -690,7 +705,7 @@ export default function ProjectIntegrationProvider() {
                   <div
                     key={run.id}
                     className={`px-4 py-3 border-b border-border/50 last:border-0 cursor-pointer hover:bg-muted/30 transition-colors ${
-                      selectedSyncRunId === run.id ? "bg-emerald-500/5" : ""
+                      selectedSyncRunId === run.id ? "bg-accent" : ""
                     }`}
                     onClick={() => setSelectedSyncRunId(run.id)}
                   >
@@ -710,7 +725,7 @@ export default function ProjectIntegrationProvider() {
                         variant="outline"
                         className={`text-xs ${
                           run.status === "succeeded"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            ? "border-border text-accent-ink"
                             : run.status === "failed"
                               ? "bg-red-500/10 text-red-400 border-red-500/20"
                               : "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -760,7 +775,7 @@ export default function ProjectIntegrationProvider() {
                         variant="outline"
                         className={`text-xs ${
                           event.result === "success"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            ? "border-border text-accent-ink"
                             : event.result === "error"
                               ? "bg-red-500/10 text-red-400 border-red-500/20"
                               : "bg-zinc-500/10 text-muted-foreground border-zinc-500/20"

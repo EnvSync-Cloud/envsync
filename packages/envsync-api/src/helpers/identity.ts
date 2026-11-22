@@ -208,6 +208,53 @@ export async function setDirectoryUserPassword(userId: string, password: string)
 	}
 }
 
+export async function getDirectoryMfaEnabled(userId: string): Promise<boolean> {
+	const res = await managementFetch(`/users/${encodeURIComponent(userId)}/mfa/status`);
+	if (!res.ok) {
+		throw new Error(`Atrium MFA status failed: ${res.status}`);
+	}
+	const data = (await res.json()) as { mfa_enabled?: boolean };
+	return data.mfa_enabled === true;
+}
+
+export async function beginDirectoryMfa(userId: string): Promise<{
+	otpauth_url: string;
+	qr_image: string;
+	secret: string;
+}> {
+	const res = await managementFetch(`/users/${encodeURIComponent(userId)}/mfa/enable`, {
+		method: "POST",
+	});
+	if (!res.ok) {
+		throw new Error(`Atrium MFA setup failed: ${res.status}`);
+	}
+	const data = (await res.json()) as { qr_uri?: string; qr_base64?: string; secret?: string };
+	return {
+		otpauth_url: data.qr_uri ?? "",
+		qr_image: data.qr_base64 ? `data:image/png;base64,${data.qr_base64}` : "",
+		secret: data.secret ?? "",
+	};
+}
+
+export async function confirmDirectoryMfa(userId: string, code: string) {
+	const res = await managementFetch(`/users/${encodeURIComponent(userId)}/mfa/verify`, {
+		method: "POST",
+		body: JSON.stringify({ code }),
+	});
+	if (!res.ok) {
+		throw new Error(`Atrium MFA confirm failed: ${res.status}`);
+	}
+}
+
+export async function disableDirectoryMfa(userId: string) {
+	const res = await managementFetch(`/users/${encodeURIComponent(userId)}/mfa/disable`, {
+		method: "POST",
+	});
+	if (!res.ok) {
+		throw new Error(`Atrium MFA disable failed: ${res.status}`);
+	}
+}
+
 async function tokenRequest(body: URLSearchParams, dpopProof?: string): Promise<IdentityTokenSet> {
 	const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
 	if (dpopProof) headers.DPoP = dpopProof;

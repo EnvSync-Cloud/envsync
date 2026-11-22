@@ -1,125 +1,54 @@
 # EnvSync Web
 
-Dashboard shell for EnvSync (React + Vite). Lives in the monorepo at `apps/envsync-web`.
+Dashboard shell at `apps/envsync-web` (React, Vite, Tailwind). Agent notes: [AGENTS.md](./AGENTS.md).
 
-- **OSS build:** `bun run build:oss` — no enterprise modules  
-- **Enterprise / Hosted:** `build:enterprise` / `build:hosted` — injects `packages/envsync-enterprise-web`  
-- **API client:** `@envsync-cloud/envsync-ts-sdk` only (`BASE` = API origin; manage under `/api/v1/manage`)
+- OSS build: `bun run build:oss` — enterprise modules resolve to an empty stub.
+- Enterprise build: `bun run build:enterprise`.
+- Hosted build: `bun run build:hosted` — enterprise modules plus hosted deployment mode.
+- API client: `@envsync-cloud/envsync-ts-sdk` only. `BASE` is the API origin. Manage calls use `/api/v1/manage/...` on that origin.
 
-Agent notes: [AGENTS.md](./AGENTS.md)
+There is no separate management SPA.
 
-## ✨ What is EnvSync?
+## Develop
 
-EnvSync keeps your `.env` files, configuration secrets, and environment variables perfectly synchronized across development, staging, and production environments.
-
-**Key Benefits:**
-- 🔒 **Secure** - Encrypted at rest and in transit
-- ⚡ **Fast** - Real-time synchronization across environments  
-- 🌐 **Web-first** - Built for modern web development workflows
-- 🔧 **Developer-friendly** - Intuitive web interface
-
-## 🛠️ Tech Stack
-
-- **React** - UI library
-- **Vite** - Build tool and dev server
-- **TailwindCSS** - Utility-first CSS framework
-- **React Query** - Data fetching and state management
-- **Zod** - TypeScript-first schema validation
-
-## 🚀 Quick Start
-
-### Prerequisites
-- [Bun](https://bun.sh/) - JavaScript runtime and package manager
-
-### Installation
-
-From monorepo root:
+From the monorepo root, with Compose and `bun run cli:init` already done (see the root [README](../../README.md)):
 
 ```bash
-bun install
 bun run --filter envsync-web dev
 ```
 
-Local dashboard: `http://app.lvh.me:8001` (see root README). Prefer monorepo `.env` / `public/runtime-config.js` over a standalone clone.
+Open `http://app.lvh.me:8001`. Do not use `http://localhost:8001` for sign-in. The API allows the `app.lvh.me` origin, and Atrium sets the session cookie for `lvh.me`.
 
-## 📝 Available Scripts
+Runtime config is `window.__ENVSYNC_RUNTIME_CONFIG__` (`src/utils/runtime-config.ts`). `VITE_API_BASE_URL` is the fallback API origin. Hosted and self-host builds write the rest (app URL, auth URL, edition, deployment mode) into `public/runtime-config.js`.
+
+## Scripts
 
 ```bash
-# Start development server
-bun dev
-
-# Build for production
-bun run build
-
-# Preview production build
-bun run preview
-
-# Run linting
+bun run dev
+bun run build:oss
+bun run build:enterprise
+bun run build:hosted
 bun run lint
-```
-
-## 📁 Project Structure
-
-```
-envsync-web/
-├── src/
-│   ├── components/    # Reusable UI components
-│   ├── pages/         # Dashboard pages
-│   ├── hooks/         # Custom React hooks
-│   ├── lib/           # API clients & utilities
-|   ├── layout/        # Web Layouts
-|   └── contexts/      # React Context API
-└─── public/            # Static assets
-```
-
-## 🔧 Configuration
-
-### Required Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | EnvSync API backend URL | `https://api.envsync.cloud` |
-
-## 🏗️ Build & Deploy
-
-```bash
-bun run build
-```
-
-```bash
 bun run preview
 ```
 
-Deploy the `dist/` directory to any static hosting service (Vercel, Netlify, etc.).
+UI checks live on the `ui:*` scripts in `package.json` (`ui:smoke`, `ui:regression`, and the journey scripts). They are Playwright runs, separate from `packages/envsync-api` E2E.
 
-## 🌟 EnvSync Ecosystem
+## Layout
 
-- **[envsync-cli](https://github.com/envsync-cloud/envsync-cli)** - Command line interface
-- **[envsync-api](https://github.com/envsync-cloud/envsync-api)** - REST API and backend services  
-- **[envsync-landing](https://github.com/envsync-cloud/envsync-landing)** - Landing page
-- **envsync-web** - Web dashboard (this repo)
+```text
+src/
+  pages/         # feature directories
+  components/    # shared UI, including components/ui
+  api/           # React Query hooks
+  modules/       # dashboard route registration
+  layout/
+  hooks/
+  utils/         # runtime config
+```
 
-## 🤝 Contributing
+Enterprise pages are injected from `packages/envsync-enterprise-web` on enterprise and hosted builds.
 
-We're building the future of environment management! 
+## License
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 💬 Support & Community
-
-- 📧 **Email:** hi@envsync.com
-- 📖 **Blog:** [blog.envsync.com](https://blog.envsync.com)
-
----
-
-**Making environment configuration simple, secure, and synchronized** 🌟
-
-Built with ❤️ by the EnvSync team using [Loveable](https://loveable.dev)
+The shell is on the MIT side of the monorepo. See the root [LICENSE](../../LICENSE) and [EDITIONING.md](../../EDITIONING.md).

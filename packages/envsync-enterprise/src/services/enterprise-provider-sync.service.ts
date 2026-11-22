@@ -474,33 +474,53 @@ export class EnterpriseProviderSyncService {
 			throw new ValidationError("CircleCI connection requires api_token or api_token_secret_ref.", "ENTERPRISE_CIRCLECI_AUTH_MISSING");
 		}
 
-		const orgId = asString(context.connection.auth_config.org_id);
-		if (!orgId) {
-			throw new ValidationError("CircleCI connection requires org_id.", "ENTERPRISE_CIRCLECI_ORG_MISSING");
-		}
-
+		const contextId = asString(context.mapping.metadata.context_id)
+			?? asString(context.binding.metadata.context_id)
+			?? asString(context.connection.auth_config.context_id)
+			?? asString(context.connection.auth_config.org_id);
 		const projectSlug = context.mapping.target_identifier;
-		const contextName = asString(context.mapping.metadata.context_name) ?? "project";
 
 		for (const item of context.items) {
 			const key = this.buildRemoteKey(item, context);
+			if (contextId) {
+				await fetchJson(
+					`https://circleci.com/api/v2/context/${encodeURIComponent(contextId)}/environment-variable/${encodeURIComponent(key)}`,
+					{
+						method: "PUT",
+						headers: {
+							"Circle-Token": token,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ value: item.value }),
+					},
+					[404],
+				);
+				continue;
+			}
+
+			if (!projectSlug) {
+				throw new ValidationError(
+					"CircleCI mapping needs a project slug like gh/org/repo, or a context ID.",
+					"ENTERPRISE_CIRCLECI_TARGET_MISSING",
+				);
+			}
+
 			await fetchJson(
-				`https://circleci.com/api/v2/context/${encodeURIComponent(orgId)}/environment-variable/${encodeURIComponent(key)}`,
+				`https://circleci.com/api/v2/project/${encodeURIComponent(projectSlug)}/envvar`,
 				{
-					method: "PUT",
+					method: "POST",
 					headers: {
 						"Circle-Token": token,
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({ value: item.value }),
+					body: JSON.stringify({ name: key, value: item.value }),
 				},
-				[404],
 			);
 		}
 
 		return {
 			written_count: context.items.length,
-			target: { project: projectSlug, context: contextName },
+			target: { project: projectSlug || null, context: contextId || null },
 		};
 	}
 

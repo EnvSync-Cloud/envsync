@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/api";
@@ -20,9 +20,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Count } from "@/components/ui/count";
 import { PageError } from "@/components/ui/page-error";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ProjectSettingsTabs } from "@/components/ProjectSettingsTabs";
 import { useAuthContext } from "@/contexts/auth";
 import { API_KEYS } from "@/constants";
@@ -46,6 +52,20 @@ function tokenStatus(token: ServiceToken) {
 
 function accessLabel(token: ServiceToken) {
   return token.permissions?.write ? "Read & Write" : "Read";
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const className =
+    status === "Active"
+      ? "border-border font-normal text-accent-ink"
+      : status === "Rotating"
+        ? "border-border font-normal text-amber-200"
+        : "border-border font-normal text-muted-foreground";
+  return (
+    <Badge variant="outline" className={className}>
+      {status}
+    </Badge>
+  );
 }
 
 function isForbiddenError(error: unknown) {
@@ -190,13 +210,15 @@ export const ServiceTokens = () => {
   const isEmpty = !isPageLoading && !isForbidden && tokens.length === 0;
 
   return (
-    <div className="animate-page-enter space-y-6">
-      {appId ? <ProjectSettingsTabs appId={appId} active="tokens" /> : null}
       <PageShell
-        title="Service Tokens"
-        description="Create project-scoped service tokens with environment and secrets-path access."
-        icon={KeyRound}
-        isLoading={isPageLoading}
+        title="Service tokens"
+        description="Project tokens for CI and other machines. Each token is limited to the environments and paths you set."
+        secondaryNav={appId ? <ProjectSettingsTabs appId={appId} active="tokens" /> : null}
+        stats={
+          !isForbidden && tokens.length > 0
+            ? [{ label: tokens.length === 1 ? "token" : "tokens", value: tokens.length }]
+            : undefined
+        }
         actions={
           canManage ? (
             <Button
@@ -204,8 +226,8 @@ export const ServiceTokens = () => {
               disabled={createToken.isPending}
               data-testid="create-service-token"
             >
-              <Plus className="mr-2 size-4" />
-              Create Service Token
+              <Plus className="size-4" />
+              Create token
             </Button>
           ) : undefined
         }
@@ -227,156 +249,106 @@ export const ServiceTokens = () => {
           mode={revealMode}
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <KeyRound className="mr-3 size-8 rounded-md border border-emerald-600 bg-emerald-400 p-2 stroke-[3] text-white" />
-              Service Tokens
-              <Count count={tokens.length} size="xl" variant="subtle" className="ml-2" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isForbidden ? (
-              <div className="py-12 text-center" data-testid="service-tokens-forbidden">
-                <KeyRound className="mx-auto mb-4 size-16 text-muted-foreground" />
-                <h3 className="mb-2 text-xl font-medium text-foreground">
-                  You do not have access
-                </h3>
-                <p className="mx-auto max-w-md text-muted-foreground">
-                  Service tokens require the manage API keys permission.
-                </p>
-              </div>
-            ) : isEmpty ? (
-              <div className="py-12 text-center">
-                <KeyRound className="mx-auto mb-4 size-16 text-muted-foreground" />
-                <h3 className="mb-2 text-xl font-medium text-foreground">No service tokens</h3>
-                <p className="mx-auto mb-6 max-w-md text-muted-foreground">
-                  Create a service token to let CI and other machines read or write this
-                  project&apos;s secrets.
-                </p>
-                <Button onClick={() => setIsCreateOpen(true)} disabled={createToken.isPending}>
-                  <Plus className="mr-2 size-4" />
-                  Create Service Token
-                </Button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      {["Name", "Scopes", "Access", "Expires", "Last used", "Status"].map(
-                        (header) => (
-                          <th
-                            key={header}
-                            className="px-4 py-3 text-left font-medium text-muted-foreground"
-                          >
-                            {header}
-                          </th>
-                        ),
-                      )}
-                      <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isPageLoading
-                      ? Array.from({ length: 4 }, (_, index) => (
-                          <tr key={index} className="animate-pulse">
-                            {Array.from({ length: 7 }, (__, cellIndex) => (
-                              <td key={cellIndex} className="px-4 py-4">
-                                <div className="h-4 w-3/4 rounded bg-muted" />
-                              </td>
-                            ))}
-                          </tr>
-                        ))
-                      : tokens.map((token) => {
-                          const status = tokenStatus(token);
-                          const busy = Boolean(actionLoading[token.id]);
-                          return (
-                            <tr
-                              key={token.id}
-                              className="border-b border-border transition-colors hover:bg-muted/50"
-                              data-testid={`service-token-row-${token.id}`}
+        {isPageLoading ? (
+          <div className="h-64 animate-pulse rounded-lg border border-border bg-card" />
+        ) : isForbidden ? (
+          <p className="text-sm text-muted-foreground" data-testid="service-tokens-forbidden">
+            Service tokens require the manage API keys permission.
+          </p>
+        ) : isEmpty ? (
+          <p className="text-sm text-muted-foreground">
+            No service tokens. Create one so CI can read or write this project&apos;s secrets.
+          </p>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead>Name</TableHead>
+                  <TableHead>Scopes</TableHead>
+                  <TableHead>Access</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead>Last used</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tokens.map((token) => {
+                  const status = tokenStatus(token);
+                  const busy = Boolean(actionLoading[token.id]);
+                  return (
+                    <TableRow
+                      key={token.id}
+                      className="border-border"
+                      data-testid={`service-token-row-${token.id}`}
+                    >
+                      <TableCell>
+                        <span className="block font-medium text-foreground">{token.name}</span>
+                        <span className="font-mono text-xs text-muted-foreground">{token.id}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(token.scopes ?? []).map((scope, index) => (
+                            <Badge
+                              key={`${token.id}-scope-${index}`}
+                              variant="outline"
+                              className="border-border font-normal"
                             >
-                              <td className="px-4 py-4">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-foreground">{token.name}</span>
-                                  <span className="font-mono text-xs text-muted-foreground">
-                                    ID: {token.id}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex flex-wrap gap-1">
-                                  {(token.scopes ?? []).map((scope, index) => (
-                                    <Badge key={`${token.id}-scope-${index}`} variant="outline">
-                                      {scope.env_type_id
-                                        ? environmentNameById.get(scope.env_type_id) ?? "Environment"
-                                        : "All Environments"}
-                                      {` ${scope.path || "/"}`}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="px-4 py-4 text-sm text-muted-foreground">
-                                {accessLabel(token)}
-                              </td>
-                              <td className="px-4 py-4 text-sm text-muted-foreground">
-                                {formatDate(token.expires_at)}
-                              </td>
-                              <td className="px-4 py-4 text-sm text-muted-foreground">
-                                {formatLastUsed(token.last_used_at)}
-                              </td>
-                              <td className="px-4 py-4">
-                                <Badge
-                                  className={
-                                    status === "Active"
-                                      ? "border-green-800 bg-green-900 text-green-300"
-                                      : status === "Rotating"
-                                        ? "border-amber-800 bg-amber-900 text-amber-300"
-                                        : "border-border bg-muted text-muted-foreground"
-                                  }
-                                >
-                                  {status}
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center justify-end space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRotate(token)}
-                                    disabled={busy || Boolean(token.grace_until)}
-                                    title="Rotate service token"
-                                    data-testid={`rotate-service-token-${token.id}`}
-                                  >
-                                    <RefreshCw className="size-3" />
-                                    <span className="ml-2">Rotate</span>
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRevoke(token)}
-                                    disabled={busy}
-                                    className="border-red-600 text-red-400 hover:bg-red-900/20 hover:text-red-300"
-                                    title="Revoke service token"
-                                    data-testid={`revoke-service-token-${token.id}`}
-                                  >
-                                    <Trash2 className="size-3" />
-                                    <span className="ml-2">Revoke</span>
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                              {scope.env_type_id
+                                ? environmentNameById.get(scope.env_type_id) ?? "Environment"
+                                : "All environments"}
+                              {` ${scope.path || "/"}`}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {accessLabel(token)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatDate(token.expires_at)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatLastUsed(token.last_used_at)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={status} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRotate(token)}
+                            disabled={busy || Boolean(token.grace_until)}
+                            title="Rotate service token"
+                            data-testid={`rotate-service-token-${token.id}`}
+                          >
+                            <RefreshCw className="size-3" />
+                            Rotate
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRevoke(token)}
+                            disabled={busy}
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            title="Revoke service token"
+                            data-testid={`revoke-service-token-${token.id}`}
+                          >
+                            <Trash2 className="size-3" />
+                            Revoke
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
         <AlertDialog open={Boolean(pendingRotate)} onOpenChange={(open) => !open && setPendingRotate(null)}>
           <AlertDialogContent>
@@ -424,7 +396,6 @@ export const ServiceTokens = () => {
           </AlertDialogContent>
         </AlertDialog>
       </PageShell>
-    </div>
   );
 };
 

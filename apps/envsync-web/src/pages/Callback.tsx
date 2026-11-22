@@ -75,7 +75,7 @@ const Callback = () => {
         {failed && (
           <Link
             to="/login"
-            className="text-sm text-emerald-400 underline-offset-4 hover:underline"
+            className="text-sm text-accent-ink underline-offset-4 hover:underline"
           >
             Back to sign in
           </Link>

@@ -82,7 +82,7 @@ export const VariableHistoryDrawer = ({
 		switch (operation) {
 			case "CREATE":
 				return (
-					<Badge className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+					<Badge variant="outline" className="border-border font-normal text-accent-ink">
 						Created
 					</Badge>
 				);
@@ -152,13 +152,13 @@ export const VariableHistoryDrawer = ({
 			<DialogContent className="flex max-h-[90vh] max-w-3xl flex-col border-border bg-card text-foreground">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-xl">
-						<History className="size-5 text-emerald-400" />
+						<History className="size-5 text-muted-foreground" />
 						Version History
 					</DialogTitle>
 					<DialogDescription className="text-muted-foreground">
 						{variable ? (
 							<span>
-								Viewing timeline for <code className="font-mono text-emerald-400">{variable.key}</code>
+								Viewing timeline for <code className="font-mono text-foreground">{variable.key}</code>
 							</span>
 						) : (
 							"Select a variable to view its history"
@@ -224,21 +224,21 @@ export const VariableHistoryDrawer = ({
 
 											<div className="grid gap-3 md:grid-cols-3">
 												<div className="space-y-1">
-													<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+													<p className="flex items-center gap-2 text-xs text-tertiary">
 														<GitBranch className="size-3" />
 														PIT ID
 													</p>
 													<p className="font-mono text-xs text-muted-foreground">{entry.pit_id}</p>
 												</div>
 												<div className="space-y-1">
-													<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+													<p className="flex items-center gap-2 text-xs text-tertiary">
 														<User className="size-3" />
 														Changed by
 													</p>
 													<p className="text-sm text-foreground">{entry.user_id}</p>
 												</div>
 												<div className="space-y-1">
-													<p className="text-xs uppercase tracking-wide text-tertiary">Message</p>
+													<p className="text-xs text-tertiary">Message</p>
 													<p className="text-sm text-foreground">{entry.change_request_message}</p>
 												</div>
 											</div>
@@ -248,7 +248,7 @@ export const VariableHistoryDrawer = ({
 													<Separator className="my-3 bg-muted" />
 													<div className="space-y-2">
 														<div className="flex items-center justify-between">
-															<p className="text-xs uppercase tracking-wide text-tertiary">Value</p>
+															<p className="text-xs text-tertiary">Value</p>
 															{isSecrets && (
 																<Button
 																	type="button"

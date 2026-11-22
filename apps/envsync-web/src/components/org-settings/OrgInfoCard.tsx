@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Globe } from "lucide-react";
 import { FormData, FormErrors } from "@/constants";
 import { LogoUpload } from "./LogoUpload";
 
@@ -34,15 +33,12 @@ export const OrgInfoCard = ({
   logoPreview,
 }: OrgInfoCardProps) => {
   return (
-    <Card className="bg-card text-card-foreground border-border/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border rounded-xl">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Globe className="size-8 mr-1 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
-            <CardTitle className="text-foreground">
-              Organization Information
-            </CardTitle>
-          </div>
+          <CardTitle className="text-foreground">
+            Organization Information
+          </CardTitle>
           {hasUnsavedChanges && (
             <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
               Unsaved changes
@@ -133,7 +129,7 @@ export const OrgInfoCard = ({
 
         <div className="flex gap-2">
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+            
             onClick={onSaveChanges}
             disabled={isSaving || !hasUnsavedChanges}
           >
@@ -148,7 +144,7 @@ export const OrgInfoCard = ({
           </Button>
           {hasUnsavedChanges && (
             <Button
-              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-foreground/80"
+              variant="outline"
               onClick={onResetChanges}
             >
               Cancel Changes

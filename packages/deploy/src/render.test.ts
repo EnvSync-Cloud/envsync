@@ -339,8 +339,13 @@ describe("renderAtriumClients", () => {
 		expect(clients).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(clients).toContain("https://app.enterprise.example.com/auth/callback");
 		expect(configYaml).toContain("issuer: \"https://auth.enterprise.example.com\"");
-		expect(configYaml).toContain("disable_passwords: true");
-		expect(configYaml).toContain("passwordless_mode: otp");
+		expect(configYaml).toContain("identifier_first: true");
+		expect(configYaml).not.toContain("disable_passwords:");
+		expect(configYaml).not.toContain("passwordless_mode:");
+		expect(configYaml).toContain("support_url: \"https://enterprise.example.com/onboarding\"");
+		expect(configYaml).toContain("id: github");
+		expect(configYaml).toContain("id: gitlab");
+		expect(configYaml).toContain("issuer: EnvSync");
 		expect(configYaml).toContain('data_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="');
 		expect(configYaml).toContain("access_token_lifetime: 1h");
 		expect(configYaml).toContain("refresh_token_lifetime: 168h");

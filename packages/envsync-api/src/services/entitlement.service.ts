@@ -20,6 +20,7 @@ import {
 	type VerifiedEntitlement,
 } from "@/services/entitlement.types";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { PlanService } from "@/services/plan.service";
 
 const ENTITLEMENT_ISS = "envsync-license-server";
 const DEFAULT_GRACE_SECONDS = 72 * 60 * 60; // 72h grace after exp (Coder-like)
@@ -334,7 +335,6 @@ export class EntitlementService {
 		if (!EditionPolicyService.isHosted()) {
 			return ceiling;
 		}
-		const { PlanService } = await import("@/services/plan.service");
 		const resolved = await PlanService.resolve(orgId);
 		const granted = new Set(resolved.features);
 		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
@@ -390,7 +390,6 @@ export class EntitlementService {
 			return;
 		}
 
-		const { PlanService } = await import("@/services/plan.service");
 		const resolved = await PlanService.resolve(orgId);
 		if (!resolved.features.includes(feature)) {
 			throw new ForbiddenError(

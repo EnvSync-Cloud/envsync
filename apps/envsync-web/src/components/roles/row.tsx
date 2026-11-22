@@ -109,7 +109,7 @@ export const RoleRow = ({ role }: RoleRowProps) => {
       <td className="p-4">
         <span className="text-sm text-muted-foreground">
           {accessLevelIcon[role.accessLevel]}
-          {role.accessLevel.toUpperCase()}
+          {role.accessLevel}
         </span>
       </td>
       <td className="p-4">
@@ -118,18 +118,10 @@ export const RoleRow = ({ role }: RoleRowProps) => {
             role.features.map((feature) => (
               <span
                 key={feature}
-                className={`text-xs flex-nowrap flex items-center px-2 py-1 rounded ${
-                  feature === "billing"
-                    ? "bg-green-900 text-green-300"
-                    : feature === "webhook"
-                    ? "bg-emerald-300 text-emerald-900"
-                    : feature === "api"
-                    ? "bg-yellow-900 text-yellow-300"
-                    : "bg-muted text-muted-foreground"
-                }`}
+                className="flex flex-nowrap items-center gap-1 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground"
               >
                 {featuresIcons[feature] || null}
-                {feature.toUpperCase()}
+                {feature}
               </span>
             ))
           ) : (

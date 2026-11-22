@@ -29,7 +29,7 @@ export const PasswordResetModal = ({
       <DialogContent className="bg-muted border-border">
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center">
-            <Key className="w-5 h-5 text-emerald-500 mr-2" />
+            <Key className="mr-2 size-4 text-muted-foreground" />
             Reset Password
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -40,12 +40,12 @@ export const PasswordResetModal = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-4">
+          <div className="rounded-lg border border-border bg-background p-4">
             <div className="flex items-start space-x-3">
-              <Key className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-emerald-200">
-                <p className="font-medium mb-1">What happens next:</p>
-                <ul className="list-disc list-inside space-y-1 text-emerald-300">
+              <Key className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="text-sm text-muted-foreground">
+                <p className="mb-1 font-medium text-foreground">What happens next:</p>
+                <ul className="list-inside list-disc space-y-1">
                   <li>
                     Password reset email sent to: <strong>{userEmail}</strong>
                   </li>

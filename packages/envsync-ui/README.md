@@ -46,4 +46,4 @@ export default {
 - `apps/envsync-landing`
 - `packages/envsync-enterprise-web` (via shell or direct package)
 
-Brand anchor: `--primary: 153 74% 44%`.
+Light theme `--primary` is `153 74% 44%` (EnvSync green) with dark label text. Dark theme `--primary` is near-white (`0 0% 98%`) with near-black label text, so primary buttons stay readable on dark surfaces. Green on a dark surface is `--accent-ink` / `--accent-tint`, not `--primary`.

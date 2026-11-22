@@ -226,7 +226,7 @@ export const RoleEditForm = ({
           })
         ) : (
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+            
             disabled={createRoleMutation.isPending}
           >
             <Plus className="size-4 mr-2" />
@@ -269,7 +269,7 @@ export const RoleEditForm = ({
             <Label className="text-foreground">Permissions</Label>
             {PERMISSION_GROUPS.map((group) => (
               <div key={group.label} className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <p className="text-xs font-medium text-muted-foreground">
                   {group.label}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -287,14 +287,14 @@ export const RoleEditForm = ({
                         key={perm.key}
                         className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
                           isChecked
-                            ? "border-emerald-500 bg-emerald-500/10"
+                            ? "border-foreground bg-accent"
                             : "border-border bg-card hover:border-muted-foreground"
                         }`}
                       >
                         <Checkbox
                           checked={isChecked || isInherited}
                           onCheckedChange={() => togglePermission(perm.key)}
-                          className="border-border data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                          className="border-border"
                         />
                         <Icon size={14} className="text-muted-foreground shrink-0" />
                         <span className="text-sm text-foreground truncate">
@@ -307,7 +307,7 @@ export const RoleEditForm = ({
               </div>
             ))}
             {permissions.is_admin && (
-              <p className="text-xs text-emerald-400">
+              <p className="text-xs text-muted-foreground">
                 Admin inherits all management permissions via FGA.
               </p>
             )}

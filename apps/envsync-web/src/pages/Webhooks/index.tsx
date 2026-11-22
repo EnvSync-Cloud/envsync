@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -28,7 +28,6 @@ import { useCopy } from "@/hooks/useClipboard";
 import { cn, formatDate, formatLastUsed } from "@/lib/utils";
 import { CreateWebhookRequest } from "@envsync-cloud/envsync-ts-sdk";
 import { WEBHOOK_EVENT_CATEGORIES } from "@/constants";
-import { Count } from "@/components/ui/count";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   CreateWebhookDialog,
@@ -280,8 +279,8 @@ export const WebHooks = () => {
     <div className="animate-page-enter space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-            <Webhook className="size-5 text-emerald-400" />
+          <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+            <Webhook className="size-5 text-muted-foreground" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground tracking-tight">Webhooks</h1>
@@ -293,7 +292,7 @@ export const WebHooks = () => {
         </div>
 
         <Button
-          className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+          
           disabled={createWebhook.isPending}
           onClick={() => setIsCreateModalOpen(true)}
         >
@@ -317,20 +316,8 @@ export const WebHooks = () => {
         />
       </div>
 
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center">
-            <Webhook className="size-8 mr-3 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
-            Webhooks
-            <Count
-              className="ml-2"
-              count={webhooks?.length}
-              variant="subtle"
-              size="xl"
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-border bg-card text-card-foreground">
+        <CardContent className="pt-6">
           {isEmpty ? (
             <div className="text-center py-12 rounded-xl bg-card/40 border border-dashed border-border">
               <Webhook className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -344,7 +331,7 @@ export const WebHooks = () => {
               </p>
               <Button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+                
                 disabled={createWebhook.isPending}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -463,13 +450,8 @@ export const WebHooks = () => {
                           </td>
                           <td className="py-4 px-4">
                             <Badge
-                              variant="secondary"
-                              className={cn(
-                                "text-xs flex items-center gap-1 w-fit bg-emerald-900/20 text-foreground/60",
-                                WEBHOOK_TYPES.find(
-                                  (t) => t.value === webhook.webhook_type
-                                )?.color
-                              )}
+                              variant="outline"
+                              className="flex w-fit items-center gap-1 border-border text-xs font-normal text-foreground"
                             >
                               {getWebhookTypeIcon(webhook.webhook_type)}
                               {WEBHOOK_TYPES.find(
@@ -489,9 +471,9 @@ export const WebHooks = () => {
                                     className={cn(
                                       "rounded-full size-2 mr-1",
                                       event.includes("view")
-                                        ? "bg-emerald-500"
+                                        ? "bg-foreground/40"
                                         : event.includes("create")
-                                        ? "bg-emerald-500"
+                                        ? "bg-foreground/40"
                                         : event.includes("update")
                                         ? "bg-amber-500"
                                         : event.includes("delete")
@@ -517,11 +499,12 @@ export const WebHooks = () => {
                           <td className="py-4 px-4">
                             <div className="flex items-center space-x-2">
                               <Badge
-                                className={`${
+                                variant="outline"
+                                className={
                                   webhook.is_active
-                                    ? "bg-green-900 text-green-300 border-green-800"
-                                    : "bg-muted text-muted-foreground border-border"
-                                } border`}
+                                    ? "border-border font-normal text-accent-ink"
+                                    : "border-border font-normal text-muted-foreground"
+                                }
                               >
                                 {webhook.is_active ? "Active" : "Inactive"}
                               </Badge>

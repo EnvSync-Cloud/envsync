@@ -313,7 +313,6 @@ export function SamlProviderSheet({
             <Button
               type="submit"
               disabled={pending}
-              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {pending ? "Saving…" : editing ? "Save changes" : "Add IdP"}
             </Button>

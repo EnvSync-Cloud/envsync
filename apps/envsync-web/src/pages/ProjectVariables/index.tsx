@@ -292,7 +292,7 @@ export const ProjectEnvironments = () => {
             </Button>
             <Button
               onClick={() => navigate(appEnvironmentsPath(appId ?? ""))}
-              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+              
             >
               <Settings className="w-4 h-4 mr-2" />
               Create Environment Type
@@ -304,9 +304,8 @@ export const ProjectEnvironments = () => {
   }
 
   return (
-    <div>
-      <div className="mx-auto max-w-[1600px] px-5 md:px-6 py-6">
-        <EnvironmentVariablesTable
+    <>
+      <EnvironmentVariablesTable
           selectedEnvironment={selectedEnvironment}
           setSelectedEnvironment={setSelectedEnvironment}
           variables={environmentVariables}
@@ -339,8 +338,6 @@ export const ProjectEnvironments = () => {
           }
           onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
         />
-      </div>
-
       <AddEnvVarModal
         open={showAddModal}
         onOpenChange={setShowAddModal}
@@ -383,7 +380,7 @@ export const ProjectEnvironments = () => {
         isOpen={showHistoryDrawer}
         onOpenChange={setShowHistoryDrawer}
       />
-    </div>
+    </>
   );
 };
 

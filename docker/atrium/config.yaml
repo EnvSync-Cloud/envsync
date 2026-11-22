@@ -16,7 +16,9 @@ security:
   refresh_token_lifetime: 168h
   session_lifetime: 168h
   disable_registration: true
-  disable_social_registration: true
+  disable_social_registration: false
+  mfa:
+    issuer: EnvSync
   hash_algo: internal/hashalgo/algo.go
   # Local and CI only. Atrium refuses to serve without a 32-byte key.
   data_key: "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=" # gitleaks:allow
@@ -60,4 +62,27 @@ branding:
   text_color: "#f5f5f6"
   show_register: false
   show_forgot_password: true
+  # Sign-in page "Get Started" link. Point this at the landing onboarding page.
+  support_url: "http://localhost:8002/onboarding"
   templates: /branding/templates
+
+# GitHub callback: http://auth.lvh.me:8080/login/social/github/callback
+# GitLab callback: http://auth.lvh.me:8080/login/social/gitlab/callback
+# Replace the client id and secret with the OAuth app. Buttons stay on the
+# sign-in page with these placeholders so the layout can be reviewed.
+# New social accounts stay off while security.disable_registration is true.
+# An email that already has a password is not linked to the provider.
+social:
+  providers:
+    - id: github
+      type: github
+      name: GitHub
+      enabled: true
+      client_id: "replace-me-github"
+      client_secret: "replace-me-github"
+    - id: gitlab
+      type: gitlab
+      name: GitLab
+      enabled: true
+      client_id: "replace-me-gitlab"
+      client_secret: "replace-me-gitlab"

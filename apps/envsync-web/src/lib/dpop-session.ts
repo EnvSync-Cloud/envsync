@@ -1,4 +1,8 @@
+import { p256 } from "@noble/curves/nist.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+
 import { runtimeConfig } from "@/utils/runtime-config";
+import { createUuid } from "@/utils/uuid";
 
 const DB_NAME = "envsync-dpop";
 const STORE = "keys";
@@ -6,8 +10,14 @@ const KEY_ID = "session";
 const LOGIN_STATE_KEY = "envsync_login_state";
 const DPOP_COOKIE = "envsync_dpop";
 
+/** P-256 key kept for http://*.lvh.me, where browsers hide crypto.subtle. */
+export type SoftwarePrivateKey = {
+  software: "p256";
+  d: string;
+};
+
 export type DeviceKey = {
-  privateKey: CryptoKey;
+  privateKey: CryptoKey | SoftwarePrivateKey;
   publicJwk: JsonWebKey;
 };
 
@@ -147,20 +157,52 @@ export async function loadDeviceKey(): Promise<DeviceKey | null> {
   return record;
 }
 
-export async function ensureDeviceKey(): Promise<DeviceKey> {
-  const existing = await loadDeviceKey();
-  if (existing) return existing;
-  if (typeof indexedDB === "undefined" || !crypto.subtle) {
-    throw new Error("This browser cannot store a device key.");
-  }
+function isSoftwarePrivateKey(key: DeviceKey["privateKey"]): key is SoftwarePrivateKey {
+  return typeof key === "object" && key !== null && "software" in key && key.software === "p256";
+}
 
+function localInsecureDevHost() {
+  if (typeof window === "undefined" || window.isSecureContext) return false;
+  const host = window.location.hostname;
+  return host === "localhost"
+    || host === "127.0.0.1"
+    || host.endsWith(".lvh.me")
+    || host.endsWith(".localhost");
+}
+
+function base64UrlToBytes(value: string) {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/")
+    + "=".repeat((4 - (value.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function generateSoftwareDeviceKey(): DeviceKey {
+  const { secretKey } = p256.keygen();
+  const uncompressed = p256.getPublicKey(secretKey, false);
+  return {
+    privateKey: { software: "p256", d: bytesToBase64Url(secretKey) },
+    publicJwk: {
+      kty: "EC",
+      crv: "P-256",
+      x: bytesToBase64Url(uncompressed.slice(1, 33)),
+      y: bytesToBase64Url(uncompressed.slice(33, 65)),
+    },
+  };
+}
+
+async function generateWebCryptoDeviceKey(): Promise<DeviceKey> {
   const pair = await crypto.subtle.generateKey(
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"],
   );
   const exported = await crypto.subtle.exportKey("jwk", pair.publicKey);
-  const record: DeviceKey = {
+  return {
     privateKey: pair.privateKey,
     publicJwk: {
       kty: exported.kty,
@@ -169,6 +211,40 @@ export async function ensureDeviceKey(): Promise<DeviceKey> {
       y: exported.y,
     },
   };
+}
+
+async function sha256Bytes(data: Uint8Array) {
+  if (crypto.subtle) {
+    return new Uint8Array(await crypto.subtle.digest("SHA-256", data as BufferSource));
+  }
+  return sha256(data);
+}
+
+async function signEs256(key: DeviceKey["privateKey"], data: Uint8Array) {
+  if (isSoftwarePrivateKey(key)) {
+    return p256.sign(data, base64UrlToBytes(key.d), { lowS: true, prehash: true });
+  }
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    data as BufferSource,
+  );
+  return new Uint8Array(signature);
+}
+
+export async function ensureDeviceKey(): Promise<DeviceKey> {
+  const existing = await loadDeviceKey();
+  if (existing) return existing;
+  if (typeof indexedDB === "undefined") {
+    throw new Error("This browser cannot store a device key.");
+  }
+  if (!crypto.subtle && !localInsecureDevHost()) {
+    throw new Error("This page is not a secure context, so the browser will not create a sign-in key.");
+  }
+
+  const record = crypto.subtle
+    ? await generateWebCryptoDeviceKey()
+    : generateSoftwareDeviceKey();
   await idbRequest("readwrite", (store) => store.put(record, KEY_ID));
   return record;
 }
@@ -200,22 +276,15 @@ export async function signProof(input: {
     htm: input.method.toUpperCase(),
     htu: proofUrl(input.url),
     iat: Math.floor(Date.now() / 1000),
-    jti: crypto.randomUUID(),
+    jti: createUuid(),
   };
   if (input.accessToken) {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(input.accessToken),
-    );
-    claims.ath = bytesToBase64Url(new Uint8Array(digest));
+    const digest = await sha256Bytes(new TextEncoder().encode(input.accessToken));
+    claims.ath = bytesToBase64Url(digest);
   }
   const signingInput = `${jsonToBase64Url(header)}.${jsonToBase64Url(claims)}`;
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    input.key.privateKey,
-    new TextEncoder().encode(signingInput),
-  );
-  return `${signingInput}.${bytesToBase64Url(new Uint8Array(signature))}`;
+  const signature = await signEs256(input.key.privateKey, new TextEncoder().encode(signingInput));
+  return `${signingInput}.${bytesToBase64Url(signature)}`;
 }
 
 async function refreshFromCookie(): Promise<string | null> {

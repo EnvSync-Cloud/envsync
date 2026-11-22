@@ -88,7 +88,7 @@ export const DeleteEnvVarModal = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
+                <code className="rounded bg-muted px-2 py-1 font-mono text-sm text-foreground">
                   {variable.key}
                 </code>
               </div>

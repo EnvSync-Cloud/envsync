@@ -138,7 +138,7 @@ export const PitHistoryTable = ({
 												{truncatePitId(pit.id)}
 											</span>
 											{isSelected && (
-												<Badge className="w-fit border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+												<Badge variant="outline" className="w-fit border-border font-normal text-accent-ink">
 													Selected
 												</Badge>
 											)}

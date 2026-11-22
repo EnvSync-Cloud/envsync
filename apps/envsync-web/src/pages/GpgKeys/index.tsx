@@ -178,7 +178,7 @@ const GpgKeys = () => {
       return <Badge className="bg-yellow-600">Expired</Badge>;
     if (key.expires_at && new Date(key.expires_at).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000)
       return <Badge className="bg-amber-600">Expiring</Badge>;
-    return <Badge className="bg-emerald-600">Active</Badge>;
+    return <Badge variant="outline" className="border-border font-normal text-accent-ink">Active</Badge>;
   };
 
   if (isLoading) {
@@ -194,8 +194,8 @@ const GpgKeys = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-            <KeyRound className="size-5 text-emerald-400" />
+          <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+            <KeyRound className="size-5 text-muted-foreground" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-foreground tracking-tight">GPG Keys</h1>
@@ -261,7 +261,7 @@ const GpgKeys = () => {
                     <Textarea
                       value={signResult}
                       readOnly
-                      className="bg-card border-border text-green-400 min-h-[100px] font-mono text-xs"
+                      className="min-h-[100px] border-border bg-card font-mono text-xs text-foreground"
                     />
                     <Button
                       variant="ghost"
@@ -331,10 +331,10 @@ const GpgKeys = () => {
                   </Select>
                 </div>
                 {verifyResult && (
-                  <div className={`p-3 rounded-lg ${verifyResult.valid ? "bg-emerald-900/30 border border-emerald-700" : "bg-red-900/30 border border-red-700"}`}>
+                  <div className={`rounded-lg border p-3 ${verifyResult.valid ? "border-border bg-card" : "border-red-800 bg-red-950/40"}`}>
                     <div className="flex items-center gap-2">
                       {verifyResult.valid ? (
-                        <><CheckCircle className="w-5 h-5 text-emerald-400" /><span className="text-emerald-400 font-medium">Valid Signature</span></>
+                        <><CheckCircle className="size-4 text-accent-ink" /><span className="font-medium text-accent-ink">Valid signature</span></>
                       ) : (
                         <><XCircle className="w-5 h-5 text-red-400" /><span className="text-red-400 font-medium">Invalid Signature</span></>
                       )}
@@ -404,7 +404,7 @@ const GpgKeys = () => {
           {/* Generate Dialog */}
           <Dialog open={isGenerateOpen} onOpenChange={setIsGenerateOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-emerald-500 hover:bg-emerald-600">
+              <Button >
                 <Plus className="w-4 h-4 mr-2" /> Generate Key
               </Button>
             </DialogTrigger>
@@ -456,10 +456,10 @@ const GpgKeys = () => {
       </div>
 
       {/* Keys Table */}
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
-            <KeyRound className="w-5 h-5 mr-2 text-emerald-400" />
+            <KeyRound className="mr-2 size-5 text-muted-foreground" />
             Keys
             {gpgKeys && gpgKeys.length > 0 && (
               <Badge variant="secondary" className="ml-2">{gpgKeys.length}</Badge>

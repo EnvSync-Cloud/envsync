@@ -20,7 +20,9 @@ security:
   refresh_token_lifetime: 168h
   session_lifetime: 168h
   disable_registration: true
-  disable_social_registration: true
+  disable_social_registration: false
+  mfa:
+    issuer: EnvSync
   # Required. 32 bytes of standard base64. Generate a new value for each install.
   data_key: ""
 
@@ -65,4 +67,23 @@ branding:
   text_color: "#f5f5f6"
   show_register: false
   show_forgot_password: true
+  support_url: "https://envsync.cloud/onboarding"
   templates: /branding/templates
+
+# Callbacks: https://auth.example.com/login/social/github/callback
+# and https://auth.example.com/login/social/gitlab/callback
+# Enable a provider only after both client_id and client_secret are set.
+social:
+  providers:
+    - id: github
+      type: github
+      name: GitHub
+      enabled: false
+      client_id: ""
+      client_secret: ""
+    - id: gitlab
+      type: gitlab
+      name: GitLab
+      enabled: false
+      client_id: ""
+      client_secret: ""

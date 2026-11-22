@@ -159,10 +159,10 @@ const Teams = () => {
         secondaryNav={
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "teams" | "detail")}>
             <TabsList className="h-auto bg-transparent p-0">
-              <TabsTrigger data-testid="teams-tab-directory" value="teams" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+              <TabsTrigger data-testid="teams-tab-directory" value="teams" className="rounded-xl data-[state=active]:bg-accent data-[state=active]:text-foreground">
                 Teams Directory
               </TabsTrigger>
-              <TabsTrigger data-testid="teams-tab-detail" value="detail" className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+              <TabsTrigger data-testid="teams-tab-detail" value="detail" className="rounded-xl data-[state=active]:bg-accent data-[state=active]:text-foreground">
                 Team Details
               </TabsTrigger>
             </TabsList>
@@ -230,7 +230,7 @@ const Teams = () => {
                     <TableCell className="text-muted-foreground">{team.description || "No description"}</TableCell>
                     <TableCell>
                       {team.role_id ? (
-                        <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
+                        <Badge variant="outline" className="border-border font-normal text-foreground">
                           {roles.find((role) => role.id === team.role_id)?.name || "Assigned"}
                         </Badge>
                       ) : (
@@ -284,14 +284,14 @@ const Teams = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg border border-border bg-card/70 p-4">
                     <div className="mb-3 flex items-center gap-2">
-                      <ShieldAlert className="size-4 text-emerald-400" />
+                      <ShieldAlert className="size-4 text-muted-foreground" />
                       <h3 className="font-medium text-foreground">Team Role</h3>
                     </div>
                     <p className="mb-3 text-sm text-muted-foreground">
                       Team members keep their direct org role and also inherit this team-scoped role bundle.
                     </p>
                     <div className="mb-3 flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
+                      <Badge variant="outline" className="border-border font-normal text-foreground">
                         {selectedRoleName}
                       </Badge>
                     </div>
@@ -312,7 +312,7 @@ const Teams = () => {
                           </SelectContent>
                         </Select>
                         <Button
-                          className="bg-emerald-500 hover:bg-emerald-600"
+                          
                           onClick={() => teamRoleId && assignRole.mutate({ teamId: selectedTeam.id, role_id: teamRoleId })}
                         >
                           Assign
@@ -332,7 +332,7 @@ const Teams = () => {
 
                   <div className="rounded-lg border border-border bg-card/70 p-4">
                     <div className="mb-3 flex items-center gap-2">
-                      <UserPlus className="size-4 text-emerald-400" />
+                      <UserPlus className="size-4 text-muted-foreground" />
                       <h3 className="font-medium text-foreground">Add Member</h3>
                     </div>
                     <p className="mb-3 text-sm text-muted-foreground">
@@ -353,7 +353,7 @@ const Teams = () => {
                           </SelectContent>
                         </Select>
                         <Button
-                          className="bg-emerald-500 hover:bg-emerald-600"
+                          
                           onClick={() => memberUserId && addMember.mutate({ teamId: selectedTeam.id, user_id: memberUserId })}
                         >
                           Add

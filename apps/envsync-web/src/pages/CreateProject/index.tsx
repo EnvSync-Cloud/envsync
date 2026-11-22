@@ -1,31 +1,16 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { appDetailPath } from "@/lib/app-routes";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  ArrowLeft,
-  Plus,
-  Shield,
-  Key,
-  Info,
-  Palette,
-  X,
-  Layers,
-} from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { sdk } from "@/api";
 import { toast } from "sonner";
 import { trackAction } from "@/telemetry";
 import { ErrorAlert } from "@/components/ui/error-alert";
-import {
-  TooltipTrigger,
-  Tooltip,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { ENV_TYPE_COLORS } from "@/constants";
 import { createUuid } from "@/utils/uuid";
 
@@ -294,38 +279,39 @@ export const CreateProject = () => {
     navigate(-1);
   }, [navigate]);
 
-  const submitLabel =
-    pendingEnvTypes.length > 0
-      ? `Create Project with ${pendingEnvTypes.length} Environment${pendingEnvTypes.length > 1 ? "s" : ""}`
-      : "Create Project";
+  const previewEnvironments = [
+    { name: "Development", color: "#22c55e" },
+    ...pendingEnvTypes.filter(
+      (envType) => envType.name.trim().toLowerCase() !== "development",
+    ),
+  ];
+  const secretsLabel = !formData.enableSecrets
+    ? "Off"
+    : formData.publicKey.trim()
+      ? "Your public key"
+      : "EnvSync key";
 
   return (
-    <div className="space-y-6 mx-auto max-h-full">
-      {/* Header */}
-      <div className="flex items-center space-x-3">
-        <Button
-          onClick={handleBack}
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-foreground hover:bg-muted"
-        >
-          <ArrowLeft className="size-4 mr-1" />
-          Back to Projects
-        </Button>
-      </div>
-      <div className="flex items-center space-x-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Create New Project</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Name it, then add environments if you want more than Development.
-          </p>
-        </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <Button
+        onClick={handleBack}
+        variant="ghost"
+        size="sm"
+        className="-ml-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        <ArrowLeft className="mr-1 size-4" />
+        Back to Projects
+      </Button>
+
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Create New Project</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Name it. A Development environment is included.
+        </p>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl">
-        <Card className="border-border bg-card">
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-xl border border-border bg-card p-6">
               {submitError && (
                 <ErrorAlert
                   error={submitError}
@@ -333,155 +319,125 @@ export const CreateProject = () => {
                 />
               )}
 
-              {/* Project Name */}
               <div className="space-y-2">
-                <Label htmlFor="project-name" className="text-foreground">
-                  Project Name *
-                </Label>
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="project-name" className="text-foreground">
+                    Project name
+                  </Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {formData.name.length}/{MAX_NAME_LENGTH}
+                  </span>
+                </div>
                 <Input
                   id="project-name"
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
-                  className={`bg-muted border-border text-foreground ${
+                  className={`border-border bg-muted text-foreground ${
                     formErrors.name ? "border-red-500" : ""
                   }`}
-                  placeholder="Enter project name"
+                  placeholder="Billing API"
                   disabled={isCreating}
                   maxLength={MAX_NAME_LENGTH}
                 />
                 {formErrors.name && (
-                  <p className="text-red-400 text-sm">{formErrors.name}</p>
+                  <p className="text-sm text-red-400">{formErrors.name}</p>
                 )}
-                <div className="flex justify-end text-xs text-muted-foreground">
-                  <span>
-                    {formData.name.length}/{MAX_NAME_LENGTH}
-                  </span>
-                </div>
               </div>
 
-              {/* Project Description */}
               <div className="space-y-2">
-                <Label htmlFor="project-description" className="text-foreground">
-                  Description *
-                </Label>
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="project-description" className="text-foreground">
+                    Description
+                  </Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
+                  </span>
+                </div>
                 <Textarea
                   id="project-description"
                   value={formData.description}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
-                  className={`bg-muted max-h-[120px] border-border text-foreground min-h-[72px] ${
+                  rows={2}
+                  className={`min-h-0 border-border bg-muted text-foreground ${
                     formErrors.description ? "border-red-500" : ""
                   }`}
-                  placeholder="Describe what this project is for..."
+                  placeholder="What this project stores"
                   disabled={isCreating}
                   maxLength={MAX_DESCRIPTION_LENGTH}
                 />
                 {formErrors.description && (
-                  <p className="text-red-400 text-sm">
+                  <p className="text-sm text-red-400">
                     {formErrors.description}
                   </p>
                 )}
-                <div className="flex justify-end text-xs text-muted-foreground">
-                  <span>
-                    {formData.description.length}/{MAX_DESCRIPTION_LENGTH}
-                  </span>
-                </div>
               </div>
 
-              {/* Enable Secrets */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label className="text-foreground flex items-center">
-                      <Shield className="w-4 h-4 mr-2 text-pink-500" />
-                      Enable Secrets
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      EnvSync generates the key. Paste a public key only if you want to hold it yourself.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formData.enableSecrets}
-                    onCheckedChange={(checked) =>
-                      handleInputChange("enableSecrets", checked)
-                    }
-                    disabled={isCreating}
-                    className="data-[state=checked]:bg-emerald-500  data-[state=unchecked]:bg-muted"
-                  />
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+                <div>
+                  <Label className="text-foreground">Secrets</Label>
+                  <p className="text-xs text-muted-foreground">
+                    EnvSync holds the key unless you paste your own.
+                  </p>
                 </div>
+                <Switch
+                  checked={formData.enableSecrets}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("enableSecrets", checked)
+                  }
+                  disabled={isCreating}
+                  aria-label="Enable Secrets"
+                />
               </div>
 
-              {/* Public Key (conditional) */}
               {formData.enableSecrets && (
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="public-key"
-                    className="text-foreground flex items-center"
-                  >
-                    <Key className="w-4 h-4 mr-2 text-yellow-500" />
-                    Public Key (Optional)
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 ml-2 text-muted-foreground hover:text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Encrypted at rest and in transit.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </Label>
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="public-key" className="text-foreground">
+                      Your public key
+                    </Label>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      Optional
+                    </span>
+                  </div>
                   <Textarea
                     id="public-key"
                     value={formData.publicKey}
                     onChange={(e) =>
                       handleInputChange("publicKey", e.target.value)
                     }
-                    className={`bg-muted border-border text-foreground min-h-[120px] font-mono text-sm ${
+                    rows={3}
+                    className={`min-h-0 border-border bg-muted font-mono text-sm text-foreground ${
                       formErrors.publicKey ? "border-red-500" : ""
                     }`}
-                    placeholder={`-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
------END PUBLIC KEY-----`}
+                    placeholder="Paste a PEM public key to hold it yourself"
                     disabled={isCreating}
                     maxLength={MAX_PUBLIC_KEY_LENGTH}
                   />
                   {formErrors.publicKey && (
-                    <p className="text-red-400 text-sm">
+                    <p className="text-sm text-red-400">
                       {formErrors.publicKey}
                     </p>
                   )}
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Encrypted at rest and in transit.</span>
-                    <span>
-                      {formData.publicKey.length}/{MAX_PUBLIC_KEY_LENGTH}
-                    </span>
-                  </div>
                 </div>
               )}
 
-              {/* Environment Types Section */}
-              <div className="space-y-4 border-t border-border pt-6">
-                <div className="flex items-center justify-between">
-                  <Label className="text-foreground flex items-center">
-                    <Layers className="w-4 h-4 mr-2 text-cyan-500" />
-                    Environment Types
-                  </Label>
+              <div className="space-y-3 border-t border-border pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-foreground">Environments</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleApplyPresets}
                     disabled={isCreating}
-                    className="text-xs text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
-                    <Plus className="w-3 h-3 mr-1" />
+                    <Plus className="mr-1 size-3" />
                     Add Common Presets
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Optional. A Development environment is created for you. Add
-                  Staging, Production, or others if you want them now.
-                </p>
 
                 {/* List of added env types */}
                 {pendingEnvTypes.length > 0 && (
@@ -517,16 +473,13 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 )}
 
                 {/* Add env type inline form */}
-                <div className="space-y-3 bg-muted/50 rounded-lg p-3 border border-border">
+                <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="w-8 h-8 rounded-lg border-2 border-border flex items-center justify-center shrink-0"
+                    <span
+                      className="size-8 shrink-0 rounded-md border border-border"
                       style={{ backgroundColor: envTypeInput.color }}
-                      title="Selected color"
-                    >
-                      <Palette className="w-4 h-4 text-foreground" />
-                    </button>
+                      aria-hidden
+                    />
                     <Input
                       value={envTypeInput.name}
                       onChange={(e) => {
@@ -544,26 +497,27 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                           handleAddEnvType();
                         }
                       }}
-                      className="bg-muted border-border text-foreground text-sm"
-                      placeholder="e.g. Development, Staging, QA..."
+                      className="border-border bg-muted text-sm text-foreground"
+                      placeholder="QA"
                       disabled={isCreating}
+                      aria-label="Environment name"
                     />
                     <Button
                       type="button"
                       size="sm"
                       onClick={handleAddEnvType}
                       disabled={isCreating || !envTypeInput.name.trim()}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-foreground shrink-0"
+                      className="shrink-0 "
+                      aria-label="Add environment"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="size-4" />
                     </Button>
                   </div>
                   {envTypeErrors.name && (
-                    <p className="text-red-400 text-xs">
+                    <p className="text-xs text-red-400">
                       {envTypeErrors.name}
                     </p>
                   )}
-                  {/* Color presets */}
                   <div className="flex flex-wrap gap-1.5">
                     {ENV_TYPE_COLORS.map((color) => (
                       <button
@@ -572,10 +526,11 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                         onClick={() =>
                           setEnvTypeInput((prev) => ({ ...prev, color }))
                         }
-                        className={`w-5 h-5 rounded-full border-2 transition-all ${
+                        aria-label={`Color ${color}`}
+                        className={`size-5 rounded-full border-2 ${
                           envTypeInput.color === color
-                            ? "border-white scale-110"
-                            : "border-border hover:border-muted-foreground"
+                            ? "border-white"
+                            : "border-transparent"
                         }`}
                         style={{ backgroundColor: color }}
                       />
@@ -597,12 +552,43 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                   type="submit"
                   disabled={isCreating || !formData.name.trim() || !formData.description.trim()}
                 >
-                  {isCreating ? creationProgress : submitLabel}
+                  {isCreating ? creationProgress : "Create Project"}
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+
+            <aside className="rounded-xl border border-border bg-card p-5 lg:sticky lg:top-6">
+              <p className="text-xs text-muted-foreground">Preview</p>
+              <p className="mt-2 truncate text-lg font-medium text-foreground">
+                {formData.name.trim() || "Untitled project"}
+              </p>
+              <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
+                {formData.description.trim() || "No description yet."}
+              </p>
+              <dl className="mt-5 space-y-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Secrets</dt>
+                  <dd className="mt-1 text-foreground">{secretsLabel}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Environments</dt>
+                  <dd className="mt-2 flex flex-wrap gap-2">
+                    {previewEnvironments.map((envType) => (
+                      <span
+                        key={envType.name}
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-1 text-xs text-foreground"
+                      >
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: envType.color }}
+                        />
+                        {envType.name}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              </dl>
+            </aside>
       </div>
     </div>
   );

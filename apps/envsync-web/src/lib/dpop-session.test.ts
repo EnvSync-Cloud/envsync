@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { p256 } from "@noble/curves/nist.js";
+
 import {
   clearAccessToken,
   proofUrl,
@@ -7,6 +9,7 @@ import {
   setAccessToken,
   signProof,
   type DeviceKey,
+  type SoftwarePrivateKey,
 } from "./dpop-session";
 
 function decodePart(part: string) {
@@ -84,6 +87,43 @@ describe("dashboard DPoP session", () => {
     const claims = decodePart(proof.split(".")[1]);
     expect(claims.htu).toBe("https://auth.envsync.cloud/oauth/token");
     expect(claims.ath).toBeUndefined();
+  });
+
+  test("signs with a software P-256 key when WebCrypto is unavailable", async () => {
+    const { secretKey } = p256.keygen();
+    const uncompressed = p256.getPublicKey(secretKey, false);
+    const bytesToBase64Url = (bytes: Uint8Array) => {
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    };
+    const privateKey: SoftwarePrivateKey = {
+      software: "p256",
+      d: bytesToBase64Url(secretKey),
+    };
+    const key: DeviceKey = {
+      privateKey,
+      publicJwk: {
+        kty: "EC",
+        crv: "P-256",
+        x: bytesToBase64Url(uncompressed.slice(1, 33)),
+        y: bytesToBase64Url(uncompressed.slice(33, 65)),
+      },
+    };
+    const proof = await signProof({
+      key,
+      method: "POST",
+      url: "http://auth.lvh.me:8080/oauth/token",
+    });
+    const [encodedHeader, encodedClaims, encodedSignature] = proof.split(".");
+    const header = decodePart(encodedHeader);
+    expect(header.alg).toBe("ES256");
+    expect(header.jwk).toEqual(key.publicJwk);
+    const signingInput = new TextEncoder().encode(`${encodedHeader}.${encodedClaims}`);
+    const paddedSignature = encodedSignature.replace(/-/g, "+").replace(/_/g, "/")
+      + "=".repeat((4 - (encodedSignature.length % 4)) % 4);
+    const signature = Uint8Array.from(atob(paddedSignature), (char) => char.charCodeAt(0));
+    expect(p256.verify(signature, signingInput, uncompressed, { lowS: true, prehash: true })).toBe(true);
   });
 
   test("fills path parameters before the proof URL is signed", () => {

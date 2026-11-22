@@ -43,7 +43,7 @@ export function AuditFilters({
     filterOptions.user !== "all";
 
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border">
       <CardContent className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search */}

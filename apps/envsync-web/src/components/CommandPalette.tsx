@@ -78,6 +78,10 @@ function clearRecentItems() {
   localStorage.removeItem(RECENT_ITEMS_KEY);
 }
 
+function includesText(value: string | null | undefined, query: string) {
+  return typeof value === "string" && value.toLowerCase().includes(query);
+}
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -162,11 +166,25 @@ export function CommandPalette() {
   });
 
   const { data: apiKeys = [] } = useQuery<
-    Array<{ id: string; description: string; key: string }>
+    Array<{ id: string; description: string; key?: string | null; key_hint?: string | null }>
   >({
     queryKey: [API_KEYS.ALL_API_KEYS],
     queryFn: async () => {
-      return await sdk.apiKeys.getAllApiKeys();
+      const keys = await sdk.apiKeys.getAllApiKeys();
+      return keys.map((key) => {
+        const record = key as {
+          id: string;
+          description?: string | null;
+          key?: string | null;
+          key_hint?: string | null;
+        };
+        return {
+          id: record.id,
+          description: record.description ?? "",
+          key: record.key,
+          key_hint: record.key_hint ?? null,
+        };
+      });
     },
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -176,11 +194,7 @@ export function CommandPalette() {
     if (!search) return projects.slice(0, 8);
     const q = search.toLowerCase();
     return projects
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description?.toLowerCase().includes(q)
-      )
+      .filter((p) => includesText(p.name, q) || includesText(p.description, q))
       .slice(0, 8);
   }, [projects, search]);
 
@@ -188,11 +202,7 @@ export function CommandPalette() {
     if (!search) return [];
     const q = search.toLowerCase();
     return users
-      .filter(
-        (u) =>
-          u.full_name?.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q)
-      )
+      .filter((u) => includesText(u.full_name, q) || includesText(u.email, q))
       .slice(0, 5);
   }, [users, search]);
 
@@ -200,11 +210,7 @@ export function CommandPalette() {
     if (!search) return [];
     const q = search.toLowerCase();
     return teams
-      .filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.description?.toLowerCase().includes(q)
-      )
+      .filter((t) => includesText(t.name, q) || includesText(t.description, q))
       .slice(0, 5);
   }, [teams, search]);
 
@@ -214,8 +220,9 @@ export function CommandPalette() {
     return apiKeys
       .filter(
         (k) =>
-          k.description?.toLowerCase().includes(q) ||
-          k.key.toLowerCase().includes(q)
+          includesText(k.description, q) ||
+          includesText(k.key_hint, q) ||
+          includesText(k.key, q)
       )
       .slice(0, 5);
   }, [apiKeys, search]);
@@ -224,16 +231,14 @@ export function CommandPalette() {
     if (!search) return authorizedNavItems;
     const q = search.toLowerCase();
     return authorizedNavItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.href.toLowerCase().includes(q)
+      (item) => includesText(item.name, q) || includesText(item.href, q)
     );
   }, [authorizedNavItems, search]);
 
   const filteredRecent = useMemo(() => {
     if (!search) return recentItems;
     const q = search.toLowerCase();
-    return recentItems.filter((r) => r.name.toLowerCase().includes(q));
+    return recentItems.filter((r) => includesText(r.name, q));
   }, [recentItems, search]);
 
   const runAction = (action: () => void) => {

@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserRow, UserRowSkeleton } from "./UserRow";
 import { EmptyState } from "./EmptyState";
-import { Users } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Count } from "../ui/count";
 
@@ -37,10 +36,9 @@ export const UsersTable = ({
   onDeleteUser,
 }: UsersTableProps) => {
   return (
-    <Card className="bg-card text-card-foreground border-border shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border rounded-xl">
       <CardHeader>
         <CardTitle className="text-foreground flex items-center gap-3">
-          <Users className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
           Members
           <Count size="xl" variant="subtle" count={users?.length} />
         </CardTitle>

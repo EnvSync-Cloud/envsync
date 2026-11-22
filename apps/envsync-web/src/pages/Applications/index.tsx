@@ -66,10 +66,15 @@ export const Applications = () => {
     );
   }
 
+  const variableCount = apps.reduce((total, app) => total + (app.env_count ?? 0), 0);
+  const secretCount = apps.reduce((total, app) => total + (app.secret_count ?? 0), 0);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <ApplicationsHeader
         statistics={statistics}
+        variableCount={variableCount}
+        secretCount={secretCount}
         canEdit={canEdit}
         isRefetching={isRefetching}
         onRefresh={handleRefresh}

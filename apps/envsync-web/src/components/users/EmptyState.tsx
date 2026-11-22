@@ -19,7 +19,7 @@ export const EmptyState = ({ onInviteClick }: EmptyStateProps) => {
       </p>
       <Button
         onClick={onInviteClick}
-        className="bg-emerald-500 hover:bg-emerald-600 text-white"
+        
       >
         <Plus className="w-4 h-4 mr-2" />
         Invite Member

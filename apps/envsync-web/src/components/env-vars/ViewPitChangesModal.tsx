@@ -117,7 +117,7 @@ export const ViewPitChangesModal = ({
 			<DialogContent className="flex max-h-[90vh] max-w-5xl flex-col border-border bg-card text-foreground">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-xl">
-						<History className="size-5 text-emerald-400" />
+						<History className="size-5 text-muted-foreground" />
 						{kindLabel} Snapshot Details
 					</DialogTitle>
 					<DialogDescription className="text-muted-foreground">
@@ -130,35 +130,35 @@ export const ViewPitChangesModal = ({
 					<Card className="border-border bg-card">
 						<CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-5">
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+								<p className="flex items-center gap-2 text-xs text-tertiary">
 									<GitBranch className="size-3.5" />
 									PIT ID
 								</p>
 								<p className="font-mono text-sm text-foreground">{pitData.id}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+								<p className="flex items-center gap-2 text-xs text-tertiary">
 									<Clock3 className="size-3.5" />
 									Created at
 								</p>
 								<p className="text-sm text-foreground">{formatDateTime(pitData.created_at)}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+								<p className="flex items-center gap-2 text-xs text-tertiary">
 									<User className="size-3.5" />
 									Created by
 								</p>
 								<p className="text-sm text-foreground">{getUserDisplayName(pitData.user_id)}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+								<p className="flex items-center gap-2 text-xs text-tertiary">
 									<KeyRound className="size-3.5" />
 									Items in snapshot
 								</p>
 								<p className="text-sm text-foreground">{pitStateData.length}</p>
 							</div>
 							<div className="space-y-1">
-								<p className="text-xs uppercase tracking-wide text-tertiary">Recorded changes</p>
+								<p className="text-xs text-tertiary">Recorded changes</p>
 								<p className="text-sm text-foreground">{pitData.changes_count}</p>
 							</div>
 						</CardContent>
@@ -167,7 +167,7 @@ export const ViewPitChangesModal = ({
 					<Card className="border-border bg-card">
 						<CardContent className="space-y-4 p-4">
 							<div className="space-y-2">
-								<p className="flex items-center gap-2 text-xs uppercase tracking-wide text-tertiary">
+								<p className="flex items-center gap-2 text-xs text-tertiary">
 									<MessageSquare className="size-3.5" />
 									Message
 								</p>
@@ -175,7 +175,7 @@ export const ViewPitChangesModal = ({
 							</div>
 							<Separator className="bg-muted" />
 							<div className="flex flex-wrap items-center gap-2">
-								<Badge className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+								<Badge variant="outline" className="border-border font-normal text-accent-ink">
 									Current items: {pitStateData.length}
 								</Badge>
 								<Badge className="border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">
