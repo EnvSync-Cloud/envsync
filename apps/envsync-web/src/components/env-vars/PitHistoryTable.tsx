@@ -98,7 +98,7 @@ export const PitHistoryTable = ({
 				)}
 			</CardHeader>
 			<CardContent className="px-0 pb-0">
-				<Table>
+				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow className="border-border hover:bg-transparent">
 							<TableHead className="text-tertiary">Snapshot</TableHead>
@@ -144,45 +144,47 @@ export const PitHistoryTable = ({
 											)}
 										</div>
 									</TableCell>
-									<TableCell className="text-muted-foreground">
+									<TableCell className="whitespace-nowrap text-muted-foreground">
 										{formatDateTime(pit.created_at)}
 									</TableCell>
-									<TableCell className="text-muted-foreground">
+									<TableCell className="truncate text-muted-foreground">
 										{getUserLabel(pit.user_id)}
 									</TableCell>
 									<TableCell className="text-muted-foreground">
 										{pit.changes_count}
 									</TableCell>
-									<TableCell className="max-w-[320px] text-muted-foreground">
+									<TableCell className="truncate text-muted-foreground">
 										{truncateMessage(pit.change_request_message, 72)}
 									</TableCell>
 									<TableCell>
-										<div className="flex flex-wrap items-center justify-end gap-2">
+										<div className="flex flex-nowrap items-center justify-end gap-1">
 											<Button
 												type="button"
 												variant="outline"
-												size="sm"
+												size="icon"
+												aria-label="Use for compare"
+												title="Use for compare"
 												onClick={(event) => {
 													event.stopPropagation();
 													onUseForCompare(pit.id);
 												}}
-												className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
+												className="size-8 border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 											>
-												<ExternalLink className="mr-2 size-4" />
-												Use for compare
+												<ExternalLink className="size-4" />
 											</Button>
 											<Button
 												type="button"
 												variant="outline"
-												size="sm"
+												size="icon"
+												aria-label="View changes"
+												title="View changes"
 												onClick={(event) => {
 													event.stopPropagation();
 													onViewChanges(pit.id);
 												}}
-												className="border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
+												className="size-8 border-border bg-card text-foreground hover:bg-muted hover:text-foreground"
 											>
-												<Eye className="mr-2 size-4" />
-												View changes
+												<Eye className="size-4" />
 											</Button>
 											<Button
 												type="button"
@@ -193,9 +195,9 @@ export const PitHistoryTable = ({
 													event.stopPropagation();
 													onRollback(pit.id);
 												}}
-												className="border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100 disabled:opacity-40"
+												className="h-8 border-amber-500/30 bg-amber-500/10 px-2 text-amber-200 hover:bg-amber-500/20 hover:text-amber-100 disabled:opacity-40"
 											>
-												<RotateCcw className="mr-2 size-4" />
+												<RotateCcw className="mr-1 size-4" />
 												Rollback
 											</Button>
 										</div>
