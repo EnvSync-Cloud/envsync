@@ -7,8 +7,8 @@ interface OrgSettingsHeaderProps {
 export const OrgSettingsHeader = ({ orgName }: OrgSettingsHeaderProps) => {
   return (
     <div className="flex items-center space-x-3">
-      <div className="p-2 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-        <Building2 className="size-5 text-emerald-400" />
+      <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+        <Building2 className="size-5 text-muted-foreground" />
       </div>
       <div>
         <h1 data-testid="org-settings-heading" className="text-xl font-semibold tracking-tight text-foreground">

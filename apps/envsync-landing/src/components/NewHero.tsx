@@ -20,7 +20,7 @@ const NewHero = () => {
   return (
     <section className="bg-background px-2 pt-2 md:px-3 md:pt-3">
       {/* Green accent canvas — theme-invariant */}
-      <div className="relative overflow-hidden rounded-lg bg-primary">
+      <div className="relative overflow-hidden rounded-lg bg-accent-tint">
         {/* Dot texture + bottom radial glow */}
         <DotTexture />
 
@@ -82,7 +82,7 @@ const NewHero = () => {
 
       {/* Terminal overlap — outside canvas, above the bottom edge */}
       <div className="relative z-20 mx-auto -mt-24 max-w-3xl px-4 sm:px-0 md:-mt-32">
-        <CropMarkFrame color="hsl(var(--primary))">
+        <CropMarkFrame color="hsl(var(--accent-tint))">
           <Terminal title="envsync — cli" lines={terminalLines} />
         </CropMarkFrame>
       </div>

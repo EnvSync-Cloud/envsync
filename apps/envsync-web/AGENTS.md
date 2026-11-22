@@ -52,5 +52,5 @@ Uses **`@envsync-cloud/envsync-ts-sdk` only** (workspace link) for API types and
 
 - Server state managed via React Query — queries/mutations in `src/api/`
 - Client state via React Context in `src/contexts/`
-- Only `VITE_*` env vars are exposed to the client (Vite convention). `VITE_API_BASE_URL` is the primary one
+- Only `VITE_*` env vars are exposed to the client (Vite convention). Runtime config is `window.__ENVSYNC_RUNTIME_CONFIG__` in `src/utils/runtime-config.ts`. `VITE_API_BASE_URL` is the fallback API origin when that object is absent.
 - UI components follow shadcn patterns: Radix primitive + Tailwind styling in `src/components/ui/`

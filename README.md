@@ -51,11 +51,9 @@ curl -fsSL https://cli.envsync.cloud/install.sh | sh
 # Login
 envsync auth login
 
-# Pull secrets
-envsync pull --env development
-
-# Push changes
-envsync push --env staging
+# Pull and push use envsyncrc.toml from `envsync init`
+envsync pull
+envsync push
 ```
 
 ---
@@ -173,22 +171,19 @@ bun run dev
 envsync auth login
 envsync auth whoami
 
-# Project management
-envsync init
-envsync app list
+# Point the project config at an app and environment, then sync
+envsync init --app-id "<app-id>" --env-type-id "<env-type-id>"
+envsync pull
+envsync push
 
-# Secrets
-envsync pull --env development
-envsync push --env staging
-envsync push --env production --strict
+# CI export names the app and environment on the command
+envsync export --app my-app --env production --format dotenv
 
-# Export
-envsync export --format dotenv
-envsync export --format json
-
-# Run with secrets
-envsync run -- npm start
+# Run a process with the synced environment
+envsync run --command "bun run start"
 ```
+
+`pull` and `push` read `envsyncrc.toml`. They do not take `--env`. Full command list: [packages/envsync-cli/README.md](./packages/envsync-cli/README.md).
 
 ---
 

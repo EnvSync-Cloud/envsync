@@ -22,6 +22,7 @@ const RETIRED_PEM = fs.readFileSync(
 	path.join(import.meta.dir, "../../src/assets/license/envsync-entitlement-public.pem"),
 	"utf8",
 );
+const RETIRED_JWT = fs.readFileSync(path.join(FIXTURE_DIR, "retired-entitlement.jwt"), "utf8").trim();
 
 const FINGERPRINT = "test-install-fp-p4";
 
@@ -81,30 +82,30 @@ describe("EntitlementService (Phase 4)", () => {
 		}
 	});
 
-	test("rejects a license signed with the retired verification key", async () => {
+	test("rejects a token signed by the retired fixture key", async () => {
 		const originalTrusted = config.ENVSYNC_LICENSE_TRUSTED_KEYS;
 		config.ENVSYNC_LICENSE_TRUSTED_KEYS = JSON.stringify({
 			[ENTITLEMENT_RETIRED_KID]: RETIRED_PEM,
 			[ENTITLEMENT_NEXT_KID]: RETIRED_PEM,
 		});
+		EntitlementService.setTestOverrides({ allow_fixture_keys: true, public_key_pem: RETIRED_PEM });
 		try {
-			const retiredKidJwt = await signEntitlement(
-				{ max_orgs: 3, features: ["management", "oidc"] },
-				ENTITLEMENT_RETIRED_KID,
-			);
-			const renamedKidJwt = await signEntitlement(
-				{ max_orgs: 3, features: ["management", "oidc"] },
-				ENTITLEMENT_NEXT_KID,
-			);
-			await expect(EntitlementService.verifyJwt(retiredKidJwt)).rejects.toMatchObject({
-				code: "ENTITLEMENT_INVALID",
-			});
-			await expect(EntitlementService.verifyJwt(renamedKidJwt)).rejects.toMatchObject({
+			await expect(EntitlementService.verifyJwt(RETIRED_JWT)).rejects.toMatchObject({
 				code: "ENTITLEMENT_INVALID",
 			});
 		} finally {
 			config.ENVSYNC_LICENSE_TRUSTED_KEYS = originalTrusted;
 		}
+	});
+
+	test("the rotated test fixture is not the retired verification key", () => {
+		const retired = RETIRED_PEM.replace(/-----BEGIN PUBLIC KEY-----/g, "")
+			.replace(/-----END PUBLIC KEY-----/g, "")
+			.replace(/\s+/g, "");
+		const fixture = PUBLIC_PEM.replace(/-----BEGIN PUBLIC KEY-----/g, "")
+			.replace(/-----END PUBLIC KEY-----/g, "")
+			.replace(/\s+/g, "");
+		expect(fixture).not.toBe(retired);
 	});
 
 	test("accepts an entitlement JWT when its kid matches a configured public key", async () => {

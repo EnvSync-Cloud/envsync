@@ -243,7 +243,7 @@ export function CreateWebhookDialog({
                   className={cn(
                     "flex items-center justify-center size-6 rounded-full border text-xs font-bold",
                     isBasicInfoComplete
-                      ? "bg-green-500/20 border-green-500 text-green-400"
+                      ? "border-foreground bg-accent text-foreground"
                       : "bg-muted border-border text-muted-foreground"
                   )}
                 >
@@ -319,7 +319,7 @@ export function CreateWebhookDialog({
                   className={cn(
                     "flex items-center justify-center size-6 rounded-full border text-xs font-bold",
                     isConfigComplete
-                      ? "bg-green-500/20 border-green-500 text-green-400"
+                      ? "border-foreground bg-accent text-foreground"
                       : "bg-muted border-border text-muted-foreground"
                   )}
                 >
@@ -494,7 +494,7 @@ export function CreateWebhookDialog({
                   className={cn(
                     "flex items-center justify-center size-6 rounded-full border text-xs font-bold",
                     isEventsComplete
-                      ? "bg-green-500/20 border-green-500 text-green-400"
+                      ? "border-foreground bg-accent text-foreground"
                       : "bg-muted border-border text-muted-foreground"
                   )}
                 >
@@ -678,7 +678,7 @@ export function CreateWebhookDialog({
                   className={cn(
                     "flex items-center justify-center size-6 rounded-full border text-xs font-bold",
                     isBasicInfoComplete && isConfigComplete && isEventsComplete
-                      ? "bg-green-500/20 border-green-500 text-green-400"
+                      ? "border-foreground bg-accent text-foreground"
                       : "bg-muted border-border text-muted-foreground"
                   )}
                 >
@@ -705,7 +705,7 @@ export function CreateWebhookDialog({
                 {/* Summary Grid */}
                 <div className="grid grid-cols-2 gap-3 rounded-lg bg-card/60 border border-border p-4">
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                    <span className="text-[10px] text-tertiary">
                       Name
                     </span>
                     <p className="text-sm text-foreground font-medium">
@@ -715,7 +715,7 @@ export function CreateWebhookDialog({
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                    <span className="text-[10px] text-tertiary">
                       Payload URL
                     </span>
                     <p className="text-sm text-foreground font-mono truncate">
@@ -727,7 +727,7 @@ export function CreateWebhookDialog({
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                    <span className="text-[10px] text-tertiary">
                       Type
                     </span>
                     <div>
@@ -745,7 +745,7 @@ export function CreateWebhookDialog({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                    <span className="text-[10px] text-tertiary">
                       Scope
                     </span>
                     <p className="text-sm text-foreground">
@@ -756,7 +756,7 @@ export function CreateWebhookDialog({
                     </p>
                   </div>
                   <div className="col-span-2 space-y-1">
-                    <span className="text-[10px] uppercase tracking-wider text-tertiary">
+                    <span className="text-[10px] text-tertiary">
                       Events ({webhookData.event_types.length})
                     </span>
                     <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">

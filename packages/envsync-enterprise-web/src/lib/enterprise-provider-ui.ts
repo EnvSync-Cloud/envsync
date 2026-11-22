@@ -277,8 +277,8 @@ export const enterpriseProviderUi: Record<EnterpriseProvider, ProviderUiConfig> 
     usesBranch: false,
     usesPath: false,
     connectionAuthFields: [
-      { key: "api_token", label: "API token", kind: "secret-ref", placeholder: "circleci-api-token" },
-      { key: "org_id", label: "Organization ID", kind: "text", placeholder: "org-uuid" },
+      { key: "api_token", label: "API token", kind: "secret-ref", placeholder: "circleci-api-token", helper: "Org secret that holds the CircleCI token." },
+      { key: "context_id", label: "Context ID", kind: "text", placeholder: "context-uuid", helper: "Optional. Writes context variables instead of project env vars." },
     ],
     connectionMetadataFields: [
       secretPrefixField,
@@ -955,6 +955,46 @@ export const enterpriseProviderUi: Record<EnterpriseProvider, ProviderUiConfig> 
   },
 };
 
+function storageKey(field: ProviderFieldConfig) {
+  if (field.kind === "secret-ref" && !field.key.endsWith("_secret_ref")) {
+    return `${field.key}_secret_ref`;
+  }
+  return field.key;
+}
+
+const providerLogos: Partial<Record<EnterpriseProvider, string>> = {
+  github: "/images/integrations/github-actions.svg",
+  gitlab: "/images/integrations/gitlab.svg",
+  vercel: "/images/integrations/vercel.svg",
+  "aws-ssm": "/images/integrations/aws.svg",
+  "google-secret-manager": "/images/integrations/gcp.svg",
+  circleci: "/images/integrations/circleci.svg",
+  jenkins: "/images/integrations/jenkins.svg",
+  "azure-devops": "/images/integrations/azuredevops.svg",
+  bitbucket: "/images/integrations/bitbucket.svg",
+  travisci: "/images/integrations/traviisci.svg",
+  netlify: "/images/integrations/netlify.svg",
+  railway: "/images/integrations/railway.svg",
+  "fly-io": "/images/integrations/flyio.svg",
+  render: "/images/integrations/render.svg",
+  supabase: "/images/integrations/supabase.svg",
+  "digitalocean-app-platform": "/images/integrations/digitalocean.svg",
+  "azure-key-vault": "/images/integrations/azure.svg",
+  "aws-secrets-manager": "/images/integrations/aws.svg",
+  "cloudflare-workers": "/images/integrations/cloudflare.svg",
+  "azure-app-service": "/images/integrations/azure.svg",
+  codefresh: "/images/integrations/codefresh.svg",
+  "deno-deploy": "/images/integrations/deno.svg",
+  "hasura-cloud": "/images/integrations/hasura.svg",
+  heroku: "/images/integrations/heroku.svg",
+  "laravel-forge": "/images/integrations/laravel.svg",
+  "terraform-cloud": "/images/integrations/terraform.svg",
+};
+
+export function providerLogo(id: EnterpriseProvider) {
+  return providerLogos[id];
+}
+
 export function emptyFieldValues(fields: ProviderFieldConfig[]) {
   return Object.fromEntries(fields.map((field) => [field.key, ""])) as Record<string, string>;
 }
@@ -964,7 +1004,10 @@ export function extractKnownFieldValues(
   fields: ProviderFieldConfig[],
 ) {
   return Object.fromEntries(
-    fields.map((field) => [field.key, typeof source?.[field.key] === "string" ? String(source[field.key]) : ""]),
+    fields.map((field) => {
+      const stored = source?.[storageKey(field)] ?? source?.[field.key];
+      return [field.key, typeof stored === "string" ? stored : ""];
+    }),
   ) as Record<string, string>;
 }
 
@@ -975,6 +1018,7 @@ export function omitKnownFields(
   const clone = { ...(source ?? {}) };
   for (const field of fields) {
     delete clone[field.key];
+    delete clone[storageKey(field)];
   }
   return clone;
 }
@@ -987,10 +1031,12 @@ export function mergeFieldValuesIntoRecord(
   const next: Record<string, unknown> = { ...base };
   for (const field of fields) {
     const value = values[field.key]?.trim() ?? "";
+    const key = storageKey(field);
+    delete next[field.key];
     if (value) {
-      next[field.key] = value;
+      next[key] = value;
     } else {
-      delete next[field.key];
+      delete next[key];
     }
   }
   return next;

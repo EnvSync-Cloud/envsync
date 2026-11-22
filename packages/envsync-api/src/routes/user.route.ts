@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
-import type { Context, Next } from "hono";
+import type { Context, MiddlewareHandler, Next } from "hono";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { requirePermission } from "@/middlewares/permission.middleware";
 import { UserController } from "@/controllers/user.controller";
@@ -11,14 +11,124 @@ import {
 	usersResponseSchema,
 	updateUserRequestSchema,
 	updateRoleRequestSchema,
+	accountSecurityResponseSchema,
+	accountMessageResponseSchema,
+	setOwnPasswordRequestSchema,
+	confirmMfaRequestSchema,
+	disableMfaRequestSchema,
+	mfaSetupResponseSchema,
 } from "@/validators/user.validator";
 import { errorResponseSchema } from "@/validators/common";
 import { cliMiddleware } from "@/middlewares/cli.middleware";
 
 const app = new Hono();
 
+const interactiveSession: MiddlewareHandler = async (c, next) => {
+	const authType = c.get("auth_type");
+	if (authType === "api_key" || authType === "service_token") {
+		return c.json(
+			{
+				error: "Sign-in settings require an interactive session.",
+				code: "INTERACTIVE_SESSION_REQUIRED",
+			},
+			403,
+		);
+	}
+	await next();
+};
+
 app.use(authMiddleware());
 app.use(cliMiddleware());
+
+app.get(
+	"/me/security",
+	describeRoute({
+		operationId: "getAccountSecurity",
+		summary: "Get the current account's sign-in settings",
+		description: "Name parts, whether a password is set, authenticator status, and linked sign-in methods.",
+		tags: ["Users"],
+		responses: {
+			200: {
+				description: "Account security",
+				content: { "application/json": { schema: resolver(accountSecurityResponseSchema) } },
+			},
+		},
+	}),
+	interactiveSession,
+	UserController.getAccountSecurity,
+);
+
+app.post(
+	"/me/password",
+	describeRoute({
+		operationId: "setOwnPassword",
+		summary: "Set a password when the account does not have one",
+		tags: ["Users"],
+		responses: {
+			200: {
+				description: "Password set",
+				content: { "application/json": { schema: resolver(accountMessageResponseSchema) } },
+			},
+		},
+	}),
+	interactiveSession,
+	zValidator("json", setOwnPasswordRequestSchema),
+	UserController.setOwnPassword,
+);
+
+app.post(
+	"/me/mfa/setup",
+	describeRoute({
+		operationId: "setupMfa",
+		summary: "Start authenticator enrollment",
+		description: "Returns a one-time otpauth URL, QR image, and secret. The secret is not stored in the audit log.",
+		tags: ["Users"],
+		responses: {
+			200: {
+				description: "Enrollment started",
+				content: { "application/json": { schema: resolver(mfaSetupResponseSchema) } },
+			},
+		},
+	}),
+	interactiveSession,
+	UserController.setupMfa,
+);
+
+app.post(
+	"/me/mfa/confirm",
+	describeRoute({
+		operationId: "confirmMfa",
+		summary: "Confirm authenticator enrollment",
+		tags: ["Users"],
+		responses: {
+			200: {
+				description: "Authenticator enabled",
+				content: { "application/json": { schema: resolver(accountMessageResponseSchema) } },
+			},
+		},
+	}),
+	interactiveSession,
+	zValidator("json", confirmMfaRequestSchema),
+	UserController.confirmMfa,
+);
+
+app.post(
+	"/me/mfa/disable",
+	describeRoute({
+		operationId: "disableMfa",
+		summary: "Turn off the authenticator",
+		tags: ["Users"],
+		responses: {
+			200: {
+				description: "Authenticator disabled",
+				content: { "application/json": { schema: resolver(accountMessageResponseSchema) } },
+			},
+		},
+	}),
+	interactiveSession,
+	zValidator("json", disableMfaRequestSchema),
+	UserController.disableMfa,
+);
 
 app.get(
 	"/",
@@ -154,8 +264,8 @@ app.patch(
 	"/password/:id",
 	describeRoute({
 		operationId: "updatePassword",
-		summary: "Update User Password",
-		description: "Update a user's password (Admin only)",
+		summary: "Email a password reset",
+		description: "Emails a reset link. The account owner can reset their own password. Managing another user requires can_manage_users.",
 		tags: ["Users"],
 		responses: {
 			200: {
@@ -176,7 +286,14 @@ app.patch(
 			},
 		},
 	}),
-	requirePermission("can_manage_users", "org"),
+	async (ctx: Context, next: Next) => {
+		const userId = ctx.get("user_id");
+		const targetId = ctx.req.param("id");
+		if (userId && targetId && userId === targetId) {
+			return next();
+		}
+		return requirePermission("can_manage_users", "org")(ctx, next);
+	},
 	UserController.updatePassword,
 );
 

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import { testRequest } from "../helpers/request";
 import { cleanupDB, seedOrg, type SeedOrgResult } from "../helpers/db";
@@ -9,6 +9,7 @@ import { resetFGA, setupUserOrgTuples } from "../helpers/fga";
 import { resetVaultStore } from "../helpers/kms";
 import { DB } from "@/libs/db";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { PlanLimitService } from "@/services/plan_limit.service";
 
 mock.module("@/helpers/jwt", () => ({
 	verifyJWTToken: async (token: string) => {
@@ -144,6 +145,24 @@ describe("GET /api/auth/me", () => {
 		expect(body.memberships[0]?.user_id).toBe(seed.masterUser.id);
 		expect(body.memberships[0]?.is_active).toBe(true);
 		expect(body.active_membership_user_id).toBe(seed.masterUser.id);
+	});
+
+	test("returns plan and membership when usage is unavailable", async () => {
+		const seed = await seedAuthOrg();
+		const usage = spyOn(PlanLimitService, "usage").mockRejectedValue(new Error("usage unavailable"));
+		try {
+			const response = await testRequest("/api/auth/me", { token: seed.masterUser.token });
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				active_membership_user_id: seed.masterUser.id,
+				plan: expect.any(String),
+				plan_limits: expect.any(Object),
+				plan_usage: null,
+			});
+			expect(usage).toHaveBeenCalledWith(seed.org.id);
+		} finally {
+			usage.mockRestore();
+		}
 	});
 
 	test("returns 200 with valid API key", async () => {

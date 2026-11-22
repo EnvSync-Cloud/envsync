@@ -2,6 +2,19 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { exchangeWebLogin } from "@/lib/dpop-session";
+import { readLoginMethod } from "@/lib/login-auth";
+import { trackAction } from "@/telemetry";
+
+function trackLoginFailed(reason: string) {
+  trackAction("login_failed", {
+    "envsync.event_name": "login_failed",
+    "envsync.event_category": "auth",
+    "envsync.surface": "web",
+    "envsync.success": false,
+    method: readLoginMethod(),
+    reason,
+  });
+}
 
 const Callback = () => {
   const [message, setMessage] = useState("Finishing sign-in...");
@@ -15,6 +28,7 @@ const Callback = () => {
     window.history.replaceState({}, "", "/auth/callback");
 
     if (providerError || !code || !state) {
+      trackLoginFailed(providerError ? "provider_rejected" : "missing_callback");
       setFailed(true);
       setMessage("Sign-in did not complete. Start again from the login page.");
       return;
@@ -23,10 +37,19 @@ const Callback = () => {
     let cancelled = false;
     void exchangeWebLogin(code, state)
       .then(() => {
-        if (!cancelled) window.location.assign("/");
+        if (cancelled) return;
+        trackAction("login_completed", {
+          "envsync.event_name": "login_completed",
+          "envsync.event_category": "auth",
+          "envsync.surface": "web",
+          "envsync.success": true,
+          method: readLoginMethod(),
+        });
+        window.location.assign("/");
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        trackLoginFailed("exchange_failed");
         setFailed(true);
         setMessage(
           error instanceof Error
@@ -52,7 +75,7 @@ const Callback = () => {
         {failed && (
           <Link
             to="/login"
-            className="text-sm text-emerald-400 underline-offset-4 hover:underline"
+            className="text-sm text-accent-ink underline-offset-4 hover:underline"
           >
             Back to sign in
           </Link>

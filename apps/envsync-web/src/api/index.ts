@@ -10,6 +10,7 @@ import { teams } from "./teams.api";
 import { permissions } from "./permissions.api";
 import { changeRequests } from "./change-requests.api";
 import { serviceTokens } from "./service-tokens.api";
+import { accountApi } from "./account.api";
 
 export const api = {
   sdk,
@@ -24,6 +25,7 @@ export const api = {
   permissions,
   changeRequests,
   serviceTokens,
+  account: accountApi,
 };
 
 export * from "./base";

@@ -20,6 +20,7 @@ import {
 	type VerifiedEntitlement,
 } from "@/services/entitlement.types";
 import { EditionPolicyService } from "@/services/edition-policy.service";
+import { PlanService } from "@/services/plan.service";
 
 const ENTITLEMENT_ISS = "envsync-license-server";
 const DEFAULT_GRACE_SECONDS = 72 * 60 * 60; // 72h grace after exp (Coder-like)
@@ -111,40 +112,39 @@ export class EntitlementService {
 	}
 
 	/**
-	 * Production trust set, with the bundled key and the test fixture key removed.
-	 * Explicit test mode may add the fixture key back.
+	 * Production trust set. The retired bundled key is never trusted.
+	 * Explicit test mode may add a non-retired fixture public key.
 	 */
 	private static resolveTrustedKeys() {
 		const allowFixture = this.fixtureKeysAllowed();
 		const keys = loadConfiguredTrustedKeys();
 
-		if (!allowFixture) {
-			for (const kid of [...keys.keys()]) {
-				const pem = keys.get(kid);
-				if (!pem) continue;
-				if (
-					kid === ENTITLEMENT_FIXTURE_KID
-					|| kid === ENTITLEMENT_RETIRED_KID
-					|| isRetiredEntitlementPublicKey(pem)
-				) {
-					keys.delete(kid);
-				}
+		for (const kid of [...keys.keys()]) {
+			const pem = keys.get(kid);
+			if (!pem) continue;
+			if (
+				kid === ENTITLEMENT_FIXTURE_KID
+				|| kid === ENTITLEMENT_RETIRED_KID
+				|| isRetiredEntitlementPublicKey(pem)
+			) {
+				keys.delete(kid);
 			}
 		}
 
 		if (allowFixture && this.#testOverrides?.public_key_pem?.trim()) {
 			const pem = this.#testOverrides.public_key_pem.trim();
-			keys.set(this.#testOverrides.public_key_kid?.trim() || ENTITLEMENT_FIXTURE_KID, pem);
-			if (isRetiredEntitlementPublicKey(pem)) {
-				keys.set(ENTITLEMENT_RETIRED_KID, pem);
-				keys.set(ENTITLEMENT_FIXTURE_KID, pem);
+			if (!isRetiredEntitlementPublicKey(pem)) {
+				keys.set(this.#testOverrides.public_key_kid?.trim() || ENTITLEMENT_FIXTURE_KID, pem);
 			}
 		}
 
 		for (const [kid, pem] of Object.entries(this.#testOverrides?.trusted_keys ?? {})) {
 			if (!pem?.trim()) continue;
-			const retiredKid = kid === ENTITLEMENT_FIXTURE_KID || kid === ENTITLEMENT_RETIRED_KID;
-			if (!allowFixture && (retiredKid || isRetiredEntitlementPublicKey(pem))) {
+			if (
+				kid === ENTITLEMENT_FIXTURE_KID
+				|| kid === ENTITLEMENT_RETIRED_KID
+				|| isRetiredEntitlementPublicKey(pem)
+			) {
 				continue;
 			}
 			keys.set(kid, pem.trim());
@@ -335,7 +335,6 @@ export class EntitlementService {
 		if (!EditionPolicyService.isHosted()) {
 			return ceiling;
 		}
-		const { PlanService } = await import("@/services/plan.service");
 		const resolved = await PlanService.resolve(orgId);
 		const granted = new Set(resolved.features);
 		return ceiling.filter(feature => feature === "multi_org" || granted.has(feature));
@@ -391,7 +390,6 @@ export class EntitlementService {
 			return;
 		}
 
-		const { PlanService } = await import("@/services/plan.service");
 		const resolved = await PlanService.resolve(orgId);
 		if (!resolved.features.includes(feature)) {
 			throw new ForbiddenError(

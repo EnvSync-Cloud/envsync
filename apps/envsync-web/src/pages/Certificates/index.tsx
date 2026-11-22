@@ -180,7 +180,7 @@ const Certificates = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge className="bg-emerald-600">Active</Badge>;
+        return <Badge variant="outline" className="border-border font-normal text-accent-ink">Active</Badge>;
       case "revoked":
         return <Badge variant="destructive">Revoked</Badge>;
       case "expired":
@@ -240,7 +240,7 @@ const Certificates = () => {
             <>
             <Dialog open={isIssueOpen} onOpenChange={(open) => { setIsIssueOpen(open); if (!open) setIssuedCert(null); }}>
               <DialogTrigger asChild>
-                <Button className="bg-emerald-500 hover:bg-emerald-600" data-testid="certificate-issue-button">
+                <Button  data-testid="certificate-issue-button">
                   <Plus className="w-4 h-4 mr-2" /> Issue Certificate
                 </Button>
               </DialogTrigger>
@@ -325,13 +325,13 @@ const Certificates = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-emerald-400">
+                    <div className="flex items-center gap-2 text-accent-ink">
                       <CheckCircle className="w-5 h-5" />
                       <span className="font-medium">Certificate issued successfully</span>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Certificate PEM</Label>
-                      <Textarea value={issuedCert.cert_pem} readOnly className="bg-card border-border text-green-400 min-h-[80px] font-mono text-xs" />
+                      <Textarea value={issuedCert.cert_pem} readOnly className="min-h-[80px] border-border bg-card font-mono text-xs text-foreground" />
                       <Button variant="ghost" size="sm" className="mt-1 text-muted-foreground" onClick={() => { navigator.clipboard.writeText(issuedCert.cert_pem); toast.success("Copied!"); }}>
                         <Copy className="w-3 h-3 mr-1" /> Copy Certificate
                       </Button>
@@ -437,22 +437,22 @@ const Certificates = () => {
 
       <Tabs defaultValue="inventory" className="space-y-4">
         <TabsList data-testid="certificates-tabs" className="h-auto bg-transparent p-0">
-          <TabsTrigger data-testid="certificates-tab-inventory" value="inventory" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+          <TabsTrigger data-testid="certificates-tab-inventory" value="inventory" className="rounded-xl text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground">
             Inventory
           </TabsTrigger>
-          <TabsTrigger data-testid="certificates-tab-issue" value="issue" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+          <TabsTrigger data-testid="certificates-tab-issue" value="issue" className="rounded-xl text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground">
             Issue
           </TabsTrigger>
-          <TabsTrigger data-testid="certificates-tab-ca" value="ca" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+          <TabsTrigger data-testid="certificates-tab-ca" value="ca" className="rounded-xl text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground">
             CA
           </TabsTrigger>
         </TabsList>
 
       <TabsContent value="ca" className="mt-0">
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
-            <ShieldCheck className="w-5 h-5 mr-2 text-emerald-400" />
+            <ShieldCheck className="mr-2 size-5 text-muted-foreground" />
             Organization CA
           </CardTitle>
         </CardHeader>
@@ -461,7 +461,7 @@ const Certificates = () => {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle className="size-5 text-muted-foreground" />
                   <span className="text-foreground font-medium">{orgCA.subject_cn}</span>
                   {getStatusBadge(orgCA.status)}
                 </div>
@@ -486,7 +486,7 @@ const Certificates = () => {
               <p className="text-muted-foreground mb-3">Organization CA not initialized</p>
               <Dialog open={isInitCAOpen} onOpenChange={setIsInitCAOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600">
+                  <Button >
                     Initialize CA
                   </Button>
                 </DialogTrigger>
@@ -536,7 +536,7 @@ const Certificates = () => {
       </TabsContent>
 
       <TabsContent value="inventory" className="mt-0">
-      <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+      <Card className="bg-card text-card-foreground border-border">
         <CardHeader>
           <CardTitle className="text-foreground flex items-center">
             Certificates
@@ -595,7 +595,7 @@ const Certificates = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className={(cert as { auto_renew?: boolean }).auto_renew ? "text-emerald-400" : "text-muted-foreground"}
+                              className={(cert as { auto_renew?: boolean }).auto_renew ? "text-accent-ink" : "text-muted-foreground"}
                               data-testid="certificate-auto-renew-button"
                               onClick={() =>
                                 setAutoRenew.mutate({

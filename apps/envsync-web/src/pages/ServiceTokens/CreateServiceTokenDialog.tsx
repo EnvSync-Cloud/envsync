@@ -119,12 +119,11 @@ export function CreateServiceTokenDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" data-testid="create-service-token-dialog">
+      <DialogContent className="max-w-2xl bg-card" data-testid="create-service-token-dialog">
         <DialogHeader>
-          <DialogTitle>Create Service Token</DialogTitle>
+          <DialogTitle>Create token</DialogTitle>
           <DialogDescription>
-            Issue a project-scoped service token. The raw value is shown once after
-            create or rotate.
+            The raw value is shown once, after you create or rotate it.
           </DialogDescription>
         </DialogHeader>
 
@@ -288,7 +287,7 @@ export function CreateServiceTokenDialog({
             disabled={isSubmitting || !form.name.trim()}
             data-testid="create-service-token-submit"
           >
-            {isSubmitting ? "Creating..." : "Create Service Token"}
+            {isSubmitting ? "Creating..." : "Create token"}
           </Button>
         </DialogFooter>
       </DialogContent>

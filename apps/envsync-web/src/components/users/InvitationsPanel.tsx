@@ -183,10 +183,11 @@ export const InvitationsPanel = () => {
                       </TableCell>
                       <TableCell>
                         <Badge
+                          variant="outline"
                           className={
                             invitation.isAccepted
-                              ? "bg-emerald-500/10 text-emerald-200"
-                              : "bg-amber-500/10 text-amber-200"
+                              ? "border-border font-normal text-accent-ink"
+                              : "border-border font-normal text-amber-200"
                           }
                         >
                           <Clock className="mr-1 h-3 w-3" />
@@ -286,7 +287,7 @@ export const InvitationsPanel = () => {
             <Button
               onClick={handleUpdateRole}
               disabled={updateInvitationRoleMutation.isPending}
-              className="bg-emerald-500 text-foreground hover:bg-emerald-600"
+              
             >
               {updateInvitationRoleMutation.isPending ? "Saving..." : "Save Role"}
             </Button>

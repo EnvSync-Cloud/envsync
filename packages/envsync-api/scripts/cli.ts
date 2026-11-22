@@ -313,7 +313,7 @@ async function refreshVaultSession(userId: string, orgId: string) {
 	await kms.revokeMemberSessions(userId, orgId).catch(() => 0);
 	invalidateSessionToken(userId, orgId);
 
-	const sessionToken = await getVaultSessionToken(userId, orgId);
+	const sessionToken = await getVaultSessionToken(userId, orgId, "vault:write");
 	const session = await kms.validateSession(sessionToken);
 
 	if (!session.valid) {

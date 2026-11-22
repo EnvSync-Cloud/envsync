@@ -41,7 +41,7 @@ export class CertificateController {
 	};
 
 	public static readonly getRootCA = async (c: Context) => {
-		const result = await CertificateService.getRootCA();
+		const result = await CertificateService.getRootCA(c.get("org_id"));
 		return c.json(result, 200);
 	};
 

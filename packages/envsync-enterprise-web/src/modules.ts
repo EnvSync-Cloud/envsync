@@ -21,33 +21,9 @@ export const enterpriseWebModules: WebModule[] = [
         loadComponent: () => import("./pages/ProjectIntegrations"),
       },
       {
-        id: "applications-integrations-github",
+        id: "applications-integrations-provider",
         layout: "root",
-        path: "projects/:appId/integrations/github",
-        loadComponent: () => import("./pages/ProjectIntegrationProvider"),
-      },
-      {
-        id: "applications-integrations-gitlab",
-        layout: "root",
-        path: "projects/:appId/integrations/gitlab",
-        loadComponent: () => import("./pages/ProjectIntegrationProvider"),
-      },
-      {
-        id: "applications-integrations-vercel",
-        layout: "root",
-        path: "projects/:appId/integrations/vercel",
-        loadComponent: () => import("./pages/ProjectIntegrationProvider"),
-      },
-      {
-        id: "applications-integrations-aws-ssm",
-        layout: "root",
-        path: "projects/:appId/integrations/aws-ssm",
-        loadComponent: () => import("./pages/ProjectIntegrationProvider"),
-      },
-      {
-        id: "applications-integrations-google-secret-manager",
-        layout: "root",
-        path: "projects/:appId/integrations/google-secret-manager",
+        path: "projects/:appId/integrations/:provider",
         loadComponent: () => import("./pages/ProjectIntegrationProvider"),
       },
       {

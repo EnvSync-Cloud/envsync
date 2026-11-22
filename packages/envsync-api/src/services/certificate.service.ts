@@ -304,7 +304,7 @@ export class CertificateService {
 			{
 				name: "kms-encrypt-private-key",
 				execute: async () => {
-					if (is_system_generated && persist_private_key) {
+					if (is_system_generated && persist_private_key && memberKeyPem.trim()) {
 						encryptedKeyPem = await this.encryptPrivateKeyForSystemCert(
 							org_id,
 							certId,
@@ -673,7 +673,7 @@ export class CertificateService {
 	public static getChain = async (org_id: string) => {
 		const [orgCA, rootCA, imported] = await Promise.all([
 			this.getActiveOrgCARecord(org_id),
-			this.getRootCA(),
+			this.getRootCA(org_id),
 			(async () => {
 				const db = await DB.getInstance();
 				return db
@@ -858,10 +858,10 @@ export class CertificateService {
 			throw new NotFoundError("Certificate bundle", user_id, "NOT_FOUND");
 		}
 
-		const [rootCA, key_pem] = await Promise.all([
-			this.getRootCA(),
-			this.decryptSystemPrivateKey(cert),
-		]);
+		const rootCA = await this.getRootCA(org_id);
+		// sha-e8722a6 keeps managed member keys on the server, so the bundle
+		// still returns the certificate when no client-held key was stored.
+		const key_pem = cert.encrypted_key_pem ? await this.decryptSystemPrivateKey(cert) : "";
 
 		return {
 			root_ca_pem: rootCA.cert_pem,
@@ -927,9 +927,9 @@ export class CertificateService {
 		};
 	};
 
-	public static getRootCA = async () => {
+	public static getRootCA = async (org_id?: string) => {
 		const kms = await KMSClient.getInstance();
-		const result = await kms.getRootCA();
+		const result = await kms.getRootCA(org_id);
 		return { cert_pem: result.certPem };
 	};
 

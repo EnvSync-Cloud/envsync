@@ -4,7 +4,7 @@
 
 See the [README](README.md) and per-package `AGENTS.md` files for full architecture details. Essentials:
 
-- **Bun 1.3+**, **Go 1.24+**, **Docker**
+- **Bun 1.3+**, **Go 1.26+**, **Docker**
 - `bun install` — install all JS/TS dependencies
 - `docker compose up -d` — start Postgres, miniKMS, OpenFGA, Atrium, Mailpit
 - Atrium is the pinned image `ghcr.io/bravo68web/atrium:0.2.0-rc.17`. Dev mounts `docker/atrium` for config and branding.

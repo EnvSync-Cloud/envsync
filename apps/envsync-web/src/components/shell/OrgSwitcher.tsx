@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown, Globe, Loader2, Plus, Sparkles } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Globe, Loader2, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { CreateOrganizationDialog } from "@/components/auth/CreateOrganizationDialog";
@@ -40,6 +40,8 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
     [activeMembershipUserId, memberships],
   );
   const activeOrgName = activeMembership?.org_name || user?.org?.name || "EnvSync Workspace";
+  const activeRoleName = activeMembership?.role_name || user?.role?.name || "";
+  const activeContextTitle = activeRoleName ? `${activeOrgName} · ${activeRoleName}` : activeOrgName;
   const canSwitchOrganizations =
     runtimeConfig.edition === "enterprise" && user?.auth_type !== "saml";
   const canCreateOrganization = canCreateOrganizationInUi(runtimeConfig);
@@ -48,15 +50,20 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
     return (
       <div
         className={cn(
-          "flex items-center border border-primary/20 bg-primary/10 text-primary",
+          "flex items-center border border-sidebar-border bg-background text-foreground",
           variant === "header" ? "gap-2 rounded-xl px-3 py-1.5" : "rounded-2xl",
           expanded ? "gap-2 px-3 py-2" : "justify-center p-2",
         )}
-        title={activeOrgName}
+        title={activeContextTitle}
       >
-        <Sparkles className="size-3.5 shrink-0" />
+        <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
         {(expanded || variant === "header") && (
-          <span className="truncate text-sm font-medium">{activeOrgName}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium leading-tight">{activeOrgName}</span>
+            {activeRoleName ? (
+              <span className="block truncate text-[11px] leading-tight text-muted-foreground">{activeRoleName}</span>
+            ) : null}
+          </span>
         )}
       </div>
     );
@@ -69,25 +76,31 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
           <button
             data-testid="organization-switcher-trigger"
             className={cn(
-              "flex items-center border border-primary/20 bg-primary/10 text-left text-primary transition-colors hover:border-primary/30 hover:bg-primary/14",
+              "flex items-center border border-sidebar-border bg-background text-left text-foreground transition-colors hover:bg-sidebar-accent",
               variant === "header"
                 ? "max-w-[240px] gap-2 rounded-xl px-3 py-1.5"
                 : "w-full rounded-2xl",
               variant !== "header" && (expanded ? "gap-2 px-3 py-2" : "justify-center p-2"),
             )}
-            title={activeOrgName}
+            title={activeContextTitle}
+            aria-label={activeContextTitle}
           >
-            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/15">
+            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground">
               {isSwitchingOrg || isCreatingOrganization ? (
                 <Loader2 className="size-3 animate-spin" />
               ) : (
-                <Sparkles className="size-3" />
+                <Building2 className="size-3" />
               )}
             </span>
             {(expanded || variant === "header") && (
               <>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{activeOrgName}</span>
-                <ChevronsUpDown className="size-3.5 shrink-0 text-primary/70" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium leading-tight">{activeOrgName}</span>
+                  {activeRoleName ? (
+                    <span className="block truncate text-[11px] leading-tight text-muted-foreground">{activeRoleName}</span>
+                  ) : null}
+                </span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
               </>
             )}
           </button>
@@ -95,7 +108,7 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
         <PopoverContent
           align="start"
           side={variant === "header" ? "bottom" : "right"}
-          className="w-[320px] border-border bg-popover p-0"
+          className="w-[380px] border-border bg-popover p-0"
         >
           <Command className="bg-transparent text-foreground">
             <CommandInput placeholder="Search organizations..." className="text-foreground placeholder:text-tertiary" />
@@ -114,20 +127,27 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
                         void switchOrg(membership.org_id);
                       }}
                       disabled={isSwitchingOrg || isCreatingOrganization}
+                      aria-label={`${membership.org_name}, role ${membership.role_name}`}
                       className="flex items-center gap-3 rounded-xl px-3 py-3 data-[selected=true]:bg-muted"
                     >
-                      <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
                         <Globe className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-foreground">
                           {membership.org_name}
                         </span>
-                        <span className="block truncate text-xs text-tertiary">
-                          {membership.org_slug} · {membership.role_name}
+                        <span className="mt-0.5 block truncate text-xs text-tertiary">
+                          {membership.org_slug}
                         </span>
                       </span>
-                      {isActive && <Check className="size-4 text-primary" />}
+                      <span className="max-w-[9.5rem] shrink-0 text-right">
+                        <span className="block text-[10px] leading-none text-tertiary">Role</span>
+                        <span className="mt-1 block text-xs font-medium leading-snug text-foreground">
+                          {membership.role_name}
+                        </span>
+                      </span>
+                      {isActive && <Check className="size-4 shrink-0 text-foreground" />}
                     </CommandItem>
                   );
                 })}
@@ -144,9 +164,9 @@ export function OrgSwitcher({ expanded = true, variant = "sidebar" }: OrgSwitche
                         setCreateOrganizationOpen(true);
                       }}
                       disabled={isSwitchingOrg || isCreatingOrganization}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-primary data-[selected=true]:bg-muted"
+                      className="flex items-center gap-3 rounded-lg px-3 py-3 text-accent-ink data-[selected=true]:bg-muted"
                     >
-                      <span className="inline-flex size-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                      <span className="inline-flex size-9 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground">
                         <Plus className="size-4" />
                       </span>
                       <span className="text-sm font-medium">+ Create organization</span>

@@ -308,7 +308,7 @@ export const EnvironmentVariablesTable = ({
             {isSecrets ? (
               <Shield className="size-6 mr-2 text-destructive" />
             ) : (
-              <Key className="size-6 mr-2 text-primary" />
+              <Key className="mr-2 size-6 text-muted-foreground" />
             )}
             {isSecrets ? "Secrets" : "Variables"}
             <Count
@@ -447,9 +447,9 @@ export const EnvironmentVariablesTable = ({
 
         {/* Bulk Actions Bar */}
         {visibleSelectedCount > 0 && (
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-3">
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
+              <Badge variant="secondary" className="bg-muted text-foreground">
                 {visibleSelectedCount} selected
               </Badge>
               {!allVisibleSelected && (
@@ -457,7 +457,7 @@ export const EnvironmentVariablesTable = ({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="text-primary hover:text-primary/80 h-7 px-2"
+                  className="h-7 px-2 text-foreground"
                   onClick={() => toggleAllVisible(true)}
                 >
                   Select all {filteredVariables.length}
@@ -527,7 +527,15 @@ export const EnvironmentVariablesTable = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-64" />
+                <col />
+                {showEnvironmentColumn ? <col className="w-36" /> : null}
+                <col className="w-60" />
+                {canEdit ? <col className="w-28" /> : null}
+              </colgroup>
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-3 px-4 text-left">
@@ -548,11 +556,11 @@ export const EnvironmentVariablesTable = ({
                       Environment
                     </th>
                   )}
-                  <th className="text-left py-3 px-4 text-muted-foreground font-medium">
+                  <th className="whitespace-nowrap py-3 px-4 text-left font-medium text-muted-foreground">
                     Updated
                   </th>
                   {canEdit && (
-                    <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                    <th className="whitespace-nowrap py-3 pl-2 pr-4 text-right font-medium text-muted-foreground">
                       Actions
                     </th>
                   )}
@@ -572,7 +580,7 @@ export const EnvironmentVariablesTable = ({
                         isEditing
                           ? "bg-muted/30"
                           : "hover:bg-muted/50",
-                        selectedRows[variable.id] && "bg-primary/5",
+                        selectedRows[variable.id] && "bg-muted/50",
                         "text-sm"
                       )}
                     >
@@ -585,11 +593,11 @@ export const EnvironmentVariablesTable = ({
                       </td>
                       
                       {/* Key column */}
-                      <td className="py-4 px-4">
+                      <td className="whitespace-nowrap px-4 py-4">
                         {isEditing ? (
                           <div className="flex items-start space-x-2">
                             <div className="flex-1">
-                              <code className="text-sm font-mono text-primary bg-muted px-2 py-1 rounded block">
+                              <code className="block rounded bg-muted px-2 py-1 font-mono text-sm text-foreground">
                                 {variable.key}
                               </code>
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -598,16 +606,11 @@ export const EnvironmentVariablesTable = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-start space-x-2">
-                            <div>
-                              <code className="text-sm font-mono text-primary bg-muted px-2 py-1 rounded">
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-0">
+                              <code className="rounded bg-muted px-2 py-1 font-mono text-sm text-foreground">
                                 {variable.key}
                               </code>
-                              {isSecrets && (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                  Encrypted secret entry
-                                </p>
-                              )}
                             </div>
                             <Button
                               size="sm"
@@ -619,7 +622,7 @@ export const EnvironmentVariablesTable = ({
                               <Copy className="h-3 w-3" />
                             </Button>
                             {lastCopiedValue === variable.key && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[11px] text-primary">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[11px] text-foreground">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Copied
                               </span>
@@ -645,13 +648,13 @@ export const EnvironmentVariablesTable = ({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-8 w-8 p-0 text-primary hover:text-primary/80"
+                                className="h-8 w-8 p-0 text-foreground"
                                 onClick={() => saveInlineEdit(variable)}
                                 disabled={isSaving || !editState?.isDirty}
                                 aria-label="Save changes"
                               >
                                 {isSaving ? (
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
                                 ) : (
                                   <Save className="h-4 w-4" />
                                 )}
@@ -669,8 +672,8 @@ export const EnvironmentVariablesTable = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2 max-w-xs">
-                            <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
+                          <div className="flex min-w-0 items-center gap-1">
+                            <code className="hdx-mask block h-7 min-w-0 flex-1 select-none truncate rounded bg-muted px-2 font-mono text-sm leading-7 text-foreground">
                               {showSensitive[variable.id] ? variable.value : "••••••••"}
                             </code>
                             <Button
@@ -705,9 +708,9 @@ export const EnvironmentVariablesTable = ({
                         </td>
                       )}
 
-                      <td className="py-4 px-4">
-                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-3 w-3 shrink-0" />
                           <span>{formatDate(variable.updated_at)}</span>
                         </div>
                         {variable.created_by && (
@@ -718,7 +721,7 @@ export const EnvironmentVariablesTable = ({
                         )}
                       </td>
                       {canEdit && (
-                        <td className="p-4 flex justify-end">
+                        <td className="py-4 pl-2 pr-4 text-right">
                           {isEditing ? (
                             <div className="flex items-center space-x-1">
                               <Button

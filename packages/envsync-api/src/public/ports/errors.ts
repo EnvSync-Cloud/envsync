@@ -6,5 +6,6 @@ export {
 	ForbiddenError,
 	NotFoundError,
 	ValidationError,
+	isNoResultError,
 	orNotFound,
 } from "@/libs/errors";

@@ -1,6 +1,6 @@
 {
   "name": "envsync-enterprise",
-  "version": "0.24.0",
+  "version": "0.25.3",
   "description": "Proprietary EnvSync enterprise API modules (management surface, EE capabilities)",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -32,7 +32,7 @@
     "envsync-api": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "1.4.5",
     "envsync-api": "workspace:*",
     "typescript": "^5.0.0"
   }

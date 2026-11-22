@@ -80,6 +80,10 @@ type UserAuditActions =
 	| "user_deleted"
 	| "user_role_updated"
 	| "password_update_requested"
+	| "password_set"
+	| "mfa_enrollment_started"
+	| "mfa_enabled"
+	| "mfa_disabled"
 	| "session_device_revoked";
 
 type ApiKeyAuditActions =

@@ -218,7 +218,7 @@ export function CreateProviderConnectionModal({
           </label>
 
           <div className="space-y-3">
-            <p className="text-xs font-medium text-tertiary uppercase tracking-wider">Auth fields</p>
+            <p className="text-xs font-medium text-muted-foreground">Auth fields</p>
             {providerConfig.connectionAuthFields.map((field) => (
               <ProviderFieldEditor
                 key={field.key}
@@ -236,7 +236,7 @@ export function CreateProviderConnectionModal({
           </div>
 
           <div className="space-y-3">
-            <p className="text-xs font-medium text-tertiary uppercase tracking-wider">Metadata fields</p>
+            <p className="text-xs font-medium text-muted-foreground">Metadata fields</p>
             {providerConfig.connectionMetadataFields.map((field) => (
               <ProviderFieldEditor
                 key={field.key}
@@ -286,7 +286,6 @@ export function CreateProviderConnectionModal({
             <Button
               type="submit"
               disabled={createProviderConnection.isPending}
-              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {createProviderConnection.isPending ? "Creating..." : "Create"}
             </Button>

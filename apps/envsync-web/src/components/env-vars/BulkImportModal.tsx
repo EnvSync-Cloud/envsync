@@ -19,17 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import {
-  Upload,
-  FileText,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Shield,
-  Key,
-  Info,
-} from "lucide-react";
+import { CheckCircle, FileText, XCircle } from "lucide-react";
 import {
   BulkEnvVarData,
   EnvironmentType,
@@ -226,58 +216,23 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
   const canImport = selectedEnvType && validVariables.length > 0;
 
   // Dynamic content based on context
-  const modalTitle = isSecretsPage
-    ? "Bulk Import Secrets"
-    : "Bulk Import Variables";
-  const modalDescription = isSecretsPage
-    ? "Import multiple secrets at once using key=value format. All imported values will be treated as sensitive and encrypted."
-    : "Import multiple variables at once using key=value format.";
-  const buttonText = isSecretsPage ? "Import Secrets" : "Import Variables";
-  const buttonIcon = isSecretsPage ? Shield : Upload;
-  const buttonColor = isSecretsPage
-    ? "bg-red-500 hover:bg-red-600"
-    : "bg-emerald-500 hover:bg-emerald-600";
+  const modalTitle = isSecretsPage ? "Import secrets" : "Import variables";
+  const buttonText = isSecretsPage ? "Import secrets" : "Import variables";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-foreground flex items-center">
-            {isSecretsPage ? (
-              <Shield className="w-5 h-5 text-red-500 mr-2" />
-            ) : (
-              <Upload className="w-5 h-5 text-emerald-500 mr-2" />
-            )}
-            {modalTitle}
-          </DialogTitle>
+          <DialogTitle className="text-foreground">{modalTitle}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {modalDescription}
+            One KEY=value pair per line. Lines starting with # are ignored.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Context Banner for Secrets */}
-          {isSecretsPage && (
-            <div className="bg-red-900/20 border border-red-800/30 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Shield className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="text-sm font-medium text-red-400 mb-1">
-                    Secret Import Mode
-                  </h4>
-                  <p className="text-xs text-red-300/80">
-                    All imported variables will be automatically marked as
-                    sensitive, encrypted, and hidden by default for security.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Environment Type Selection */}
           <div className="space-y-2">
             <Label htmlFor="bulk-env-type" className="text-foreground">
-              Target Environment *
+              Environment
             </Label>
             <Select
               value={selectedEnvType}
@@ -313,16 +268,16 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-card">
+            <TabsList className="grid h-9 w-full grid-cols-2 bg-muted">
               <TabsTrigger
                 value="input"
-                className="text-muted-foreground data-[state=active]:text-foreground"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Input
               </TabsTrigger>
               <TabsTrigger
                 value="preview"
-                className="text-muted-foreground data-[state=active]:text-foreground"
+                className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 Preview ({parsedVariables.length})
               </TabsTrigger>
@@ -340,7 +295,7 @@ OAUTH_CLIENT_SECRET=oauth_secret_value`
                     onClick={handleLoadExample}
                     variant="ghost"
                     size="sm"
-                    className="text-emerald-400 hover:text-emerald-300"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Load Example
@@ -370,50 +325,10 @@ PORT=3000`
                   }
                   disabled={isImporting}
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Use KEY=value format, one per line</span>
-                  <span>{importText.split("\n").length} lines</span>
-                </div>
-              </div>
-
-              {/* Format Help */}
-              <div className="bg-card rounded-lg p-4 border border-border">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-teal-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium mb-2">Format Guidelines:</p>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>
-                        Use{" "}
-                        <code className="bg-muted px-1 rounded font-mono">
-                          KEY=value
-                        </code>{" "}
-                        format
-                      </li>
-                      <li>
-                        Keys must be uppercase with underscores (A-Z, 0-9, _)
-                      </li>
-                      <li>Lines starting with # are treated as comments</li>
-                      <li>
-                        Values with spaces can be quoted:{" "}
-                        <code className="bg-muted px-1 rounded font-mono">
-                          KEY="value with spaces"
-                        </code>
-                      </li>
-                      {isSecretsPage ? (
-                        <li className="text-red-400">
-                          All variables will be automatically marked as secrets
-                          and encrypted
-                        </li>
-                      ) : (
-                        <li>
-                          Variables with sensitive keywords will be marked as
-                          secrets automatically
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  {importText.split("\n").length} lines
+                  {isSecretsPage ? " · values are stored as secrets" : ""}
+                </p>
               </div>
             </TabsContent>
 
@@ -430,29 +345,10 @@ PORT=3000`
                 <div className="space-y-4">
                   {/* Summary */}
                   <div className="flex items-center space-x-4">
-                    <Badge
-                      variant="secondary"
-                      className="bg-green-900/20 text-green-400"
-                    >
-                      {validVariables.length} Valid
-                    </Badge>
-                    {invalidVariables.length > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-red-900/20 text-red-400"
-                      >
-                        {invalidVariables.length} Invalid
-                      </Badge>
-                    )}
-                    {isSecretsPage && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-red-900/20 text-red-400"
-                      >
-                        <Shield className="w-3 h-3 mr-1" />
-                        All Secrets
-                      </Badge>
-                    )}
+                    <span className="text-sm text-muted-foreground">
+                      {validVariables.length} valid
+                      {invalidVariables.length > 0 ? ` · ${invalidVariables.length} invalid` : ""}
+                    </span>
                   </div>
 
                   {/* Variables List */}
@@ -485,20 +381,18 @@ PORT=3000`
                           >
                             <td className="py-2 px-3">
                               {variable.valid ? (
-                                <CheckCircle className="w-4 h-4 text-green-400" />
+                                <CheckCircle className="size-4 text-accent-ink" />
                               ) : (
-                                <XCircle className="w-4 h-4 text-red-400" />
+                                <XCircle className="size-4 text-destructive" />
                               )}
                             </td>
                             <td className="py-2 px-3">
                               <code
-                                className={`text-sm font-mono px-2 py-1 rounded ${
-                                  variable.valid
-                                    ? "text-emerald-400 bg-card"
-                                    : "text-red-400 bg-red-900/20"
+                                className={`font-mono text-sm ${
+                                  variable.valid ? "text-foreground" : "text-destructive"
                                 }`}
                               >
-                                {variable.key || "INVALID"}
+                                {variable.key || "Invalid"}
                               </code>
                             </td>
                             <td className="py-2 px-3">
@@ -509,24 +403,9 @@ PORT=3000`
                               </code>
                             </td>
                             <td className="py-2 px-3">
-                              <div
-                                className={`flex items-center space-x-1 text-xs px-2 py-1 rounded w-fit ${
-                                  variable.sensitive || isSecretsPage
-                                    ? "bg-red-900/20 text-red-400"
-                                    : "bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                {variable.sensitive || isSecretsPage ? (
-                                  <Shield className="w-3 h-3" />
-                                ) : (
-                                  <Key className="w-3 h-3" />
-                                )}
-                                <span>
-                                  {variable.sensitive || isSecretsPage
-                                    ? "Secret"
-                                    : "Variable"}
-                                </span>
-                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {variable.sensitive || isSecretsPage ? "Secret" : "Variable"}
+                              </span>
                             </td>
                             <td className="py-2 px-3">
                               <span className="text-sm text-muted-foreground">
@@ -546,95 +425,11 @@ PORT=3000`
 
                   {/* Invalid Variables Warning */}
                   {invalidVariables.length > 0 && (
-                    <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
-                      <div className="flex items-start space-x-3">
-                        <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                        <div className="text-sm text-red-200">
-                          <p className="font-medium mb-1">
-                            {invalidVariables.length}{" "}
-                            {isSecretsPage ? "secret" : "variable"}
-                            {invalidVariables.length > 1 ? "s" : ""} will be
-                            skipped:
-                          </p>
-                          <ul className="list-disc list-inside space-y-1 text-red-300">
-                            {invalidVariables
-                              .slice(0, 3)
-                              .map((variable, index) => (
-                                <li key={index}>
-                                  Line {variable.line}: {variable.error}
-                                </li>
-                              ))}
-                            {invalidVariables.length > 3 && (
-                              <li>
-                                ... and {invalidVariables.length - 3} more
-                              </li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Import Summary */}
-                  {validVariables.length > 0 && (
-                    <div
-                      className={`rounded-lg p-4 border ${
-                        isSecretsPage
-                          ? "bg-red-900/10 border-red-800/30"
-                          : "bg-emerald-900/10 border-emerald-800/30"
-                      }`}
-                    >
-                      <div className="flex items-start space-x-3">
-                        {isSecretsPage ? (
-                          <Shield className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        )}
-                        <div
-                          className={`text-sm ${
-                            isSecretsPage ? "text-red-200" : "text-emerald-200"
-                          }`}
-                        >
-                          <p className="font-medium mb-1">
-                            Ready to import {validVariables.length}{" "}
-                            {isSecretsPage ? "secret" : "variable"}
-                            {validVariables.length > 1 ? "s" : ""}
-                          </p>
-                          <div className="space-y-1 text-xs">
-                            <div className="flex items-center space-x-4">
-                              <span>
-                                • Environment:{" "}
-                                {environmentTypes.find(
-                                  (env) => env.id === selectedEnvType
-                                )?.name || "Not selected"}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <span>
-                                • Type:{" "}
-                                {isSecretsPage
-                                  ? "All secrets (encrypted)"
-                                  : `${
-                                      validVariables.filter((v) => v.sensitive)
-                                        .length
-                                    } secrets, ${
-                                      validVariables.filter((v) => !v.sensitive)
-                                        .length
-                                    } variables`}
-                              </span>
-                            </div>
-                            {isSecretsPage && (
-                              <div className="flex items-center space-x-4">
-                                <span>
-                                  • Security: All values will be encrypted and
-                                  hidden
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-sm text-destructive">
+                      {invalidVariables.length}{" "}
+                      {invalidVariables.length === 1 ? "line" : "lines"} will be skipped
+                      {invalidVariables[0]?.error ? `: ${invalidVariables[0].error}` : ""}
+                    </p>
                   )}
                 </div>
               )}
@@ -655,23 +450,7 @@ PORT=3000`
             onClick={handleImport}
             disabled={!canImport || isImporting}
           >
-            {isImporting ? (
-              <>
-                <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {isSecretsPage
-                  ? "Importing Secrets..."
-                  : "Importing Variables..."}
-              </>
-            ) : (
-              <>
-                {isSecretsPage ? (
-                  <Shield className="w-4 h-4 mr-2" />
-                ) : (
-                  <Upload className="w-4 h-4 mr-2" />
-                )}
-                {buttonText} ({validVariables.length})
-              </>
-            )}
+            {isImporting ? "Importing…" : `${buttonText} (${validVariables.length})`}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -14,6 +14,12 @@ describe("envsync-ui tokens (H5)", () => {
 		expect(css).toContain("--primary: 153 74% 44%");
 		expect(css).toContain("--radius:");
 		expect(css).toContain("--sidebar-background:");
+		const dark = css.slice(css.indexOf(".dark"));
+		expect(dark).toContain("--background: 0 0% 4%");
+		expect(dark).toContain("--primary: 0 0% 98%");
+		expect(dark).toContain("--primary-foreground: 0 0% 6%");
+		expect(dark).toContain("--accent-ink: 153 70% 51%");
+		expect(dark).toContain("--sidebar-primary: 0 0% 16%");
 	});
 
 	test("tailwind preset maps primary color to CSS variable", () => {

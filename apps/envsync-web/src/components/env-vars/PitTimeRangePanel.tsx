@@ -42,10 +42,12 @@ export const PitTimeRangePanel = ({
 	return (
 		<Card className="border-border bg-card">
 			<CardHeader className="pb-4">
-				<CardTitle className="flex items-center gap-2 text-base text-foreground">
-					<CalendarRange className="size-4 text-cyan-400" />
-					{kindLabel} time-range compare
+				<CardTitle className="text-base text-foreground">
+					Restore from a time range
 				</CardTitle>
+				<p className="text-sm text-muted-foreground">
+					Preview the net {kindLabel.toLowerCase()} change between two times.
+				</p>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="flex flex-wrap items-center gap-2">
@@ -58,7 +60,7 @@ export const PitTimeRangePanel = ({
 							onClick={() => onPresetChange(preset)}
 							className={
 								range.preset === preset
-									? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+									? "border-border bg-accent text-foreground"
 									: "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
 							}
 						>

@@ -201,6 +201,33 @@ a.ghost.social {
   margin-top: 10px;
   text-decoration: none;
 }
+a.ghost.forgot {
+  display: grid;
+  place-items: center;
+  margin-top: 10px;
+  text-decoration: none;
+}
+.social-list { display: grid; gap: 10px; }
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #d4d4d8;
+  background: #fafafa;
+  color: #18181b;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.social-btn:hover { background: #fff; text-decoration: none; }
+.social-btn .mark {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
 
 .choice {
   display: flex;

@@ -52,10 +52,10 @@ export const ApplicationsFilters = ({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary w-4 h-4" />
             <Input
-              placeholder="Search projects..."
+              placeholder="Search projects"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 bg-card border-border text-foreground placeholder:text-tertiary focus:border-border focus:ring-emerald-500/20"
+              className="border-border bg-card pl-10 text-foreground placeholder:text-tertiary"
             />
             {searchQuery && (
               <button

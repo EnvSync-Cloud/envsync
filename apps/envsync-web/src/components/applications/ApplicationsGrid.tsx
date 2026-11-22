@@ -2,6 +2,7 @@ import { ApplicationCard } from "./ApplicationCard";
 import { EmptyState } from "./EmptyState";
 import { NoResultsState } from "./NoResultsState";
 import { App } from "@/constants";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface ApplicationsGridProps {
   apps: App[];
@@ -43,17 +44,30 @@ export const ApplicationsGrid = ({
   }
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      {apps.map((app) => (
-        <ApplicationCard
-          key={app.id}
-          app={app}
-          canEdit={canEdit}
-          onView={onView}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
+    <div className="overflow-hidden rounded-lg border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-border hover:bg-transparent">
+            <TableHead className="text-muted-foreground">Name</TableHead>
+            <TableHead className="text-right text-muted-foreground">Variables</TableHead>
+            <TableHead className="text-right text-muted-foreground">Secrets</TableHead>
+            <TableHead className="text-muted-foreground">Updated</TableHead>
+            {canEdit ? <TableHead className="w-12" /> : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {apps.map((app) => (
+            <ApplicationCard
+              key={app.id}
+              app={app}
+              canEdit={canEdit}
+              onView={onView}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

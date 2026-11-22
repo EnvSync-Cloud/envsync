@@ -12,7 +12,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0f1a]">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center max-w-md">
         <div className="mb-6">
           <img src="/EnvSync.svg" alt="EnvSync" className="w-12 h-12 mx-auto mb-8 opacity-50" />
@@ -24,9 +24,9 @@ const NotFound = () => {
             404
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-muted">
               <svg
-                className="w-10 h-10 text-emerald-400"
+                className="h-10 w-10 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -50,7 +50,7 @@ const NotFound = () => {
         </p>
         <a
           href="/"
-          className="inline-flex items-center px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="inline-flex items-center px-5 py-2.5  text-sm font-medium rounded-lg transition-colors"
         >
           Return to Dashboard
         </a>

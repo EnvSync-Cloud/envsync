@@ -146,7 +146,7 @@ export const AddEnvVarModal = ({
   const buttonIcon = isSecretsPage ? Shield : Plus;
   const buttonColor = isSecretsPage 
     ? "bg-red-500 hover:bg-red-600" 
-    : "bg-emerald-500 hover:bg-emerald-600";
+    : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -156,7 +156,7 @@ export const AddEnvVarModal = ({
             {isSecretsPage ? (
               <Shield className="w-5 h-5 text-red-500 mr-2" />
             ) : (
-              <Plus className="w-5 h-5 text-emerald-500 mr-2" />
+              <Plus className="mr-2 size-4 text-muted-foreground" />
             )}
             {modalTitle}
           </DialogTitle>
@@ -300,7 +300,7 @@ export const AddEnvVarModal = ({
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-muted-foreground">Key:</span>
-                <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
+                <code className="rounded bg-muted px-2 py-1 font-mono text-sm text-foreground">
                   {formData.key || (isSecretsPage ? "SECRET_KEY" : "VARIABLE_KEY")}
                 </code>
               </div>

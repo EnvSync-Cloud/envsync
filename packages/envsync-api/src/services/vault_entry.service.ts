@@ -159,7 +159,7 @@ export class VaultEntryService {
 		}
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:write");
 		const result = await kms.vaultWrite(
 			{
 				orgId: input.org_id,
@@ -186,7 +186,7 @@ export class VaultEntryService {
 		input: Omit<VaultKeyInput, "value">,
 	) => {
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:read");
 		try {
 			const result = await kms.vaultRead(
 				{
@@ -229,7 +229,7 @@ export class VaultEntryService {
 		});
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:write");
 		try {
 			await kms.vaultRead(
 				{
@@ -277,7 +277,7 @@ export class VaultEntryService {
 		});
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:delete");
 		try {
 			await kms.vaultRead(
 				{
@@ -307,7 +307,7 @@ export class VaultEntryService {
 	};
 
 	public static requireVaultSession = async (user_id: string, org_id: string) => {
-		const sessionToken = await getVaultSessionToken(user_id, org_id);
+		const sessionToken = await getVaultSessionToken(user_id, org_id, "vault:read");
 		if (!sessionToken.trim()) {
 			throw new BusinessRuleError(
 				"A vault session is required to reveal secrets.",
@@ -339,7 +339,7 @@ export class VaultEntryService {
 		}
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:read");
 		const results = await Promise.all(
 			candidates.map(candidate =>
 				limit(async () => {
@@ -432,7 +432,7 @@ export class VaultEntryService {
 		}
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:write");
 		const results = await Promise.all(
 			input.entries.map(entry =>
 				limit(async () => {
@@ -472,7 +472,7 @@ export class VaultEntryService {
 		});
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:write");
 		return Promise.all(
 			input.entries.map(entry =>
 				limit(async () => {
@@ -508,7 +508,7 @@ export class VaultEntryService {
 		});
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:delete");
 		await Promise.all(
 			input.keys.map(key =>
 				limit(() =>
@@ -531,7 +531,7 @@ export class VaultEntryService {
 			.execute();
 
 		const kms = await KMSClient.getInstance();
-		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id);
+		const sessionToken = await getVaultSessionToken(input.user_id, input.org_id, "vault:read");
 		return Promise.all(
 			envTypes.map(async envType => {
 				const entries = await kms.vaultList(

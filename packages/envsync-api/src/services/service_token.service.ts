@@ -31,6 +31,10 @@ export type ServiceTokenRecord = {
 };
 
 function hashToken(token: string): string {
+	// Service tokens are `esv_` plus a UUID. This digest is the database lookup
+	// key, so it has to be deterministic. SHA-256 matches 122 bits of randomness.
+	// A slow password hash would not add a secret and would make lookup impossible.
+	// codeql[js/insufficient-password-hash]
 	return createHash("sha256").update(token).digest("hex");
 }
 

@@ -22,6 +22,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
 import { getDefaultEnvironmentType } from "@/lib/utils";
 import { appEnvironmentsPath, appPointInTimePath } from "@/lib/app-routes";
+import { planFlagEnabled } from "@/lib/plan";
 
 export const ProjectEnvironments = () => {
   const navigate = useNavigate();
@@ -267,7 +268,7 @@ export const ProjectEnvironments = () => {
             </Button>
             <Button
               onClick={() => navigate(appEnvironmentsPath(appId ?? ""))}
-              className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+              
             >
               <Settings className="w-4 h-4 mr-2" />
               Create Environment Type
@@ -302,9 +303,8 @@ export const ProjectEnvironments = () => {
   }
 
   return (
-    <div>
-      <div className="mx-auto max-w-[1600px] px-5 md:px-6 py-6">
-        <EnvironmentVariablesTable
+    <>
+      <EnvironmentVariablesTable
           selectedEnvironment={selectedEnvironment}
           setSelectedEnvironment={setSelectedEnvironment}
           variables={secrets}
@@ -327,15 +327,17 @@ export const ProjectEnvironments = () => {
           onRefresh={handleRetry}
           onBulkImport={() => setShowBulkImportModal(true)}
           onExport={handleExport}
-          onRollback={() => {
-            const env = environmentTypes.find((entry) => entry.id === selectedEnvironment);
-            const query = env?.name?.toLowerCase() || selectedEnvironment;
-            navigate(`${appPointInTimePath(appId ?? "")}/secrets?env=${encodeURIComponent(query)}`);
-          }}
+          onRollback={
+            planFlagEnabled(user, "point_in_time")
+              ? () => {
+                  const env = environmentTypes.find((entry) => entry.id === selectedEnvironment);
+                  const query = env?.name?.toLowerCase() || selectedEnvironment;
+                  navigate(`${appPointInTimePath(appId ?? "")}/secrets?env=${encodeURIComponent(query)}`);
+                }
+              : undefined
+          }
           onManageEnvironments={() => navigate(appEnvironmentsPath(appId ?? ""))}
         />
-      </div>
-
       <AddEnvVarModal
         open={showAddModal}
         onOpenChange={setShowAddModal}
@@ -380,7 +382,7 @@ export const ProjectEnvironments = () => {
         isOpen={showHistoryDrawer}
         onOpenChange={setShowHistoryDrawer}
       />
-    </div>
+    </>
   );
 };
 

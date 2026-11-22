@@ -11,6 +11,24 @@ import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
 import {
+	applyProtectedFileRestore,
+	enforceProtectedMaterialModes,
+	materialById,
+	migrateLegacySecretFiles,
+	omitProtectedEnv,
+	planProtectedFileRestore,
+	planSwarmSecretSync,
+	PROTECTED_ENV_KEYS,
+	PROTECTED_MATERIAL,
+	PROTECTED_MATERIAL_ARCHIVE_DIR,
+	PROTECTED_SECRET_FILE_MODE,
+	readExistingMaterial,
+	redactProtectedConfigSecrets,
+	removeLegacySecretFiles,
+	type ProtectedSecretRef,
+	writeProtectedMaterialFile,
+} from "./protected-secrets";
+import {
 	assertBackupMode,
 	decryptBackup,
 	identityPathForArchive,
@@ -69,6 +87,10 @@ interface DeployConfig {
 		api_client_id: string;
 		cli_client_id: string;
 		management_client_id: string;
+		github_client_id?: string;
+		github_client_secret?: string;
+		gitlab_client_id?: string;
+		gitlab_client_secret?: string;
 	};
 	observability: {
 		retention_days: number;
@@ -159,6 +181,7 @@ interface DeployGeneratedState {
 		minikms_session_signing_key: string;
 		minikms_db_password: string;
 		saml_session_secret: string;
+		protected_secrets?: ProtectedSecretRef[];
 	};
 	bootstrap: {
 		completed_at: string;
@@ -299,15 +322,18 @@ const NGINX_VPN_CONF = path.join(DEPLOY_ROOT, "nginx-vpn.conf");
 const OTEL_AGENT_CONF = path.join(DEPLOY_ROOT, "otel-agent.yaml");
 const CLICKSTACK_CLICKHOUSE_CONF = path.join(DEPLOY_ROOT, "clickhouse-listen.xml");
 const INTERNAL_CONFIG_JSON = path.join(DEPLOY_ROOT, "config.json");
-const MINIKMS_SESSION_SIGNING_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-session-signing-key.pem");
-const MINIKMS_ROOT_CA_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-cert.pem");
-const MINIKMS_ROOT_CA_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-root-ca-key.pem");
-const MINIKMS_GRPC_CA_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-ca-cert.pem");
-const MINIKMS_GRPC_CA_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-ca-key.pem");
-const MINIKMS_GRPC_SERVER_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-server-cert.pem");
-const MINIKMS_GRPC_SERVER_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-server-key.pem");
-const MINIKMS_GRPC_CLIENT_CERT_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-client-cert.pem");
-const MINIKMS_GRPC_CLIENT_KEY_FILE = path.join(DEPLOY_ROOT, "minikms-grpc-client-key.pem");
+const MINIKMS_SECRET_DIR = path.join(ETC_ROOT, "minikms");
+const SECRET_FILE_MODE = PROTECTED_SECRET_FILE_MODE;
+const MINIKMS_ROOT_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_root_key").fileName);
+const MINIKMS_SESSION_SIGNING_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_session_signing_key").fileName);
+const MINIKMS_ROOT_CA_CERT_FILE = path.join(DEPLOY_ROOT, materialById("minikms_root_ca_cert").fileName);
+const MINIKMS_ROOT_CA_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_root_ca_key").fileName);
+const MINIKMS_GRPC_CA_CERT_FILE = path.join(DEPLOY_ROOT, materialById("minikms_grpc_ca_cert").fileName);
+const MINIKMS_GRPC_CA_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_grpc_ca_key").fileName);
+const MINIKMS_GRPC_SERVER_CERT_FILE = path.join(DEPLOY_ROOT, materialById("minikms_grpc_server_cert").fileName);
+const MINIKMS_GRPC_SERVER_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_grpc_server_key").fileName);
+const MINIKMS_GRPC_CLIENT_CERT_FILE = path.join(DEPLOY_ROOT, materialById("minikms_grpc_client_cert").fileName);
+const MINIKMS_GRPC_CLIENT_KEY_FILE = path.join(MINIKMS_SECRET_DIR, materialById("minikms_grpc_client_key").fileName);
 const UPGRADE_BACKUPS_ROOT = path.join(BACKUPS_ROOT, "upgrade");
 const WIREGUARD_STATE_FILE = path.join(WIREGUARD_ROOT, "state.json");
 const WIREGUARD_PRIVATE_KEY_FILE = path.join(WIREGUARD_ROOT, "server-private.key");
@@ -341,6 +367,7 @@ const REMOVE_TARGETS = [
 	LICENSE_KEY_FILE,
 	LICENSE_ROOT_CA_FILE,
 	INTERNAL_CONFIG_JSON,
+	MINIKMS_SECRET_DIR,
 	VERSIONS_LOCK,
 	WIREGUARD_ROOT,
 	WIREGUARD_STATE_FILE,
@@ -667,6 +694,146 @@ function writePrivateKeyMaybe(target: string, content: string) {
 	writePrivateKeyFile(target, content);
 }
 
+function writeProtectedMaybe(target: string, content: string) {
+	if (currentOptions.dryRun) {
+		logDryRun(`Would write ${target} (mode 0600)`);
+		return;
+	}
+	writeProtectedMaterialFile(target, content, PROTECTED_SECRET_FILE_MODE);
+}
+
+function syncProtectedSecretFiles(generated: DeployGeneratedState, opts?: { generate?: boolean }) {
+	const generate = opts?.generate !== false;
+	const roots = protectedMaterialRoots();
+	if (currentOptions.dryRun) {
+		logDryRun(`Would store miniKMS root key, session-signing key, and private PEMs under ${MINIKMS_SECRET_DIR} (mode 0600)`);
+		for (const item of PROTECTED_MATERIAL) {
+			if (item.location !== "secret") continue;
+			const legacy = path.join(DEPLOY_ROOT, item.fileName);
+			const target = path.join(MINIKMS_SECRET_DIR, item.fileName);
+			if (legacy !== target && exists(legacy)) {
+				logDryRun(`Would move ${legacy} to ${target} and remove the legacy file`);
+			}
+		}
+		return;
+	}
+	migrateLegacySecretFiles(roots);
+	const rootOnDisk = readExistingMaterial(roots, "minikms_root_key", true);
+	if (rootOnDisk) {
+		generated.secrets.minikms_root_key = rootOnDisk;
+	} else if (!generated.secrets.minikms_root_key.trim() && generate) {
+		generated.secrets.minikms_root_key = randomBytes(32).toString("hex");
+	}
+	if (generated.secrets.minikms_root_key.trim()) {
+		const rootBody = `${generated.secrets.minikms_root_key.trim()}\n`;
+		if (!exists(MINIKMS_ROOT_KEY_FILE) || fs.readFileSync(MINIKMS_ROOT_KEY_FILE, "utf8") !== rootBody) {
+			writeProtectedMaterialFile(MINIKMS_ROOT_KEY_FILE, rootBody, PROTECTED_SECRET_FILE_MODE);
+		}
+	} else {
+		logWarn(`Protected material ${path.basename(MINIKMS_ROOT_KEY_FILE)} is missing`);
+	}
+	const sessionOnDisk = readExistingMaterial(roots, "minikms_session_signing_key", false);
+	if (sessionOnDisk) {
+		generated.secrets.minikms_session_signing_key = sessionOnDisk;
+	} else if (!generated.secrets.minikms_session_signing_key.trim() && generate) {
+		generated.secrets.minikms_session_signing_key = generateMinikmsSessionSigningKey();
+	}
+	if (generated.secrets.minikms_session_signing_key.trim()) {
+		const sessionBody = generated.secrets.minikms_session_signing_key.endsWith("\n")
+			? generated.secrets.minikms_session_signing_key
+			: `${generated.secrets.minikms_session_signing_key}\n`;
+		generated.secrets.minikms_session_signing_key = sessionBody;
+		if (!exists(MINIKMS_SESSION_SIGNING_KEY_FILE) || fs.readFileSync(MINIKMS_SESSION_SIGNING_KEY_FILE, "utf8") !== sessionBody) {
+			writeProtectedMaterialFile(MINIKMS_SESSION_SIGNING_KEY_FILE, sessionBody, PROTECTED_SECRET_FILE_MODE);
+		}
+	} else {
+		logWarn(`Protected material ${path.basename(MINIKMS_SESSION_SIGNING_KEY_FILE)} is missing`);
+	}
+	removeLegacySecretFiles(roots);
+	enforceProtectedMaterialModes(roots);
+}
+
+function persistedGeneratedState(config: DeployConfig, generated: DeployGeneratedState): DeployGeneratedState {
+	return {
+		...generated,
+		secrets: redactProtectedConfigSecrets(generated.secrets, MINIKMS_SECRET_DIR, config.services.stack_name),
+	};
+}
+
+function writeInternalConfig(config: DeployConfig, generated: DeployGeneratedState) {
+	writeFileMaybe(
+		INTERNAL_CONFIG_JSON,
+		JSON.stringify({ config, generated: persistedGeneratedState(config, generated) }, null, 2) + "\n",
+		SECRET_FILE_MODE,
+	);
+}
+
+function ensureProtectedSwarmSecrets(config: DeployConfig) {
+	const plan = planSwarmSecretSync({
+		secretDir: MINIKMS_SECRET_DIR,
+		stackName: config.services.stack_name,
+		recreate: false,
+	});
+	if (currentOptions.dryRun) {
+		for (const line of plan.dryRunLines) logDryRun(line);
+		return;
+	}
+	for (const secret of plan.secrets) {
+		if (!exists(secret.file)) {
+			throw new Error(`Missing protected secret file ${secret.file}`);
+		}
+		if (commandSucceeds("docker", ["secret", "inspect", secret.name])) continue;
+		logCommand("docker", ["secret", "create", secret.name, secret.file]);
+		run("docker", ["secret", "create", secret.name, secret.file]);
+	}
+}
+
+function recreateProtectedSwarmSecrets(config: DeployConfig) {
+	const plan = planSwarmSecretSync({
+		secretDir: MINIKMS_SECRET_DIR,
+		stackName: config.services.stack_name,
+		recreate: true,
+	});
+	if (currentOptions.dryRun) {
+		for (const line of plan.dryRunLines) logDryRun(line);
+		return;
+	}
+	for (const secret of plan.secrets) {
+		if (!exists(secret.file)) {
+			logWarn(`Skipping Swarm secret ${secret.name}; ${secret.file} is missing`);
+			continue;
+		}
+		if (commandSucceeds("docker", ["secret", "inspect", secret.name])) {
+			logCommand("docker", ["secret", "rm", secret.name]);
+			runIgnoringAbsent("docker", ["secret", "rm", secret.name], {
+				absentPatterns: ["not found", "no such"],
+			});
+		}
+		logCommand("docker", ["secret", "create", secret.name, secret.file]);
+		run("docker", ["secret", "create", secret.name, secret.file]);
+	}
+}
+
+function removeProtectedSwarmSecrets(config: DeployConfig) {
+	const plan = planSwarmSecretSync({
+		secretDir: MINIKMS_SECRET_DIR,
+		stackName: config.services.stack_name,
+		recreate: true,
+	});
+	for (const secret of plan.secrets) {
+		if (currentOptions.dryRun) {
+			logDryRun(`Would remove Swarm secret ${secret.name} if present`);
+			logCommand("docker", ["secret", "rm", secret.name]);
+			continue;
+		}
+		if (!commandSucceeds("docker", ["secret", "inspect", secret.name])) continue;
+		logCommand("docker", ["secret", "rm", secret.name]);
+		runIgnoringAbsent("docker", ["secret", "rm", secret.name], {
+			absentPatterns: ["not found", "no such"],
+		});
+	}
+}
+
 function ensureEnterpriseLicenseFilesReadable() {
 	if (exists(LICENSE_ROOT)) {
 		try {
@@ -712,8 +879,14 @@ function generateMinikmsSessionSigningKey() {
 	return privateKey.export({ type: "pkcs8", format: "pem" }).toString();
 }
 
+function minikmsMaterialExists(target: string) {
+	if (exists(target)) return true;
+	const legacy = path.join(DEPLOY_ROOT, path.basename(target));
+	return legacy !== target && exists(legacy);
+}
+
 function writeMinikmsRootCaIfMissing() {
-	if (fs.existsSync(MINIKMS_ROOT_CA_CERT_FILE) && fs.existsSync(MINIKMS_ROOT_CA_KEY_FILE)) {
+	if (exists(MINIKMS_ROOT_CA_CERT_FILE) && minikmsMaterialExists(MINIKMS_ROOT_CA_KEY_FILE)) {
 		return;
 	}
 	const key = spawnSync(
@@ -724,7 +897,7 @@ function writeMinikmsRootCaIfMissing() {
 	if (key.status !== 0) {
 		throw new Error(`openssl failed to generate miniKMS root CA key: ${key.stderr}`);
 	}
-	writePrivateKeyMaybe(MINIKMS_ROOT_CA_KEY_FILE, key.stdout);
+	writeProtectedMaybe(MINIKMS_ROOT_CA_KEY_FILE, key.stdout);
 	const cert = spawnSync(
 		"openssl",
 		[
@@ -754,21 +927,21 @@ function writeMinikmsRootCaIfMissing() {
 function writeMinikmsGrpcTlsIfMissing() {
 	if (
 		exists(MINIKMS_GRPC_CA_CERT_FILE)
-		&& exists(MINIKMS_GRPC_CA_KEY_FILE)
+		&& minikmsMaterialExists(MINIKMS_GRPC_CA_KEY_FILE)
 		&& exists(MINIKMS_GRPC_SERVER_CERT_FILE)
 		&& exists(MINIKMS_GRPC_CLIENT_CERT_FILE)
-		&& exists(MINIKMS_GRPC_SERVER_KEY_FILE)
-		&& exists(MINIKMS_GRPC_CLIENT_KEY_FILE)
+		&& minikmsMaterialExists(MINIKMS_GRPC_SERVER_KEY_FILE)
+		&& minikmsMaterialExists(MINIKMS_GRPC_CLIENT_KEY_FILE)
 	) {
 		return;
 	}
 	logInfo("Generating missing miniKMS gRPC mTLS certificates under /opt/envsync/deploy/");
 	const pems = generateMinikmsGrpcTlsPemSet();
-	writePrivateKeyMaybe(MINIKMS_GRPC_CA_KEY_FILE, pems.caKey);
+	writeProtectedMaybe(MINIKMS_GRPC_CA_KEY_FILE, pems.caKey);
 	writeFileMaybe(MINIKMS_GRPC_CA_CERT_FILE, pems.caCert, 0o644);
-	writePrivateKeyMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, pems.serverKey);
+	writeProtectedMaybe(MINIKMS_GRPC_SERVER_KEY_FILE, pems.serverKey);
 	writeFileMaybe(MINIKMS_GRPC_SERVER_CERT_FILE, pems.serverCert, 0o644);
-	writePrivateKeyMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, pems.clientKey);
+	writeProtectedMaybe(MINIKMS_GRPC_CLIENT_KEY_FILE, pems.clientKey);
 	writeFileMaybe(MINIKMS_GRPC_CLIENT_CERT_FILE, pems.clientCert, 0o644);
 }
 
@@ -974,7 +1147,7 @@ PostDown = iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
 ${netutilsFirewallRules.join("\n")}
 ${peersSection}
 `;
-	writeFileMaybe(WIREGUARD_CONFIG_FILE, content);
+	writeFileMaybe(WIREGUARD_CONFIG_FILE, content, SECRET_FILE_MODE);
 }
 
 function emptyApiSlotState(): ApiSlotState {
@@ -1462,6 +1635,10 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			api_client_id: requireDefined(raw.auth?.api_client_id, "auth.api_client_id"),
 			cli_client_id: requireDefined(raw.auth?.cli_client_id, "auth.cli_client_id"),
 			management_client_id: raw.auth?.management_client_id ?? "management",
+			github_client_id: raw.auth?.github_client_id,
+			github_client_secret: raw.auth?.github_client_secret,
+			gitlab_client_id: raw.auth?.gitlab_client_id,
+			gitlab_client_secret: raw.auth?.gitlab_client_secret,
 		},
 		observability: {
 			retention_days: requireDefined(raw.observability?.retention_days, "observability.retention_days"),
@@ -1597,6 +1774,7 @@ function normalizeGeneratedState(raw?: Partial<DeployGeneratedState>): DeployGen
 				raw?.secrets?.minikms_session_signing_key ?? defaults.secrets.minikms_session_signing_key,
 			minikms_db_password: raw?.secrets?.minikms_db_password ?? defaults.secrets.minikms_db_password,
 			saml_session_secret: raw?.secrets?.saml_session_secret ?? defaults.secrets.saml_session_secret,
+			protected_secrets: normalizeProtectedSecretRefs(raw?.secrets?.protected_secrets),
 		},
 		bootstrap: {
 			completed_at: raw?.bootstrap?.completed_at ?? defaults.bootstrap.completed_at,
@@ -1661,10 +1839,44 @@ function mergeGeneratedState(env: RuntimeEnv, generated?: Partial<DeployGenerate
 	});
 }
 
+function normalizeProtectedSecretRefs(value: unknown): ProtectedSecretRef[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const refs: ProtectedSecretRef[] = [];
+	for (const item of value) {
+		if (!item || typeof item !== "object") continue;
+		const record = item as Record<string, unknown>;
+		if (typeof record.id !== "string" || typeof record.file !== "string") continue;
+		refs.push({
+			id: record.id,
+			file: record.file,
+			...(typeof record.secret === "string" && record.secret.length > 0 ? { secret: record.secret } : {}),
+		});
+	}
+	return refs;
+}
+
+function protectedMaterialRoots() {
+	return { secretDir: MINIKMS_SECRET_DIR, deployRoot: DEPLOY_ROOT };
+}
+
+function hydrateProtectedSecrets(generated: DeployGeneratedState): DeployGeneratedState {
+	const roots = protectedMaterialRoots();
+	const rootKey = readExistingMaterial(roots, "minikms_root_key", true);
+	const sessionKey = readExistingMaterial(roots, "minikms_session_signing_key", false);
+	return {
+		...generated,
+		secrets: {
+			...generated.secrets,
+			minikms_root_key: rootKey || generated.secrets.minikms_root_key,
+			minikms_session_signing_key: sessionKey || generated.secrets.minikms_session_signing_key,
+		},
+	};
+}
+
 function loadState() {
 	const config = loadConfig();
 	const internal = readInternalState();
-	const generated = mergeGeneratedState(loadGeneratedEnv(), internal?.generated);
+	const generated = hydrateProtectedSecrets(mergeGeneratedState(loadGeneratedEnv(), internal?.generated));
 	return { config, generated };
 }
 
@@ -1888,43 +2100,41 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	}
 	const generatedEnv = renderHelpers.buildRuntimeEnv(config, generated, { setupToken });
 	const merged = renderHelpers.mergeRuntimeEnvLocalFirst(generatedEnv, existingEnv);
-	const runtimeEnv = merged.env;
+	const protectedEnvKeys = new Set<string>(PROTECTED_ENV_KEYS);
+	const runtimeEnv = omitProtectedEnv(merged.env);
 	for (const key of merged.forced) {
+		if (protectedEnvKeys.has(key)) continue;
 		logInfo(`Applying generated ${key} (overriding ${DEPLOY_ENV})`);
 	}
 	for (const key of merged.kept) {
+		if (protectedEnvKeys.has(key)) continue;
 		logWarn(
 			`Keeping local ${key} from ${DEPLOY_ENV} (template differs). Use \`${cliBin()} set-env ${key} <value> --force\` to replace.`,
 		);
 	}
-	if (merged.added.length > 0) {
-		logInfo(`Preserving ${merged.added.length} extra key(s) from ${DEPLOY_ENV}`);
+	const added = merged.added.filter(key => !protectedEnvKeys.has(key));
+	if (added.length > 0) {
+		logInfo(`Preserving ${added.length} extra key(s) from ${DEPLOY_ENV}`);
 	}
 	logStep("Rendering deploy artifacts");
 	if (!currentOptions.dryRun) {
 		orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE, setupToken);
 		logInfo(`Setup token fingerprint: ${orgSetup.setupTokenFingerprint(setupToken)} (${SETUP_TOKEN_FILE})`);
 	}
-	if (!generated.secrets.minikms_session_signing_key) {
-		generated.secrets.minikms_session_signing_key = generateMinikmsSessionSigningKey();
-	}
-	// Private key files are mode 0600.
-	writePrivateKeyMaybe(MINIKMS_SESSION_SIGNING_KEY_FILE, generated.secrets.minikms_session_signing_key);
+	syncProtectedSecretFiles(generated);
 	writeMinikmsRootCaIfMissing();
 	writeMinikmsGrpcTlsIfMissing();
-	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), 0o600);
-	writeFileMaybe(
-		INTERNAL_CONFIG_JSON,
-		JSON.stringify({ config, generated: mergeGeneratedState(runtimeEnv, generated) }, null, 2) + "\n",
-	);
+	if (!currentOptions.dryRun) enforceProtectedMaterialModes(protectedMaterialRoots());
+	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), SECRET_FILE_MODE);
+	writeInternalConfig(config, mergeGeneratedState(runtimeEnv, generated));
 	writeFileMaybe(VERSIONS_LOCK, JSON.stringify(config.images, null, 2) + "\n");
-	writeFileMaybe(ATRIUM_CONFIG_FILE, renderHelpers.renderAtriumConfig(config, runtimeEnv));
-	writeFileMaybe(ATRIUM_CLIENTS_FILE, renderHelpers.renderAtriumClients(config, runtimeEnv));
+	writeFileMaybe(ATRIUM_CONFIG_FILE, renderHelpers.renderAtriumConfig(config, runtimeEnv), SECRET_FILE_MODE);
+	writeFileMaybe(ATRIUM_CLIENTS_FILE, renderHelpers.renderAtriumClients(config, runtimeEnv), SECRET_FILE_MODE);
 	copyAtriumBranding();
 	writeFileMaybe(TRAEFIK_DYNAMIC_FILE, renderHelpers.renderTraefikDynamicConfig(config, generated));
-	writeFileMaybe(BOOTSTRAP_BASE_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "base", DEPLOY_RENDER_PATHS));
-	writeFileMaybe(BOOTSTRAP_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "bootstrap", DEPLOY_RENDER_PATHS));
-	writeFileMaybe(STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "full", DEPLOY_RENDER_PATHS));
+	writeFileMaybe(BOOTSTRAP_BASE_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "base", DEPLOY_RENDER_PATHS), SECRET_FILE_MODE);
+	writeFileMaybe(BOOTSTRAP_STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "bootstrap", DEPLOY_RENDER_PATHS), SECRET_FILE_MODE);
+	writeFileMaybe(STACK_FILE, renderHelpers.renderStack(config, runtimeEnv, generated, "full", DEPLOY_RENDER_PATHS), SECRET_FILE_MODE);
 	writeFileMaybe(NGINX_WEB_CONF, renderHelpers.renderNginxConf("web", config.domain.root_domain));
 	// Landing nginx config omitted on self-host (Phase 2).
 	writeFileMaybe(NGINX_API_MAINTENANCE_CONF, renderHelpers.renderApiMaintenanceConf());
@@ -1933,18 +2143,17 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	if (config.vpn?.provider && config.vpn.provider !== "none") {
 		writeFileMaybe(NGINX_VPN_CONF, renderHelpers.renderNginxVpnConf(config));
 	}
+	ensureProtectedSwarmSecrets(config);
 	logSuccess(currentOptions.dryRun ? "Deploy artifacts previewed" : "Deploy artifacts written");
 }
 
 function saveDesiredConfig(config: DeployConfig) {
 	const internal = readInternalState();
-	const generated = mergeGeneratedState(loadGeneratedEnv(), internal?.generated);
+	const generated = hydrateProtectedSecrets(mergeGeneratedState(loadGeneratedEnv(), internal?.generated));
+	syncProtectedSecretFiles(generated, { generate: false });
 	logStep(`Saving desired config to ${DEPLOY_YAML}`);
-	writeFileMaybe(DEPLOY_YAML, toYaml(config) + "\n");
-	writeFileMaybe(
-		INTERNAL_CONFIG_JSON,
-		JSON.stringify({ config, generated }, null, 2) + "\n",
-	);
+	writeFileMaybe(DEPLOY_YAML, toYaml(config) + "\n", SECRET_FILE_MODE);
+	writeInternalConfig(config, generated);
 	logSuccess(currentOptions.dryRun ? "Desired config previewed" : "Desired config saved");
 }
 
@@ -2925,6 +3134,7 @@ function cleanupBootstrapState(config: DeployConfig) {
 			logDryRun(`Would remove volume ${volumeName}`);
 			logCommand("docker", ["volume", "rm", "-f", volumeName]);
 		}
+		removeProtectedSwarmSecrets(config);
 		logSuccess("Bootstrap cleanup preview completed");
 		return;
 	}
@@ -2968,6 +3178,7 @@ function cleanupBootstrapState(config: DeployConfig) {
 		}
 	}
 
+	removeProtectedSwarmSecrets(config);
 	logSuccess("Existing EnvSync deployment resources removed");
 }
 
@@ -4085,6 +4296,9 @@ async function cmdSetEnv(name: string | undefined, value: string) {
 		throw new Error(`Usage: ${cliBin()} set-env NAME VALUE`);
 	}
 	assertEnvName(name);
+	if ((PROTECTED_ENV_KEYS as readonly string[]).includes(name)) {
+		throw new Error(`${name} is not stored in the deploy environment. It is mounted from a Swarm secret.`);
+	}
 	if (!value) {
 		throw new Error(`Usage: ${cliBin()} set-env ${name} VALUE`);
 	}
@@ -4453,6 +4667,7 @@ async function cmdBackup() {
 		if (!isOssConfig(config)) {
 			logDryRun(`Would include Enterprise license material from ${LICENSE_ROOT}`);
 		}
+		logDryRun(`Would archive protected miniKMS material into ${path.join(staged, PROTECTED_MATERIAL_ARCHIVE_DIR)} (private files mode 0600)`);
 		logDryRun(`Would write manifest ${manifestPath}`);
 		if (backupMode === "age") {
 			logDryRun(`Would encrypt the archive with age and write the identity to ${identityPathForArchive(`${tarPath}.age`)}`);
@@ -4474,16 +4689,17 @@ async function cmdBackup() {
 			logWarn("Backup will temporarily stop the EnvSync stack to capture consistent volume data.");
 			stopManagedRuntime(config, "Stopping existing EnvSync services for consistent backup");
 		}
-		writeFile(path.join(staged, "deploy.env"), fs.readFileSync(DEPLOY_ENV, "utf8"));
-		writeFile(path.join(staged, "deploy.yaml"), fs.readFileSync(DEPLOY_YAML, "utf8"));
-		writeFile(path.join(staged, "config.json"), fs.readFileSync(INTERNAL_CONFIG_JSON, "utf8"));
+		writeFile(path.join(staged, "deploy.env"), fs.readFileSync(DEPLOY_ENV, "utf8"), SECRET_FILE_MODE);
+		writeFile(path.join(staged, "deploy.yaml"), fs.readFileSync(DEPLOY_YAML, "utf8"), SECRET_FILE_MODE);
+		writeFile(path.join(staged, "config.json"), fs.readFileSync(INTERNAL_CONFIG_JSON, "utf8"), SECRET_FILE_MODE);
 		writeFile(path.join(staged, "versions.lock.json"), fs.readFileSync(VERSIONS_LOCK, "utf8"));
-		writeFile(path.join(staged, "docker-stack.bootstrap.base.yaml"), fs.readFileSync(BOOTSTRAP_BASE_STACK_FILE, "utf8"));
-		writeFile(path.join(staged, "docker-stack.bootstrap.yaml"), fs.readFileSync(BOOTSTRAP_STACK_FILE, "utf8"));
-		writeFile(path.join(staged, "docker-stack.yaml"), fs.readFileSync(STACK_FILE, "utf8"));
+		writeFile(path.join(staged, "docker-stack.bootstrap.base.yaml"), fs.readFileSync(BOOTSTRAP_BASE_STACK_FILE, "utf8"), SECRET_FILE_MODE);
+		writeFile(path.join(staged, "docker-stack.bootstrap.yaml"), fs.readFileSync(BOOTSTRAP_STACK_FILE, "utf8"), SECRET_FILE_MODE);
+		writeFile(path.join(staged, "docker-stack.yaml"), fs.readFileSync(STACK_FILE, "utf8"), SECRET_FILE_MODE);
 		writeFile(path.join(staged, "traefik-dynamic.yaml"), fs.readFileSync(TRAEFIK_DYNAMIC_FILE, "utf8"));
-		writeFile(path.join(staged, "atrium-config.yaml"), fs.readFileSync(ATRIUM_CONFIG_FILE, "utf8"));
-		writeFile(path.join(staged, "atrium-clients.json"), fs.readFileSync(ATRIUM_CLIENTS_FILE, "utf8"));
+		writeFile(path.join(staged, "atrium-config.yaml"), fs.readFileSync(ATRIUM_CONFIG_FILE, "utf8"), SECRET_FILE_MODE);
+		writeFile(path.join(staged, "atrium-clients.json"), fs.readFileSync(ATRIUM_CLIENTS_FILE, "utf8"), SECRET_FILE_MODE);
+		stageProtectedMaterial(staged);
 		writeFile(path.join(staged, "otel-agent.yaml"), fs.readFileSync(OTEL_AGENT_CONF, "utf8"));
 		writeFile(path.join(staged, "clickhouse-listen.xml"), fs.readFileSync(CLICKSTACK_CLICKHOUSE_CONF, "utf8"));
 		if (!isOssConfig(config) && exists(LICENSE_ROOT)) {
@@ -4548,20 +4764,80 @@ async function cmdBackup() {
 	}
 }
 
+function stageProtectedMaterial(stagedRoot: string) {
+	const targetDir = path.join(stagedRoot, PROTECTED_MATERIAL_ARCHIVE_DIR);
+	ensureDir(targetDir);
+	fs.chmodSync(targetDir, 0o700);
+	for (const item of PROTECTED_MATERIAL) {
+		const source = item.location === "secret"
+			? path.join(MINIKMS_SECRET_DIR, item.fileName)
+			: path.join(DEPLOY_ROOT, item.fileName);
+		if (!exists(source)) {
+			logWarn(`Protected material ${item.fileName} is missing and will not be archived`);
+			continue;
+		}
+		const dest = path.join(targetDir, item.fileName);
+		fs.copyFileSync(source, dest);
+		fs.chmodSync(dest, item.mode);
+	}
+}
+
+function logProtectedRestorePlan(stackName: string, archiveRoot: string) {
+	const filePlan = planProtectedFileRestore({
+		archiveRoot,
+		secretDir: MINIKMS_SECRET_DIR,
+		deployRoot: DEPLOY_ROOT,
+	});
+	for (const line of filePlan.dryRunLines) logDryRun(line);
+	const swarmPlan = planSwarmSecretSync({
+		secretDir: MINIKMS_SECRET_DIR,
+		stackName,
+		recreate: true,
+	});
+	for (const line of swarmPlan.dryRunLines) logDryRun(line);
+	logDryRun(`Would rewrite ${INTERNAL_CONFIG_JSON} without raw miniKMS root or session-signing keys`);
+	logDryRun(`Would strip protected miniKMS keys from ${DEPLOY_ENV}`);
+}
+
+function restoreProtectedMaterial(archiveRoot: string) {
+	const filePlan = planProtectedFileRestore({
+		archiveRoot,
+		secretDir: MINIKMS_SECRET_DIR,
+		deployRoot: DEPLOY_ROOT,
+	});
+	const applied = applyProtectedFileRestore(filePlan.files);
+	for (const missing of applied.missing) {
+		logWarn(`Backup archive has no ${path.basename(missing)}; that protected file was not recreated from the archive`);
+	}
+	const loaded = loadState();
+	syncProtectedSecretFiles(loaded.generated, { generate: false });
+	if (exists(DEPLOY_ENV)) {
+		const stripped = omitProtectedEnv(parseEnvFile(fs.readFileSync(DEPLOY_ENV, "utf8")));
+		writeFile(DEPLOY_ENV, renderHelpers.renderEnvFile(stripped), SECRET_FILE_MODE);
+	}
+	writeFile(
+		INTERNAL_CONFIG_JSON,
+		JSON.stringify({ config: loaded.config, generated: persistedGeneratedState(loaded.config, loaded.generated) }, null, 2) + "\n",
+		SECRET_FILE_MODE,
+	);
+}
+
 async function cmdRestore(archivePath: string, autoDeploy = false) {
 	if (!archivePath) throw new Error("restore requires a .tar.gz or .tar.gz.age path");
 	logSection("Restore");
 	const restoreRoot = path.join(BACKUPS_ROOT, `restore-${Date.now()}`);
 	logInfo(`Restore archive: ${archivePath}`);
 	if (currentOptions.dryRun) {
+		const existing = loadState();
 		if (archivePath.endsWith(".age")) {
 			logDryRun(`Would decrypt ${archivePath} with ${currentOptions.identityPath ?? identityPathForArchive(archivePath)}`);
 		}
 		logDryRun(`Would extract ${archivePath} into ${restoreRoot}`);
 		logDryRun(`Would restore deploy files into ${DEPLOY_ROOT} and ${ETC_ROOT}`);
-		if (hasManagedRuntime(loadState().config)) {
-			stopManagedRuntime(loadState().config, "Stopping existing EnvSync services before restore");
+		if (hasManagedRuntime(existing.config)) {
+			stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
 		}
+		logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
 		logDryRun("Would restore all managed Docker volumes from the archive");
 		logSuccess("Restore dry-run completed");
 		return;
@@ -4585,16 +4861,17 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 		fs.chmodSync(extractPath, 0o600);
 	}
 	run("bash", ["-lc", `tar -xzf ${JSON.stringify(extractPath)} -C ${JSON.stringify(restoreRoot)}`]);
-	writeFile(DEPLOY_ENV, fs.readFileSync(path.join(restoreRoot, "deploy.env"), "utf8"), 0o600);
-	writeFile(DEPLOY_YAML, fs.readFileSync(path.join(restoreRoot, "deploy.yaml"), "utf8"));
-	writeFile(INTERNAL_CONFIG_JSON, fs.readFileSync(path.join(restoreRoot, "config.json"), "utf8"));
+	writeFile(DEPLOY_ENV, fs.readFileSync(path.join(restoreRoot, "deploy.env"), "utf8"), SECRET_FILE_MODE);
+	writeFile(DEPLOY_YAML, fs.readFileSync(path.join(restoreRoot, "deploy.yaml"), "utf8"), SECRET_FILE_MODE);
+	writeFile(INTERNAL_CONFIG_JSON, fs.readFileSync(path.join(restoreRoot, "config.json"), "utf8"), SECRET_FILE_MODE);
 	writeFile(VERSIONS_LOCK, fs.readFileSync(path.join(restoreRoot, "versions.lock.json"), "utf8"));
-	writeFile(BOOTSTRAP_BASE_STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.bootstrap.base.yaml"), "utf8"));
-	writeFile(BOOTSTRAP_STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.bootstrap.yaml"), "utf8"));
-	writeFile(STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.yaml"), "utf8"));
+	writeFile(BOOTSTRAP_BASE_STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.bootstrap.base.yaml"), "utf8"), SECRET_FILE_MODE);
+	writeFile(BOOTSTRAP_STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.bootstrap.yaml"), "utf8"), SECRET_FILE_MODE);
+	writeFile(STACK_FILE, fs.readFileSync(path.join(restoreRoot, "docker-stack.yaml"), "utf8"), SECRET_FILE_MODE);
 	writeFile(TRAEFIK_DYNAMIC_FILE, fs.readFileSync(path.join(restoreRoot, "traefik-dynamic.yaml"), "utf8"));
-	writeFile(ATRIUM_CONFIG_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-config.yaml"), "utf8"));
-	writeFile(ATRIUM_CLIENTS_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-clients.json"), "utf8"));
+	writeFile(ATRIUM_CONFIG_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-config.yaml"), "utf8"), SECRET_FILE_MODE);
+	writeFile(ATRIUM_CLIENTS_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-clients.json"), "utf8"), SECRET_FILE_MODE);
+	restoreProtectedMaterial(restoreRoot);
 	writeFile(OTEL_AGENT_CONF, fs.readFileSync(path.join(restoreRoot, "otel-agent.yaml"), "utf8"));
 	writeFile(CLICKSTACK_CLICKHOUSE_CONF, fs.readFileSync(path.join(restoreRoot, "clickhouse-listen.xml"), "utf8"));
 	const restoredLicenseRoot = path.join(restoreRoot, "license");
@@ -4607,6 +4884,7 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	for (const volume of STACK_VOLUMES) {
 		restoreDockerVolume(stackVolumeName(config, volume), path.join(restoreRoot, "volumes", volume));
 	}
+	recreateProtectedSwarmSecrets(config);
 	logSuccess("Restore completed");
 	logInfo(`Restored archive: ${archivePath}`);
 	logInfo(`Restored stack name: ${config.services.stack_name}`);

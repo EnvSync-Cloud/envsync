@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
@@ -24,7 +24,7 @@ import { registerCmkTenantWrappingProvider } from "../services/cmk.service";
 
 registerCmkTenantWrappingProvider();
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 const platformTokenParam = {
 	name: "X-EnvSync-Platform-Token",
@@ -70,7 +70,7 @@ app.post(
 	KmsController.breakGlassDetach,
 );
 
-const manage = new Hono();
+const manage = enterpriseRouter();
 manage.use(authMiddleware());
 manage.use(enterpriseGuard("kms"));
 manage.use(requirePermission("can_manage_org_settings", "org"));

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 
 const FEATURE_LABELS: Record<string, string> = {
   integrations: "Integrations",
@@ -10,25 +10,34 @@ const FEATURE_LABELS: Record<string, string> = {
   log_forwarding: "Log forwarding",
   management: "Enterprise management",
   multi_org: "Multiple organizations",
+  point_in_time: "Point in time recovery",
 };
 
 function featureLabel(feature: string) {
   return FEATURE_LABELS[feature] ?? feature.replaceAll("_", " ");
 }
 
-export function UpgradeEmptyState({ feature }: { feature: string }) {
+export function UpgradeEmptyState({
+  feature,
+  title,
+}: {
+  feature: string;
+  title?: string;
+}) {
   const label = featureLabel(feature);
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
       <div className="mx-auto max-w-lg rounded-2xl border border-border bg-card/50 px-8 py-10 text-center">
-        <div className="mx-auto mb-6 flex size-12 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10">
-          <Sparkles className="size-5 text-emerald-500" />
+        <div className="mx-auto mb-6 flex size-12 items-center justify-center rounded-xl border border-border bg-muted">
+          <LockKeyhole className="size-5 text-muted-foreground" />
         </div>
-        <p className="text-xs uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-300/80">
-          Upgrade
+        <p className="text-xs text-muted-foreground">
+          Not on this plan
         </p>
-        <h1 className="mt-3 text-2xl font-semibold text-foreground">{label} is not on this plan</h1>
+        <h1 className="mt-3 text-2xl font-semibold text-foreground">
+          {title ?? `${label} is not on this plan`}
+        </h1>
         <p className="mt-3 text-sm text-muted-foreground">
           {feature === "kms"
             ? "Key management is not on this plan. Existing encryption continues. Contact support to detach to managed."

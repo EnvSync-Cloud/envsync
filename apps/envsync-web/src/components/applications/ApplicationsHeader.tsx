@@ -1,10 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, RefreshCw, Database } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Statistics } from "@/constants";
 
 interface ApplicationsHeaderProps {
   statistics: Statistics;
+  variableCount: number;
+  secretCount: number;
   canEdit: boolean;
   isRefetching: boolean;
   onRefresh: () => void;
@@ -13,54 +14,51 @@ interface ApplicationsHeaderProps {
 
 export const ApplicationsHeader = ({
   statistics,
+  variableCount,
+  secretCount,
   canEdit,
   isRefetching,
   onRefresh,
   onCreateProject,
 }: ApplicationsHeaderProps) => {
+  const usage = [
+    { label: "Projects", value: statistics.total },
+    { label: "Variables", value: variableCount },
+    { label: "Secrets", value: secretCount },
+  ];
+
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-emerald-500/10 rounded-lg">
-          <Database className="size-5 text-emerald-400" />
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold text-foreground">Projects</h1>
+          <span className="text-sm tabular-nums text-muted-foreground">{statistics.total}</span>
         </div>
-        <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-medium text-foreground">Projects</h1>
-            <div className="flex items-center space-x-2">
-              <Badge
-                variant="secondary"
-                className="text-xs"
-              >
-                {statistics.total}
-              </Badge>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your environment configurations
-          </p>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={onRefresh}
+            variant="outline"
+            size="icon"
+            disabled={isRefetching}
+            aria-label="Refresh projects"
+          >
+            <RefreshCw className={`size-4 ${isRefetching ? "animate-spin" : ""}`} />
+          </Button>
+          {canEdit && (
+            <Button onClick={onCreateProject}>
+              <Plus className="mr-2 size-4" />
+              Create Project
+            </Button>
+          )}
         </div>
       </div>
-      <div className="flex items-center space-x-2">
-        <Button
-          onClick={onRefresh}
-          variant="outline"
-          size="sm"
-          disabled={isRefetching}
-        >
-          <RefreshCw
-            className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`}
-          />
-        </Button>
-        {canEdit && (
-          <Button
-            onClick={onCreateProject}
-            size="sm"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Project
-          </Button>
-        )}
+      <div className="grid grid-cols-3 overflow-hidden rounded-lg border border-border">
+        {usage.map((item) => (
+          <div key={item.label} className="border-border px-4 py-3 sm:border-l sm:first:border-l-0">
+            <p className="text-xs text-muted-foreground">{item.label}</p>
+            <p className="mt-1 text-lg font-medium tabular-nums text-foreground">{item.value}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

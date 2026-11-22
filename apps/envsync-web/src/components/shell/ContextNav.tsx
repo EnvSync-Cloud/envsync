@@ -7,6 +7,7 @@ import type { EffectivePermissions } from "@/api/permissions.api";
 import { navGroups } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { projectsPath } from "@/lib/app-routes";
+import { planFlagEnabled } from "@/lib/plan";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
 import type { WebNavGroup, WebNavItem } from "@/modules/types";
@@ -44,30 +45,21 @@ function NavLink({
         to={item.href}
         data-testid={`shell-nav-${item.id}`}
         className={cn(
-          "relative flex w-full items-center rounded-2xl text-left text-sm font-medium transition-all duration-200",
-          expanded ? "gap-3 px-3 py-2.5" : "justify-center px-2 py-2.5",
+          "relative flex w-full items-center rounded-lg text-left text-sm transition-colors",
+          expanded ? "gap-2.5 px-2.5 py-1.5" : "justify-center px-2 py-1.5",
           isActive
-            ? "border border-primary/20 bg-primary/12 text-foreground"
-            : "border border-transparent text-muted-foreground hover:border-border hover:bg-secondary hover:text-foreground",
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
         )}
         title={!expanded ? item.name : undefined}
       >
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
-            isActive
-              ? "bg-primary/18 text-primary"
-              : "bg-secondary text-muted-foreground group-hover:text-foreground",
-          )}
-        >
-          <Icon className="size-[18px]" />
-        </span>
+        <Icon className="size-4 shrink-0" />
         {expanded && (
           <span className="block min-w-0 truncate">{item.name}</span>
         )}
       </Link>
       {!expanded && (
-        <div className="absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-primary/20 bg-popover px-2.5 py-1.5 text-xs text-foreground opacity-0 invisible backdrop-blur-sm transition-all duration-150 group-hover:visible group-hover:opacity-100">
+        <div className="invisible absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
           {item.name}
         </div>
       )}
@@ -90,7 +82,7 @@ function NavGroup({
     <div>
       {expanded ? (
         <div className="mb-2 px-3">
-          <span className="text-[11px] font-medium uppercase tracking-[0.22em] text-tertiary">
+          <span className="text-xs text-muted-foreground">
             {group.label}
           </span>
         </div>
@@ -127,7 +119,7 @@ function filterGroups(
 
 export function ContextNav({ expanded, product, appId, allowedScopes }: ContextNavProps) {
   const { pathname } = useLocation();
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuthContext();
+  const { isLoading: isAuthLoading, isAuthenticated, user } = useAuthContext();
   const { data: permissions } = api.permissions.getMyPermissions({
     enabled: !isAuthLoading && isAuthenticated,
   });
@@ -145,7 +137,9 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       return [
         {
           label: "Project",
-          items: buildProjectNavItems(appId, allowedScopes, permissions),
+          items: buildProjectNavItems(appId, allowedScopes, permissions, {
+            pointInTime: planFlagEnabled(user, "point_in_time"),
+          }),
         },
       ];
     }
@@ -156,7 +150,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       (item) => item.id === "dashboard" || item.id === "applications",
       permissions,
     );
-  }, [allowedScopes, appId, permissions, product]);
+  }, [allowedScopes, appId, permissions, product, user]);
 
   const fallbackGroups = useMemo(() => {
     if (groups.length > 0) return groups;

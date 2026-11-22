@@ -27,7 +27,7 @@ function downloadText(filename: string, value: string) {
 
 function getStatusTone(status?: string) {
   return status?.toLowerCase() === "active"
-    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-200 ring-1 ring-emerald-500/20"
+    ? "border-border font-normal text-accent-ink"
     : "bg-white/[0.06] text-foreground ring-1 ring-white/10";
 }
 
@@ -59,9 +59,7 @@ export const MyCertificatesCard = () => {
     <Card className="border-border bg-card/70">
       <CardHeader className="space-y-3">
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-emerald-500/10 p-2 ring-1 ring-emerald-500/20">
-            <ShieldCheck className="size-5 text-emerald-400" />
-          </div>
+          <ShieldCheck className="size-4 shrink-0 text-muted-foreground" />
           <div>
             <CardTitle className="text-base text-foreground">My Certificates</CardTitle>
             <p className="text-sm text-muted-foreground">Managed certificate bundle.</p>
@@ -83,10 +81,10 @@ export const MyCertificatesCard = () => {
             <div className="space-y-3 rounded-2xl border border-border bg-card/70 p-4">
               <div data-testid="my-certs-status-row" className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className={cn("border-0 px-2.5 py-1 font-medium", getStatusTone(data.member_certificate.status))}>
+                  <Badge variant="outline" className={cn("px-2.5 py-1", getStatusTone(data.member_certificate.status))}>
                     {data.member_certificate.status}
                   </Badge>
-                  <Badge variant="secondary" className="bg-emerald-500/10 px-2.5 py-1 text-emerald-700 dark:text-emerald-200">
+                  <Badge variant="outline" className="border-border px-2.5 py-1 font-normal text-foreground">
                     {data.member_certificate.metadata?.role_name ?? "System"}
                   </Badge>
                 </div>

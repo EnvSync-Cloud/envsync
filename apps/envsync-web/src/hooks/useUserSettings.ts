@@ -6,15 +6,22 @@ import { UpdateUserRequest } from "@envsync-cloud/envsync-ts-sdk";
 import { toast } from "sonner";
 
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   profile_picture_url: string | null;
 }
 
 interface FormErrors {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   profile_picture_url?: string;
+}
+
+function splitName(fullName: string | null | undefined) {
+  const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+  return { firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") };
 }
 
 export const useUserSettings = () => {
@@ -26,13 +33,13 @@ export const useUserSettings = () => {
   // State management
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     profile_picture_url: null,
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [emailNotifications, setEmailNotifications] = useState(true);
 
   // Dialog states
   const [isPasswordResetDialogOpen, setIsPasswordResetDialogOpen] =
@@ -59,8 +66,10 @@ export const useUserSettings = () => {
 
   const handleResetChanges = () => {
     if (userData) {
+      const names = splitName(userData.full_name);
       const initialData = {
-        name: userData.full_name || "",
+        firstName: names.firstName,
+        lastName: names.lastName,
         email: userData.email || "",
         profile_picture_url: userData.profile_picture_url || null,
       };
@@ -78,10 +87,8 @@ export const useUserSettings = () => {
   const validateForm = useCallback((): boolean => {
     const errors: FormErrors = {};
 
-    if (!formData.name.trim()) {
-      errors.name = "Full name is required";
-    } else if (formData.name.trim().length < 2) {
-      errors.name = "Full name must be at least 2 characters";
+    if (!formData.firstName.trim()) {
+      errors.firstName = "First name is required";
     }
 
     if (!formData.email.trim()) {
@@ -227,10 +234,14 @@ export const useUserSettings = () => {
   const handleSaveChanges = useCallback(() => {
     if (!validateForm()) return;
 
-    const updateData: UpdateUserRequest = {
-      full_name: formData.name.trim(),
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const updateData = {
+      full_name: [firstName, lastName].filter(Boolean).join(" "),
+      first_name: firstName,
+      last_name: lastName,
       email: formData.email.trim(),
-    };
+    } as UpdateUserRequest;
 
     if (formData.profile_picture_url) {
       updateData.profile_picture_url = formData.profile_picture_url;
@@ -265,7 +276,6 @@ export const useUserSettings = () => {
     formErrors,
     hasUnsavedChanges,
     logoPreview,
-    emailNotifications,
 
     // Dialog states
     isPasswordResetDialogOpen,
@@ -276,7 +286,6 @@ export const useUserSettings = () => {
     fileInputRef,
 
     // Setters
-    setEmailNotifications,
     setIsPasswordResetDialogOpen,
     setIsDeleteAccountDialogOpen,
     setDeleteConfirmText,

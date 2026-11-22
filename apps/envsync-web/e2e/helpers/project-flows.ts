@@ -208,15 +208,17 @@ export async function switchUsersTab(page: Page, section: "members" | "invitatio
 }
 
 export async function switchChangeRequestsTab(page: Page, section: "list" | "create") {
-	const tab = section === "list"
-		? page.getByTestId("change-requests-tab-list")
-		: page.getByTestId("change-requests-tab-create");
-	await tab.click();
-	await expect(
-		section === "list"
-			? page.getByTestId("change-requests-list")
-			: page.getByRole("heading", { name: "Create Request" }),
-	).toBeVisible();
+	if (section === "list") {
+		await expect(page.getByTestId("change-requests-list")).toBeVisible();
+		return;
+	}
+
+	const createHeading = page.getByRole("heading", { name: "Create Request" });
+	const openCreate = page.getByTestId("change-requests-tab-create");
+	if (!(await createHeading.isVisible().catch(() => false))) {
+		await openCreate.evaluate((button: HTMLButtonElement) => button.click());
+	}
+	await expect(createHeading).toBeVisible();
 }
 
 export async function createProject(page: Page, projectName: string) {
@@ -237,7 +239,7 @@ export async function createProject(page: Page, projectName: string) {
 		failOnUnexpectedStatus: true,
 	});
 
-	await page.getByRole("button", { name: /Create Project with 3 Environments?/ }).click();
+	await page.locator("form").getByRole("button", { name: "Create Project" }).click();
 	const trackedResponse = await createResponse;
 	expectObjectBody(trackedResponse.responseBody, "Create project response");
 	expect(typeof trackedResponse.responseBody.id).toBe("string");
@@ -255,12 +257,10 @@ export async function createProject(page: Page, projectName: string) {
 }
 
 export async function openProjectCardActions(page: Page, projectName: string) {
-	const card = page.locator('[class*="cursor-pointer"][class*="group"]').filter({ hasText: projectName }).first();
-	await card.waitFor({ state: "visible" });
-	await card.hover();
-	const actionButton = card.getByRole("button").last();
-	await actionButton.click({ force: true });
-	return card;
+	const row = page.getByRole("row").filter({ hasText: projectName }).first();
+	await expect(row).toBeVisible();
+	await row.getByRole("button", { name: "Application actions" }).click();
+	return row;
 }
 
 export async function editProject(page: Page, projectName: string, nextName: string) {
