@@ -1,7 +1,7 @@
 # EnvSync dual license
 
 This monorepo contains both **open source (MIT)** and **proprietary enterprise**
-software (PostHog / Coder style). Copyright (c) 2026 EnvSync Cloud.
+software (PostHog / Coder style). Copyright (c) 2025-2026 EnvSync Cloud Private Limited.
 
 ## 1. MIT License (default for open-source paths)
 
@@ -10,7 +10,7 @@ under the MIT License:
 
 MIT License
 
-Copyright (c) 2026 EnvSync Cloud
+Copyright (c) 2025-2026 EnvSync Cloud Private Limited
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ SOFTWARE.
 
 The following paths are **not** MIT. They are proprietary software. Production
 use requires a valid EnvSync enterprise subscription or other written license
-from EnvSync Cloud. See the LICENSE file inside each package for terms:
+from EnvSync Cloud Private Limited. See the LICENSE file inside each package for terms:
 
 | Path | Package |
 |------|---------|
@@ -60,8 +60,9 @@ Signing keys for entitlements live only on EnvSync’s private license-server.
 ## 3. Contributions
 
 - Contributions to MIT paths are accepted under the MIT License.
-- Contributions to proprietary paths are accepted under terms that allow EnvSync
-  Cloud to include them under the EnvSync Enterprise License (see CONTRIBUTING.md).
+- Contributions to proprietary paths are accepted under terms that allow
+  EnvSync Cloud Private Limited to include them under the EnvSync Enterprise
+  License (see CONTRIBUTING.md).
 
 ## 4. Product editions (non-legal summary)
 

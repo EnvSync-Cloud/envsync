@@ -12,6 +12,7 @@
   },
   "files": [
     "dist",
+    "LICENSE",
     "README.md"
   ],
   "scripts": {
@@ -29,7 +30,7 @@
   "bugs": {
     "url": "https://github.com/EnvSync-Cloud/envsync/issues"
   },
-  "author": "EnvSync Cloud",
+  "author": "EnvSync Cloud Private Limited",
   "license": "MIT",
   "keywords": [
     "envsync",

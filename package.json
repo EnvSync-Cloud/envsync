@@ -2,6 +2,7 @@
   "name": "monorepo",
   "version": "0.25.3",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
   "workspaces": [
     "apps/*",
     "sdks/*",

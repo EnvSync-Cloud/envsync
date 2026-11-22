@@ -115,9 +115,9 @@ EnvSync is a **public dual-license monorepo** (not private-superset-only). See:
 
 Code under `packages/envsync-enterprise`, `packages/envsync-enterprise-web`,
 `packages/envsync-enterprise` / `envsync-enterprise-web`, and `packages/deploy-cli` (enterprise deploy)
-is **proprietary**. By contributing to those paths you grant EnvSync Cloud the
-right to use, modify, and distribute your contribution under the EnvSync
-Enterprise License (and to relicense as needed for the product).
+is **proprietary**. By contributing to those paths you grant EnvSync Cloud
+Private Limited the right to use, modify, and distribute your contribution
+under the EnvSync Enterprise License (and to relicense as needed for the product).
 
 MIT-path contributions remain under MIT.
 
