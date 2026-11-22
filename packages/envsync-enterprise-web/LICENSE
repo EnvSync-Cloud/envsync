@@ -1,6 +1,6 @@
 EnvSync Enterprise License (Proprietary)
 
-Copyright (c) 2026 EnvSync Cloud. All rights reserved.
+Copyright (c) 2025-2026 EnvSync Cloud Private Limited. All rights reserved.
 
 This package (`envsync-enterprise-web`) is proprietary software. It is included
 in the public monorepo for transparency and dual-license development (PostHog /
@@ -10,7 +10,7 @@ core dashboard shell (`apps/envsync-web`).
 ## Production use
 
 Use of this software in production requires a valid EnvSync enterprise
-subscription or other written license from EnvSync Cloud.
+subscription or other written license from EnvSync Cloud Private Limited.
 
 ## What this covers
 

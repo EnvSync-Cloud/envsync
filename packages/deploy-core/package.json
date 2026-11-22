@@ -1,6 +1,8 @@
 {
   "name": "@envsync-cloud/deploy-core",
   "version": "0.25.3",
+  "license": "MIT",
+  "author": "EnvSync Cloud Private Limited",
   "type": "module",
   "module": "src/index.ts",
   "exports": {
@@ -11,6 +13,7 @@
   },
   "files": [
     "dist",
+    "LICENSE",
     "README.md"
   ],
   "repository": {

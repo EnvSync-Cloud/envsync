@@ -1,6 +1,6 @@
 # @envsync-cloud/deploy-enterprise
 
-**License:** Proprietary (UNLICENSED)  
+**License:** Proprietary (see [LICENSE](./LICENSE))  
 **Binary:** `envsync-deploy-enterprise`  
 **Private registry:** GitHub Packages
 
