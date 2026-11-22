@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 type RequestMode = "direct" | "promotion";
@@ -234,12 +233,13 @@ const ChangeRequests = () => {
         }
         actions={
           activeView === "requests" ? (
-            <Button data-testid="change-requests-tab-create" onClick={() => setActiveView("create")}>
+            <Button type="button" data-testid="change-requests-tab-create" onClick={() => setActiveView("create")}>
               <Plus className="mr-2 size-4" />
               Create Request
             </Button>
           ) : (
             <Button
+              type="button"
               data-testid="change-requests-tab-list"
               variant="outline"
               onClick={() => setActiveView("requests")}
@@ -249,12 +249,7 @@ const ChangeRequests = () => {
           )
         }
       >
-        <Tabs
-          value={activeView}
-          onValueChange={(value) => setActiveView(value as ActiveView)}
-          className="space-y-6"
-        >
-          <TabsContent value="create" className="mt-0">
+        {activeView === "create" ? (
             <Card data-testid="change-requests-create-panel" className="max-w-3xl border-border bg-card/70">
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">Create Request</CardTitle>
@@ -430,7 +425,7 @@ const ChangeRequests = () => {
                 )}
 
                 <Button
-                  
+                  type="button"
                   onClick={submit}
                   data-testid="change-request-submit-button"
                 >
@@ -438,9 +433,7 @@ const ChangeRequests = () => {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="requests" className="mt-0">
+        ) : (
             <Card data-testid="change-requests-list" className="border-border bg-card/70">
               <CardContent className="pt-6">
                 {requestRows.length === 0 ? (
@@ -544,8 +537,7 @@ const ChangeRequests = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+        )}
       </PageShell>
 
       <Dialog
