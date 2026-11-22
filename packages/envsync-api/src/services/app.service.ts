@@ -14,6 +14,7 @@ import { runSaga } from "@/helpers/saga";
 import { wrapManagedPrivateKey, unwrapManagedPrivateKey } from "@/helpers/key-store";
 import { AuthorizationService } from "@/services/authorization.service";
 import { EnvTypeService } from "@/services/env_type.service";
+import { appCreateNeedsByokPlan } from "@/services/app-create-policy";
 import { PlanLimitService } from "@/services/plan_limit.service";
 
 export class AppService {
@@ -109,7 +110,7 @@ export class AppService {
 		}
 
 		await PlanLimitService.assertCount(org_id, "projects");
-		if (!is_managed_secret) {
+		if (appCreateNeedsByokPlan(enable_secrets, is_managed_secret)) {
 			await PlanLimitService.assertFeature(org_id, "byok_secrets");
 		}
 

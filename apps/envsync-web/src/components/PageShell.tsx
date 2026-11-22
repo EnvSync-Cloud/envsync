@@ -75,7 +75,12 @@ export function PageShell({
               <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
               {inlineStats && inlineStats.length > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  {inlineStats.map((stat) => `${stat.value} ${stat.label.toLowerCase()}`).join(" · ")}
+                  {inlineStats.map((stat, index) => (
+                    <span key={stat.label}>
+                      {index > 0 ? " · " : null}
+                      {stat.value} {stat.label.toLowerCase()}
+                    </span>
+                  ))}
                 </p>
               )}
             </div>

@@ -527,7 +527,15 @@ export const EnvironmentVariablesTable = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-12" />
+                <col />
+                <col className="w-72" />
+                {showEnvironmentColumn ? <col className="w-36" /> : null}
+                <col className="w-44" />
+                {canEdit ? <col className="w-14" /> : null}
+              </colgroup>
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-3 px-4 text-left">
@@ -669,8 +677,8 @@ export const EnvironmentVariablesTable = ({
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-2 max-w-xs">
-                            <code className="hdx-mask select-none text-sm font-mono text-foreground bg-muted px-2 py-1 rounded flex-1 truncate">
+                          <div className="flex min-w-0 items-center gap-1">
+                            <code className="hdx-mask block h-7 min-w-0 flex-1 select-none truncate rounded bg-muted px-2 font-mono text-sm leading-7 text-foreground">
                               {showSensitive[variable.id] ? variable.value : "••••••••"}
                             </code>
                             <Button
@@ -718,7 +726,7 @@ export const EnvironmentVariablesTable = ({
                         )}
                       </td>
                       {canEdit && (
-                        <td className="p-4 flex justify-end">
+                        <td className="px-4 py-4 text-right">
                           {isEditing ? (
                             <div className="flex items-center space-x-1">
                               <Button

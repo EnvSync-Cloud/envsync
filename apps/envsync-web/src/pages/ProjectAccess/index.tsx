@@ -16,6 +16,11 @@ import { appDetailPath } from "@/lib/app-routes";
 
 const relationPriority = { viewer: 1, editor: 2, admin: 3 } as const;
 const sourceOrder = ["org", "direct", "team"] as const;
+const sourceLabel: Record<(typeof sourceOrder)[number], string> = {
+  org: "Organization",
+  direct: "Direct",
+  team: "Team",
+};
 
 const ProjectAccess = () => {
   const { appId } = useParams();
@@ -114,6 +119,7 @@ const ProjectAccess = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Project Access"
+        description="Who can open this project, and where that access comes from."
         icon={LockKeyhole}
         actions={
           <Button asChild variant="outline" className="border-border text-foreground">
@@ -139,7 +145,7 @@ const ProjectAccess = () => {
         }
       >
       {activeSection === "access" ? (
-        <div data-testid="project-access-panel-control" className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div data-testid="project-access-panel-control" className="space-y-4">
           <Card className="border-border bg-card/70">
             <CardHeader>
               <CardTitle className="text-foreground">Grant Access</CardTitle>
@@ -256,7 +262,7 @@ const ProjectAccess = () => {
           </Card>
         </div>
       ) : (
-        <div data-testid="project-access-panel-effective" className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div data-testid="project-access-panel-effective" className="space-y-4">
           <Card data-testid="project-access-effective-users" className="border-border bg-card/70">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-foreground">
@@ -299,7 +305,7 @@ const ProjectAccess = () => {
                                 .filter((source) => entry.sources.includes(source))
                                 .map((source) => (
                                   <Badge key={source} variant="secondary" className="bg-blue-500/10 text-blue-300">
-                                    {source}
+                                    {sourceLabel[source]}
                                   </Badge>
                                 ))}
                             </div>
