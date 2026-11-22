@@ -4828,24 +4828,31 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	const restoreRoot = path.join(BACKUPS_ROOT, `restore-${Date.now()}`);
 	logInfo(`Restore archive: ${archivePath}`);
 	if (currentOptions.dryRun) {
-		const existing = loadState();
 		if (archivePath.endsWith(".age")) {
 			logDryRun(`Would decrypt ${archivePath} with ${currentOptions.identityPath ?? identityPathForArchive(archivePath)}`);
 		}
 		logDryRun(`Would extract ${archivePath} into ${restoreRoot}`);
 		logDryRun(`Would restore deploy files into ${DEPLOY_ROOT} and ${ETC_ROOT}`);
-		if (hasManagedRuntime(existing.config)) {
-			stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
+		if (exists(DEPLOY_YAML)) {
+			const existing = loadState();
+			if (hasManagedRuntime(existing.config)) {
+				stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
+			}
+			logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
+		} else {
+			logDryRun("No deploy config on this host yet. Existing runtime stop will be skipped.");
 		}
-		logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
 		logDryRun("Would restore all managed Docker volumes from the archive");
 		logSuccess("Restore dry-run completed");
 		return;
 	}
-	const currentConfig = loadState().config;
-	if (hasManagedRuntime(currentConfig)) {
-		logWarn("Restore will stop the existing EnvSync stack before replacing managed data volumes.");
-		stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
+	// A wiped host has no deploy.yaml. Restore still has to read the archive.
+	if (exists(DEPLOY_YAML)) {
+		const currentConfig = loadState().config;
+		if (hasManagedRuntime(currentConfig)) {
+			logWarn("Restore will stop the existing EnvSync stack before replacing managed data volumes.");
+			stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
+		}
 	}
 	ensureDir(restoreRoot);
 	let extractPath = archivePath;
