@@ -44,6 +44,7 @@ import {
 	sealPlaintextUpgradeDumps,
 } from "./backup-archive";
 import {
+	assertDistinctExportKeysPaths,
 	type KeyBundleFile,
 	privateKeyMaterials,
 	readKeyBundleEntries,
@@ -4936,6 +4937,7 @@ async function cmdExportKeys() {
 	const timestamp = new Date().toISOString().replace(/[:]/g, "-");
 	const outputPath = currentOptions.outputPath ?? path.join(config.backup.output_dir, `envsync-keys-${timestamp}.tar.gz.age`);
 	const identityPath = currentOptions.identityPath ?? identityPathForArchive(outputPath);
+	assertDistinctExportKeysPaths(outputPath, currentOptions.identityPath);
 	if (currentOptions.dryRun) {
 		logDryRun(`Would read private key files from ${MINIKMS_SECRET_DIR}`);
 		for (const item of privateKeyMaterials()) logDryRun(`Would include ${item.fileName}`);

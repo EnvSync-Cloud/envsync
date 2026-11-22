@@ -185,6 +185,18 @@ export function buildKeyBundleFiles(entries: KeyBundleFile[], createdAt: string)
 	];
 }
 
+/** Reject an explicit export-keys identity that is the same file as the bundle output. */
+export function assertDistinctExportKeysPaths(outputPath: string, identityPath: string | undefined) {
+	if (identityPath === undefined) return;
+	const output = path.resolve(outputPath);
+	const identity = path.resolve(identityPath);
+	if (output === identity) {
+		throw new Error(
+			`--identity and --output resolve to the same path (${output}). Pass a different --identity file.`,
+		);
+	}
+}
+
 export async function sealKeyBundle(opts: {
 	entries: KeyBundleFile[];
 	outputPath: string;

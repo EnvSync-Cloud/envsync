@@ -16,6 +16,7 @@ import {
 	selectExpiredUpgradeSnapshots,
 } from "./backup-archive";
 import {
+	assertDistinctExportKeysPaths,
 	createTarGz,
 	readKeyBundleEntries,
 	requiredKeyFileNames,
@@ -117,6 +118,21 @@ describe("export-keys bundle", () => {
 			expect(opened.toString("utf8")).toContain(keys.root);
 			expect(opened.toString("utf8")).toContain(keys.session);
 			expect(opened.toString("utf8")).toContain(keys.pem);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("rejects an explicit identity that resolves to the same path as the output", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "envsync-export-keys-paths-"));
+		try {
+			const output = path.join(dir, "envsync-keys.tar.gz.age");
+			const sameViaParent = path.join(dir, "nested", "..", "envsync-keys.tar.gz.age");
+			expect(() => assertDistinctExportKeysPaths(output, output)).toThrow(/same path/);
+			expect(() => assertDistinctExportKeysPaths(output, sameViaParent)).toThrow(/same path/);
+			expect(() => assertDistinctExportKeysPaths("envsync-keys.tar.gz.age", path.resolve("envsync-keys.tar.gz.age"))).toThrow(/same path/);
+			expect(() => assertDistinctExportKeysPaths(output, path.join(dir, "envsync-keys.identity"))).not.toThrow();
+			expect(() => assertDistinctExportKeysPaths(output, undefined)).not.toThrow();
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
 		}

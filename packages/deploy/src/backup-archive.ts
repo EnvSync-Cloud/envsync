@@ -63,6 +63,8 @@ function writePrivateFile(target: string, bytes: Uint8Array | string) {
 
 /** Encrypt a plaintext file to `sealedPath`. The identity is not stored inside the ciphertext. */
 export async function sealPlaintextFile(sourcePath: string, sealedPath: string, recipients: readonly string[] = []) {
+	// Read timestamps before the plaintext read, which can refresh atime.
+	const sourceStat = fs.statSync(sourcePath);
 	const plaintext = fs.readFileSync(sourcePath);
 	if (isAgeCiphertext(plaintext)) {
 		return { archivePath: sourcePath, identityPath: identityPathForArchive(sourcePath), recipient: "" };
@@ -72,6 +74,8 @@ export async function sealPlaintextFile(sourcePath: string, sealedPath: string, 
 	const identityText = sealed.identity.endsWith("\n") ? sealed.identity : `${sealed.identity}\n`;
 	writePrivateFile(sealedPath, sealed.ciphertext);
 	writePrivateFile(identityPath, identityText);
+	// Retention uses mtime. Copy the source times before the plaintext file is removed.
+	fs.utimesSync(sealedPath, sourceStat.atime, sourceStat.mtime);
 	fs.rmSync(sourcePath);
 	return { archivePath: sealedPath, identityPath, recipient: sealed.recipient };
 }

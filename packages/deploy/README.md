@@ -34,7 +34,7 @@ Enterprise stacks run a **single API service** with manage routes at `/api/v1/ma
 
 ## Backup and key custody
 
-`envsync-deploy backup` writes an age-encrypted data backup. MiniKMS private keys are excluded. `envsync-deploy export-keys` writes a separate age-encrypted key bundle (mode `0600`) and identity file (mode `0600`) for offline storage. Restore a data backup with `--keys` and `--keys-identity`. Upgrade DB snapshots are age-encrypted and pruned after `upgrade.snapshot_retention_days` (default 7).
+`envsync-deploy backup` writes an age-encrypted data backup. MiniKMS private keys are excluded. `envsync-deploy export-keys` writes a separate age-encrypted key bundle (mode `0600`) and identity file (mode `0600`) for offline storage. Restore a data backup with `--keys` and `--keys-identity`. Upgrade DB snapshots are age-encrypted. Snapshots older than `upgrade.snapshot_retention_days` (default 7) are pruned only during backup and upgrade runs: `envsync-deploy backup`, and an API upgrade that takes a DB snapshot (`envsync-deploy upgrade`, or `deploy` when `upgrade.db_snapshot_on_api_upgrade` is enabled). No scheduled job prunes them between runs.
 
 ## Build
 
