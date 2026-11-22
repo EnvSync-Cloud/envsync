@@ -155,6 +155,45 @@ Do **not** mount customer entitlement PEMs on Hosted API for product multi-org.
 CI reference: `.github/workflows/deploy-fe.yaml` must use `bun run --filter envsync-web build:hosted`.  
 Boundary CI fails Hosted FE if it uses OSS build.
 
+### Release deploy
+
+A tag push (`vX.Y.Z`) runs `.github/workflows/release.yml`. That workflow
+publishes the CLI, packages, and images first. The **Deploy production** job
+then waits for a reviewer on the GitHub `production` environment. Nothing in
+that job runs until the deployment is approved.
+
+After approval, the job does three things in order:
+
+1. Run `envsync-deploy-enterprise backup` on the API host. The command stops
+   the Swarm stack, writes an age-encrypted archive, and starts the current
+   release again.
+2. Upload that archive, its age identity, and the manifest to Cloudflare R2.
+   The object prefix is `envsync/production/<tag>/` unless
+   `CLOUDFLARE_R2_PREFIX` is set.
+3. Install `@envsync-cloud/deploy-enterprise` at the tag on the host, run
+   `upgrade` for that version, then dispatch `deploy-fe.yaml` for the same tag
+   and wait for the hosted dashboard and landing deploy.
+
+Store these on the `production` environment. The workflow fails closed when
+one is missing.
+
+| Secret | Use |
+|--------|-----|
+| `PROD_SSH_HOST` | API host name |
+| `PROD_SSH_USER` | SSH user with passwordless `sudo` |
+| `PROD_SSH_KEY` | Private key for that user |
+| `CLOUDFLARE_R2_ACCOUNT_ID` | Cloudflare account that owns the bucket |
+| `CLOUDFLARE_R2_ACCESS_KEY_ID` | R2 S3 access key |
+| `CLOUDFLARE_R2_SECRET_ACCESS_KEY` | R2 S3 secret |
+| `CLOUDFLARE_R2_BUCKET` | Bucket name |
+| `CLOUDFLARE_R2_PREFIX` | Optional key prefix |
+
+The host's root npm config must already be able to read
+`@envsync-cloud/deploy-enterprise` from GitHub Packages. Add at least one
+required reviewer on the `production` environment. Without a reviewer, GitHub
+does not pause the job. Allow tag names that match `v*`, or leave the
+deployment branch policy empty so tag pushes can deploy.
+
 ### Runtime config (web)
 
 ```js
