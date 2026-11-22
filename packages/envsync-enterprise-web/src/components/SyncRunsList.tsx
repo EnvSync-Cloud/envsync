@@ -21,7 +21,7 @@ const statusConfig: Record<
   succeeded: {
     label: "Success",
     className:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+      "border-border text-accent-ink",
   },
   failed: {
     label: "Failed",

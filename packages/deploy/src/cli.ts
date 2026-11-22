@@ -87,6 +87,10 @@ interface DeployConfig {
 		api_client_id: string;
 		cli_client_id: string;
 		management_client_id: string;
+		github_client_id?: string;
+		github_client_secret?: string;
+		gitlab_client_id?: string;
+		gitlab_client_secret?: string;
 	};
 	observability: {
 		retention_days: number;
@@ -1631,6 +1635,10 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			api_client_id: requireDefined(raw.auth?.api_client_id, "auth.api_client_id"),
 			cli_client_id: requireDefined(raw.auth?.cli_client_id, "auth.cli_client_id"),
 			management_client_id: raw.auth?.management_client_id ?? "management",
+			github_client_id: raw.auth?.github_client_id,
+			github_client_secret: raw.auth?.github_client_secret,
+			gitlab_client_id: raw.auth?.gitlab_client_id,
+			gitlab_client_secret: raw.auth?.gitlab_client_secret,
 		},
 		observability: {
 			retention_days: requireDefined(raw.observability?.retention_days, "observability.retention_days"),

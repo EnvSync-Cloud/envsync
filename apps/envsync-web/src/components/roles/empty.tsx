@@ -12,7 +12,7 @@ export const EmptyRoles = () => (
       features they can access.
     </p>
     <RoleEditForm>
-      <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+      <Button >
         <Plus className="size-4 mr-2" />
         Create New Role
       </Button>

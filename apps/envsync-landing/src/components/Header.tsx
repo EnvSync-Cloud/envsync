@@ -5,13 +5,14 @@ import { Link, useLocation } from "react-router-dom";
 import { trackAction } from "@/telemetry";
 import { runtimeConfig } from "@/utils/runtime-config";
 import { navGroups, pathInGroup, standaloneNav, type NavGroup } from "@/nav";
+import LogoMark from "@/components/LogoMark";
 
 const linkClasses =
   "rounded-md px-3 py-1.5 text-base font-medium text-muted-foreground " +
   "transition-colors duration-200 ease-[cubic-bezier(0.19,1,0.22,1)] hover:text-foreground " +
   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-accent-outline/35";
 
-const Header = () => {
+const Header = ({ inkMark = false }: { inkMark?: boolean }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const location = useLocation();
@@ -43,7 +44,7 @@ const Header = () => {
     >
       <div className="mx-auto flex h-[72px] max-w-[1480px] items-center justify-between px-4 sm:px-8">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/EnvSync.svg" alt="EnvSync Logo" className="h-7 w-7" />
+          <LogoMark ink={inkMark} />
           <span className="text-base font-medium text-foreground">EnvSync</span>
           <span className="rounded-full border border-border px-2 py-0.5 font-mono text-xs leading-4 text-muted-foreground">
             BETA

@@ -11,7 +11,7 @@ import { appsCreated } from "@/libs/telemetry/metrics";
 import { KMSClient } from "@/libs/kms/client";
 import { getVaultSessionToken } from "@/libs/kms/session-manager";
 import { runSaga } from "@/helpers/saga";
-import { wrapManagedPrivateKey, unwrapManagedPrivateKey } from "@/helpers/key-store";
+import { generateKeyPair, wrapManagedPrivateKey, unwrapManagedPrivateKey } from "@/helpers/key-store";
 import { AuthorizationService } from "@/services/authorization.service";
 import { EnvTypeService } from "@/services/env_type.service";
 import { appCreateNeedsByokPlan } from "@/services/app-create-policy";
@@ -241,6 +241,54 @@ export class AppService {
 
 			return app;
 		});
+	};
+
+	/**
+	 * Secrets need an RSA public key. Older projects enabled secrets without storing one.
+	 * Generate a managed keypair in that case so writes do not call publicEncrypt with null.
+	 */
+	public static ensureEncryptionKey = async (app: {
+		id: string;
+		org_id: string;
+		public_key?: string | null;
+	}) => {
+		if (app.public_key) return app.public_key;
+
+		const db = await DB.getInstance();
+		const current = await db
+			.selectFrom("app")
+			.select(["public_key", "org_id"])
+			.where("id", "=", app.id)
+			.executeTakeFirst();
+		if (current?.public_key) return current.public_key;
+
+		const keypair = generateKeyPair();
+		const storedPrivateKey = await wrapManagedPrivateKey(app.org_id, app.id, keypair.privateKey);
+		const updated = await db
+			.updateTable("app")
+			.set({
+				public_key: keypair.publicKey,
+				private_key: storedPrivateKey,
+				is_managed_secret: true,
+				updated_at: new Date(),
+			})
+			.where("id", "=", app.id)
+			.where("public_key", "is", null)
+			.returning("public_key")
+			.executeTakeFirst();
+
+		await invalidateCache(CacheKeys.app(app.id), CacheKeys.appsByOrg(app.org_id));
+		if (updated?.public_key) return updated.public_key;
+
+		const raced = await db
+			.selectFrom("app")
+			.select("public_key")
+			.where("id", "=", app.id)
+			.executeTakeFirst();
+		if (!raced?.public_key) {
+			throw new ValidationError("This project has no encryption key.");
+		}
+		return raced.public_key;
 	};
 
 	public static updateApp = async (

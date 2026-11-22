@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/api";
 import { toast } from "sonner";
 import { useCopy } from "@/hooks/useClipboard";
-import { Count } from "@/components/ui/count";
 import { ApiKeyRow } from "@/components/api-keys/row";
 import { EmptyApiKeys } from "./empty";
 import { PageShell } from "@/components/PageShell";
@@ -297,19 +296,7 @@ export const ApiKeys = () => {
         </Dialog>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Key className="size-8 mr-3 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
-            API Keys
-            <Count
-              count={apiKeys?.length}
-              size="xl"
-              variant="subtle"
-              className="ml-2"
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isEmpty ? (
             <EmptyApiKeys
               isCreatingApiKey={createApiKey.isPending}

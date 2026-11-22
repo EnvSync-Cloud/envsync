@@ -101,7 +101,7 @@ export function SignedInDevicesCard() {
     >
       <CardHeader>
         <div className="flex items-center space-x-2">
-          <MonitorSmartphone className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
+          <MonitorSmartphone className="size-4 shrink-0 text-muted-foreground" />
           <div>
             <CardTitle className="text-foreground">Signed-in devices</CardTitle>
             <CardDescription>
@@ -131,7 +131,7 @@ export function SignedInDevicesCard() {
                   {device.label}
                 </h4>
                 {device.current && (
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-400">
+                  <span className="rounded-md border border-border px-1.5 py-0.5 text-[11px] text-accent-ink">
                     This device
                   </span>
                 )}

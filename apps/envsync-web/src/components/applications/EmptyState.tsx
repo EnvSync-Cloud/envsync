@@ -11,12 +11,10 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
     <div className="flex items-center justify-center min-h-[50vh]">
       <div className="text-center max-w-lg">
         {/* Geometric vault illustration */}
-        <div className="mx-auto mb-8 w-24 h-24 relative">
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rotate-6" />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 -rotate-6" />
-          <div className="relative w-24 h-24 rounded-2xl bg-card border border-border flex items-center justify-center">
+        <div className="relative mx-auto mb-8 size-16">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-border bg-card">
             <svg
-              className="w-10 h-10 text-emerald-400"
+              className="size-7 text-muted-foreground"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -42,7 +40,7 @@ export const EmptyState = ({ canEdit, onCreateProject }: EmptyStateProps) => {
           <div className="space-y-6">
             <Button
               onClick={onCreateProject}
-              className="bg-emerald-500 hover:bg-emerald-600 text-foreground px-6"
+              className="px-6"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Project

@@ -28,7 +28,7 @@ interface PageShellProps {
 
 const toneClasses: Record<PageShellStatTone, string> = {
   default: "border-border bg-muted/50 text-foreground",
-  success: "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-100",
+  success: "border-border bg-card text-accent-ink",
   warning: "border-amber-500/20 bg-amber-500/[0.08] text-amber-100",
   danger: "border-rose-500/20 bg-rose-500/[0.08] text-rose-100",
 };
@@ -108,7 +108,7 @@ export function PageShell({
               key={stat.label}
               className={cn("rounded-xl border p-4", toneClasses[stat.tone ?? "default"])}
             >
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">{stat.label}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
               <div className="mt-1 text-2xl font-medium tracking-tight">{stat.value}</div>
             </div>
           ))}

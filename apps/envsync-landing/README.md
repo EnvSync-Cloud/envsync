@@ -1,141 +1,57 @@
 # EnvSync Landing
 
-Marketing / Hosted signup site (`apps/envsync-landing`). **Hosted-only** — not deployed on self-host OSS or Enterprise stacks (see [EDITIONING.md](../../EDITIONING.md)).
+Hosted marketing site at `apps/envsync-landing`. Self-host OSS and Enterprise stacks do not run this app. See [EDITIONING.md](../../EDITIONING.md).
 
-## ✨ What is EnvSync?
+The dev server is forced to the dark theme. The home page is `src/pages/Index.tsx`, which renders `src/components/home/HomeLanding.tsx`.
 
-EnvSync keeps your `.env` files, configuration secrets, and environment variables perfectly synchronized across development, staging, and production environments.
+## Develop
 
-**Key Benefits:**
-- 🔒 **Secure** - Encrypted at rest and in transit
-- ⚡ **Fast** - Real-time synchronization across environments  
-- 🌐 **Web-first** - Built for modern web development workflows
-- 🔧 **Developer-friendly** - Simple CLI and intuitive web interface
-
-## 🛠️ Tech Stack
-
-- **React** - UI library
-- **Vite** - Build tool and dev server
-- **TailwindCSS** - Utility-first CSS framework
-- **React Query** - Data fetching and state management
-- **Zod** - TypeScript-first schema validation
-
-## 🚀 Quick Start
-
-### Prerequisites
-- [Bun](https://bun.sh/) - JavaScript runtime and package manager
-
-### Installation
-
-From monorepo root:
+From the monorepo root:
 
 ```bash
 bun install
 bun run --filter envsync-landing dev
 ```
 
-### Environment Setup
+Open `http://localhost:8002`.
 
-Create a `.env` file:
+Vite reads the root `.env` when those variables are set. Local defaults in `src/utils/runtime-config.ts` are enough to boot the page:
 
-```env
-VITE_API_BASE_URL=https://api.envsync.cloud
-```
+| Variable | Role | Local fallback |
+|----------|------|----------------|
+| `VITE_API_BASE_URL` | API origin | `http://localhost:4000` |
+| `VITE_DOCS_URL` | Docs site | `https://docs.envsync.cloud` |
+| `VITE_API_DOCS_URL` | API reference | `{docs}/docs/api` |
+| `VITE_CONTACT_HREF` | Contact link | `mailto:team@envsync.cloud` |
 
-### Development
+Hosted builds inject `window.__ENVSYNC_RUNTIME_CONFIG__`. Do not add a second `.env` inside this app.
 
-```bash
-bun dev
-```
-
-Visit `http://localhost:8080` to see the landing page! 🎉
-
-## 📝 Available Scripts
+## Scripts
 
 ```bash
-# Start development server
-bun dev
-
-# Build for production
-bun run build
-
-# Preview production build
+bun run dev       # Vite on port 8002
+bun run build     # production build
 bun run preview
-
-# Run linting
 bun run lint
 ```
 
-## 📁 Project Structure
+`bun run deploy` builds and runs Wrangler. Hosted frontend publish from GitHub is the root `deploy-fe` workflow, not this script.
 
-```
-envsync-landing/
-├── src/
-│   ├── components/    # Reusable UI components
-│   ├── sections/      # Landing page sections
-│   ├── hooks/         # Custom React hooks
-│   ├── lib/           # Utilities & configurations
-│   └── helpers/       # Helper functions
-├── public/            # Static assets & images
-└── dist/              # Production build
-```
+## Layout
 
-## 🔧 Configuration
-
-### Required Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_BASE_URL` | EnvSync API backend URL | `https://api.envsync.cloud` |
-
-## 🏗️ Build & Deploy
-
-```bash
-bun run build
+```text
+src/
+  pages/            # routes (home, pricing, onboarding, product, companies)
+  components/home/  # home page sections and motion
+  components/       # header, footer, shared marketing components
+  content/          # product and company page copy
+  utils/            # runtime config
 ```
 
-```bash
-bun run preview
-```
+## Stack
 
-Deploy the `dist/` directory to any static hosting service (Vercel, Netlify, etc.).
+React, Vite, Tailwind, and the shared `envsync-ui` tokens. The page calls `@envsync-cloud/envsync-ts-sdk` only. Fonts are Inter and JetBrains Mono.
 
-## 🎨 Landing Page Features
+## License
 
-- **Hero Section** - Compelling introduction to EnvSync
-- **Features Showcase** - Highlight key benefits and capabilities
-- **How It Works** - Step-by-step process explanation
-- **Call-to-Action** - Drive conversions and sign-ups
-- **Responsive Design** - Optimized for all devices
-
-## 🌟 EnvSync Ecosystem
-
-- **[envsync-cli](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli)** - Command line interface
-- **[envsync-web](https://github.com/EnvSync-Cloud/envsync-web)** - Web dashboard for managing configurations
-- **[envsync-api](https://github.com/EnvSync-Cloud/envsync-api)** - REST API and backend services  
-- **envsync-landing** - Landing page (this repo)
-
-## 🤝 Contributing
-
-We're building the future of environment management! 
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 💬 Support & Community
-
-- 📧 **Email:** hi@envsync.cloud
-- 📖 **Blog:** [blog.envsync.cloud](https://blog.envsync.cloud)
-
----
-
-**Making environment configuration simple, secure, and synchronized** 🌟
-
-Built with ❤️ by the EnvSync team using [Loveable](https://loveable.dev)
+Part of the public monorepo. See the root [LICENSE](../../LICENSE).

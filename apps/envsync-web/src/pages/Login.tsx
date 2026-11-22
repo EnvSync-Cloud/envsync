@@ -94,10 +94,15 @@ const Login = () => {
       }
       trackLoginFailed("envsync", "missing_login_url");
       setSignInError("We couldn't start sign-in. Please try again.");
-    } catch {
+    } catch (error) {
       trackLoginFailed("envsync", "start_failed");
+      const message = error instanceof Error ? error.message : "";
+      const storageBlocked = error instanceof DOMException
+        && (error.name === "SecurityError" || error.name === "QuotaExceededError");
       setSignInError(
-        "We couldn't start sign-in. Allow site data for this browser and try again.",
+        storageBlocked
+          ? "We couldn't start sign-in. Allow site data for this browser and try again."
+          : message || "We couldn't start sign-in. Please try again.",
       );
     } finally {
       setSignInPending(false);
@@ -175,7 +180,7 @@ const Login = () => {
 
             {showSso && (
               <>
-                <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />
                   or
                   <span className="h-px flex-1 bg-border" />

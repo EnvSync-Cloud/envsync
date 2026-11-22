@@ -130,6 +130,7 @@ export default function ProjectRotation() {
       enabled={enabled}
       isError={isError}
       error={error}
+      variant="shell"
       actions={
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
@@ -143,7 +144,9 @@ export default function ProjectRotation() {
         </div>
       }
     >
-      <ProjectSettingsTabs appId={appId} active="rotation" />
+      <div className="border-b border-border pb-px">
+        <ProjectSettingsTabs appId={appId} active="rotation" />
+      </div>
 
       <div className="space-y-3">
         {policies.length === 0 && !isLoading ? (

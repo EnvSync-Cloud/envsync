@@ -97,12 +97,9 @@ export default function SyncOperations() {
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-6 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-            Enterprise
-          </p>
-          <h1 className="text-3xl font-semibold text-foreground flex items-center gap-2">
-            <Workflow className="size-7" />
+        <div className="space-y-1">
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+            <Workflow className="size-4 text-muted-foreground" />
             Sync operations
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
@@ -175,7 +172,7 @@ export default function SyncOperations() {
                 onClick={() => setSelectedId(run.id)}
                 className={cn(
                   "w-full rounded-xl border border-border bg-card/40 p-4 text-left transition-colors hover:bg-muted/40",
-                  selected?.id === run.id && "border-emerald-500/40 bg-emerald-500/5",
+                  selected?.id === run.id && "border-foreground bg-accent",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">

@@ -119,7 +119,6 @@ const ProjectAccess = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Project Access"
-        description="Who can open this project, and where that access comes from."
         icon={LockKeyhole}
         actions={
           <Button asChild variant="outline" className="border-border text-foreground">
@@ -127,17 +126,44 @@ const ProjectAccess = () => {
           </Button>
         }
         stats={[
-          { label: "direct users", value: <span data-testid="project-access-summary-direct-users">{grantSummary.directUsers}</span> },
-          { label: "team grants", value: <span data-testid="project-access-summary-team-grants">{grantSummary.directTeams}</span> },
-          { label: "inherited", value: <span data-testid="project-access-summary-inherited-users">{grantSummary.inherited}</span> },
-        ]}
+          grantSummary.directUsers > 0
+            ? {
+                label: grantSummary.directUsers === 1 ? "direct user" : "direct users",
+                value: (
+                  <span data-testid="project-access-summary-direct-users">
+                    {grantSummary.directUsers}
+                  </span>
+                ),
+              }
+            : null,
+          grantSummary.directTeams > 0
+            ? {
+                label: grantSummary.directTeams === 1 ? "team grant" : "team grants",
+                value: (
+                  <span data-testid="project-access-summary-team-grants">
+                    {grantSummary.directTeams}
+                  </span>
+                ),
+              }
+            : null,
+          grantSummary.inherited > 0
+            ? {
+                label: grantSummary.inherited === 1 ? "inherited user" : "inherited users",
+                value: (
+                  <span data-testid="project-access-summary-inherited-users">
+                    {grantSummary.inherited}
+                  </span>
+                ),
+              }
+            : null,
+        ].filter((stat): stat is NonNullable<typeof stat> => stat !== null)}
         secondaryNav={
           <Tabs data-testid="project-access-tabs" value={activeSection} onValueChange={handleSectionChange}>
             <TabsList className="h-auto bg-transparent p-0">
-              <TabsTrigger data-testid="project-access-tab-control" value="access" className="rounded-xl bg-emerald-500/12 text-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+              <TabsTrigger data-testid="project-access-tab-control" value="access" className="rounded-xl text-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground">
                 Access Control
               </TabsTrigger>
-              <TabsTrigger data-testid="project-access-tab-effective" value="effective" className="rounded-xl text-muted-foreground data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground">
+              <TabsTrigger data-testid="project-access-tab-effective" value="effective" className="rounded-xl text-muted-foreground data-[state=active]:bg-accent data-[state=active]:text-foreground">
                 Effective Permissions
               </TabsTrigger>
             </TabsList>
@@ -150,11 +176,17 @@ const ProjectAccess = () => {
             <CardHeader>
               <CardTitle className="text-foreground">Grant Access</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-[9rem_minmax(0,1fr)_9rem_auto] md:items-end">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Subject type *</p>
-                  <Select value={subjectType} onValueChange={(value) => setSubjectType(value as "user" | "team")}>
+                  <p className="text-sm text-muted-foreground">Subject type</p>
+                  <Select
+                    value={subjectType}
+                    onValueChange={(value) => {
+                      setSubjectType(value as "user" | "team");
+                      setSubjectId("");
+                    }}
+                  >
                     <SelectTrigger className="border-border bg-card text-foreground">
                       <SelectValue />
                     </SelectTrigger>
@@ -164,12 +196,12 @@ const ProjectAccess = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <p className="text-sm text-muted-foreground">Subject *</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Subject</p>
                   <Select value={subjectId} onValueChange={setSubjectId}>
-                      <SelectTrigger className="border-border bg-card text-foreground">
-                        <SelectValue placeholder={`Select ${subjectType}`} />
-                      </SelectTrigger>
+                    <SelectTrigger className="border-border bg-card text-foreground">
+                      <SelectValue placeholder={`Select ${subjectType}`} />
+                    </SelectTrigger>
                     <SelectContent className="border-border bg-card">
                       {subjectOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id} className="text-foreground">
@@ -179,11 +211,8 @@ const ProjectAccess = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-[1fr_auto]">
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Access level *</p>
+                  <p className="text-sm text-muted-foreground">Access level</p>
                   <Select value={relation} onValueChange={(value) => setRelation(value as "viewer" | "editor" | "admin")}>
                     <SelectTrigger className="border-border bg-card text-foreground">
                       <SelectValue />
@@ -196,7 +225,7 @@ const ProjectAccess = () => {
                   </Select>
                 </div>
                 <Button
-                  className="mt-6 bg-emerald-500 hover:bg-emerald-600"
+                  
                   onClick={handleGrant}
                   disabled={!canManage || !subjectId}
                 >
@@ -211,6 +240,9 @@ const ProjectAccess = () => {
               <CardTitle className="text-foreground">Direct Grants</CardTitle>
             </CardHeader>
             <CardContent>
+              {grants.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No direct grants.</p>
+              ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">
@@ -233,7 +265,7 @@ const ProjectAccess = () => {
                         </TableCell>
                         <TableCell className="text-muted-foreground capitalize">{grant.subject_type}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
+                          <Badge variant="outline" className="border-border font-normal text-foreground">
                             {grant.relation}
                           </Badge>
                         </TableCell>
@@ -258,6 +290,7 @@ const ProjectAccess = () => {
                   })}
                 </TableBody>
               </Table>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -266,7 +299,7 @@ const ProjectAccess = () => {
           <Card data-testid="project-access-effective-users" className="border-border bg-card/70">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-foreground">
-                <Users className="size-5 text-emerald-400" />
+                <Users className="size-5 text-muted-foreground" />
                 Effective User Access
               </CardTitle>
             </CardHeader>
@@ -281,7 +314,13 @@ const ProjectAccess = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {effectiveAccess
+                  {effectiveAccess.length === 0 ? (
+                    <TableRow className="border-border">
+                      <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                        No one has access yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : effectiveAccess
                     .slice()
                     .sort((a, b) => (relationPriority[b.relation || "viewer"] || 0) - (relationPriority[a.relation || "viewer"] || 0))
                     .map((entry) => (
@@ -291,7 +330,7 @@ const ProjectAccess = () => {
                         </TableCell>
                         <TableCell>
                           {entry.relation ? (
-                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
+                            <Badge variant="outline" className="border-border font-normal text-foreground">
                               {entry.relation}
                             </Badge>
                           ) : (
@@ -345,7 +384,7 @@ const ProjectAccess = () => {
                       <TableRow key={`${grant.subject_id}-${grant.relation}`} className="border-border">
                         <TableCell className="text-foreground">{grant.teamName}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
+                          <Badge variant="outline" className="border-border font-normal text-foreground">
                             {grant.relation}
                           </Badge>
                         </TableCell>

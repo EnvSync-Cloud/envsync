@@ -167,7 +167,6 @@ export function CreateOrgSecretModal({
             <Button
               type="submit"
               disabled={createOrgSecret.isPending}
-              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
             >
               {createOrgSecret.isPending ? "Creating..." : "Create"}
             </Button>

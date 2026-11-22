@@ -1,0 +1,240 @@
+/* Motion measured from cloudflare.com/products/workers. See .reanimate/workers-landing/spec.md */
+
+.home-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.14) 0.7px, transparent 0.75px);
+  background-size: 14px 14px;
+}
+
+@keyframes home-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.home-fade {
+  animation: home-fade 2s cubic-bezier(0, 0, 0.2, 1) 0.1s both;
+}
+
+@keyframes canvas-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.canvas-fade {
+  animation: canvas-fade-in 1s linear 0.2s both;
+}
+
+.canvas-fade-late {
+  animation: canvas-fade-in 1s linear 1.5s both;
+}
+
+@keyframes background-pulse {
+  0%, 100% { opacity: 1; transform: translate(0); }
+  50% { opacity: 0.3; transform: translate3d(var(--pulse-x, 0), var(--pulse-y, 0), 0); }
+}
+
+.pulse-dot {
+  animation: background-pulse 2s linear infinite;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes waveform-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.waveform {
+  display: flex;
+  width: max-content;
+  animation: waveform-scroll 20s linear infinite;
+}
+
+@keyframes webAppsFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.cluster-in {
+  animation: webAppsFadeIn 0.4s ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes corner-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.corner-mark {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: hsl(0 0% 38%);
+  pointer-events: none;
+  animation: corner-in 2s cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation-play-state: paused;
+}
+
+.corner-mark.on-green {
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.corner-live,
+.is-in .corner-mark {
+  animation-play-state: running;
+}
+
+@keyframes dashdraw {
+  from { stroke-dashoffset: 10; }
+  to { stroke-dashoffset: 0; }
+}
+
+.dash {
+  stroke-dasharray: 4 4;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes codeIconLeft {
+  0% { transform: scale(1) translate(0); }
+  16.67% { transform: scale(0.8) translate(-8px); }
+  33.33% { transform: scale(1) translate(0); }
+  100% { transform: scale(1) translate(0); }
+}
+
+@keyframes codeIconCenter {
+  0% { transform: rotate(0deg); }
+  33.33% { transform: rotate(180deg); }
+  100% { transform: rotate(180deg); }
+}
+
+@keyframes codeIconRight {
+  0% { transform: scale(1) translate(0); }
+  16.67% { transform: scale(0.8) translate(8px); }
+  33.33% { transform: scale(1) translate(0); }
+  100% { transform: scale(1) translate(0); }
+}
+
+.code-left,
+.code-center,
+.code-right {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: 4s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-delay: 0.5s;
+  animation-iteration-count: infinite;
+}
+
+.code-left { animation-name: codeIconLeft; }
+.code-center { animation-name: codeIconCenter; }
+.code-right { animation-name: codeIconRight; }
+
+@keyframes icon-rotate {
+  0% { transform: rotate(0deg); }
+  33.33% { transform: rotate(360deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spin-mark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: icon-rotate 4s ease-in-out infinite;
+}
+
+@keyframes tile-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tile-in {
+  animation: tile-fade 0.4s ease-out both;
+  animation-play-state: paused;
+  animation-delay: var(--d, 700ms);
+}
+
+.is-in .tile-in {
+  animation-play-state: running;
+}
+
+@keyframes browser1Enter {
+  from { opacity: 0; transform: scale(0.8) translate(34px, 21px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes browser2Enter {
+  from { opacity: 0; transform: scale(0.8) translate(17px, 11px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes browser3Enter {
+  from { opacity: 0; transform: scale(0.8) translate(-13px, -12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes browser4Enter {
+  from { opacity: 0; transform: scale(0.8) translate(-28px, -25px); }
+  to { opacity: 1; transform: none; }
+}
+
+.illus {
+  animation-duration: 1.2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+  animation-play-state: paused;
+}
+.illus-a { animation-name: browser1Enter; }
+.illus-b { animation-name: browser2Enter; }
+.illus-c { animation-name: browser3Enter; }
+.illus-d { animation-name: browser4Enter; }
+
+.is-in .illus {
+  animation-play-state: running;
+}
+
+@keyframes cursor-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.cursor-pulse {
+  animation: cursor-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes status-spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-spin {
+  animation: status-spin 1s linear infinite;
+}
+
+@keyframes infinite-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: infinite-scroll 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-fade,
+  .canvas-fade,
+  .canvas-fade-late,
+  .pulse-dot,
+  .waveform,
+  .cluster-in,
+  .corner-mark,
+  .tile-in,
+  .illus,
+  .dash,
+  .code-left,
+  .code-center,
+  .code-right,
+  .spin-mark,
+  .cursor-pulse,
+  .status-spin,
+  .ticker-track {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

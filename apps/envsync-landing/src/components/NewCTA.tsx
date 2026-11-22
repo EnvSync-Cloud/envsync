@@ -7,7 +7,7 @@ import { trackAction } from "@/telemetry"
 const NewCTA = () => {
   return (
     <section className="bg-background px-2 pb-2 md:px-3 md:pb-3">
-      <div className="relative overflow-hidden rounded-lg bg-primary">
+      <div className="relative overflow-hidden rounded-lg bg-accent-tint">
         {/* Dot texture + bottom radial glow */}
         <DotTexture />
 

@@ -6,6 +6,8 @@ import { RoleService } from "@/services/role.service";
 import { EditionPolicyService } from "@/services/edition-policy.service";
 import { EntitlementService } from "@/services/entitlement.service";
 import { OrganizationProvisioningService } from "@/services/organization-provisioning.service";
+import { PlanService } from "@/services/plan.service";
+import { PlanLimitService } from "@/services/plan_limit.service";
 import {
 	clearWebAuthCookies,
 	readAccessToken,
@@ -64,10 +66,8 @@ async function buildSessionPayload(userId: string, options?: { authType?: Sessio
 	const [features, install_features, resolvedPlan, usage] = await Promise.all([
 		EntitlementService.getOrgFeatures(user.org_id),
 		EntitlementService.getInstallFeatures(),
-		import("@/services/plan.service").then(({ PlanService }) => PlanService.resolve(user.org_id)),
-		import("@/services/plan_limit.service").then(({ PlanLimitService }) =>
-			PlanLimitService.usage(user.org_id).catch(() => null),
-		),
+		PlanService.resolve(user.org_id),
+		PlanLimitService.usage(user.org_id).catch(() => null),
 	]);
 
 	return {

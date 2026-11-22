@@ -53,11 +53,12 @@ export const ApiKeyRow = ({
       </td>
       <td className="py-4 px-4">
         <Badge
-          className={`${
+          variant="outline"
+          className={
             apiKey.is_active
-              ? "bg-green-900 text-green-300 border-green-800"
-              : "bg-muted text-muted-foreground border-border"
-          } border`}
+              ? "border-border font-normal text-accent-ink"
+              : "border-border font-normal text-muted-foreground"
+          }
         >
           {apiKey.is_active ? "Active" : "Inactive"}
         </Badge>

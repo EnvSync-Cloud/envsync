@@ -1,8 +1,6 @@
-import { ShieldAlert } from "lucide-react";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRolesTable } from "@/hooks/useRoles";
-import { Count } from "@/components/ui/count";
 import { RoleRow } from "@/components/roles/row";
 import { RoleEditForm } from "@/components/roles/edit-form";
 import { RoleRowSkeleton } from "@/components/roles/loading";
@@ -16,28 +14,20 @@ export const Roles = () => {
   }, [isLoading, roles]);
 
   return (
-    <div className="animate-page-enter flex flex-col items-start sm:items-center justify-between gap-4">
-      <div className="flex justify-between items-center w-full">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg ring-1 ring-emerald-500/20">
-            <ShieldAlert className="size-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Roles</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Manage roles and assign permissions to control what users can access
-              across the platform.
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex w-full items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Roles</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {roles?.length ?? 0} roles
+          </p>
         </div>
         <RoleEditForm />
       </div>
-      <Card className="bg-card text-card-foreground border-border shadow-xl rounded-xl w-full mt-2">
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-3">
-            <ShieldAlert className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-white rounded-md" />
+      <Card className="w-full border-border bg-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium text-foreground">
             Roles
-            <Count size="xl" variant="subtle" count={roles?.length} />
           </CardTitle>
         </CardHeader>
         <CardContent>

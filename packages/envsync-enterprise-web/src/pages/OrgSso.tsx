@@ -226,12 +226,9 @@ export default function OrgSso() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-            Enterprise
-          </p>
-          <h1 className="text-3xl font-semibold text-foreground flex items-center gap-2">
-            <Fingerprint className="size-7" />
+        <div className="space-y-1">
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+            <Fingerprint className="size-4 text-muted-foreground" />
             SSO
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">

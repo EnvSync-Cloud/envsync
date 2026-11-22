@@ -14,6 +14,13 @@ export {
 /**
  * Wraps executeTakeFirstOrThrow, converting NoResultError → NotFoundError
  */
+export function isNoResultError(err: unknown): boolean {
+	return (
+		err instanceof NoResultError ||
+		(err instanceof Error && err.constructor.name === "NoResultError")
+	);
+}
+
 export async function orNotFound<T>(
 	promise: Promise<T>,
 	resource: string,
@@ -22,7 +29,7 @@ export async function orNotFound<T>(
 	try {
 		return await promise;
 	} catch (err) {
-		if (err instanceof NoResultError) throw new NotFoundError(resource, id);
+		if (isNoResultError(err)) throw new NotFoundError(resource, id);
 		throw err;
 	}
 }

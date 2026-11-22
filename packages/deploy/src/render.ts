@@ -43,6 +43,10 @@ export interface DeployConfig {
 		api_client_id: string;
 		cli_client_id: string;
 		management_client_id: string;
+		github_client_id?: string;
+		github_client_secret?: string;
+		gitlab_client_id?: string;
+		gitlab_client_secret?: string;
 	};
 	observability: {
 		retention_days: number;
@@ -441,15 +445,15 @@ export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv)
 		`  issuer: ${yamlQuote(runtimeEnv.ATRIUM_ISSUER)}`,
 		"  login_identifier: username",
 		"  identifier_first: true",
-		"  disable_passwords: true",
-		"  passwordless_mode: otp",
 		`  data_key: ${yamlQuote(runtimeEnv.ATRIUM_DATA_KEY)}`,
 		"  access_token_format: jwt",
 		"  access_token_lifetime: 1h",
 		"  refresh_token_lifetime: 168h",
 		"  session_lifetime: 168h",
 		"  disable_registration: true",
-		"  disable_social_registration: true",
+		"  disable_social_registration: false",
+		"  mfa:",
+		"    issuer: EnvSync",
 		"",
 		"registration:",
 		"  dcr_enabled: false",
@@ -492,9 +496,32 @@ export function renderAtriumConfig(config: DeployConfig, runtimeEnv: RuntimeEnv)
 		'  text_color: "#f5f5f6"',
 		"  show_register: false",
 		"  show_forgot_password: true",
+		`  support_url: ${yamlQuote(publicHttpsUrl(config, domainMap(config.domain.root_domain).landing, "/onboarding"))}`,
 		"  templates: /branding/templates",
 		"",
+		...renderAtriumSocial(config),
+		"",
 	].join("\n");
+}
+
+function renderAtriumSocial(config: DeployConfig): string[] {
+	const lines = ["social:", "  providers:"];
+	const github = socialProvider("github", "github", "GitHub", config.auth.github_client_id, config.auth.github_client_secret);
+	const gitlab = socialProvider("gitlab", "gitlab", "GitLab", config.auth.gitlab_client_id, config.auth.gitlab_client_secret);
+	lines.push(...github, ...gitlab);
+	return lines;
+}
+
+function socialProvider(id: string, type: string, name: string, clientId?: string, clientSecret?: string): string[] {
+	const enabled = Boolean(clientId && clientSecret);
+	return [
+		`    - id: ${id}`,
+		`      type: ${type}`,
+		`      name: ${name}`,
+		`      enabled: ${enabled ? "true" : "false"}`,
+		`      client_id: ${yamlQuote(clientId ?? "")}`,
+		`      client_secret: ${yamlQuote(clientSecret ?? "")}`,
+	];
 }
 
 export function renderAtriumClients(config: DeployConfig, runtimeEnv: RuntimeEnv) {
@@ -528,7 +555,7 @@ export function renderAtriumClients(config: DeployConfig, runtimeEnv: RuntimeEnv
 					secret: runtimeEnv.ATRIUM_API_CLIENT_SECRET,
 					name: "EnvSync API",
 					redirect_uris: [...new Set(apiRedirectUris)],
-					grant_types: ["authorization_code", "refresh_token"],
+					grant_types: ["authorization_code", "refresh_token", "password"],
 					scopes: ["openid", "profile", "email"],
 					token_endpoint_auth_method: "client_secret_post",
 					skip_consent: true,

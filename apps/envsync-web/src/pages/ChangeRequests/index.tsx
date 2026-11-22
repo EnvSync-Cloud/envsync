@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Ban, Check, GitPullRequest, ShieldAlert, X } from "lucide-react";
+import { Ban, Check, GitPullRequest, Plus, ShieldAlert, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, sdk } from "@/api";
@@ -20,14 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 type RequestMode = "direct" | "promotion";
 type ActiveView = "requests" | "create";
 
 const getStatusClass = (status: string) => {
-  if (status === "approved") return "bg-emerald-500/10 text-emerald-200";
+  if (status === "approved") return "border border-border bg-transparent font-normal text-accent-ink";
   if (status === "applying") return "bg-amber-500/10 text-amber-200";
   if (status === "failed") return "bg-orange-500/10 text-orange-200";
   if (status === "rejected") return "bg-red-500/10 text-red-200";
@@ -221,45 +220,45 @@ const ChangeRequests = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title={isProjectScoped ? "Approvals" : "Change Requests"}
+        description={
+          isProjectScoped
+            ? "Review a change to this project's variables or secrets before it is applied."
+            : "Review changes to variables or secrets before they are applied."
+        }
         icon={GitPullRequest}
         stats={
           pendingRequests > 0
             ? [{ label: "Pending", value: pendingRequests }]
             : undefined
         }
-        secondaryNav={
-          <Tabs
-            value={activeView}
-            onValueChange={(value) => setActiveView(value as ActiveView)}
-          >
-            <TabsList className="h-auto bg-transparent p-0">
-              <TabsTrigger
-                data-testid="change-requests-tab-list"
-                value="requests"
-                className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground"
-              >
-                Requests
-              </TabsTrigger>
-              <TabsTrigger
-                data-testid="change-requests-tab-create"
-                value="create"
-                className="rounded-xl data-[state=active]:bg-emerald-500/18 data-[state=active]:text-foreground"
-              >
-                Create Request
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        actions={
+          activeView === "requests" ? (
+            <Button type="button" data-testid="change-requests-tab-create" onClick={() => setActiveView("create")}>
+              <Plus className="mr-2 size-4" />
+              Create Request
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              data-testid="change-requests-tab-list"
+              variant="outline"
+              onClick={() => setActiveView("requests")}
+            >
+              Requests
+            </Button>
+          )
         }
       >
-        <Tabs
-          value={activeView}
-          onValueChange={(value) => setActiveView(value as ActiveView)}
-          className="space-y-6"
-        >
-          <TabsContent value="create" className="mt-0">
+        <div className="space-y-6">
+        {activeView === "create" ? (
             <Card data-testid="change-requests-create-panel" className="max-w-3xl border-border bg-card/70">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-foreground">Create Request</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {mode === "promotion"
+                    ? "Promote values from one environment into a protected target."
+                    : "Propose a variable or secret change on a protected environment."}
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className={isProjectScoped ? "space-y-2" : "grid gap-4 md:grid-cols-2"}>
@@ -287,7 +286,7 @@ const ChangeRequests = () => {
                   </div>
                   {!isProjectScoped && (
                   <div className="space-y-2">
-                    <Label className="text-foreground">Project *</Label>
+                    <Label className="text-foreground">Project</Label>
                     <Select value={selectedAppId} onValueChange={setSelectedAppId}>
                       <SelectTrigger
                         data-testid="change-request-project-select"
@@ -307,14 +306,8 @@ const ChangeRequests = () => {
                   )}
                 </div>
 
-                <p className="text-sm text-muted-foreground">
-                  {mode === "promotion"
-                    ? "Move values from one environment into a protected one."
-                    : "Propose a change to a protected environment."}
-                </p>
-
                 <div className="space-y-2">
-                  <Label className="text-foreground">Title *</Label>
+                  <Label className="text-foreground">Title</Label>
                   <Input
                     data-testid="change-request-title-input"
                     value={title}
@@ -324,7 +317,7 @@ const ChangeRequests = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-foreground">Message *</Label>
+                  <Label className="text-foreground">Message</Label>
                   <Textarea
                     data-testid="change-request-message-input"
                     value={message}
@@ -337,7 +330,7 @@ const ChangeRequests = () => {
                 <div className={mode === "promotion" ? "grid gap-4 md:grid-cols-2" : "space-y-2"}>
                   {mode === "promotion" && (
                     <div className="space-y-2">
-                      <Label className="text-foreground">Source environment *</Label>
+                      <Label className="text-foreground">Source environment</Label>
                       <Select
                         value={sourceEnvTypeId}
                         onValueChange={setSourceEnvTypeId}
@@ -364,7 +357,7 @@ const ChangeRequests = () => {
                   )}
 
                   <div className="space-y-2">
-                    <Label className="text-foreground">Target environment *</Label>
+                    <Label className="text-foreground">Target environment</Label>
                     <Select
                       value={targetEnvTypeId}
                       onValueChange={setTargetEnvTypeId}
@@ -394,7 +387,7 @@ const ChangeRequests = () => {
                 {mode === "direct" && (
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label className="text-foreground">Env var</Label>
+                      <Label className="text-foreground">Variable</Label>
                       <Input
                         data-testid="change-request-env-key-input"
                         value={envKey}
@@ -433,7 +426,7 @@ const ChangeRequests = () => {
                 )}
 
                 <Button
-                  className="bg-emerald-500 hover:bg-emerald-600"
+                  type="button"
                   onClick={submit}
                   data-testid="change-request-submit-button"
                 >
@@ -441,9 +434,7 @@ const ChangeRequests = () => {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="requests" className="mt-0">
+        ) : null}
             <Card data-testid="change-requests-list" className="border-border bg-card/70">
               <CardContent className="pt-6">
                 {requestRows.length === 0 ? (
@@ -489,8 +480,7 @@ const ChangeRequests = () => {
                             {request.status === "pending" &&
                               canReview && (
                                 <Button
-                                  variant="ghost"
-                                  className="text-green-300 hover:bg-green-950 hover:text-green-200"
+                                  variant="outline"
                                   data-testid="change-request-approve-button"
                                   disabled={approve.isPending}
                                   onClick={() =>
@@ -523,7 +513,7 @@ const ChangeRequests = () => {
                                 </Button>
                               )}
                             {request.status === "pending" &&
-                              request.requested_by_user_id === user?.user.id && (
+                              request.requested_by_user_id === user?.user?.id && (
                                 <Button
                                   variant="ghost"
                                   className="text-muted-foreground hover:bg-muted"
@@ -548,8 +538,7 @@ const ChangeRequests = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </PageShell>
 
       <Dialog
@@ -567,25 +556,25 @@ const ChangeRequests = () => {
               <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="rounded-lg border border-border bg-card/70 p-3">
-                  <p className="text-xs uppercase tracking-wide text-tertiary">Type</p>
+                  <p className="text-xs text-tertiary">Type</p>
                   <p className="mt-1 text-sm capitalize text-foreground">
                     {selectedRequest.request_kind}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border bg-card/70 p-3">
-                  <p className="text-xs uppercase tracking-wide text-tertiary">Status</p>
+                  <p className="text-xs text-tertiary">Status</p>
                   <p className="mt-1 text-sm capitalize text-foreground">
                     {selectedRequest.status}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border bg-card/70 p-3">
-                  <p className="text-xs uppercase tracking-wide text-tertiary">Env changes</p>
+                  <p className="text-xs text-tertiary">Env changes</p>
                   <p className="mt-1 text-sm text-foreground">
                     {selectedRequest.env_item_count}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border bg-card/70 p-3">
-                  <p className="text-xs uppercase tracking-wide text-tertiary">Secret changes</p>
+                  <p className="text-xs text-tertiary">Secret changes</p>
                   <p className="mt-1 text-sm text-foreground">
                     {selectedRequest.secret_item_count}
                   </p>
@@ -607,7 +596,7 @@ const ChangeRequests = () => {
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-foreground">{item.key}</span>
-                          <Badge className="bg-emerald-500/10 text-emerald-300">
+                          <Badge variant="outline" className="border-border font-normal text-foreground">
                             {item.operation}
                           </Badge>
                         </div>
@@ -677,7 +666,6 @@ const ChangeRequests = () => {
                     />
                     <div className="mt-3 flex gap-2">
                       <Button
-                        className="bg-green-600 hover:bg-green-700"
                         data-testid="change-request-dialog-approve-button"
                         disabled={approve.isPending}
                         onClick={() =>

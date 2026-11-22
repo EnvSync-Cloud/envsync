@@ -42,7 +42,7 @@ export function OnboardingBanner({
   };
 
   return (
-    <div className="relative rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 via-emerald-500/5 to-emerald-500/5 p-5">
+    <div className="relative rounded-xl border border-border bg-card p-5">
       <button
         onClick={handleDismiss}
         className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -67,12 +67,12 @@ export function OnboardingBanner({
             <Link
               key={idx}
               to={step.href}
-              className="flex items-center space-x-2 p-2.5 rounded-lg bg-card hover:bg-emerald-500/5 border border-border hover:border-emerald-500/20 transition-all"
+              className="flex items-center space-x-2 rounded-lg border border-border bg-card p-2.5 transition-colors hover:bg-muted"
             >
               <div
                 className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
                   step.done
-                    ? "bg-green-500/20 text-green-400"
+                    ? "bg-accent text-accent-ink"
                     : "bg-muted text-muted-foreground"
                 }`}
               >

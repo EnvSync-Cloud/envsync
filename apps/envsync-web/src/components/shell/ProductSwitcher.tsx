@@ -43,12 +43,12 @@ export function ProductSwitcher({ expanded, product, projectIds }: ProductSwitch
         <button
           data-testid="product-switcher-trigger"
           className={cn(
-            "flex w-full items-center rounded-2xl border border-border bg-secondary text-left text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5",
+            "flex w-full items-center rounded-lg border border-sidebar-border bg-background text-left text-foreground transition-colors hover:bg-sidebar-accent",
             expanded ? "gap-2 px-3 py-2" : "justify-center p-2",
           )}
           title={active.name}
         >
-          <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground">
             <ActiveIcon className="size-3.5" />
           </span>
           {expanded && (
@@ -77,11 +77,11 @@ export function ProductSwitcher({ expanded, product, projectIds }: ProductSwitch
                     }}
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 data-[selected=true]:bg-muted"
                   >
-                    <span className="inline-flex size-8 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                    <span className="inline-flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
                       <Icon className="size-4" />
                     </span>
                     <span className="flex-1 text-sm font-medium">{item.name}</span>
-                    {item.id === product && <Check className="size-4 text-primary" />}
+                    {item.id === product && <Check className="size-4 text-foreground" />}
                   </CommandItem>
                 );
               })}

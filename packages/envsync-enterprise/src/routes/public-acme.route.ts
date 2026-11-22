@@ -1,8 +1,8 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 
 import { AcmeController } from "../controllers/acme.controller";
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 app.get("/:orgSlug/directory", AcmeController.directory);
 app.on("HEAD", "/:orgSlug/new-nonce", AcmeController.newNonce);

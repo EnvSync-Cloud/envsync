@@ -28,8 +28,8 @@ export function ProjectSettingsTabs({
           data-testid={`project-settings-tab-${tab.id}`}
           className={
             tab.id === active
-              ? "rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-sm font-medium text-foreground"
-              : "rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
+              ? "rounded-lg border border-border bg-accent px-3 py-1.5 text-sm font-medium text-foreground"
+              : "rounded-lg border border-transparent px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
           }
         >
           {tab.label}

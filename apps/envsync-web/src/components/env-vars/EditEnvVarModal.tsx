@@ -182,7 +182,7 @@ export const EditEnvVarModal = ({
       <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center">
-            <Edit className="w-5 h-5 text-emerald-500 mr-2" />
+            <Edit className="mr-2 size-4 text-muted-foreground" />
             Edit Variable
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -427,7 +427,7 @@ export const EditEnvVarModal = ({
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-tertiary">Key:</span>
-                  <code className="text-sm font-mono text-emerald-400 bg-muted px-2 py-1 rounded">
+                  <code className="rounded bg-muted px-2 py-1 font-mono text-sm text-foreground">
                     {formData.key || "VARIABLE_KEY"}
                   </code>
                 </div>
@@ -446,7 +446,7 @@ export const EditEnvVarModal = ({
                 {isValueModified && formData.sensitive && (
                   <div className="flex items-center space-x-2">
                     <span className="text-xs text-tertiary">Value:</span>
-                    <span className="text-xs text-emerald-400 bg-muted px-2 py-1 rounded font-mono">
+                    <span className="rounded bg-muted px-2 py-1 font-mono text-xs text-foreground">
                       Updated
                     </span>
                   </div>

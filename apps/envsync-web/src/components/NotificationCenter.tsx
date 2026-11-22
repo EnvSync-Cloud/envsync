@@ -14,7 +14,7 @@ import { formatLastUsed } from "@/lib/utils";
 function getTypeColor(type: Notification["type"]) {
   switch (type) {
     case "success":
-      return "bg-green-500";
+      return "bg-accent-ink";
     case "error":
       return "bg-red-500";
     case "warning":

@@ -9,7 +9,7 @@ export const WebHooksErrorPage = () => {
       fullScreen
       title="Failed to load Webhooks"
       onRetry={refreshWebhooks}
-      retryClassName="bg-emerald-500 hover:bg-emerald-600 text-white"
+      retryClassName=""
     />
   );
 };

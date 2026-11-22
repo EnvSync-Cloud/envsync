@@ -1,394 +1,75 @@
-# EnvSync CLI 💻
+# EnvSync CLI
 
-The command line interface for [EnvSync Cloud](https://envsync.cloud) - seamlessly sync your environment configurations from your terminal.
+Go CLI in this monorepo at `packages/envsync-cli`. It talks to one API origin through `sdks/envsync-go-sdk`. Product routes are `/api/...`. Enterprise manage routes are `/api/v1/manage/...` on that same origin.
 
-> **Built with Go and the urfave/cli framework** ⚡  
-> Fast, reliable, and developer-friendly CLI for environment synchronization.
+Sign-in is Atrium, through `envsync auth login`.
 
-## ✨ What is EnvSync?
+## Install
 
-EnvSync keeps your `.env` files, configuration secrets, and environment variables perfectly synchronized across development, staging, and production environments.
-
-**Key Benefits:**
-
-- 🔒 **Secure** - Encrypted at rest and in transit
-- ⚡ **Fast** - Real-time synchronization across environments
-- 🌐 **Web-first** - Built for modern web development workflows
-- 🔧 **Developer-friendly** - Simple CLI commands for terminal lovers
-
-## 🛠️ Tech Stack
-
-- **Go** — CLI binary
-- **urfave/cli** — command framework
-- **envsync-go-sdk** — HTTP client (product + Enterprise manage on one API origin)
-- **Uber Zap** — structured logging
-- Auth against EnvSync API / Atrium (not Auth0)
-
-## 🚀 Installation
-
-### Install from Release
-
-Download the latest release binary for your platform from the [Releases page](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/releases/) and follow these steps:
-
-1. Download the binary for your OS (Linux, macOS, Windows)
-2. Make it executable (if necessary)
-   ```bash
-   chmod +x envsync
-   ```
-3. Move it to a directory in your PATH, e.g., `/usr/local/bin/`:
-   ```bash
-   sudo mv envsync /usr/local/bin/
-   ```
-4. Verify the installation:
-   ```bash
-   envsync --help
-   ```
-
-### Install from Source
+Release binaries are published from this monorepo. From a clone:
 
 ```bash
-git clone https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli.git
-cd envsync-cli
-make build
-sudo mv bin/envsync /usr/local/bin/
-```
-
-### Verify Installation
-
-```bash
+cd packages/envsync-cli
+make build BACKEND_URL=http://api.lvh.me:4000
+sudo cp bin/envsync /usr/local/bin/envsync
 envsync --help
 ```
 
-## 📖 Usage
+`make build` defaults `BACKEND_URL` to `http://localhost:8600`. Local Compose serves the API at `http://api.lvh.me:4000`, so pass that URL when you build for this repo. You can also set `ENVSYNC_API_URL` at runtime.
 
-### Authentication Commands
+Go 1.26 or newer. See [AGENTS.md](./AGENTS.md) for the internal layout.
+
+## Commands
+
+| Command | What it does |
+|---------|----------------|
+| `envsync auth login` | Device-flow sign-in. `--no-browser`, `--no-wait` |
+| `envsync auth whoami` | Print the signed-in identity |
+| `envsync auth logout` | Clear the local session |
+| `envsync init` | Write `envsyncrc.toml`. `--app-id` / `-a`, `--env-type-id` / `-e` |
+| `envsync pull` | Pull the environment named in `envsyncrc.toml` |
+| `envsync push` | Push local values for that same config |
+| `envsync export` | CI export. `--app`, `--env`, `--format dotenv\|json` |
+| `envsync run --command "..."` | Run a command with the synced environment. Alias `-c` |
+| `envsync app` | `create`, `list`, `delete` |
+| `envsync env` | `list`, `switch`, `delete` (`environment` is the long name) |
+| `envsync config` | `get`, `set`, `reset` |
+| `envsync request` | Change requests: list, get, approve, reject, cancel |
+| `envsync team` | Teams and membership |
+| `envsync access` | Project grants |
+| `envsync service-token` | Service tokens |
+| `envsync cert` | Organization CA and certificates |
+| `envsync gpg` | GPG keys |
+| `envsync rotation` | Rotation jobs |
+| `envsync dynamic-secret` | Dynamic secret engines |
+| `envsync gen-pem` | Generate a managed-secret key pair |
+
+Global flag: `--json` / `-j`.
+
+`envsync pull` and `envsync push` do not take `--env`. Point `envsyncrc.toml` at the environment with `envsync init` or `envsync env switch`, then pull or push. `envsync export` is the command that takes `--app` and `--env`.
 
 ```bash
-# Login to EnvSync Cloud
-envsync login
-
-# Check current user
-envsync whoami
-
-# Logout from EnvSync Cloud
-envsync logout
-```
-
-### Project Initialization
-
-```bash
-# Generate a new configuration file
-envsync init --app "my-app" --env-type "development"
-envsync init -a "my-app" -e "production"
-```
-
-### Environment Synchronization
-
-```bash
-# Push local environment variables to remote
-envsync push
-
-# Pull environment variables from remote
+envsync auth login
+envsync init --app-id "<app-id>" --env-type-id "<env-type-id>"
 envsync pull
-
-# Export environment variables and secrets for CI
-envsync export --app-id "app-id" --env-type "production" --format json
+envsync push
+envsync export --app my-app --env production --format dotenv
+envsync run --command "bun run start"
 ```
 
-### Application Management
+## Config
 
-```bash
-# Create a new application
-envsync app create
-
-# List all applications
-envsync app list
-
-# Delete an application
-envsync app delete --id "app-id"
-envsync app delete -i "app-id"
-```
-
-### Environment Type Management
-
-```bash
-# List all environment types for a specific app
-envsync env-type list --app-id "app-id"
-envsync env-type list -a "app-id"
-
-# View details of a specific environment type
-envsync env-type view --id "env-type-id"
-envsync env-type view -i "env-type-id"
-```
-
-### Configuration Management
-
-```bash
-# Set a configuration value
-envsync config set
-
-# Get a configuration value
-envsync config get
-```
-
-### Run Commands with Environment
-
-```bash
-# Execute commands with synced environment variables
-envsync run --command "npm start"
-envsync run -c "python app.py"
-envsync run -c "go run main.go"
-
-# Run with redacted output (for testing)
-envsync run -c "npm start" --redact "secret-value"
-envsync run -c "npm start" -r "secret-value"
-```
-
-### Global Options
-
-```bash
-# Output in JSON format
-envsync --json app list
-envsync -j whoami
-
-# Show help
-envsync --help
-envsync -h
-```
-
-## 📋 Command Reference
-
-```
-NAME:
-   envsync - sync environment variables between local and remote environments
-
-USAGE:
-   envsync [global options] [command [command options]]
-
-COMMANDS:
-   init      Generate a new configuration file
-   run       Run with project command
-   export    Export environment variables and secrets for CI workflows
-   app       Interact with your apps.
-   env-type  Manage environment types.
-   config    Manage configuration settings.
-   help, h   Shows a list of commands or help for one command
-
-   AUTH:
-     login   Login to Envsync Cloud
-     whoami  Display current user information
-     logout  Logout from Envsync Cloud
-
-   SYNC:
-     push  Push environment variables to remote environment
-     pull  Pull environment variables from remote environment
-
-GLOBAL OPTIONS:
-   --json, -j  Output in JSON format (default: false)
-   --help, -h  show help
-```
-
-## 🔧 Configuration
-
-### Project Configuration (`envsyncrc.toml`)
-
-EnvSync CLI uses a TOML configuration file (`envsyncrc.toml`) in your project root to store project-specific settings:
+Project file, written by `envsync init`:
 
 ```toml
-app_id = "your-app-id"
-env_type_id = "your-env-type-id"
+app_id = "<app-id>"
+env_type_id = "<env-type-id>"
 ```
 
-This file is automatically generated when you run `envsync init` and is used by the sync service to identify your project and environment configuration.
+User config is `~/.envsyncrc.toml` (tokens and preferences).
 
-### Authentication Methods
+For CI, set `API_KEY`. That skips interactive login. `ENVSYNC_API_URL` overrides the API origin baked in at build time.
 
-EnvSync CLI supports multiple authentication methods with the following priority:
+## License
 
-1. **API Key (Recommended for CI/CD)** - Set the `API_KEY` environment variable
-2. **JWT Token** - Obtained through `envsync login` and stored in user config
-
-#### Using API Key in CI/CD Environments
-
-For automated environments like CI/CD pipelines, use the `API_KEY` environment variable:
-
-```bash
-# Set API key as environment variable
-export API_KEY="your-api-key-here"
-
-# Now run envsync commands
-envsync pull
-envsync run -c "npm test"
-```
-
-This method is preferred for CI/CD because:
-
-- No interactive login required
-- More secure for automated environments
-- Easier to manage in CI/CD secret management systems
-
-## 🚀 Quick Start Workflow
-
-### 1. **Login to EnvSync Cloud**
-
-```bash
-envsync login
-```
-
-### 2. **Initialize Your Project**
-
-```bash
-envsync init --app "my-project" --env-type "development"
-```
-
-### 3. **Push Your Local Environment**
-
-```bash
-envsync push
-```
-
-### 4. **Pull Environment to Another Machine**
-
-```bash
-envsync pull
-```
-
-### 5. **Run Your Application**
-
-```bash
-envsync run --command "npm start"
-```
-
-## 📁 Project Structure
-
-```
-envsync-cli/
-├── cmd/
-│   └── cli/
-│       └── main.go         # CLI entry point with urfave/cli setup
-├── internal/
-│   ├── actions/            # Command implementations
-│   │   └── run.go          # Run command with env injection
-│   ├── constants/          # Application constants
-│   ├── config/             # Configuration management
-│   ├── domain/             # Domain models
-│   ├── services/           # Business logic and services
-│   │   └── sync.go         # Sync service with TOML config reading
-│   ├── repository/         # Data access and API client setup
-│   │   └── repository.go   # HTTP client with API key support
-│   ├── mappers/            # Data transformation and mapping
-│   └── logger/             # Logging utilities
-├── bin/                    # Compiled binaries
-├── Makefile               # Development and build automation
-└── docs/                  # Documentation
-```
-
-## 🔨 Development
-
-### Prerequisites
-
-- [Go](https://golang.org/) 1.21 or higher
-- Make (for using Makefile commands)
-
-### Development Commands
-
-The project uses a Makefile for development automation:
-
-```bash
-# Clone the repository
-git clone https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli.git
-cd envsync-cli
-```
-
-```bash
-# Build the binary
-make build
-
-# Install the binary to /usr/local/bin
-make install
-
-# Run in development mode
-make dev
-
-# Watch for changes and rebuild automatically
-make watch
-
-# Update dependencies
-make update
-
-# Format code and tidy modules
-make tidy
-
-# Run linter
-make lint
-
-# Show all available commands
-make help
-```
-
-### Custom Backend URL
-
-You can build the CLI with a custom backend URL:
-
-```bash
-make build BACKEND_URL=https://your-custom-api.com/api
-```
-
-### Run Development Version
-
-```bash
-./bin/envsync --help
-```
-
-## 🌟 EnvSync Ecosystem
-
-- **envsync-cli** - Command line interface (this repo)
-- **[envsync-web](https://github.com/EnvSync-Cloud/envsync-web)** - Web dashboard for managing configurations
-- **[envsync-api](https://github.com/EnvSync-Cloud/envsync-api)** - REST API and backend services
-- **[envsync-landing](https://github.com/EnvSync-Cloud/envsync-landing)** - Landing page
-
-## 🤝 Contributing
-
-We're building the future of environment management!
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow Go best practices and conventions
-- Add tests for new functionality
-- Update documentation for new commands
-- Ensure cross-platform compatibility
-- Use the Makefile for consistent development workflows
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 💬 Support & Community
-
-- 📧 **Email:** hi@envsync.cloud
-- 📖 **Blog:** [docs.envsync.cloud](https://blog.envsync.cloud)
-- 🐛 **Issues:** [GitHub Issues](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/issues)
-
-## 🔗 Useful Links
-
-- 🌐 **Web Dashboard:** [envsync.cloud](https://envsync.cloud)
-- 📚 **API Documentation:** [api.envsync.cloud/docs](https://api.envsync.cloud/docs)
-- 📦 **Releases:** [GitHub Releases](https://github.com/EnvSync-Cloud/envsync/packages/envsync-cli/releases)
-
----
-
-**Making environment configuration simple, secure, and synchronized** 🌟
-
-Built with ❤️ by the EnvSync team
-
-## Organization vocabulary
-
-EnvSync uses **Organization** as the tenant boundary (not “workspace”).
-Self-host multi-org is license-gated and provisioned via enterprise deploy/operator
-paths—not the dashboard. See monorepo root `EDITIONING.md` and `SELFHOSTING.md`.
+The CLI is part of the public monorepo. See the root [LICENSE](../../LICENSE) and [EDITIONING.md](../../EDITIONING.md).

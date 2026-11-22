@@ -64,7 +64,7 @@ bun run sim
 
 ## E2E
 
-The automated E2E suite is API + CLI focused. It does not automate the browser login flow in this pass.
+The API package E2E suite covers API and CLI flows. It does not drive the browser. Dashboard browser checks are the `ui:*` scripts in `apps/envsync-web`.
 
 From the monorepo root:
 

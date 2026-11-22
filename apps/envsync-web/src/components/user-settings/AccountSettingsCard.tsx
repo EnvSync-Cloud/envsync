@@ -1,64 +1,115 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Bell, Key } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface AccountSettingsCardProps {
-  emailNotifications: boolean;
-  setEmailNotifications: (value: boolean) => void;
-  onPasswordReset: () => void;
-  isPasswordResetLoading: boolean;
+  hasPassword: boolean;
+  password: string;
+  confirm: string;
+  error?: string;
+  onPassword: (value: string) => void;
+  onConfirm: (value: string) => void;
+  onSetPassword: () => void;
+  onResetPassword: () => void;
+  isSetting: boolean;
+  isResetting: boolean;
+}
+
+function SecretInput({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={visible ? "text" : "password"}
+          value={value}
+          autoComplete={autoComplete}
+          onChange={(event) => onChange(event.target.value)}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+          onClick={() => setVisible((current) => !current)}
+          aria-label={visible ? "Hide password" : "Show password"}
+        >
+          {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export const AccountSettingsCard = ({
-  emailNotifications,
-  setEmailNotifications,
-  onPasswordReset,
-  isPasswordResetLoading,
+  hasPassword,
+  password,
+  confirm,
+  error,
+  onPassword,
+  onConfirm,
+  onSetPassword,
+  onResetPassword,
+  isSetting,
+  isResetting,
 }: AccountSettingsCardProps) => {
   return (
-    <Card className="border-border bg-card text-card-foreground rounded-xl">
+    <Card className="rounded-xl border-border bg-card text-card-foreground">
       <CardHeader>
-        <div className="flex items-center space-x-2">
-          <Bell className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
-          <CardTitle className="text-foreground">Preferences</CardTitle>
-        </div>
+        <CardTitle className="text-foreground">{hasPassword ? "Password" : "Set password"}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-medium text-foreground">Email Notifications</h4>
+      <CardContent className="space-y-4">
+        {hasPassword ? (
+          <>
             <p className="text-sm text-muted-foreground">
-              Receive updates and alerts via email
+              A reset link goes to your email. The current password stays until you open that link.
             </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={emailNotifications}
-              onChange={(e) => setEmailNotifications(e.target.checked)}
+            <Button variant="outline" onClick={onResetPassword} disabled={isResetting}>
+              {isResetting ? "Sending..." : "Email reset link"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              This account signs in without a password. Set one to use the password field on the sign-in page.
+            </p>
+            <SecretInput
+              id="new-password"
+              label="Password"
+              value={password}
+              onChange={onPassword}
+              autoComplete="new-password"
             />
-            <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-medium text-foreground">Change Password</h4>
-            <p className="text-sm text-muted-foreground">
-              Update your account password for security
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            className="text-foreground border-border hover:bg-muted"
-            onClick={onPasswordReset}
-            disabled={isPasswordResetLoading}
-          >
-            <Key className="w-4 h-4 mr-2" />
-            {isPasswordResetLoading ? "Resetting..." : "Reset Password"}
-          </Button>
-        </div>
+            <SecretInput
+              id="confirm-password"
+              label="Confirm password"
+              value={confirm}
+              onChange={onConfirm}
+              autoComplete="new-password"
+            />
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <Button onClick={onSetPassword} disabled={isSetting || password.length < 8 || password !== confirm}>
+              {isSetting ? "Saving..." : "Set password"}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   );

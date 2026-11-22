@@ -9,6 +9,7 @@ export function EnterprisePageFrame({
   error,
   actions,
   children,
+  variant = "column",
 }: {
   title: string;
   description?: string;
@@ -18,11 +19,15 @@ export function EnterprisePageFrame({
   error?: unknown;
   actions?: ReactNode;
   children?: ReactNode;
+  /** `shell` sits in the dashboard content well. `column` is a centered reading width. */
+  variant?: "column" | "shell";
 }) {
+  const frameClass = variant === "shell" ? "space-y-5" : "mx-auto max-w-5xl space-y-8 px-6 py-8";
+
   if (!enabled) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4 px-6 py-8">
-        <h1 className="text-2xl font-semibold">{title}</h1>
+      <div className={frameClass}>
+        <h1 className="text-xl font-semibold">{title}</h1>
         <p className="text-sm text-muted-foreground">
           Enterprise modules are not enabled on this dashboard build.
         </p>
@@ -31,13 +36,10 @@ export function EnterprisePageFrame({
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.24em] text-emerald-600 dark:text-emerald-300/80">
-            Enterprise
-          </p>
-          <h1 className="flex items-center gap-2 text-3xl font-semibold text-foreground">
+    <div className={frameClass}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-0.5">
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
             {icon}
             {title}
           </h1>

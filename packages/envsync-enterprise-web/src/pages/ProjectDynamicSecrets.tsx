@@ -78,6 +78,7 @@ export default function ProjectDynamicSecrets() {
       enabled={enabled}
       isError={isError}
       error={error}
+      variant="shell"
       actions={
         <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>
           <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
@@ -85,7 +86,9 @@ export default function ProjectDynamicSecrets() {
         </Button>
       }
     >
-      <ProjectSettingsTabs appId={appId} active="dynamic-secrets" />
+      <div className="border-b border-border pb-px">
+        <ProjectSettingsTabs appId={appId} active="dynamic-secrets" />
+      </div>
       <p className="text-sm text-muted-foreground">
         Engines are organization-scoped.{" "}
         <Link to="/organisation/dynamic-secrets" className="underline underline-offset-4">

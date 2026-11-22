@@ -105,3 +105,18 @@ describe("DELETE /api/user/:id", () => {
 		expect(res.status).toBe(403);
 	});
 });
+
+test("a self-service first-name change preserves a compound surname", async () => {
+	const user = await seedUser(seed.org.id, seed.roles.viewer.id, { fullName: "Ada van Example" });
+	setupUserOrgTuples(user.id, seed.org.id, { can_view: true });
+
+	const response = await testRequest(`/api/user/${user.id}`, {
+		method: "PATCH",
+		token: user.token,
+		body: { first_name: "  Grace  " },
+	});
+	expect(response.status).toBe(200);
+	const updated = await testRequest(`/api/user/${user.id}`, { token: seed.masterUser.token });
+	expect(updated.status).toBe(200);
+	expect(await updated.json()).toMatchObject({ full_name: "Grace van Example", email: user.email });
+});

@@ -20,12 +20,12 @@ const formatCompactNumber = (num: number): string => {
 const variantStyles = {
   default: "bg-primary text-primary-foreground",
   subtle:
-    "bg-primary/10 text-primary border border-primary/20",
+    "border border-border bg-muted text-foreground",
   ghost:
-    "bg-transparent text-primary hover:bg-primary/10 hover:text-primary",
+    "bg-transparent text-foreground hover:bg-muted",
   destructive: "bg-red-500 text-white hover:bg-red-600",
   outline:
-    "bg-transparent border border-primary/50 text-primary",
+    "border border-border bg-transparent text-foreground",
 };
 
 const sizeStyles = {

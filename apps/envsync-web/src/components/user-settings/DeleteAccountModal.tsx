@@ -19,6 +19,9 @@ interface DeleteAccountModalProps {
   setDeleteConfirmText: (text: string) => void;
   isLoading: boolean;
   userEmail?: string;
+  title?: string;
+  description?: string;
+  action?: string;
 }
 
 export const DeleteAccountModal = ({
@@ -29,6 +32,9 @@ export const DeleteAccountModal = ({
   setDeleteConfirmText,
   isLoading,
   userEmail,
+  title = "Leave Organization",
+  description = "This action cannot be undone for this organization. It removes your membership from the current organization and ends your access immediately.",
+  action = "Leave Organization",
 }: DeleteAccountModalProps) => {
   const handleClose = () => {
     onOpenChange(false);
@@ -41,10 +47,10 @@ export const DeleteAccountModal = ({
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-            Leave Organization
+            {title}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            This action cannot be undone for this organization. It removes your membership from the current organization and ends your access immediately.
+            {description}
           </DialogDescription>
         </DialogHeader>
         
@@ -101,7 +107,7 @@ export const DeleteAccountModal = ({
             ) : (
               <>
                 <Trash2 className="w-4 h-4 mr-2" />
-                Leave Organization
+                {action}
               </>
             )}
           </Button>

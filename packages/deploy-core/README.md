@@ -2,13 +2,10 @@
 
 Shared deployment primitives for edition-aware packaging.
 
-This package is the extraction target for logic currently living in
-`packages/deploy` (OSS engine) so both:
-
-- `@envsync-cloud/deploy` for OSS (`envsync-deploy`)
-- `@envsync-cloud/deploy-enterprise` for Enterprise (thin wrapper → OSS engine)
-
-can share release rendering, topology defaults, and runtime-config generation.
+`@envsync-cloud/deploy` (OSS, `envsync-deploy`) and
+`@envsync-cloud/deploy-enterprise` (thin wrapper over that engine) both
+import this package for plan loading, topology checks, runtime env
+generation, and release artifact planning.
 
 Current exports:
 

@@ -3,9 +3,21 @@ import { AppError, BusinessRuleError, NotFoundError } from "@/libs/errors";
 
 import { VaultEntryService, type VaultMutationOptions } from "./vault_entry.service";
 
-function decryptRevealedSecret(key: string, encryptedValue: string, privateKey: string): string {
+function isAppLayerCiphertext(value: string) {
+	return value.startsWith("RSA:") || value.startsWith("HYB:");
+}
+
+export function selectionNeedsManagedPrivateKey(values: readonly string[]) {
+	return values.some(isAppLayerCiphertext);
+}
+
+/** Managed reveal. RSA/HYB values decrypt with the app key. Older rows stored as plaintext stay plaintext. */
+export function revealSecretValue(key: string, storedValue: string, privateKey: string): string {
+	if (!isAppLayerCiphertext(storedValue)) {
+		return storedValue;
+	}
 	try {
-		return rsaLayerDecrypt(encryptedValue, privateKey);
+		return rsaLayerDecrypt(storedValue, privateKey);
 	} catch {
 		throw new BusinessRuleError(
 			`Failed to decrypt secret ${key}.`,
@@ -105,10 +117,12 @@ export class SecretService {
 		}
 
 		await VaultEntryService.requireVaultSession(input.user_id, input.org_id);
-		const privateKey = await loadManagedPrivateKey(input.app_id);
+		const privateKey = selectionNeedsManagedPrivateKey(selected.map(secret => secret.value))
+			? await loadManagedPrivateKey(input.app_id)
+			: "";
 		return selected.map(secret => ({
 			...secret,
-			value: decryptRevealedSecret(secret.key, secret.value, privateKey),
+			value: revealSecretValue(secret.key, secret.value, privateKey),
 		}));
 	};
 

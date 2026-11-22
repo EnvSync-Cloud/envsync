@@ -11,7 +11,9 @@ export interface TelemetryConfig {
 }
 
 export function getTelemetryConfig(): TelemetryConfig {
-  const disabled = runtimeConfig.hyperdxDisabled ?? (import.meta.env.VITE_OTEL_SDK_DISABLED === "true");
+  const disabled = runtimeConfig.hyperdxDisabled === true
+    || import.meta.env.VITE_HYPERDX_DISABLED === "true"
+    || import.meta.env.VITE_OTEL_SDK_DISABLED === "true";
   return {
     endpoint:
       firstPartyOtelUrl(runtimeConfig.hyperdxUrl) ||

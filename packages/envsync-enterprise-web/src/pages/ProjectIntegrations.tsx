@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Layers3, Link2, Plus, RefreshCw, Workflow } from "lucide-react";
+import { ChevronRight, Layers3, Link2, Plus } from "lucide-react";
 
 import { sdk } from "@shell/api";
 import { useCreateManualSyncRun, useEnvTypeMappings, useIntegrationBindings, useOrgSecrets, useProviderConnections, useSyncRuns, type EnterpriseProvider } from "../api/hooks";
@@ -11,7 +11,7 @@ import { SyncRunsList } from "../components/SyncRunsList";
 import { Button } from "@shell/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shell/components/ui/tabs";
 import { appDetailPath, appIntegrationProviderPath, orgIntegrationsPath } from "@shell/lib/app-routes";
-import { enterpriseProviderUi } from "../lib/enterprise-provider-ui";
+import { enterpriseProviderUi, providerLogo } from "../lib/enterprise-provider-ui";
 
 const providers = Object.values(enterpriseProviderUi) as Array<{
   id: EnterpriseProvider;
@@ -64,7 +64,6 @@ export default function ProjectIntegrations() {
           <Button
             onClick={() => setShowCreateConnection(true)}
             size="sm"
-            className="bg-emerald-600 text-foreground hover:bg-emerald-700"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Add Connection
@@ -91,55 +90,28 @@ export default function ProjectIntegrations() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 @768px:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Connections</p>
-            <Link2 className="size-4 text-blue-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-foreground">{providerConnections.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Bindings</p>
-            <Layers3 className="size-4 text-emerald-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-foreground">{bindings.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Mappings</p>
-            <Workflow className="size-4 text-purple-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-foreground">{mappings.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Sync Runs</p>
-            <RefreshCw className="size-4 text-amber-400" />
-          </div>
-          <p className="mt-2 text-2xl font-semibold text-foreground">{syncRuns.length}</p>
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {providerConnections.length} connections · {bindings.length} bindings · {syncRuns.length} syncs
+      </p>
 
       {/* Tabbed content */}
       <Tabs defaultValue="connections" className="space-y-4">
         <TabsList className="h-auto rounded-none border-b border-border bg-transparent p-0 w-full justify-start gap-0">
           <TabsTrigger
             value="connections"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Connections
           </TabsTrigger>
           <TabsTrigger
             value="syncs"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Syncs
           </TabsTrigger>
           <TabsTrigger
             value="org-secrets"
-            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-emerald-500 data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            className="rounded-none border-b-2 border-transparent px-4 py-2.5 text-sm font-medium text-tertiary transition-colors hover:text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             Org Secrets
           </TabsTrigger>
@@ -149,57 +121,41 @@ export default function ProjectIntegrations() {
         <TabsContent value="connections" className="mt-0">
           <div className="border border-border rounded-xl overflow-hidden">
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_100px_100px_100px_120px_40px] gap-4 px-4 py-3 border-b border-border bg-card/50">
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Provider</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Connections</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Bindings</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Mappings</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Last Sync</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_160px_24px] gap-4 border-b border-border px-4 py-3">
+              <span className="text-xs text-muted-foreground">Provider</span>
+              <span className="text-xs text-muted-foreground">Status</span>
               <span />
             </div>
 
-            {/* Rows */}
             {providerSummary.map((provider) => (
               <Link
                 key={provider.id}
                 to={appIntegrationProviderPath(appId, provider.id)}
-                className="grid grid-cols-[1fr_100px_100px_100px_120px_40px] gap-4 px-4 py-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors group"
+                className="grid grid-cols-[minmax(0,1fr)_160px_24px] items-center gap-4 border-b border-border/50 px-4 py-3 last:border-0 hover:bg-muted/30"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-8 rounded-lg bg-muted border border-border/50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-medium text-muted-foreground">
+                <div className="flex min-w-0 items-center gap-3">
+                  {providerLogo(provider.id) ? (
+                    <img
+                      src={providerLogo(provider.id)}
+                      alt=""
+                      className="size-8 shrink-0 rounded-md"
+                    />
+                  ) : (
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
                       {provider.name.charAt(0)}
                     </span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{provider.name}</p>
-                    <p className="text-xs text-tertiary truncate">{provider.description}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center">
-                  <span className="text-sm text-muted-foreground">{provider.connectionCount}</span>
-                </div>
-
-                <div className="flex items-center">
-                  <span className="text-sm text-muted-foreground">{provider.bindingCount}</span>
-                </div>
-
-                <div className="flex items-center">
-                  <span className="text-sm text-muted-foreground">{provider.mappingCount}</span>
-                </div>
-
-                <div className="flex items-center">
-                  {provider.latestSync ? (
-                    <span className="text-xs text-muted-foreground">{provider.latestSync.status}</span>
-                  ) : (
-                    <span className="text-xs text-zinc-600">—</span>
                   )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{provider.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{provider.description}</p>
+                  </div>
                 </div>
-
-                <div className="flex items-center justify-end">
-                  <ChevronRight className="size-4 text-zinc-600 group-hover:text-muted-foreground transition-colors" />
-                </div>
+                <span className="text-sm text-muted-foreground">
+                  {provider.connectionCount > 0
+                    ? `${provider.connectionCount} connected`
+                    : "Not connected"}
+                </span>
+                <ChevronRight className="size-4 text-muted-foreground" />
               </Link>
             ))}
 
@@ -233,9 +189,9 @@ export default function ProjectIntegrations() {
         <TabsContent value="org-secrets" className="mt-0">
           <div className="border border-border rounded-xl overflow-hidden">
             <div className="grid grid-cols-[1fr_200px_120px] gap-4 px-4 py-3 border-b border-border bg-card/50">
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Key</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider">Description</span>
-              <span className="text-xs font-medium text-tertiary uppercase tracking-wider text-right">Created</span>
+              <span className="text-xs font-medium text-tertiary ">Key</span>
+              <span className="text-xs font-medium text-tertiary ">Description</span>
+              <span className="text-xs font-medium text-tertiary  text-right">Created</span>
             </div>
 
             {orgSecrets.map((secret) => (

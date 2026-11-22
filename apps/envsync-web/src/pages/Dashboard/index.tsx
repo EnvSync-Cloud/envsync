@@ -1,4 +1,4 @@
-import { LayoutDashboard, Plus, UserPlus, Key, Activity, Database, Variable, Users, Shield, Clock, ChevronRight, AlertCircle } from "lucide-react";
+import { Plus, UserPlus, Key, Activity, Database, Clock, ChevronRight, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PageShell } from "@/components/PageShell";
 import { PageError } from "@/components/ui/page-error";
@@ -6,8 +6,18 @@ import { OnboardingBanner } from "@/components/OnboardingBanner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard, type DashboardStats } from "@/hooks/useDashboard";
-import { formatLastUsed, truncateUUIDs } from "@/lib/utils";
+import { formatLastUsed } from "@/lib/utils";
 import { apiKeysPath, appDetailPath, orgAccessPath, projectCreatePath, projectsPath } from "@/lib/app-routes";
+
+function activityDetail(text: string) {
+  const cleaned = text
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "")
+    .replace(/\b(in app|for environment type|for app)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([.,])/g, "$1")
+    .trim();
+  return cleaned.replace(/^[.,\s]+|[.,\s]+$/g, "");
+}
 
 function StatValue({ value }: { value: number | null }) {
   if (value === null) {
@@ -39,27 +49,25 @@ export default function Dashboard() {
   return (
     <PageShell
       title="Dashboard"
-      icon={LayoutDashboard}
       isLoading={isLoading}
-      statLayout="cards"
       stats={[
         {
-          label: "Projects",
+          label: stats.projectsCount === 1 ? "project" : "projects",
           value: <StatValue value={stats.projectsCount} />,
           tone: stats.projectsCount === null ? "warning" : "default",
         },
         {
-          label: "Config Items",
+          label: stats.variablesCount === 1 ? "config item" : "config items",
           value: <StatValue value={stats.variablesCount} />,
           tone: stats.variablesCount === null ? "warning" : "default",
         },
         {
-          label: "Team Members",
+          label: stats.teamMembersCount === 1 ? "team member" : "team members",
           value: <StatValue value={stats.teamMembersCount} />,
           tone: stats.teamMembersCount === null ? "warning" : "default",
         },
         {
-          label: "API Keys",
+          label: stats.apiKeysCount === 1 ? "API key" : "API keys",
           value: <StatValue value={stats.apiKeysCount} />,
           tone: stats.apiKeysCount === null ? "warning" : "default",
         },
@@ -67,7 +75,7 @@ export default function Dashboard() {
     >
       {/* Quick actions bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+        <Button asChild size="sm">
           <Link to={projectCreatePath()}>
             <Plus className="size-4 mr-1.5" />
             Create Project
@@ -93,7 +101,7 @@ export default function Dashboard() {
         <div className="border-b @768px:border-b-0 @768px:border-r border-border">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <Database className="size-4 text-emerald-400" />
+              <Database className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground">Projects</h3>
               {stats.projectsCount !== null && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -101,7 +109,7 @@ export default function Dashboard() {
                 </Badge>
               )}
             </div>
-            <Link to={projectsPath()} className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+            <Link to={projectsPath()} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               View all
             </Link>
           </div>
@@ -110,7 +118,7 @@ export default function Dashboard() {
               <div className="px-4 py-8 text-center">
                 <p className="text-xs text-muted-foreground">No projects yet</p>
                 {!hasProjects && (
-                  <Link to={projectCreatePath()} className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 inline-block">
+                  <Link to={projectCreatePath()} className="mt-1 inline-block text-xs text-foreground">
                     Create your first project →
                   </Link>
                 )}
@@ -124,7 +132,7 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="size-7 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-emerald-400">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {project.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -146,10 +154,10 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
-              <Clock className="size-4 text-purple-400" />
+              <Clock className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground">Recent Activity</h3>
             </div>
-            <Link to="/audit" className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+            <Link to="/audit" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               View all
             </Link>
           </div>
@@ -180,20 +188,20 @@ export default function Dashboard() {
                     <Activity className="size-3 text-muted-foreground" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] px-1 py-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      >
-                        {log.action?.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "Unknown"}
-                      </Badge>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                      {truncateUUIDs(log.message || log.details || "No details")}
-                      {log.created_at && (
-                        <span className="ml-1">· {formatLastUsed(log.created_at)}</span>
-                      )}
-                    </p>
+                    {(() => {
+                      const action = (log.action || "activity").replace(/_/g, " ");
+                      const detail = activityDetail(log.message || log.details || "");
+                      const showDetail = detail.length > 0 && detail.toLowerCase() !== action.toLowerCase();
+                      return (
+                        <>
+                          <p className="truncate text-sm text-foreground">{action}</p>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {showDetail ? `${detail} · ` : ""}
+                            {log.created_at ? formatLastUsed(log.created_at) : ""}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ))

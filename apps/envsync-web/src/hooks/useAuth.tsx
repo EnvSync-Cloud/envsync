@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest, isPublicAuthPath, isReloginError, redirectToLogin, sdk } from "@/api";
 import { clearLastProjectId } from "@/lib/shell-context";
@@ -13,6 +13,7 @@ export const useAuth = () => {
   const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
   const [isCreatingOrganization, setIsCreatingOrganization] = useState(false);
   const queryClient = useQueryClient();
+  const seenIdentity = useRef<string | null>(null);
 
   const syncIdentity = useCallback((userData: EntitledAuthSession) => {
     identifyUser(userData.user.id, {
@@ -27,10 +28,19 @@ export const useAuth = () => {
   const fetchUser = useCallback(async () => {
     try {
       const userData = normalizeAuthSession(await sdk.authentication.whoami());
+      const nextIdentity = userData.user.id;
+      if (seenIdentity.current && seenIdentity.current !== nextIdentity) {
+        queryClient.removeQueries({ queryKey: ["project-environments"] });
+      }
+      seenIdentity.current = nextIdentity;
       setUser(userData);
       setIsAuthenticated(true);
       syncIdentity(userData);
     } catch (error) {
+      if (seenIdentity.current) {
+        queryClient.removeQueries({ queryKey: ["project-environments"] });
+      }
+      seenIdentity.current = null;
       setIsAuthenticated(false);
       setUser(undefined);
       const onPublicAuth = typeof window !== "undefined" && isPublicAuthPath(window.location.pathname);
@@ -47,7 +57,7 @@ export const useAuth = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [syncIdentity]);
+  }, [queryClient, syncIdentity]);
 
   useEffect(() => {
     setAuthError(null);

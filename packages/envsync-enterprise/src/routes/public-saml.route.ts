@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { enterpriseRouter } from "./router";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 
@@ -9,7 +9,7 @@ import {
 	samlSsoResponseSchema,
 } from "../validators/saml.validator";
 
-const app = new Hono();
+const app = enterpriseRouter();
 
 app.get(
 	"/metadata/:orgId",

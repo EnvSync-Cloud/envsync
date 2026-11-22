@@ -1,5 +1,6 @@
 import { Github } from "lucide-react";
 import { Link } from "react-router-dom";
+import LogoMark from "@/components/LogoMark";
 import { runtimeConfig } from "@/utils/runtime-config";
 
 export const VERSION = `v${__APP_VERSION__}`;
@@ -49,7 +50,7 @@ const linkGroups = [
   },
 ] as const;
 
-const Footer = () => {
+const Footer = ({ inkMark = false }: { inkMark?: boolean }) => {
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-8">
@@ -57,7 +58,7 @@ const Footer = () => {
           {/* Brand column */}
           <div>
             <Link to="/" className="flex items-center gap-2">
-              <img src="/EnvSync.svg" alt="EnvSync Logo" className="h-7 w-7" />
+              <LogoMark ink={inkMark} />
               <span className="text-base font-medium text-foreground">EnvSync</span>
               <span className="rounded-full border border-border px-2 py-0.5 font-mono text-xs leading-4 text-muted-foreground">
                 BETA

@@ -2,17 +2,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User } from "lucide-react";
 import { ProfilePictureUpload } from "./ProfilePictureUpload";
+import type { SignInMethod } from "@/api/account.api";
 
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   profile_picture_url: string | null;
 }
 
 interface FormErrors {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   profile_picture_url?: string;
 }
@@ -23,6 +25,7 @@ interface ProfileInformationCardProps {
   hasUnsavedChanges: boolean;
   logoPreview: string | null;
   fileInputRef: React.RefObject<HTMLInputElement>;
+  signInMethods: SignInMethod[];
   onInputChange: (field: keyof FormData, value: string) => void;
   onLogoUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onLogoRemove: () => void;
@@ -37,6 +40,7 @@ export const ProfileInformationCard = ({
   hasUnsavedChanges,
   logoPreview,
   fileInputRef,
+  signInMethods,
   onInputChange,
   onLogoUpload,
   onLogoRemove,
@@ -45,57 +49,79 @@ export const ProfileInformationCard = ({
   isLoading,
 }: ProfileInformationCardProps) => {
   return (
-    <Card className="border-border bg-card text-card-foreground rounded-xl">
+    <Card className="rounded-xl border-border bg-card text-card-foreground">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <User className="size-8 bg-emerald-400 border border-emerald-600 p-2 stroke-[3] text-foreground rounded-md" />
-            <CardTitle className="text-foreground">Profile Information</CardTitle>
-          </div>
-          {hasUnsavedChanges && (
-            <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-              Unsaved changes
-            </span>
-          )}
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-foreground">Personal information</CardTitle>
+          {hasUnsavedChanges ? (
+            <span className="text-xs text-muted-foreground">Unsaved changes</span>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="full-name" className="text-foreground">
-            Full Name *
-          </Label>
-          <Input
-            id="full-name"
-            value={formData.name}
-            onChange={(e) => onInputChange("name", e.target.value)}
-            className={`bg-card border-border text-foreground ${
-              formErrors.name ? "border-red-500" : ""
-            }`}
-            placeholder="Enter your full name"
-          />
-          {formErrors.name && (
-            <p className="text-red-400 text-sm">{formErrors.name}</p>
-          )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="first-name">First name</Label>
+            <Input
+              id="first-name"
+              value={formData.firstName}
+              onChange={(event) => onInputChange("firstName", event.target.value)}
+              autoComplete="given-name"
+              className={formErrors.firstName ? "border-destructive" : undefined}
+            />
+            {formErrors.firstName ? (
+              <p className="text-sm text-destructive">{formErrors.firstName}</p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="last-name">Last name</Label>
+            <Input
+              id="last-name"
+              value={formData.lastName}
+              onChange={(event) => onInputChange("lastName", event.target.value)}
+              autoComplete="family-name"
+              className={formErrors.lastName ? "border-destructive" : undefined}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-foreground">
-            Email Address *
-          </Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="email">Email</Label>
+            <button
+              type="button"
+              className="text-sm text-foreground underline-offset-4 hover:underline"
+              onClick={() => document.getElementById("email")?.focus()}
+            >
+              Change email
+            </button>
+          </div>
           <Input
             id="email"
             type="email"
             value={formData.email}
-            onChange={(e) => onInputChange("email", e.target.value)}
-            className={`bg-card border-border text-foreground ${
-              formErrors.email ? "border-red-500" : ""
-            }`}
-            placeholder="Enter your email address"
+            onChange={(event) => onInputChange("email", event.target.value)}
+            autoComplete="email"
+            className={formErrors.email ? "border-destructive" : undefined}
           />
-          {formErrors.email && (
-            <p className="text-red-400 text-sm">{formErrors.email}</p>
-          )}
+          {formErrors.email ? <p className="text-sm text-destructive">{formErrors.email}</p> : null}
         </div>
+
+        {signInMethods.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Sign-in methods</p>
+            <div className="flex flex-wrap gap-2">
+              {signInMethods.map((method) => (
+                <span
+                  key={method.id}
+                  className="inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-sm"
+                >
+                  {method.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <ProfilePictureUpload
           logoPreview={logoPreview}
@@ -107,28 +133,14 @@ export const ProfileInformationCard = ({
         />
 
         <div className="flex gap-2">
-          <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
-            onClick={onSaveChanges}
-            disabled={isLoading || !hasUnsavedChanges}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
+          <Button onClick={onSaveChanges} disabled={isLoading || !hasUnsavedChanges}>
+            {isLoading ? "Saving..." : "Save"}
           </Button>
-          {hasUnsavedChanges && (
-            <Button
-              className="border border-emerald-500 bg-emerald-200 hover:bg-emerald-300 text-foreground/80"
-              onClick={onResetChanges}
-            >
-              Cancel Changes
+          {hasUnsavedChanges ? (
+            <Button variant="outline" onClick={onResetChanges}>
+              Cancel
             </Button>
-          )}
+          ) : null}
         </div>
       </CardContent>
     </Card>

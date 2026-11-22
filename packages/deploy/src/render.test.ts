@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parse } from "yaml";
 
 import {
 	buildApiServiceEnvironment,
@@ -339,8 +340,13 @@ describe("renderAtriumClients", () => {
 		expect(clients).toContain("https://api.enterprise.example.com/api/access/web/callback");
 		expect(clients).toContain("https://app.enterprise.example.com/auth/callback");
 		expect(configYaml).toContain("issuer: \"https://auth.enterprise.example.com\"");
-		expect(configYaml).toContain("disable_passwords: true");
-		expect(configYaml).toContain("passwordless_mode: otp");
+		expect(configYaml).toContain("identifier_first: true");
+		expect(configYaml).not.toContain("disable_passwords:");
+		expect(configYaml).not.toContain("passwordless_mode:");
+		expect(configYaml).toContain("support_url: \"https://enterprise.example.com/onboarding\"");
+		expect(configYaml).toContain("id: github");
+		expect(configYaml).toContain("id: gitlab");
+		expect(configYaml).toContain("issuer: EnvSync");
 		expect(configYaml).toContain('data_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="');
 		expect(configYaml).toContain("access_token_lifetime: 1h");
 		expect(configYaml).toContain("refresh_token_lifetime: 168h");
@@ -475,5 +481,28 @@ describe("VPN Configuration (Netbird)", () => {
 		expect(vpnConf).toContain("server_name openfga.envsync.local;");
 		expect(vpnConf).toContain("server_name clickstack.envsync.local;");
 		expect(vpnConf).toContain("server_name rustfs.envsync.local;");
+	});
+});
+
+describe("Atrium social provider configuration", () => {
+	test.each([
+		["", "", false],
+		["client-id", "", false],
+		["", "client-secret", false],
+		["client-id", 'value: "#quoted"', true],
+	] as const)("enables GitHub only when both credentials are set (%#)", (id, secret, enabled) => {
+		const configured = {
+			...config,
+			auth: {
+				...config.auth,
+				github_client_id: id,
+				github_client_secret: secret,
+			},
+		};
+		const yaml = parse(renderAtriumConfig(configured, buildRuntimeEnv(configured, generated)));
+		expect(yaml.social.providers).toEqual([
+			{ id: "github", type: "github", name: "GitHub", enabled, client_id: id, client_secret: secret },
+			{ id: "gitlab", type: "gitlab", name: "GitLab", enabled: false, client_id: "", client_secret: "" },
+		]);
 	});
 });

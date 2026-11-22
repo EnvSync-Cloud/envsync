@@ -61,22 +61,10 @@ export const OrgSettings = () => {
   }
 
   return (
-    <div className="animate-page-enter space-y-6">
+    <>
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="space-y-6">
       <OrgSettingsHeader orgName={orgData?.name} />
-
-      {showEnterpriseCard && (
-        <div className="flex flex-wrap gap-2">
-          {enterpriseSections.map((section) => (
-            <Link
-              key={section.id}
-              to={section.href}
-              className="inline-flex items-center rounded-md border border-border px-3 py-1.5 text-sm text-foreground hover:bg-muted"
-            >
-              {section.label}
-            </Link>
-          ))}
-        </div>
-      )}
 
       <OrgInfoCard
         formData={formData}
@@ -92,27 +80,44 @@ export const OrgSettings = () => {
         logoPreview={logoPreview}
       />
 
-      <div className="rounded-xl border border-border bg-card p-5">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Plan</p>
-        <h2 className="mt-1 text-lg font-semibold capitalize">
-          {runtimeConfig.deploymentMode === "selfhosted" && sessionPlan === "plus"
-            ? "OSS"
-            : sessionPlan}
-        </h2>
-        {runtimeConfig.deploymentMode === "hosted" && sessionPlan === "developer" ? (
-          <a
-            href="mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B"
-            className="mt-3 inline-flex rounded-md border border-border px-3 py-1.5 text-sm"
-          >
-            Request Plus+
-          </a>
-        ) : null}
-      </div>
-
       <DangerZoneCard
         onDeleteClick={handleOpenDeleteModal}
         isDeleting={isDeleting}
       />
+      </div>
+
+      <aside className="space-y-6 lg:sticky lg:top-0">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <p className="text-xs text-muted-foreground">Plan</p>
+          <h2 className="mt-1 text-lg font-medium capitalize text-foreground">
+            {runtimeConfig.deploymentMode === "selfhosted" && sessionPlan === "plus"
+              ? "OSS"
+              : sessionPlan}
+          </h2>
+          {runtimeConfig.deploymentMode === "hosted" && sessionPlan === "developer" ? (
+            <a
+              href="mailto:hello@envsync.cloud?subject=Upgrade%20to%20Plus%2B"
+              className="mt-3 inline-flex text-sm text-accent-ink"
+            >
+              Request Plus+
+            </a>
+          ) : null}
+        </div>
+        {showEnterpriseCard ? (
+          <nav className="space-y-1">
+            {enterpriseSections.map((section) => (
+              <Link
+                key={section.id}
+                to={section.href}
+                className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                {section.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </aside>
+    </div>
 
       <DeleteOrgModal
         open={isDeleteModalOpen}
@@ -123,7 +128,7 @@ export const OrgSettings = () => {
         onDelete={handleDeleteOrg}
         isDeleting={isDeleting}
       />
-    </div>
+    </>
   );
 };
 

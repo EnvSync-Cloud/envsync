@@ -64,18 +64,13 @@ export const ViewAppModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-              <Database className="w-6 h-6 text-foreground" />
-            </div>
-            <div>
-              <DialogTitle className="text-foreground text-xl font-medium">
-                {app.name}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Project Details and Configuration
-              </DialogDescription>
-            </div>
+          <div>
+            <DialogTitle className="text-xl font-medium text-foreground">
+              {app.name}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Project details
+            </DialogDescription>
           </div>
         </DialogHeader>
 
@@ -84,12 +79,12 @@ export const ViewAppModal = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Badge
-                variant="secondary"
-                className={`${
+                variant="outline"
+                className={
                   app.status === "active"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-muted text-muted-foreground border-border"
-                } border`}
+                    ? "border-border font-normal text-accent-ink"
+                    : "border-border font-normal text-muted-foreground"
+                }
               >
                 {app.status || "active"}
               </Badge>
@@ -109,7 +104,7 @@ export const ViewAppModal = ({
             {canEdit && (
               <Button
                 onClick={() => onEdit(app)}
-                className="bg-emerald-500 hover:bg-emerald-600 text-foreground"
+                
                 size="sm"
               >
                 <Edit className="w-4 h-4 mr-2" />

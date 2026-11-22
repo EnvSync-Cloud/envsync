@@ -56,7 +56,7 @@ export class SecretController {
 		}
 
 		// Layer 1: RSA/BYOK encryption only. miniKMS VaultService handles Layers 2+3.
-		const encryptedValue = smartEncrypt(value || "", app.public_key!);
+		const encryptedValue = smartEncrypt(value || "", await AppService.ensureEncryptionKey(app));
 		secretOperations.add(1, { operation: "encrypted" });
 
 		// Create the secret in VaultService (RSA blob stored with ECIES+KMS wrapping)
@@ -143,7 +143,7 @@ export class SecretController {
 		}
 
 		// Layer 1: RSA/BYOK encryption only
-		const encryptedValue = smartEncrypt(value || "", app.public_key!);
+		const encryptedValue = smartEncrypt(value || "", await AppService.ensureEncryptionKey(app));
 		secretOperations.add(1, { operation: "encrypted" });
 
 		// Update the secret in VaultService
@@ -308,9 +308,10 @@ export class SecretController {
 		}
 
 		// Layer 1 only: RSA/BYOK encryption (synchronous). VaultService handles Layers 2+3.
+		const publicKey = await AppService.ensureEncryptionKey(app);
 		const encryptedEnvs = envs.map((env: { key: string; value: string }) => ({
 			key: env.key,
-			value: smartEncrypt(env.value || "", app.public_key!),
+			value: smartEncrypt(env.value || "", publicKey),
 		}));
 		secretOperations.add(envs.length, { operation: "encrypted" });
 
@@ -411,9 +412,10 @@ export class SecretController {
 		}
 
 		// Layer 1 only: RSA/BYOK encryption
+		const publicKey = await AppService.ensureEncryptionKey(app);
 		const encryptedEnvs = envs.map((env: { key: string; value: string }) => ({
 			key: env.key,
-			value: smartEncrypt(env.value || "", app.public_key!),
+			value: smartEncrypt(env.value || "", publicKey),
 		}));
 		secretOperations.add(envs.length, { operation: "encrypted" });
 

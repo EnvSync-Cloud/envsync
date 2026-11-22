@@ -48,7 +48,7 @@ Prefer **Organization** in product UI; org create is `POST /auth/create-organiza
 ## Runtimes
 
 - Bun 1.3+ (TS packages, package manager)
-- Go 1.25+ (CLI)
+- Go 1.26+ (CLI)
 - Node 18+ (compatibility)
 
 ## Package manager
@@ -109,12 +109,14 @@ Single `.env` file at the repo root. All TS packages read from it via the `load-
 
 ## Init
 
-Current local bootstrap from scratch is now:
+Current local bootstrap from scratch is:
 
 ```
 cp .env.example .env
 bun install
+docker compose up -d
 bun run cli init
+bun run cli create-dev-user --seed
 bun run clickstack:sync
 bun run dev
 ```

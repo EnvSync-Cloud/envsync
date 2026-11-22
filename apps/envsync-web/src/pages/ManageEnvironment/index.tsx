@@ -403,7 +403,7 @@ export const ManageEnvironment = () => {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-emerald-500" />
+          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
           <p className="text-sm text-tertiary">Loading...</p>
         </div>
       </div>
@@ -426,7 +426,7 @@ export const ManageEnvironment = () => {
               <Button
                 onClick={() => refetch()}
                 size="sm"
-                className="bg-emerald-600 text-foreground hover:bg-emerald-700"
+                
               >
                 Retry
               </Button>
@@ -456,7 +456,7 @@ export const ManageEnvironment = () => {
         <Button
           onClick={openCreateSheet}
           size="sm"
-          className="bg-emerald-600 text-foreground hover:bg-emerald-700"
+          
         >
           <Plus className="mr-1.5 h-4 w-4" />
           Add Environment
@@ -518,8 +518,8 @@ export const ManageEnvironment = () => {
                   <div className="flex items-center gap-1.5">
                     {envType.is_default && (
                       <Badge
-                        variant="secondary"
-                        className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0"
+                        variant="outline"
+                        className="border-border px-1.5 py-0 text-[10px] font-normal text-foreground"
                       >
                         Default
                       </Badge>
@@ -630,7 +630,7 @@ export const ManageEnvironment = () => {
             <Button
               onClick={handleCreate}
               disabled={createEnvironmentType.isPending}
-              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
+              
             >
               {createEnvironmentType.isPending ? "Creating..." : "Create"}
             </Button>
@@ -662,7 +662,7 @@ export const ManageEnvironment = () => {
             <Button
               onClick={handleUpdate}
               disabled={updateEnvironmentType.isPending}
-              className="bg-emerald-600 text-foreground hover:bg-emerald-700"
+              
             >
               {updateEnvironmentType.isPending ? "Saving..." : "Save"}
             </Button>

@@ -121,7 +121,7 @@ export function AuditTable({
   getResourceTypeFromAction,
 }: AuditTableProps) {
   return (
-    <Card className="bg-card text-card-foreground bg-gradient-to-br from-card to-card border-border/80 shadow-xl rounded-xl">
+    <Card className="bg-card text-card-foreground border-border">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
           <span>Activity Log</span>
@@ -268,8 +268,8 @@ export function AuditTable({
                           size="sm"
                           className={
                             pageNum === pagination.page
-                              ? "bg-emerald-500 text-foreground h-7 w-7 p-0 text-xs"
-                              : "text-muted-foreground border-border hover:bg-muted h-7 w-7 p-0 text-xs"
+                              ? "h-7 w-7 p-0 text-xs"
+                              : "h-7 w-7 border-border p-0 text-xs text-muted-foreground hover:bg-muted"
                           }
                         >
                           {pageNum}

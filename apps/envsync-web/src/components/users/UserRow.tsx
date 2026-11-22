@@ -68,38 +68,17 @@ export const UserRow = ({
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    const roleLower = role.toLowerCase();
-
-    if (roleLower.includes("org")) {
-      return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900 dark:text-red-300 dark:border-red-800 hover:bg-red-700 hover:text-red-100 hover:border-red-500 select-all";
-    } else if (roleLower.includes("billing")) {
-      return "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800 hover:bg-yellow-700 hover:text-yellow-100 hover:border-yellow-500 select-all";
-    } else if (roleLower.includes("admin")) {
-      return "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900 dark:text-teal-300 dark:border-teal-800 hover:bg-teal-700 hover:text-teal-100 hover:border-teal-500 select-all";
-    } else if (
-      roleLower.includes("developer") ||
-      roleLower.includes("dev") ||
-      roleLower.includes("engineer")
-    ) {
-      return "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900 dark:text-teal-300 dark:border-teal-800 hover:bg-teal-700 hover:text-teal-100 hover:border-teal-500 select-all";
-    } else if (roleLower.includes("manager") || roleLower.includes("lead")) {
-      return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800 hover:bg-green-700 hover:text-green-100 hover:border-green-500 select-all";
-    } else {
-      return "bg-muted text-muted-foreground border-border hover:bg-zinc-600 hover:text-foreground hover:border-zinc-500 select-all";
-    }
-  };
+  const getRoleBadgeColor = () =>
+    "border border-border bg-transparent font-normal text-foreground";
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900 dark:text-green-300 dark:border-green-800 hover:bg-green-700 hover:text-green-100 hover:border-green-600";
+        return "border border-border bg-transparent font-normal text-accent-ink";
       case "pending":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:border-yellow-800 hover:bg-yellow-700 hover:text-yellow-100 hover:border-yellow-600";
-      case "inactive":
-        return "bg-muted text-muted-foreground border-border hover:bg-zinc-600 hover:text-foreground hover:border-zinc-500";
+        return "border border-border bg-transparent font-normal text-amber-200";
       default:
-        return "bg-muted text-muted-foreground border-border hover:bg-zinc-600 hover:text-foreground hover:border-zinc-500";
+        return "border border-border bg-transparent font-normal text-muted-foreground";
     }
   };
 
@@ -143,7 +122,7 @@ export const UserRow = ({
         </div>
       </td>
       <td className="py-4 px-4">
-        <Badge className={`${getRoleBadgeColor(user.role)} border`}>
+        <Badge className={getRoleBadgeColor()}>
           {getRoleIcon(user.role)}
           <span className="ml-1">{user.role}</span>
         </Badge>

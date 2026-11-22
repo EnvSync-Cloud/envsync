@@ -47,7 +47,7 @@ export const PitDiffResults = ({
 		<Card className="border-border bg-card">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2 text-base text-foreground">
-					<GitCompareArrows className="size-4 text-emerald-400" />
+					<GitCompareArrows className="size-4 text-muted-foreground" />
 					{title}
 				</CardTitle>
 				<p className="text-sm text-muted-foreground">{description}</p>
@@ -81,7 +81,7 @@ export const PitDiffResults = ({
 				{!isPending && !error && hasPreviewed && diff && totalChanges > 0 && (
 					<>
 						<div className="flex flex-wrap items-center gap-2">
-							<Badge className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+							<Badge variant="outline" className="border-border font-normal text-accent-ink">
 								Added: {diff.added.length}
 							</Badge>
 							<Badge className="border border-cyan-500/20 bg-cyan-500/10 text-cyan-300">

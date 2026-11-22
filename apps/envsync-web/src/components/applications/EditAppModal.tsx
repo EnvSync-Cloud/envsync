@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Database, Save, X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { App } from "@/constants";
 
 interface EditAppFormData {
@@ -147,16 +147,11 @@ export const EditAppModal = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-lg flex items-center justify-center">
-              <Database className="w-5 h-5 text-foreground" />
-            </div>
-            <div>
-              <DialogTitle className="text-foreground">Edit Project</DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Update project information and settings
-              </DialogDescription>
-            </div>
+          <div>
+            <DialogTitle className="text-foreground">Edit project</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Name, description, and secrets
+            </DialogDescription>
           </div>
         </DialogHeader>
 
