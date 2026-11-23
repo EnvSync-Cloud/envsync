@@ -1,5 +1,5 @@
 import { Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
+import { Client, Pool } from "pg";
 
 import { KyselyLogger } from "@/libs/db/KyselyLogger";
 import infoLogs, { LogTypes } from "@/libs/logger";
@@ -56,32 +56,32 @@ export class PostgresDB {
 
 	/** Short-lived probe so a down server does not cache a failed pool. */
 	static async ping(): Promise<boolean> {
-		const queryTimeoutMs = 2_000;
-		const sql = new Bun.SQL({
-			adapter: "postgres",
-			hostname: config.DATABASE_HOST,
-			port: Number(config.DATABASE_PORT),
+		const client = new Client({
 			database: config.DATABASE_NAME,
-			username: config.DATABASE_USER,
+			host: config.DATABASE_HOST,
+			user: config.DATABASE_USER,
 			password: config.DATABASE_PASSWORD,
-			tls: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
-			connectionTimeout: 2,
-			max: 1,
+			port: Number(config.DATABASE_PORT),
+			connectionTimeoutMillis: 2_000,
+			query_timeout: 2_000,
+			statement_timeout: 2_000,
+			ssl: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
 		});
-		let timer: ReturnType<typeof setTimeout> | undefined;
+		client.on("error", () => {
+			// connect() rejects; the listener keeps a refused connection from crashing the process.
+		});
 		try {
-			await Promise.race([
-				sql`SELECT 1`,
-				new Promise<never>((_, reject) => {
-					timer = setTimeout(() => reject(new Error("postgres ping timed out")), queryTimeoutMs);
-				}),
-			]);
+			await client.connect();
+			await client.query("SELECT 1");
 			return true;
 		} catch {
 			return false;
 		} finally {
-			if (timer) clearTimeout(timer);
-			await sql.close({ timeout: 0 }).catch(() => undefined);
+			try {
+				await client.end();
+			} catch {
+				// The probe client is disposable.
+			}
 		}
 	}
 

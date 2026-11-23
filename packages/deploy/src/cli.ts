@@ -65,7 +65,6 @@ import {
 	stageDataBackup,
 } from "./key-bundle";
 import {
-	DEPLOY_DATA_PLANE_TIMEOUT_SECONDS,
 	REDIS_PING_COMMAND,
 	deployDataPlaneWaits,
 	deployRuntimeWaits,
@@ -3428,54 +3427,10 @@ function dataPlanePassword(
 	}
 }
 
-const DATA_PLANE_SERVICE_SUFFIXES = ["postgres", "redis", "atrium_db", "openfga_db", "minikms_db"] as const;
-
-function inspectServiceUpdateState(serviceName: string) {
-	const raw = tryRun(
-		"docker",
-		["service", "inspect", serviceName, "--format", "{{if .UpdateStatus}}{{.UpdateStatus.State}}{{else}}none{{end}}"],
-		{ quiet: true },
-	).trim().toLowerCase();
-	return raw || "missing";
-}
-
-function waitForDataPlaneServiceUpdates(config: DeployConfig, timeoutSeconds = DEPLOY_DATA_PLANE_TIMEOUT_SECONDS) {
-	if (currentOptions.dryRun) {
-		logDryRun("Would wait for database and Redis service updates to complete before probing readiness");
-		return;
-	}
-	logStep("Waiting for database and Redis service updates to complete");
-	const deadline = Date.now() + timeoutSeconds * 1000;
-	const names = DATA_PLANE_SERVICE_SUFFIXES.map(suffix => `${config.services.stack_name}_${suffix}`);
-	while (Date.now() < deadline) {
-		const pending: string[] = [];
-		for (const name of names) {
-			const state = inspectServiceUpdateState(name);
-			if (state.includes("rollback")) {
-				throw new Error(`${name} service update rolled back (${state})`);
-			}
-			if (state === "paused") {
-				throw new Error(`${name} service update paused`);
-			}
-			if (state !== "completed" && state !== "none") {
-				pending.push(`${name}=${state}`);
-			}
-		}
-		if (pending.length === 0) {
-			return;
-		}
-		logInfo(`Waiting for data-plane service updates: ${pending.join(", ")}`);
-		sleepSeconds(3);
-	}
-	const pending = names.map(name => `${name}=${inspectServiceUpdateState(name)}`).join(", ");
-	throw new Error(`Timed out waiting for database and Redis service updates to complete: ${pending}`);
-}
-
 function waitForDeployDataPlane(
 	config: DeployConfig,
 	runtimeEnv: { ATRIUM_DB_PASSWORD: string; OPENFGA_DB_PASSWORD: string; MINIKMS_DB_PASSWORD: string },
 ) {
-	waitForDataPlaneServiceUpdates(config);
 	for (const wait of deployDataPlaneWaits()) {
 		if (wait.kind === "redis") {
 			waitForRedisService(config, wait.timeoutSeconds);

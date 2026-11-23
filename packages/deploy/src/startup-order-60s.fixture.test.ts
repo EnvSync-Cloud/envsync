@@ -58,10 +58,9 @@ function safeText(text: string) {
 	return cleaned;
 }
 
-const RUN_FIXTURE = process.env.RUN_STARTUP_ORDER_60S === "1";
 const dockerAvailable = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 
-describe.skipIf(!RUN_FIXTURE || !dockerAvailable)("startup order 60 second postgres delay", () => {
+describe.skipIf(!dockerAvailable)("startup order 60 second postgres delay", () => {
 	test("fixture startup-order-60s-postgres-delay: API becomes ready without another deploy", async () => {
 		expect(SAML_SECRET.length).toBe(64);
 		expect(/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(OPENFGA_STORE_ID)).toBe(true);
@@ -255,7 +254,7 @@ describe.skipIf(!RUN_FIXTURE || !dockerAvailable)("startup order 60 second postg
 			}
 			fga?.stop(true);
 			if (created.pg) spawnSync("docker", ["rm", "-fv", pgName], { stdio: "ignore" });
-			if (created.redis) spawnSync("docker", ["rm", "-f", redisName], { stdio: "ignore" });
+			if (created.redis) spawnSync("docker", ["rm", "-fv", redisName], { stdio: "ignore" });
 			if (created.network) spawnSync("docker", ["network", "rm", network], { stdio: "ignore" });
 			if (envDir) rmSync(envDir, { recursive: true, force: true });
 		}
