@@ -12,4 +12,5 @@ test("routes both homepage signup links to hosted onboarding", () => {
   );
   const signupLinks = Array.from(html.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>Start for free<\/a>/g));
   expect(signupLinks.map((link) => link[1])).toEqual(["/onboarding", "/onboarding"]);
+  expect(html).toContain("Zero trust access layer for secrets");
 });
