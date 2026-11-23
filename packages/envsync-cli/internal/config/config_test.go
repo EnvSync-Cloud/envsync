@@ -143,6 +143,10 @@ func TestWriteConfigFileFailedUpdateKeepsSavedCredentials(t *testing.T) {
 		}
 	}
 
+	if runtime.GOOS == "windows" {
+		t.Skip("directory mode does not block creating a file on Windows")
+	}
+
 	dir := filepath.Dir(path)
 	if err := os.Chmod(dir, 0o555); err != nil {
 		t.Fatal(err)
