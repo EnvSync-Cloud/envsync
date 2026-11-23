@@ -5018,16 +5018,20 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	const restoreRoot = path.join(BACKUPS_ROOT, `restore-${Date.now()}`);
 	logInfo(`Restore archive: ${archivePath}`);
 	if (currentOptions.dryRun) {
-		const existing = loadState();
 		if (archivePath.endsWith(".age")) {
 			logDryRun(`Would decrypt ${archivePath} with ${currentOptions.identityPath ?? identityPathForArchive(archivePath)}`);
 		}
 		logDryRun(`Would extract ${archivePath} into ${restoreRoot}`);
 		logDryRun(`Would restore deploy files into ${DEPLOY_ROOT} and ${ETC_ROOT}`);
-		if (hasManagedRuntime(existing.config)) {
-			stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
+		if (exists(DEPLOY_YAML)) {
+			const existing = loadState();
+			if (hasManagedRuntime(existing.config)) {
+				stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
+			}
+			logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
+		} else {
+			logDryRun("No deploy config on this host yet. Existing runtime stop will be skipped.");
 		}
-		logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
 		if (currentOptions.keysBundlePath) {
 			logDryRun(`Would decrypt key bundle ${currentOptions.keysBundlePath} with ${currentOptions.keysIdentityPath ?? identityPathForArchive(currentOptions.keysBundlePath)}`);
 		} else {
@@ -5037,7 +5041,8 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 		logSuccess("Restore dry-run completed");
 		return;
 	}
-	const currentConfig = loadState().config;
+	// A wiped host has no deploy.yaml. Restore still has to read the archive.
+	const currentConfig = exists(DEPLOY_YAML) ? loadState().config : undefined;
 	ensurePrivateDir(restoreRoot);
 	let extractPath = archivePath;
 	const archiveBytes = fs.readFileSync(archivePath);
@@ -5059,7 +5064,7 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 		bundleKeyFiles: bundleEntries?.map(entry => entry.fileName),
 		keysIncludedInArchive: keyPolicy.keysIncluded,
 	});
-	if (hasManagedRuntime(currentConfig)) {
+	if (currentConfig && hasManagedRuntime(currentConfig)) {
 		logWarn("Restore will stop the existing EnvSync stack before replacing managed data volumes.");
 		stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
 	}
