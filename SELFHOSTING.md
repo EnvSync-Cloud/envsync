@@ -91,6 +91,20 @@ Important facts:
 - `deploy` performs the release rollout.
 - running `envsync-deploy` with no subcommand shows the current status and the recommended next step.
 
+## Swarm service topology
+
+Swarm self-host runs two miniKMS tasks. Both tasks share one Postgres service and one Redis service. Each of those database services is one container with a data volume.
+
+miniKMS and Atrium update start-first: Swarm starts the replacement task, waits for its healthcheck, and then stops the previous task. A failed healthcheck rolls that service back to the previous task. miniKMS checks TCP port 50051. Atrium checks HTTP `GET /health` and stays at one task. API blue/green is the API slot pair (`envsync_api_blue` and `envsync_api_green`).
+
+Postgres is pinned to `postgres:17.12`. Redis is pinned to `redis:7.4.12`. The same tags are used for `postgres`, `atrium_db`, `openfga_db`, `minikms_db`, Redis, and the CLI helpers that wait on or migrate those databases. Digests are recorded in [packages/deploy/versions.lock.json](./packages/deploy/versions.lock.json) and written to the host `versions.lock.json` during deploy.
+
+miniKMS schema changes run once, as a CLI job (`001` through `007`). They are not part of the miniKMS service command. Atrium applies its database migrations when the task starts (`database.migrations: true`).
+
+The Atrium image has no shell. Deploy copies a static BusyBox binary from `busybox:1.36.1-musl` into the host deploy directory and mounts it at `/busybox` so the `/health` check can run. The copy matches the architecture of the Swarm node that runs deploy.
+
+`docker compose` uses the same Postgres and Redis tags. Compose files do not set Swarm replica counts or rolling-update policy.
+
 ## Upgrade / rollback
 
 Upgrade to the running deploy package version:

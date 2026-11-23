@@ -1,0 +1,8 @@
+{
+  "postgres": "postgres:17.12",
+  "redis": "redis:7.4.12",
+  "digests": {
+    "postgres": "sha256:223efeb196329b55b3b9a13db144956411dbc18e727e59f681c3e0aede6475cf",
+    "redis": "sha256:2e3eb11462c4e3759e6972678dd051d150ff54b1e60714b3c33b701260172a90"
+  }
+}

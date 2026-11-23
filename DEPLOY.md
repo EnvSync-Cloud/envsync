@@ -338,6 +338,12 @@ envsync-deploy health --json
 
 Blue/green: inactive API slot updates first; promote only when healthy; previous slot kept for rollback.
 
+### Swarm service topology
+
+Self-host Swarm runs two miniKMS replicas. They share one Postgres service and one Redis service. Each database service is one container with a data volume. miniKMS and Atrium update start-first and roll back automatically when a new task fails its healthcheck. Atrium stays at one replica. API blue/green is the API slot pair.
+
+Postgres is pinned to `postgres:17.12` and Redis to `redis:7.4.12` on every database service and CLI helper. Recorded digests live in `packages/deploy/versions.lock.json`.
+
 ### Maintainer smoke (monorepo)
 
 ```bash
@@ -433,7 +439,7 @@ envsync-deploy-enterprise health --json
 
 ### Day-2
 
-Same subcommands as OSS (`upgrade`, `promote`, `rollback`, `backup`, `restore`, `health`) via `envsync-deploy-enterprise`.
+Same subcommands as OSS (`upgrade`, `promote`, `rollback`, `backup`, `restore`, `health`) via `envsync-deploy-enterprise`. The Swarm service topology above applies to Enterprise self-host as well: two miniKMS replicas, one Atrium replica, start-first updates with automatic rollback, and the same pinned Postgres and Redis tags.
 
 ---
 
@@ -458,7 +464,7 @@ Same subcommands as OSS (`upgrade`, `promote`, `rollback`, `backup`, `restore`, 
 
 ## 5. Local development (not production)
 
-Monorepo root — **not** a substitute for Swarm deploy. `docker compose up` uses `docker-compose.yaml`, which may mount `docker/minikms/*.dev.pem`. Those files stay on the local and CI path only.
+Monorepo root — **not** a substitute for Swarm deploy. `docker compose up` uses `docker-compose.yaml`, which may mount `docker/minikms/*.dev.pem`. Those files stay on the local and CI path only. Local Compose and `docker-compose.prod.yaml` pin Postgres to `postgres:17.12` and Redis to `redis:7.4.12`. They do not set Swarm replica counts.
 
 ```bash
 cp .env.example .env

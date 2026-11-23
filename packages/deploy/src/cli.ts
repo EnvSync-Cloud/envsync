@@ -7,6 +7,17 @@ import chalk from "chalk";
 import YAML from "yaml";
 import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud/deploy-core";
 import * as renderHelpers from "./render";
+import { parseReplicaHealth, type ServiceHealth } from "./replica-health";
+import {
+	ROLLING_INSPECT_FORMAT,
+	ROLLING_UPDATE_WAIT_SECONDS,
+	evaluateRollingService,
+	parseRollingInspect,
+	rollingSpecMismatches,
+	type ObservedRollingService,
+	type RollingDecision,
+	type RollingServiceName,
+} from "./rolling-update";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
@@ -219,7 +230,6 @@ type ApiSlotState = {
 	deployed_at: string;
 };
 type RuntimeEnv = Record<string, string>;
-type ServiceHealth = "healthy" | "missing" | "degraded";
 type CommandOptions = {
 	dryRun: boolean;
 	force: boolean;
@@ -2143,7 +2153,35 @@ function touchApiSlotDeployment(deployment: DeployGeneratedState["deployment"], 
 
 // Phase 7: duplicate local render helpers removed — use ./render (renderHelpers) only.
 
+const ATRIUM_HEALTHCHECK_STAMP = `${renderHelpers.ATRIUM_HEALTHCHECK_IMAGE}\n`;
+
+function ensureAtriumHealthcheckBinary() {
+	const target = renderHelpers.atriumHealthcheckHostPath(DEPLOY_ROOT);
+	const stampPath = `${target}.image`;
+	if (currentOptions.dryRun) {
+		logDryRun(`Would install ${renderHelpers.ATRIUM_HEALTHCHECK_IMAGE} at ${target} for the Atrium /health check`);
+		return;
+	}
+	if (exists(target) && exists(stampPath) && fs.readFileSync(stampPath, "utf8") === ATRIUM_HEALTHCHECK_STAMP) {
+		return;
+	}
+	ensureDir(path.dirname(target));
+	const name = `envsync-atrium-healthcheck-${process.pid}`;
+	logStep("Installing Atrium HTTP healthcheck helper");
+	run("docker", ["rm", "-f", name]);
+	run("docker", ["create", "--name", name, renderHelpers.ATRIUM_HEALTHCHECK_IMAGE]);
+	try {
+		fs.rmSync(target, { force: true });
+		run("docker", ["cp", `${name}:/bin/busybox`, target]);
+		fs.chmodSync(target, 0o755);
+		fs.writeFileSync(stampPath, ATRIUM_HEALTHCHECK_STAMP, { mode: 0o644 });
+	} finally {
+		run("docker", ["rm", "-f", name]);
+	}
+}
+
 function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedState) {
+	ensureAtriumHealthcheckBinary();
 	const setupToken = currentOptions.dryRun
 		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
 		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
@@ -2180,7 +2218,10 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	if (!currentOptions.dryRun) enforceProtectedMaterialModes(protectedMaterialRoots());
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), SECRET_FILE_MODE);
 	writeInternalConfig(config, mergeGeneratedState(runtimeEnv, generated));
-	writeFileMaybe(VERSIONS_LOCK, JSON.stringify(config.images, null, 2) + "\n");
+	writeFileMaybe(
+		VERSIONS_LOCK,
+		JSON.stringify({ ...config.images, ...renderHelpers.databaseImageLock() }, null, 2) + "\n",
+	);
 	writeFileMaybe(ATRIUM_CONFIG_FILE, renderHelpers.renderAtriumConfig(config, runtimeEnv), SECRET_FILE_MODE);
 	writeFileMaybe(ATRIUM_CLIENTS_FILE, renderHelpers.renderAtriumClients(config, runtimeEnv), SECRET_FILE_MODE);
 	copyAtriumBranding();
@@ -2395,7 +2436,7 @@ async function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: strin
 		"PGPASSWORD=envsync-postgres",
 		"-v",
 		`${UPGRADE_BACKUPS_ROOT}:/backup`,
-		"postgres:17",
+		renderHelpers.POSTGRES_IMAGE,
 		"sh",
 		"-lc",
 		`pg_dump -h ${serviceStackName(config, "postgres")} -U postgres -d envsync -Fc -f /backup/${fileName}`,
@@ -2436,7 +2477,7 @@ async function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: strin
 			"PGPASSWORD=envsync-postgres",
 			"-v",
 			`${UPGRADE_BACKUPS_ROOT}:/backup:ro`,
-			"postgres:17",
+			renderHelpers.POSTGRES_IMAGE,
 			"sh",
 			"-lc",
 			`pg_restore --clean --if-exists --no-owner --no-privileges -h ${serviceStackName(config, "postgres")} -U postgres -d envsync /backup/${restoreName}`,
@@ -2518,13 +2559,13 @@ function waitForCommand(
 }
 
 function waitForPostgresService(config: DeployConfig, label: string, host: string, user: string, password: string) {
-	waitForCommand(config, `${label} database readiness`, "postgres:17", `pg_isready -h ${host} -U ${user}`, 120, {
+	waitForCommand(config, `${label} database readiness`, renderHelpers.POSTGRES_IMAGE, `pg_isready -h ${host} -U ${user}`, 120, {
 		PGPASSWORD: password,
 	});
 }
 
 function waitForRedisService(config: DeployConfig) {
-	waitForCommand(config, "redis readiness", "redis:7", "redis-cli -h redis ping | grep PONG");
+	waitForCommand(config, "redis readiness", renderHelpers.REDIS_IMAGE, "redis-cli -h redis ping | grep PONG");
 }
 
 function waitForTcpService(config: DeployConfig, label: string, host: string, port: number, timeoutSeconds = 120) {
@@ -2643,7 +2684,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 			`PGPASSWORD=${runtimeEnv.MINIKMS_DB_PASSWORD}`,
 			"-v",
 			`${path.join(REPO_ROOT, "docker/minikms/migrations")}:/migrations:ro`,
-			"postgres:17",
+			renderHelpers.POSTGRES_IMAGE,
 			"sh",
 			"-lc",
 			MINIKMS_MIGRATE_SQL,
@@ -2659,7 +2700,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 		`PGPASSWORD=${runtimeEnv.MINIKMS_DB_PASSWORD}`,
 		"-v",
 		`${path.join(REPO_ROOT, "docker/minikms/migrations")}:/migrations:ro`,
-		"postgres:17",
+		renderHelpers.POSTGRES_IMAGE,
 		"sh",
 		"-lc",
 		MINIKMS_MIGRATE_SQL,
@@ -3060,16 +3101,6 @@ function assertBootstrapState(generated: DeployGeneratedState) {
 	}
 }
 
-function parseReplicaHealth(raw: string): ServiceHealth {
-	const match = raw.match(/^(\d+)\/(\d+)$/);
-	if (!match) return raw.trim() ? "degraded" : "missing";
-	const current = Number(match[1]);
-	const desired = Number(match[2]);
-	if (desired === 0) return "missing";
-	if (current === desired) return "healthy";
-	return "degraded";
-}
-
 function listStackServices(config: DeployConfig) {
 	const output = tryRun(
 		"docker",
@@ -3355,14 +3386,20 @@ function waitForHealthyServices(
 	throw new Error(`Timed out waiting for deployed services to become healthy: ${pending}`);
 }
 
+/** Set when a detached stack deploy is accepted. Convergence is checked later. */
+let lastRenderedStackDeployAtMs: number | null = null;
+
 function deployRenderedStack(config: DeployConfig, label: string) {
 	if (currentOptions.dryRun) {
 		logDryRun(`Would deploy ${label} stack for ${config.services.stack_name}`);
 		logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+		logDryRun("Would wait until miniKMS and Atrium updates complete and their specs match");
 		return;
 	}
 	logStep(`Deploying ${label} stack`);
 	logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+	// Stay detached. --detach=false would block inside this out-of-sequence retry loop.
+	const startedAtMs = Date.now();
 	for (let attempt = 1; attempt <= 5; attempt += 1) {
 		const result = spawnSync("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name], {
 			env: process.env,
@@ -3374,7 +3411,8 @@ function deployRenderedStack(config: DeployConfig, label: string) {
 		if (stdout) console.log(stdout);
 		if (stderr) console.error(stderr);
 		if (result.status === 0) {
-			logSuccess(`${label} stack deployed`);
+			lastRenderedStackDeployAtMs = startedAtMs;
+			logInfo(`${label} stack deploy accepted`);
 			return;
 		}
 		const combined = `${stdout}\n${stderr}`.toLowerCase();
@@ -3385,6 +3423,89 @@ function deployRenderedStack(config: DeployConfig, label: string) {
 		}
 		throw new Error(`Command failed: docker stack deploy -c ${STACK_FILE} ${config.services.stack_name}${stderr ? `\n${stderr}` : ""}`);
 	}
+}
+
+function inspectRollingService(serviceName: string) {
+	const output = tryRun(
+		"docker",
+		["service", "inspect", serviceName, "--format", ROLLING_INSPECT_FORMAT],
+		{ quiet: true },
+	);
+	return parseRollingInspect(output);
+}
+
+function describeRollingDecision(
+	serviceName: string,
+	service: RollingServiceName,
+	observed: ObservedRollingService,
+	decision: RollingDecision,
+	replicaHealth: ServiceHealth,
+) {
+	const mismatches = rollingSpecMismatches(service, observed);
+	const state = observed.updateState || "absent";
+	if (decision.action === "fail" && decision.kind === "rolled_back") {
+		const spec = mismatches.length > 0 ? `; spec ${mismatches.join(", ")}` : "";
+		return `${serviceName} update ${state} did not keep the requested spec${spec}`;
+	}
+	if (decision.action === "fail") {
+		return `${serviceName} update completed with a different spec (${mismatches.join(", ") || state})`;
+	}
+	if (decision.action === "wait" && decision.kind === "settling") {
+		return `${serviceName} no new update yet; confirming the running spec (${state})`;
+	}
+	if (decision.action === "wait" && decision.kind === "unhealthy") {
+		return `${serviceName} update ${state}; replicas ${replicaHealth}`;
+	}
+	if (decision.action === "wait" && decision.kind === "spec") {
+		return `${serviceName} requested spec is not running yet (${mismatches.join(", ") || state})`;
+	}
+	return `${serviceName} update ${state}`;
+}
+
+function waitForRequestedRollingServices(config: DeployConfig) {
+	if (currentOptions.dryRun) {
+		logDryRun("Would wait for miniKMS and Atrium update completion, health, and requested spec");
+		return;
+	}
+	const deployStartedAtMs = lastRenderedStackDeployAtMs ?? Date.now();
+	const deadline = Date.now() + ROLLING_UPDATE_WAIT_SECONDS * 1000;
+	const services: RollingServiceName[] = ["minikms", "atrium"];
+	const settle = new Map<RollingServiceName, number>(services.map(service => [service, 0]));
+	let pending: string[] = [];
+	while (Date.now() < deadline) {
+		const replicaHealth = listStackServices(config);
+		pending = [];
+		let ready = 0;
+		for (const service of services) {
+			const serviceName = `${config.services.stack_name}_${service}`;
+			const observed = inspectRollingService(serviceName);
+			const health = replicaHealth.get(serviceName) ?? "missing";
+			const decision = evaluateRollingService({
+				service,
+				observed,
+				replicaHealth: health,
+				deployStartedAtMs,
+				settleObservations: settle.get(service) ?? 0,
+			});
+			const detail = describeRollingDecision(serviceName, service, observed, decision, health);
+			if (decision.action === "fail") {
+				throw new Error(detail);
+			}
+			if (decision.action === "ready") {
+				ready += 1;
+				continue;
+			}
+			settle.set(service, decision.kind === "settling" ? (settle.get(service) ?? 0) + 1 : 0);
+			pending.push(detail);
+		}
+		if (ready === services.length) {
+			logSuccess("miniKMS and Atrium updates completed with the requested spec");
+			return;
+		}
+		logInfo(pending.join("; "));
+		sleepSeconds(3);
+	}
+	throw new Error(`Timed out waiting for miniKMS and Atrium updates to complete: ${pending.join("; ")}`);
 }
 
 function persistGeneratedState(config: DeployConfig, generated: DeployGeneratedState) {
@@ -4099,6 +4220,7 @@ async function cmdDeploy() {
 		deployRenderedStack(config, "steady");
 	}
 	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
+	waitForRequestedRollingServices(config);
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },
