@@ -1,21 +1,32 @@
-MIT License
+EnvSync Enterprise License (Proprietary)
 
-Copyright (c) 2026 EnvSync Cloud
+Copyright (c) 2025-2026 EnvSync Cloud Private Limited. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This package (`@envsync-cloud/deploy-enterprise`) is proprietary software. It is
+included in the public monorepo for transparency and dual-license development
+but is **not** licensed under the MIT License that applies to
+`@envsync-cloud/deploy` and `@envsync-cloud/deploy-core`.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Production use
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Use of this software in production requires a valid EnvSync enterprise
+subscription or other written license from EnvSync Cloud Private Limited.
+
+## What this covers
+
+- The enterprise deploy CLI entry point and the forced enterprise edition
+- Packaging and distribution of `@envsync-cloud/deploy-enterprise`
+
+## What this does not cover
+
+- `@envsync-cloud/deploy` and `@envsync-cloud/deploy-core` remain under the MIT License.
+
+## Contributions
+
+Contributions are accepted under terms that assign or license the contribution
+to EnvSync Cloud Private Limited for inclusion under this enterprise license.
+See CONTRIBUTING.md.
+
+## Contact
+
+sales@envsync.cloud

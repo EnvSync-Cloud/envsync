@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import infoLogs, { LogTypes } from "./index";
-import { LOG_REDACTED, redactLogPayload, redactWrittenLog } from "./redact";
+import infoLogs, { LogTypes } from "@/libs/logger";
+import { LOG_REDACTED, redactLogPayload, redactWrittenLog } from "@/libs/logger/redact";
 
 const SENTINEL = "envsync-log-sentinel-9f3c2a";
 

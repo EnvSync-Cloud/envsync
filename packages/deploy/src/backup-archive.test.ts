@@ -9,8 +9,10 @@ import {
 	decryptBackup,
 	identityPathForArchive,
 	isAgeCiphertext,
+	pruneUpgradeSnapshots,
 	sealPlaintextArchiveFile,
 	sealPlaintextBackupArchives,
+	sealPlaintextFile,
 } from "./backup-archive";
 
 const SECRET = "backup-plaintext-DEV137-value";
@@ -44,6 +46,32 @@ describe("backup encryption", () => {
 
 			const opened = await decryptBackup(ciphertext, identity);
 			expect(Buffer.from(opened).toString("utf8")).toContain(SECRET);
+		} finally {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("keeps the source atime and mtime on the sealed file so retention still sees its age", async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "envsync-backup-mtime-"));
+		try {
+			const dump = path.join(dir, "envsync-db-preupgrade-1.0.0-to-1.1.0.dump");
+			fs.writeFileSync(dump, "PGDMP-old-snapshot\n");
+			const atime = new Date("2020-01-01T00:00:00.000Z");
+			const mtime = new Date("2020-01-15T00:00:00.000Z");
+			fs.utimesSync(dump, atime, mtime);
+			const sealed = await sealPlaintextFile(dump, `${dump}.age`);
+			const sealedStat = fs.statSync(sealed.archivePath);
+			expect(Math.abs(sealedStat.atimeMs - atime.getTime())).toBeLessThan(1000);
+			expect(Math.abs(sealedStat.mtimeMs - mtime.getTime())).toBeLessThan(1000);
+			expect(fs.existsSync(dump)).toBe(false);
+
+			const now = Date.parse("2020-01-23T00:00:00.000Z");
+			const pruned = pruneUpgradeSnapshots(dir, 7, now);
+			expect(pruned.removed.map(file => path.basename(file)).sort()).toEqual([
+				"envsync-db-preupgrade-1.0.0-to-1.1.0.dump.age",
+				"envsync-db-preupgrade-1.0.0-to-1.1.0.identity",
+			]);
+			expect(fs.existsSync(sealed.archivePath)).toBe(false);
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
 		}

@@ -1,6 +1,7 @@
 {
   "name": "envsync-api",
   "version": "0.25.3",
+  "license": "MIT",
   "type": "module",
   "module": "index.ts",
   "exports": {
