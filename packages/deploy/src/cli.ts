@@ -30,12 +30,29 @@ import {
 } from "./protected-secrets";
 import {
 	assertBackupMode,
+	assertIncludeKeysAllowed,
 	decryptBackup,
+	DEFAULT_SNAPSHOT_RETENTION_DAYS,
+	ensurePrivateDir,
 	identityPathForArchive,
 	isAgeCiphertext,
+	pruneUpgradeSnapshots,
+	removeSealedSnapshot,
 	sealPlaintextArchiveFile,
 	sealPlaintextBackupArchives,
+	sealPlaintextFile,
+	sealPlaintextUpgradeDumps,
 } from "./backup-archive";
+import {
+	assertDistinctExportKeysPaths,
+	type KeyBundleFile,
+	privateKeyMaterials,
+	readKeyBundleEntries,
+	resolveRestoreKeys,
+	restoreKeyFiles,
+	sealKeyBundle,
+	stageDataBackup,
+} from "./key-bundle";
 
 // Edition is forced by package entrypoints:
 // - packages/deploy/src/index.ts → oss
@@ -101,6 +118,7 @@ interface DeployConfig {
 	backup: {
 		output_dir: string;
 		encrypted: boolean;
+		recipients?: string[];
 	};
 	smtp: {
 		host: string;
@@ -121,6 +139,7 @@ interface DeployConfig {
 		maintenance_mode_enabled: boolean;
 		db_snapshot_on_api_upgrade: boolean;
 		keep_failed_upgrade_db_snapshot: boolean;
+		snapshot_retention_days: number;
 	};
 	netutils?: {
 		enabled?: boolean;
@@ -201,7 +220,16 @@ type ApiSlotState = {
 };
 type RuntimeEnv = Record<string, string>;
 type ServiceHealth = "healthy" | "missing" | "degraded";
-type CommandOptions = { dryRun: boolean; force: boolean; insecureUnencrypted: boolean; identityPath?: string };
+type CommandOptions = {
+	dryRun: boolean;
+	force: boolean;
+	insecureUnencrypted: boolean;
+	includeKeys: boolean;
+	identityPath?: string;
+	keysBundlePath?: string;
+	keysIdentityPath?: string;
+	outputPath?: string;
+};
 type NetutilsForward = {
 	service: string;
 	service_port: number;
@@ -439,7 +467,7 @@ const REQUIRED_CLICKSTACK_TAGS = [
 const CLICKSTACK_SELFHOST_TEAM_NAME = "EnvSync Self-Hosted Team";
 
 const SEMVER_VERSION_RE = /^\d+\.\d+\.\d+$/;
-let currentOptions: CommandOptions = { dryRun: false, force: false, insecureUnencrypted: false };
+let currentOptions: CommandOptions = { dryRun: false, force: false, insecureUnencrypted: false, includeKeys: false };
 const DEFAULT_SOURCE_REPO_URL = "https://github.com/EnvSync-Cloud/envsync.git";
 const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
 const MANAGED_VERSIONED_IMAGE_PREFIXES = {
@@ -1357,14 +1385,19 @@ function renderHelpBlock() {
 	lines.push(
 		"  org create           Create organization via setup token (self-host; first org + further if allowed)",
 		"  org status           Show setup/org readiness via setup token",
-		"  backup               Create an age-encrypted backup. The identity file is written beside the archive",
-		"  restore <archive>    Restore a .tar.gz.age archive (pass --identity when it is not beside the archive)",
+		"  backup               Create an age-encrypted data backup. Key material is excluded unless --include-keys is set",
+		"  export-keys          Write an age-encrypted miniKMS key bundle and a separate identity file",
+		"  restore <archive>    Restore a .tar.gz.age archive. Pass --keys when the backup excluded key material",
 		"",
 		`${chalk.dim("Options")}`,
 		"  --dry-run            Preview mutating work without changing the host",
 		"  --force              Skip destructive confirmations where supported",
 		"  --deploy             Used with restore to start services after restore",
-		"  --identity <file>    Age identity for restore. Defaults to the .identity file beside the archive",
+		"  --identity <file>    Age identity for restore, or the identity path written by export-keys",
+		"  --include-keys       Include miniKMS private keys in the data backup. Requires age encryption",
+		"  --keys <bundle>      Age-encrypted key bundle from export-keys",
+		"  --keys-identity <file>  Age identity for --keys. Defaults to the .identity file beside the bundle",
+		"  --output <file>      Output path for export-keys",
 		"  --insecure-unencrypted  Write a plaintext .tar.gz. Allowed only when backup.encrypted is false",
 		"  --name/--email/--password  Non-interactive org create flags",
 		"  --interactive / -i   Prompt for org create fields",
@@ -1455,7 +1488,8 @@ function printOperatorOverview() {
 		"`envsync-deploy health --json`",
 		"`envsync-deploy plan-topology --json`",
 		"`envsync-deploy backup`",
-		"`envsync-deploy restore <archive>`",
+		"`envsync-deploy export-keys`",
+		"`envsync-deploy restore <archive> --keys <bundle>`",
 		"`envsync-deploy promote`",
 		"`envsync-deploy rollback`",
 	];
@@ -1579,6 +1613,23 @@ function requireDefined<T>(value: T | undefined, label: string): T {
 	return value;
 }
 
+function normalizeBackupRecipients(value: unknown): string[] | undefined {
+	if (value == null) return undefined;
+	if (!Array.isArray(value) || value.some(item => typeof item !== "string" || item.trim().length === 0)) {
+		throw new Error("backup.recipients must be a list of age recipient strings");
+	}
+	return value.map(item => item.trim());
+}
+
+function normalizeSnapshotRetentionDays(value: unknown) {
+	if (value == null) return DEFAULT_SNAPSHOT_RETENTION_DAYS;
+	const days = typeof value === "number" ? value : Number(value);
+	if (!Number.isInteger(days) || days < 0) {
+		throw new Error("upgrade.snapshot_retention_days must be a non-negative integer");
+	}
+	return days;
+}
+
 function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 	const version = resolveReleaseVersion(raw);
 	const forced = getForcedDeployEdition();
@@ -1649,6 +1700,7 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 		backup: {
 			output_dir: requireDefined(raw.backup?.output_dir, "backup.output_dir"),
 			encrypted: requireDefined(raw.backup?.encrypted, "backup.encrypted"),
+			recipients: normalizeBackupRecipients(raw.backup?.recipients),
 		},
 		smtp: {
 			host: requireDefined(raw.smtp?.host, "smtp.host"),
@@ -1669,6 +1721,7 @@ function normalizeConfig(raw: Partial<DeployConfig>): DeployConfig {
 			maintenance_mode_enabled: raw.upgrade?.maintenance_mode_enabled ?? true,
 			db_snapshot_on_api_upgrade: raw.upgrade?.db_snapshot_on_api_upgrade ?? true,
 			keep_failed_upgrade_db_snapshot: raw.upgrade?.keep_failed_upgrade_db_snapshot ?? true,
+			snapshot_retention_days: normalizeSnapshotRetentionDays(raw.upgrade?.snapshot_retention_days),
 		},
 		netutils: normalizeNetutilsForwards(raw.netutils?.forwards, stackName, raw.netutils?.enabled ?? false),
 		vpn: {
@@ -2300,16 +2353,37 @@ function validateStaticBundle(kind: "web" | "landing", targetDir: string) {
 	);
 }
 
-function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toVersion: string) {
+async function maintainUpgradeSnapshots(config: DeployConfig) {
+	const days = config.upgrade.snapshot_retention_days;
+	if (currentOptions.dryRun) {
+		logDryRun(`Would seal unencrypted ${UPGRADE_BACKUPS_ROOT}/envsync-db-preupgrade-*.dump files and prune snapshots older than ${days} days`);
+		return;
+	}
+	ensurePrivateDir(UPGRADE_BACKUPS_ROOT);
+	const sealed = await sealPlaintextUpgradeDumps(UPGRADE_BACKUPS_ROOT, config.backup.recipients ?? []);
+	if (sealed.length > 0) {
+		logInfo(`Sealed ${sealed.length} preupgrade dump(s)`);
+		for (const item of sealed) logInfo(item.archivePath);
+	}
+	const pruned = pruneUpgradeSnapshots(UPGRADE_BACKUPS_ROOT, days);
+	if (pruned.removed.length > 0) {
+		logInfo(`Pruned ${pruned.removed.length} upgrade snapshot file(s) older than ${days} days`);
+		for (const file of pruned.removed) logInfo(file);
+	}
+}
+
+async function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toVersion: string) {
 	const timestamp = new Date().toISOString().replace(/[:]/g, "-");
 	const fileName = `envsync-db-preupgrade-${fromVersion || "unknown"}-to-${toVersion}-${timestamp}.dump`;
 	const hostPath = path.join(UPGRADE_BACKUPS_ROOT, fileName);
-	logStep(`Creating API DB upgrade snapshot ${fileName}`);
+	const sealedPath = `${hostPath}.age`;
+	logStep(`Creating API DB upgrade snapshot ${path.basename(sealedPath)}`);
+	await maintainUpgradeSnapshots(config);
 	if (currentOptions.dryRun) {
-		logDryRun(`Would create upgrade DB snapshot at ${hostPath}`);
-		return hostPath;
+		logDryRun(`Would create an age-encrypted upgrade DB snapshot at ${sealedPath} (mode 0600)`);
+		return sealedPath;
 	}
-	ensureDir(UPGRADE_BACKUPS_ROOT);
+	ensurePrivateDir(UPGRADE_BACKUPS_ROOT);
 	run("docker", [
 		"run",
 		"--rm",
@@ -2326,33 +2400,50 @@ function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: string, toV
 		"-lc",
 		`pg_dump -h ${serviceStackName(config, "postgres")} -U postgres -d envsync -Fc -f /backup/${fileName}`,
 	]);
-	logSuccess(`API DB upgrade snapshot created at ${hostPath}`);
-	return hostPath;
+	const sealed = await sealPlaintextFile(hostPath, sealedPath, config.backup.recipients ?? []);
+	logSuccess(`API DB upgrade snapshot created at ${sealed.archivePath}`);
+	return sealed.archivePath;
 }
 
-function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
+async function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: string) {
 	const fileName = path.basename(backupPath);
 	logWarn(`Restoring API DB upgrade snapshot ${fileName}`);
 	if (currentOptions.dryRun) {
-		logDryRun(`Would restore upgrade DB snapshot from ${backupPath}`);
+		logDryRun(`Would decrypt and restore upgrade DB snapshot from ${backupPath}`);
 		return;
 	}
-	run("docker", [
-		"run",
-		"--rm",
-		"--hostname",
-		"envsync-upgrade-restore",
-		"--network",
-		stackNetworkName(config),
-		"-e",
-		"PGPASSWORD=envsync-postgres",
-		"-v",
-		`${UPGRADE_BACKUPS_ROOT}:/backup:ro`,
-		"postgres:17",
-		"sh",
-		"-lc",
-		`pg_restore --clean --if-exists --no-owner --no-privileges -h ${serviceStackName(config, "postgres")} -U postgres -d envsync /backup/${fileName}`,
-	]);
+	let restoreName = fileName;
+	let tempPlain: string | null = null;
+	const bytes = fs.readFileSync(backupPath);
+	if (isAgeCiphertext(bytes)) {
+		const identityPath = identityPathForArchive(backupPath);
+		if (!exists(identityPath)) throw new Error(`Upgrade snapshot identity not found at ${identityPath}`);
+		tempPlain = path.join(UPGRADE_BACKUPS_ROOT, `.restore-${Date.now()}.dump`);
+		const plain = await decryptBackup(bytes, fs.readFileSync(identityPath, "utf8"));
+		fs.writeFileSync(tempPlain, plain, { mode: SECRET_FILE_MODE });
+		fs.chmodSync(tempPlain, SECRET_FILE_MODE);
+		restoreName = path.basename(tempPlain);
+	}
+	try {
+		run("docker", [
+			"run",
+			"--rm",
+			"--hostname",
+			"envsync-upgrade-restore",
+			"--network",
+			stackNetworkName(config),
+			"-e",
+			"PGPASSWORD=envsync-postgres",
+			"-v",
+			`${UPGRADE_BACKUPS_ROOT}:/backup:ro`,
+			"postgres:17",
+			"sh",
+			"-lc",
+			`pg_restore --clean --if-exists --no-owner --no-privileges -h ${serviceStackName(config, "postgres")} -U postgres -d envsync /backup/${restoreName}`,
+		]);
+	} finally {
+		if (tempPlain) fs.rmSync(tempPlain, { force: true });
+	}
 	logSuccess(`API DB upgrade snapshot restored from ${backupPath}`);
 }
 
@@ -3644,6 +3735,7 @@ async function cmdSetup() {
 			maintenance_mode_enabled: true,
 			db_snapshot_on_api_upgrade: true,
 			keep_failed_upgrade_db_snapshot: true,
+			snapshot_retention_days: DEFAULT_SNAPSHOT_RETENTION_DAYS,
 		},
 		license: {
 			server_url: licenseServerUrl || undefined,
@@ -3934,7 +4026,7 @@ async function cmdDeploy() {
 			deployRenderedStack(config, `candidate ${targetSlot}`);
 			logInfo(`API migration head before upgrade: ${preUpgradeHead ?? "none"}`);
 			if (config.upgrade.db_snapshot_on_api_upgrade) {
-				snapshotPath = createApiDbUpgradeBackup(config, activeReleaseBeforeUpgrade, config.release.version);
+				snapshotPath = await createApiDbUpgradeBackup(config, activeReleaseBeforeUpgrade, config.release.version);
 			}
 			runApiMigrationJsonCommand(config, config.images.api, ["latest"]);
 			const postUpgradeHead = runApiMigrationJsonCommand(config, config.images.api, ["head"]).currentHead;
@@ -3952,7 +4044,7 @@ async function cmdDeploy() {
 			sleepSeconds(3);
 			promoted = true;
 			if (snapshotPath && !currentOptions.dryRun) {
-				fs.rmSync(snapshotPath, { force: true });
+				removeSealedSnapshot(snapshotPath);
 			}
 		} catch (error) {
 			const rollbackTarget = preUpgradeHead ?? "zero";
@@ -3971,7 +4063,7 @@ async function cmdDeploy() {
 					);
 				}
 				logWarn(`Migration rollback failed. Restoring DB snapshot ${snapshotPath}.`);
-				restoreApiDbUpgradeBackup(config, snapshotPath);
+				await restoreApiDbUpgradeBackup(config, snapshotPath);
 				usedSnapshotRestore = true;
 			}
 			const recoveredState = normalizeGeneratedState({
@@ -3985,7 +4077,7 @@ async function cmdDeploy() {
 			deployRenderedStack(config, "rollback recovery");
 			waitForApiSlotHealthy(config, recoveredState.deployment.active_slot);
 			if (snapshotPath && !config.upgrade.keep_failed_upgrade_db_snapshot && !currentOptions.dryRun) {
-				fs.rmSync(snapshotPath, { force: true });
+				removeSealedSnapshot(snapshotPath);
 			}
 			throw new Error(
 				usedSnapshotRestore
@@ -4646,6 +4738,7 @@ async function cmdBackup() {
 	logSection("Backup");
 	const { config } = loadState();
 	const backupMode = assertBackupMode(config.backup.encrypted, currentOptions.insecureUnencrypted);
+	assertIncludeKeysAllowed(currentOptions.includeKeys, backupMode);
 	const timestamp = new Date().toISOString().replace(/[:]/g, "-");
 	const archiveBase = path.join(config.backup.output_dir, `envsync-backup-${timestamp}`);
 	const manifestPath = `${archiveBase}.manifest.json`;
@@ -4667,7 +4760,12 @@ async function cmdBackup() {
 		if (!isOssConfig(config)) {
 			logDryRun(`Would include Enterprise license material from ${LICENSE_ROOT}`);
 		}
-		logDryRun(`Would archive protected miniKMS material into ${path.join(staged, PROTECTED_MATERIAL_ARCHIVE_DIR)} (private files mode 0600)`);
+		if (currentOptions.includeKeys) {
+			logDryRun("Would include miniKMS private keys in this age-encrypted data backup");
+		} else {
+			logDryRun("Would exclude the miniKMS root key, session-signing key, and private PEMs. Restore needs an export-keys bundle");
+		}
+		logDryRun(`Would seal unencrypted upgrade snapshots in ${UPGRADE_BACKUPS_ROOT} and prune snapshots older than ${config.upgrade.snapshot_retention_days} days`);
 		logDryRun(`Would write manifest ${manifestPath}`);
 		if (backupMode === "age") {
 			logDryRun(`Would encrypt the archive with age and write the identity to ${identityPathForArchive(`${tarPath}.age`)}`);
@@ -4680,7 +4778,8 @@ async function cmdBackup() {
 		return;
 	}
 	ensureDir(config.backup.output_dir);
-	ensureDir(staged);
+	ensurePrivateDir(staged);
+	await maintainUpgradeSnapshots(config);
 	const resumeRuntimeAfterBackup = hasManagedRuntime(config);
 	let backupCompleted = false;
 	let backupError: unknown = null;
@@ -4689,19 +4788,10 @@ async function cmdBackup() {
 			logWarn("Backup will temporarily stop the EnvSync stack to capture consistent volume data.");
 			stopManagedRuntime(config, "Stopping existing EnvSync services for consistent backup");
 		}
-		writeFile(path.join(staged, "deploy.env"), fs.readFileSync(DEPLOY_ENV, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "deploy.yaml"), fs.readFileSync(DEPLOY_YAML, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "config.json"), fs.readFileSync(INTERNAL_CONFIG_JSON, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "versions.lock.json"), fs.readFileSync(VERSIONS_LOCK, "utf8"));
-		writeFile(path.join(staged, "docker-stack.bootstrap.base.yaml"), fs.readFileSync(BOOTSTRAP_BASE_STACK_FILE, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "docker-stack.bootstrap.yaml"), fs.readFileSync(BOOTSTRAP_STACK_FILE, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "docker-stack.yaml"), fs.readFileSync(STACK_FILE, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "traefik-dynamic.yaml"), fs.readFileSync(TRAEFIK_DYNAMIC_FILE, "utf8"));
-		writeFile(path.join(staged, "atrium-config.yaml"), fs.readFileSync(ATRIUM_CONFIG_FILE, "utf8"), SECRET_FILE_MODE);
-		writeFile(path.join(staged, "atrium-clients.json"), fs.readFileSync(ATRIUM_CLIENTS_FILE, "utf8"), SECRET_FILE_MODE);
-		stageProtectedMaterial(staged);
-		writeFile(path.join(staged, "otel-agent.yaml"), fs.readFileSync(OTEL_AGENT_CONF, "utf8"));
-		writeFile(path.join(staged, "clickhouse-listen.xml"), fs.readFileSync(CLICKSTACK_CLICKHOUSE_CONF, "utf8"));
+		const stagedBackup = collectBackupStage(currentOptions.includeKeys);
+		for (const file of stagedBackup.files) {
+			writeFile(path.join(staged, file.relativePath), file.content, file.mode);
+		}
 		if (!isOssConfig(config) && exists(LICENSE_ROOT)) {
 			fs.cpSync(LICENSE_ROOT, path.join(staged, "license"), { recursive: true });
 		}
@@ -4712,11 +4802,11 @@ async function cmdBackup() {
 		run("bash", ["-lc", `tar -czf ${JSON.stringify(tarPath)} -C ${JSON.stringify(staged)} .`]);
 		fs.rmSync(staged, { recursive: true, force: true });
 		if (backupMode === "age") {
-			const sealed = await sealPlaintextArchiveFile(tarPath);
+			const sealed = await sealPlaintextArchiveFile(tarPath, config.backup.recipients ?? []);
 			tarPath = sealed.archivePath;
 			identityPath = sealed.identityPath;
 			recipient = sealed.recipient;
-			const leftovers = await sealPlaintextBackupArchives(config.backup.output_dir);
+			const leftovers = await sealPlaintextBackupArchives(config.backup.output_dir, config.backup.recipients ?? []);
 			if (leftovers.length > 0) {
 				logInfo(`Encrypted ${leftovers.length} existing plaintext backup archive(s) and removed the plaintext files`);
 			}
@@ -4728,6 +4818,9 @@ async function cmdBackup() {
 			created_at: new Date().toISOString(),
 			stack_name: config.services.stack_name,
 			volumes: STACK_VOLUMES.map(volume => stackVolumeName(config, volume)),
+			keys_included: stagedBackup.keys.included,
+			keys_excluded: stagedBackup.keys.excluded,
+			keys_note: stagedBackup.keys.note,
 			...(recipient ? { recipient } : {}),
 		};
 		writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
@@ -4764,10 +4857,28 @@ async function cmdBackup() {
 	}
 }
 
-function stageProtectedMaterial(stagedRoot: string) {
-	const targetDir = path.join(stagedRoot, PROTECTED_MATERIAL_ARCHIVE_DIR);
-	ensureDir(targetDir);
-	fs.chmodSync(targetDir, 0o700);
+function collectBackupStage(includeKeys: boolean) {
+	const textSources = [
+		["deploy.env", DEPLOY_ENV],
+		["deploy.yaml", DEPLOY_YAML],
+		["config.json", INTERNAL_CONFIG_JSON],
+		["versions.lock.json", VERSIONS_LOCK],
+		["docker-stack.bootstrap.base.yaml", BOOTSTRAP_BASE_STACK_FILE],
+		["docker-stack.bootstrap.yaml", BOOTSTRAP_STACK_FILE],
+		["docker-stack.yaml", STACK_FILE],
+		["traefik-dynamic.yaml", TRAEFIK_DYNAMIC_FILE],
+		["atrium-config.yaml", ATRIUM_CONFIG_FILE],
+		["atrium-clients.json", ATRIUM_CLIENTS_FILE],
+		["otel-agent.yaml", OTEL_AGENT_CONF],
+		["clickhouse-listen.xml", CLICKSTACK_CLICKHOUSE_CONF],
+	] as const;
+	const files = textSources.map(([relativePath, source]) => ({
+		relativePath,
+		content: fs.readFileSync(source, "utf8"),
+		mode: SECRET_FILE_MODE,
+	}));
+	const protectedFiles = [];
+	const secretValues: string[] = [];
 	for (const item of PROTECTED_MATERIAL) {
 		const source = item.location === "secret"
 			? path.join(MINIKMS_SECRET_DIR, item.fileName)
@@ -4776,10 +4887,89 @@ function stageProtectedMaterial(stagedRoot: string) {
 			logWarn(`Protected material ${item.fileName} is missing and will not be archived`);
 			continue;
 		}
-		const dest = path.join(targetDir, item.fileName);
-		fs.copyFileSync(source, dest);
-		fs.chmodSync(dest, item.mode);
+		const content = fs.readFileSync(source, "utf8");
+		if (item.location === "secret") secretValues.push(content.trim(), content);
+		protectedFiles.push({ fileName: item.fileName, content, mode: item.mode, privateKey: item.location === "secret" });
 	}
+	const env = parseEnvFile(files.find(file => file.relativePath === "deploy.env")?.content ?? "");
+	if (env.MINIKMS_ROOT_KEY) secretValues.push(env.MINIKMS_ROOT_KEY);
+	if (env.MINIKMS_SESSION_SIGNING_KEY) secretValues.push(env.MINIKMS_SESSION_SIGNING_KEY);
+	return stageDataBackup({ files, protectedFiles, includeKeys, secretValues });
+}
+
+function archiveKeyPolicy(restoreRoot: string) {
+	const manifestPath = path.join(restoreRoot, "backup-manifest.json");
+	const names = privateKeyMaterials().map(item => item.fileName);
+	const archiveKeyFiles = names.filter(name => exists(path.join(restoreRoot, PROTECTED_MATERIAL_ARCHIVE_DIR, name)));
+	let keysIncluded = archiveKeyFiles.length === names.length;
+	if (exists(manifestPath)) {
+		const parsed = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as { keys_included?: boolean };
+		keysIncluded = parsed.keys_included === true;
+	}
+	return { keysIncluded, archiveKeyFiles };
+}
+
+async function openKeyBundle(restoreRoot: string): Promise<KeyBundleFile[] | undefined> {
+	if (!currentOptions.keysBundlePath) return undefined;
+	const bundlePath = currentOptions.keysBundlePath;
+	const identityPath = currentOptions.keysIdentityPath ?? identityPathForArchive(bundlePath);
+	if (!exists(identityPath)) {
+		throw new Error(`Key bundle identity not found at ${identityPath}. Pass --keys-identity <file>.`);
+	}
+	const staging = path.join(restoreRoot, "key-bundle");
+	const extract = path.join(staging, "files");
+	ensurePrivateDir(extract);
+	const tarPath = path.join(staging, "bundle.tar.gz");
+	const plain = await decryptBackup(fs.readFileSync(bundlePath), fs.readFileSync(identityPath, "utf8"));
+	fs.writeFileSync(tarPath, plain, { mode: SECRET_FILE_MODE });
+	fs.chmodSync(tarPath, SECRET_FILE_MODE);
+	run("bash", ["-lc", `tar -xzf ${JSON.stringify(tarPath)} -C ${JSON.stringify(extract)}`]);
+	fs.rmSync(tarPath, { force: true });
+	return readKeyBundleEntries(extract);
+}
+
+async function cmdExportKeys() {
+	logSection("Export keys");
+	if (currentOptions.insecureUnencrypted) {
+		throw new Error("export-keys always writes an age-encrypted bundle. Remove --insecure-unencrypted.");
+	}
+	const { config } = loadState();
+	const timestamp = new Date().toISOString().replace(/[:]/g, "-");
+	const outputPath = currentOptions.outputPath ?? path.join(config.backup.output_dir, `envsync-keys-${timestamp}.tar.gz.age`);
+	const identityPath = currentOptions.identityPath ?? identityPathForArchive(outputPath);
+	assertDistinctExportKeysPaths(outputPath, currentOptions.identityPath);
+	if (currentOptions.dryRun) {
+		logDryRun(`Would read private key files from ${MINIKMS_SECRET_DIR}`);
+		for (const item of privateKeyMaterials()) logDryRun(`Would include ${item.fileName}`);
+		logDryRun(`Would write age bundle ${outputPath} (mode 0600)`);
+		logDryRun(`Would write identity ${identityPath} (mode 0600)`);
+		if (config.backup.recipients?.length) {
+			logDryRun(`Would also encrypt to ${config.backup.recipients.length} configured recipient(s)`);
+		}
+		logSuccess("Export-keys dry-run completed");
+		console.log(outputPath);
+		return;
+	}
+	const entries: KeyBundleFile[] = [];
+	for (const item of privateKeyMaterials()) {
+		const source = path.join(MINIKMS_SECRET_DIR, item.fileName);
+		if (!exists(source)) throw new Error(`Missing key file ${source}. Run bootstrap before export-keys.`);
+		entries.push({ fileName: item.fileName, content: fs.readFileSync(source, "utf8") });
+	}
+	const stagingDir = path.join(BACKUPS_ROOT, `keys-staging-${timestamp}`);
+	const sealed = await sealKeyBundle({
+		entries,
+		outputPath,
+		stagingDir,
+		recipients: config.backup.recipients,
+	});
+	if (currentOptions.identityPath && sealed.identityPath !== currentOptions.identityPath) {
+		fs.renameSync(sealed.identityPath, currentOptions.identityPath);
+		fs.chmodSync(currentOptions.identityPath, SECRET_FILE_MODE);
+	}
+	logSuccess("Key bundle written");
+	console.log(outputPath);
+	logInfo(`Age identity (stored outside the bundle): ${currentOptions.identityPath ?? sealed.identityPath}`);
 }
 
 function logProtectedRestorePlan(stackName: string, archiveRoot: string) {
@@ -4838,16 +5028,17 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 			stopManagedRuntime(existing.config, "Stopping existing EnvSync services before restore");
 		}
 		logProtectedRestorePlan(existing.config.services.stack_name, restoreRoot);
+		if (currentOptions.keysBundlePath) {
+			logDryRun(`Would decrypt key bundle ${currentOptions.keysBundlePath} with ${currentOptions.keysIdentityPath ?? identityPathForArchive(currentOptions.keysBundlePath)}`);
+		} else {
+			logDryRun("Would fail if the archive excludes key material and --keys is omitted");
+		}
 		logDryRun("Would restore all managed Docker volumes from the archive");
 		logSuccess("Restore dry-run completed");
 		return;
 	}
 	const currentConfig = loadState().config;
-	if (hasManagedRuntime(currentConfig)) {
-		logWarn("Restore will stop the existing EnvSync stack before replacing managed data volumes.");
-		stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
-	}
-	ensureDir(restoreRoot);
+	ensurePrivateDir(restoreRoot);
 	let extractPath = archivePath;
 	const archiveBytes = fs.readFileSync(archivePath);
 	if (isAgeCiphertext(archiveBytes)) {
@@ -4861,6 +5052,17 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 		fs.chmodSync(extractPath, 0o600);
 	}
 	run("bash", ["-lc", `tar -xzf ${JSON.stringify(extractPath)} -C ${JSON.stringify(restoreRoot)}`]);
+	const keyPolicy = archiveKeyPolicy(restoreRoot);
+	const bundleEntries = await openKeyBundle(restoreRoot);
+	const keySource = resolveRestoreKeys({
+		archiveKeyFiles: keyPolicy.archiveKeyFiles,
+		bundleKeyFiles: bundleEntries?.map(entry => entry.fileName),
+		keysIncludedInArchive: keyPolicy.keysIncluded,
+	});
+	if (hasManagedRuntime(currentConfig)) {
+		logWarn("Restore will stop the existing EnvSync stack before replacing managed data volumes.");
+		stopManagedRuntime(currentConfig, "Stopping existing EnvSync services before restore");
+	}
 	writeFile(DEPLOY_ENV, fs.readFileSync(path.join(restoreRoot, "deploy.env"), "utf8"), SECRET_FILE_MODE);
 	writeFile(DEPLOY_YAML, fs.readFileSync(path.join(restoreRoot, "deploy.yaml"), "utf8"), SECRET_FILE_MODE);
 	writeFile(INTERNAL_CONFIG_JSON, fs.readFileSync(path.join(restoreRoot, "config.json"), "utf8"), SECRET_FILE_MODE);
@@ -4872,6 +5074,10 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	writeFile(ATRIUM_CONFIG_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-config.yaml"), "utf8"), SECRET_FILE_MODE);
 	writeFile(ATRIUM_CLIENTS_FILE, fs.readFileSync(path.join(restoreRoot, "atrium-clients.json"), "utf8"), SECRET_FILE_MODE);
 	restoreProtectedMaterial(restoreRoot);
+	if (keySource.source === "bundle" && bundleEntries) {
+		restoreKeyFiles({ files: bundleEntries, secretDir: MINIKMS_SECRET_DIR });
+		fs.rmSync(path.join(restoreRoot, "key-bundle"), { recursive: true, force: true });
+	}
 	writeFile(OTEL_AGENT_CONF, fs.readFileSync(path.join(restoreRoot, "otel-agent.yaml"), "utf8"));
 	writeFile(CLICKSTACK_CLICKHOUSE_CONF, fs.readFileSync(path.join(restoreRoot, "clickhouse-listen.xml"), "utf8"));
 	const restoredLicenseRoot = path.join(restoreRoot, "license");
@@ -5089,17 +5295,22 @@ async function main() {
 	const command = argv[0];
 	const args = argv.slice(1);
 	let identityPath: string | undefined;
+	let keysBundlePath: string | undefined;
+	let keysIdentityPath: string | undefined;
+	let outputPath: string | undefined;
 	const positionals: string[] = [];
 	for (let index = 0; index < args.length; index++) {
 		const arg = args[index];
-		if (arg === "--dry-run" || arg === "--force" || arg === "--deploy" || arg === "--insecure-unencrypted") {
+		if (arg === "--dry-run" || arg === "--force" || arg === "--deploy" || arg === "--insecure-unencrypted" || arg === "--include-keys") {
 			continue;
 		}
-		if (arg === "--identity") {
-			identityPath = args[index + 1];
-			if (!identityPath || identityPath.startsWith("--")) {
-				throw new Error("--identity requires a file path");
-			}
+		if (arg === "--identity" || arg === "--keys" || arg === "--keys-identity" || arg === "--output") {
+			const value = args[index + 1];
+			if (!value || value.startsWith("--")) throw new Error(`${arg} requires a file path`);
+			if (arg === "--identity") identityPath = value;
+			if (arg === "--keys") keysBundlePath = value;
+			if (arg === "--keys-identity") keysIdentityPath = value;
+			if (arg === "--output") outputPath = value;
 			index += 1;
 			continue;
 		}
@@ -5109,7 +5320,11 @@ async function main() {
 		dryRun: args.includes("--dry-run"),
 		force: args.includes("--force"),
 		insecureUnencrypted: args.includes("--insecure-unencrypted"),
+		includeKeys: args.includes("--include-keys"),
 		identityPath,
+		keysBundlePath,
+		keysIdentityPath,
+		outputPath,
 	};
 	if (!command) {
 		printOperatorOverview();
@@ -5169,6 +5384,9 @@ async function main() {
 			break;
 		case "backup":
 			await cmdBackup();
+			break;
+		case "export-keys":
+			await cmdExportKeys();
 			break;
 		case "remove":
 			await cmdRemove();
