@@ -118,11 +118,13 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 	}
 	if !tokenExpired(auth, now) {
 		if auth.DeviceRegistrationPending {
-			if err := RegisterDeviceSession(context.Background(), cfg.BackendURL, auth.AccessToken); err == nil {
+			err := RegisterDeviceSession(context.Background(), cfg.BackendURL, auth.AccessToken)
+			if err == nil || !registrationRetryable(err) {
 				auth.DeviceRegistrationPending = false
 				cfg.AuthConfig = auth
 				if writeErr := cfg.WriteConfigFile(); writeErr != nil {
-					// The device row is recorded. A later command retries if this write fails.
+					// The outcome is decided. A later command retries only when the write failed
+					// after a successful registration.
 				}
 			}
 		}
@@ -135,20 +137,34 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 		return auth.AccessToken
 	}
 
-	fresh, err := refreshAuth(auth, cfg.BackendURL, now)
-	if fresh.AccessToken != "" {
-		cfg.AuthConfig = fresh
-		if writeErr := cfg.WriteConfigFile(); writeErr != nil {
-			// Ignore errors persisting the refreshed token; the request will fail
-			// with the server's own auth error instead of blocking the command.
-			// TODO: Suggest better logging mechanism here
-		}
-	}
+	fresh, err := refreshAuth(auth, now)
 	if err != nil {
 		// TODO: Suggest better logging mechanism here
 		return auth.AccessToken
 	}
 
+	// Store the rotated credentials before registration. A crash during the
+	// registration request must not drop a refresh token the provider already rotated.
+	fresh.DeviceRegistrationPending = true
+	cfg.AuthConfig = fresh
+	if writeErr := cfg.WriteConfigFile(); writeErr != nil {
+		// Ignore errors persisting the refreshed token; the request will fail
+		// with the server's own auth error instead of blocking the command.
+		// TODO: Suggest better logging mechanism here
+	}
+	regErr := RegisterDeviceSession(context.Background(), cfg.BackendURL, fresh.AccessToken)
+	if regErr != nil && registrationRetryable(regErr) {
+		return auth.AccessToken
+	}
+	fresh.DeviceRegistrationPending = false
+	cfg.AuthConfig = fresh
+	if writeErr := cfg.WriteConfigFile(); writeErr != nil {
+		// Registration finished. A later command retries if this write failed
+		// after a successful registration.
+	}
+	if regErr != nil {
+		return auth.AccessToken
+	}
 	return fresh.AccessToken
 }
 
@@ -164,7 +180,7 @@ func tokenExpired(auth config.AuthConfig, now time.Time) bool {
 
 // refreshAuth exchanges the stored refresh token for a fresh token pair using
 // the OAuth refresh grant at the recorded token endpoint.
-func refreshAuth(auth config.AuthConfig, backendURL string, now time.Time) (config.AuthConfig, error) {
+func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, error) {
 	if auth.TokenURL == "" || auth.ClientID == "" {
 		return config.AuthConfig{}, errors.New("token endpoint is unknown (this login predates refresh support); run 'envsync auth login' again")
 	}
@@ -198,12 +214,6 @@ func refreshAuth(auth config.AuthConfig, backendURL string, now time.Time) (conf
 		auth.RefreshToken = resBody.RefreshToken
 	}
 	auth.ExpiresAt = int(now.Add(time.Duration(resBody.ExpiresIn) * time.Second).Unix())
-
-	if err := RegisterDeviceSession(context.Background(), backendURL, resBody.AccessToken); err != nil {
-		auth.DeviceRegistrationPending = true
-		return auth, err
-	}
-	auth.DeviceRegistrationPending = false
 
 	return auth, nil
 }

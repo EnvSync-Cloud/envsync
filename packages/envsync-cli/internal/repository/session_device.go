@@ -51,7 +51,25 @@ func RegisterDeviceSession(ctx context.Context, backendURL, accessToken string) 
 	_, _ = io.Copy(io.Discard, res.Body)
 
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("device session registration failed: %d", res.StatusCode)
+		return &registrationStatusError{status: res.StatusCode}
 	}
 	return nil
+}
+
+type registrationStatusError struct {
+	status int
+}
+
+func (e *registrationStatusError) Error() string {
+	return fmt.Sprintf("device session registration failed: %d", e.status)
+}
+
+// registrationRetryable reports whether a later command should try the registration again.
+// A rejected registration, including a revoked device, is not retried.
+func registrationRetryable(err error) bool {
+	var statusErr *registrationStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.status == http.StatusRequestTimeout || statusErr.status == http.StatusTooManyRequests || statusErr.status >= 500
+	}
+	return true
 }
