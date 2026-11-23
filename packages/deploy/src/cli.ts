@@ -4267,6 +4267,7 @@ async function cmdDeploy() {
 	let currentState = originalState;
 	let promoted = false;
 	const readinessEnv = renderHelpers.buildRuntimeEnv(config, originalState);
+	writeDeployArtifacts(config, originalState);
 	stageColdStartInfra(config, readinessEnv);
 	const candidateDeployment = createPromotionCandidateState(config, currentState);
 	if (candidateDeployment) {
@@ -4280,6 +4281,7 @@ async function cmdDeploy() {
 		});
 		const activeImageBeforeUpgrade = currentState.deployment.slots[currentState.deployment.active_slot].api_image || config.images.api;
 		const activeReleaseBeforeUpgrade = currentState.deployment.slots[currentState.deployment.active_slot].release_version || config.release.version;
+		waitForDeployDataPlane(config, readinessEnv);
 		const preUpgradeHead = runApiMigrationJsonCommand(config, activeImageBeforeUpgrade, ["head"]).currentHead;
 		let snapshotPath: string | null = null;
 		let usedSnapshotRestore = false;

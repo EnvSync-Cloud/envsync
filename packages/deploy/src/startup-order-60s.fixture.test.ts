@@ -254,7 +254,7 @@ describe.skipIf(!RUN_FIXTURE || !dockerAvailable)("startup order 60 second postg
 				}
 			}
 			fga?.stop(true);
-			if (created.pg) spawnSync("docker", ["rm", "-f", pgName], { stdio: "ignore" });
+			if (created.pg) spawnSync("docker", ["rm", "-fv", pgName], { stdio: "ignore" });
 			if (created.redis) spawnSync("docker", ["rm", "-f", redisName], { stdio: "ignore" });
 			if (created.network) spawnSync("docker", ["network", "rm", network], { stdio: "ignore" });
 			if (envDir) rmSync(envDir, { recursive: true, force: true });
