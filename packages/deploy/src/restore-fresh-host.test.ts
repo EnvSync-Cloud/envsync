@@ -5,9 +5,11 @@ import path from "node:path";
 import { describe, expect, test } from "bun:test";
 
 const packageDir = path.resolve(import.meta.dir, "..");
+// `bun run test` builds first; the bundled CLI does not need deploy-core built separately.
+const cliEntry = path.join(packageDir, "dist", "index.js");
 
 function runRestore(args: string[], root: string) {
-	return spawnSync("bun", ["src/cli.ts", "restore", ...args], {
+	return spawnSync("bun", [cliEntry, "restore", ...args], {
 		cwd: packageDir,
 		env: {
 			...process.env,
