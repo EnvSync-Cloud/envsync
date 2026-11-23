@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/EnvSync-Cloud/envsync/packages/envsync-cli/internal/constants"
@@ -16,6 +17,7 @@ func isolateConfigDir(t *testing.T) string {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Setenv("APPDATA", t.TempDir())
 
 	path, err := configFilePath()
 	if err != nil {
@@ -116,5 +118,55 @@ func TestReadConfigFileEmptyFallsBackToDefaults(t *testing.T) {
 	}
 	if want := DefaultConfig().BackendURL; got.BackendURL != want {
 		t.Errorf("empty file backend_url: got %q, want %q", got.BackendURL, want)
+	}
+}
+
+func TestWriteConfigFileFailedUpdateKeepsSavedCredentials(t *testing.T) {
+	path := isolateConfigDir(t)
+	cfg := DefaultConfig()
+	cfg.AuthConfig.AccessToken = "saved-token"
+	cfg.AuthConfig.RefreshToken = "saved-refresh"
+	if err := cfg.WriteConfigFile(); err != nil {
+		t.Fatalf("initial write: %v", err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Fatalf("config mode = %o, want 600", info.Mode().Perm())
+		}
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(dir, 0o755)
+	})
+
+	cfg.AuthConfig.AccessToken = "replacement-token"
+	if err := cfg.WriteConfigFile(); err == nil {
+		t.Fatal("expected the update to fail before replacing the config")
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("failed update changed the saved config")
+	}
+	leftovers, err := filepath.Glob(filepath.Join(dir, ".config.json-*.tmp"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(leftovers) != 0 {
+		t.Fatalf("temporary config files left behind: %v", leftovers)
 	}
 }

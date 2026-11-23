@@ -10,8 +10,7 @@ import (
 )
 
 func TestRefreshAuthReturnsRotatedCredentials(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	isolateUserConfig(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/oauth/token" {
@@ -39,8 +38,7 @@ func TestRefreshAuthReturnsRotatedCredentials(t *testing.T) {
 }
 
 func TestResolveTokenRetriesPendingDeviceRegistration(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	isolateUserConfig(t)
 
 	var registerCalls int
 	var tokenCalls int
@@ -109,9 +107,84 @@ func TestResolveTokenRetriesPendingDeviceRegistration(t *testing.T) {
 	}
 }
 
+func TestResolveTokenKeepsPendingAcrossRetryableRegistrationFailures(t *testing.T) {
+	isolateUserConfig(t)
+
+	var registerCalls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth/token":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"refreshed-access","refresh_token":"rotated-refresh","expires_in":3600,"token_type":"DPoP"}`))
+		case "/api/access/cli/session":
+			registerCalls++
+			if registerCalls < 3 {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"registered":true}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	now := time.Now()
+	cfg := config.AppConfig{
+		BackendURL: server.URL,
+		AuthConfig: config.AuthConfig{
+			AccessToken:  "previous-access",
+			RefreshToken: "previous-refresh",
+			ExpiresAt:    int(now.Add(-time.Hour).Unix()),
+			ClientID:     "envsync-cli",
+			TokenURL:     server.URL + "/oauth/token",
+		},
+	}
+
+	if got := resolveToken(cfg, now); got != "previous-access" {
+		t.Fatalf("first resolve returned %q", got)
+	}
+	stored, err := config.ReadConfigFile()
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if stored.AuthConfig.AccessToken != "refreshed-access" || stored.AuthConfig.RefreshToken != "rotated-refresh" || !stored.AuthConfig.DeviceRegistrationPending {
+		t.Fatal("first failure did not keep the rotated credentials pending")
+	}
+
+	if got := resolveToken(stored, now); got != "refreshed-access" {
+		t.Fatalf("second resolve returned %q", got)
+	}
+	stored, err = config.ReadConfigFile()
+	if err != nil {
+		t.Fatalf("read config after second failure: %v", err)
+	}
+	if stored.AuthConfig.AccessToken != "refreshed-access" || stored.AuthConfig.RefreshToken != "rotated-refresh" || !stored.AuthConfig.DeviceRegistrationPending {
+		t.Fatal("second failure did not keep the rotated credentials pending")
+	}
+	if registerCalls != 2 {
+		t.Fatalf("device registration calls after two failures = %d", registerCalls)
+	}
+
+	if got := resolveToken(stored, now); got != "refreshed-access" {
+		t.Fatalf("third resolve returned %q", got)
+	}
+	stored, err = config.ReadConfigFile()
+	if err != nil {
+		t.Fatalf("read config after success: %v", err)
+	}
+	if stored.AuthConfig.DeviceRegistrationPending {
+		t.Fatal("pending flag was not cleared after registration succeeded")
+	}
+	if registerCalls != 3 {
+		t.Fatalf("device registration calls = %d", registerCalls)
+	}
+}
+
 func TestResolveTokenDoesNotRetryRejectedRegistration(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	isolateUserConfig(t)
 
 	var registerCalls int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

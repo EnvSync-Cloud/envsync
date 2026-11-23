@@ -10,9 +10,15 @@ import (
 	"testing"
 )
 
-func TestRegisterDeviceSessionPostsProofBeforeLaterRequests(t *testing.T) {
+func isolateUserConfig(t *testing.T) {
+	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("APPDATA", t.TempDir())
+}
+
+func TestRegisterDeviceSessionPostsProofBeforeLaterRequests(t *testing.T) {
+	isolateUserConfig(t)
 
 	const accessToken = "cli-access-token"
 	var seenAuthorization string
@@ -51,8 +57,7 @@ func TestRegisterDeviceSessionPostsProofBeforeLaterRequests(t *testing.T) {
 }
 
 func TestRegisterDeviceSessionRejectsNonSuccess(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	isolateUserConfig(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
