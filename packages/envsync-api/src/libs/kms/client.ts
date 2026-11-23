@@ -13,6 +13,7 @@ import {
 	saveOrgBootstrapSession,
 } from "@/libs/kms/org-session";
 import { resolveKmsProtoDir } from "@/libs/kms/proto-path";
+import { dispatchMinikmsUnary } from "@/libs/kms/request-proof";
 import { config } from "@/utils/env";
 import infoLogs, { LogTypes } from "@/libs/logger";
 import { withSpan } from "@/libs/telemetry";
@@ -541,18 +542,7 @@ export class KMSClient {
 				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
 				span.addEvent("minikms.grpc.request", operation);
 				try {
-					return await new Promise<TRes>((resolve, reject) => {
-						const deadline = new Date(Date.now() + timeoutMs);
-						const call = (stub as unknown as Record<string, (req: Record<string, unknown>, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => { on?: (event: "metadata", listener: (metadata: grpc.Metadata) => void) => void }>)[method](
-							request,
-							{ deadline },
-							(err: grpc.ServiceError | null, response: TRes) => {
-								if (err) reject(err);
-								else resolve(response);
-							},
-						);
-						call?.on?.("metadata", metadata => onMetadata?.(metadata));
-					});
+					return await dispatchMinikmsUnary<TRes>(stub, method, request, timeoutMs, undefined, onMetadata);
 				} catch (error) {
 					recordGrpcFailure(span, serviceName, method, request, error);
 					throw error;
@@ -1519,20 +1509,7 @@ export class KMSClient {
 				externalServiceCalls.add(1, { "peer.service": "minikms", "rpc.method": method });
 				span.addEvent("minikms.grpc.request", operation);
 				try {
-					return await new Promise<TRes>((resolve, reject) => {
-						const deadline = new Date(Date.now() + timeoutMs);
-						const metadata = new grpc.Metadata();
-						metadata.set("authorization", `Bearer ${sessionToken}`);
-						(stub as unknown as Record<string, (req: Record<string, unknown>, md: grpc.Metadata, opts: { deadline: Date }, cb: (err: grpc.ServiceError | null, res: TRes) => void) => void>)[method](
-							request,
-							metadata,
-							{ deadline },
-							(err: grpc.ServiceError | null, response: TRes) => {
-								if (err) reject(err);
-								else resolve(response);
-							},
-						);
-					});
+					return await dispatchMinikmsUnary<TRes>(stub, method, request, timeoutMs, sessionToken);
 				} catch (error) {
 					recordGrpcFailure(span, serviceName, method, request, error);
 					throw error;
