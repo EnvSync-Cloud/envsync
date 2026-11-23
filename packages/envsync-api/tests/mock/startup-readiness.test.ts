@@ -143,6 +143,20 @@ describe("startup readiness", () => {
 			sleep: clock.sleep,
 		})).rejects.toThrow(`Postgres not ready after ${BOOT_DEPENDENCY_BUDGET_MS}ms`);
 	});
+
+	test("a hanging probe is bounded by the remaining boot budget", async () => {
+		let attempts = 0;
+		await expect(retryDependency("Postgres", () => {
+			attempts += 1;
+			return new Promise<boolean>(() => undefined);
+		}, {
+			budgetMs: 700,
+			attemptTimeoutMs: 200,
+			initialDelayMs: 0,
+			maxDelayMs: 0,
+		})).rejects.toThrow("Postgres not ready after 700ms");
+		expect(attempts).toBeGreaterThan(1);
+	});
 });
 
 describe("GET /health", () => {

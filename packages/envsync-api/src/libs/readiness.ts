@@ -8,6 +8,8 @@ import { FGAClient } from "@/libs/openfga";
 
 /** Each dependency gets its own budget. D2 requires at least 120 seconds. */
 export const BOOT_DEPENDENCY_BUDGET_MS = 120_000;
+/** Upper bound for one probe so a hung command cannot consume the whole budget. */
+export const BOOT_PROBE_ATTEMPT_MS = 5_000;
 
 const INITIAL_DELAY_MS = 500;
 const MAX_DELAY_MS = 8_000;
@@ -34,6 +36,7 @@ type ReadinessOverride = {
 
 type Clock = {
 	budgetMs?: number;
+	attemptTimeoutMs?: number;
 	initialDelayMs?: number;
 	maxDelayMs?: number;
 	sleep?: (ms: number) => Promise<void>;
@@ -156,25 +159,37 @@ export async function retryDependency(label: string, probe: Probe, clock: Clock 
 	const sleep = clock.sleep ?? defaultSleep;
 	const now = clock.now ?? Date.now;
 	const maxDelayMs = clock.maxDelayMs ?? MAX_DELAY_MS;
+	const attemptTimeoutMs = clock.attemptTimeoutMs ?? BOOT_PROBE_ATTEMPT_MS;
 	const start = now();
 	const deadline = start + budgetMs;
 	let delay = clock.initialDelayMs ?? INITIAL_DELAY_MS;
 	let attempt = 0;
 	while (true) {
 		attempt += 1;
+		const remaining = deadline - now();
+		// A zero bound still runs one instant probe, so a dependency that becomes
+		// ready on the deadline counts. A hung probe cannot outlive the budget.
+		const bound = remaining > 0 ? Math.min(attemptTimeoutMs, remaining) : 0;
 		let ready = false;
+		let timer: ReturnType<typeof setTimeout> | undefined;
 		try {
-			ready = await probe();
+			ready = await Promise.race([
+				probe(),
+				new Promise<boolean>((_, reject) => {
+					timer = setTimeout(() => reject(new Error(`${label} probe timed out`)), bound);
+				}),
+			]);
 		} catch {
 			ready = false;
+		} finally {
+			if (timer) clearTimeout(timer);
 		}
 		if (ready) return;
 		if (now() >= deadline) {
 			throw new Error(`${label} not ready after ${budgetMs}ms`);
 		}
 		infoLogs(`${label} not ready (attempt ${attempt}, elapsed ${now() - start}ms)`, LogTypes.LOGS, "BOOT");
-		const remaining = deadline - now();
-		const wait = Math.min(delay, Math.max(remaining, 0));
+		const wait = Math.min(delay, Math.max(deadline - now(), 0));
 		if (wait > 0) await sleep(wait);
 		delay = Math.min(delay * 2, maxDelayMs);
 	}
@@ -193,6 +208,7 @@ export async function bootApiDependencies(options?: {
 	}
 	const clock: Clock = {
 		budgetMs: options?.budgetMs,
+		attemptTimeoutMs: options?.attemptTimeoutMs,
 		initialDelayMs: options?.initialDelayMs,
 		maxDelayMs: options?.maxDelayMs,
 		sleep: options?.sleep,

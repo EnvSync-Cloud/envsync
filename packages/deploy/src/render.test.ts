@@ -265,6 +265,7 @@ describe("renderStack", () => {
 				const testArgs = parsed.services[name]?.healthcheck?.test ?? [];
 				const command = testArgs.join(" ");
 				expect(command).toContain("pg_isready");
+				expect(command).toContain("127.0.0.1");
 				expect(command).toContain(`-U ${user}`);
 				expect(command).toContain(`-d ${database}`);
 			}

@@ -32,18 +32,26 @@ export class CacheClient {
 	private static ensureRedisClient() {
 		if (this._redisClient) return;
 
-		this._redisClient = redis.createClient({
+		const client = redis.createClient({
 			url: config.REDIS_URL ?? "",
 			name: "ec-cache",
 			socket: {
 				connectTimeout: 5_000,
-				reconnectStrategy: (retries: number) =>
-					retries >= 2 ? new Error("Redis reconnect retries exhausted") : Math.min(100 * 2 ** retries, 1_000),
+				reconnectStrategy: (retries: number) => {
+					if (retries >= 2) {
+						queueMicrotask(() => {
+							if (this._redisClient === client) this.resetRedisClient();
+						});
+						return new Error("Redis reconnect retries exhausted");
+					}
+					return Math.min(100 * 2 ** retries, 1_000);
+				},
 			},
 		});
-		this._redisClient.on("error", (err: Error) => {
+		client.on("error", (err: Error) => {
 			infoLogs(`Redis client error: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
 		});
+		this._redisClient = client;
 	}
 
 	private static resetRedisClient() {
@@ -73,6 +81,10 @@ export class CacheClient {
 			});
 		}
 		await this._redisConnect;
+		if (this._redisClient !== client || !client.isReady) {
+			if (this._redisClient === client) this.resetRedisClient();
+			throw new Error("Redis client is not connected");
+		}
 	}
 
 	private static async requireRedis() {

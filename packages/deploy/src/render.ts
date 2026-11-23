@@ -1085,7 +1085,7 @@ export function buildApiServiceEnvironment(
 function swarmPgHealthcheck(user: string, database: string) {
 	return [
 		"    healthcheck:",
-		`      test: ["CMD-SHELL", "pg_isready -U ${user} -d ${database}"]`,
+		`      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${user} -d ${database}"]`,
 		"      interval: 5s",
 		"      timeout: 5s",
 		"      retries: 20",

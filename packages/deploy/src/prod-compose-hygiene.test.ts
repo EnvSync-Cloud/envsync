@@ -18,9 +18,11 @@ describe("production compose hygiene", () => {
 
 	test("fixture prod-compose-auxiliary-postgres-healthchecks: service_healthy where a healthcheck exists", () => {
 		const compose = readFileSync(path.join(root, "docker-compose.prod.yaml"), "utf8");
-		expect(compose).toContain('pg_isready -U atrium');
-		expect(compose).toContain('pg_isready -U openfga');
-		expect(compose).toContain("pg_isready -U ${MINIKMS_DB_USER:-postgres}");
+		expect(compose).toContain('pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-postgres}');
+		expect(compose).toContain('start_period: 90s');
+		expect(compose).toContain('pg_isready -h 127.0.0.1 -U atrium');
+		expect(compose).toContain('pg_isready -h 127.0.0.1 -U openfga');
+		expect(compose).toContain("pg_isready -h 127.0.0.1 -U ${MINIKMS_DB_USER:-postgres}");
 		expect(compose).toMatch(/postgres:\n\s+condition: service_healthy/);
 		expect(compose).toMatch(/redis:\n\s+condition: service_healthy/);
 		expect(compose).toMatch(/atrium_db:\n\s+condition: service_healthy/);
