@@ -75,6 +75,11 @@ describe("rolling update convergence", () => {
 		expect(decide("minikms", observed({ image: `${MINIKMS_IMAGE}@sha256:abc` }))).toEqual({ action: "ready" });
 		expect(imageReferenceMatches(`${ATRIUM_IMAGE}@sha256:abc`, ATRIUM_IMAGE)).toBe(true);
 		expect(imageReferenceMatches(`${MINIKMS_IMAGE}-old`, MINIKMS_IMAGE)).toBe(false);
+		expect(imageReferenceMatches("ghcr.io/example/atrium:latest", "ghcr.io/example/atrium")).toBe(true);
+		expect(imageReferenceMatches("ghcr.io/example/atrium:latest@sha256:abc", "ghcr.io/example/atrium")).toBe(true);
+		expect(imageReferenceMatches("localhost:5000/atrium:latest", "localhost:5000/atrium")).toBe(true);
+		expect(imageReferenceMatches("localhost:5000/atrium:1", "localhost:5000/atrium")).toBe(false);
+		expect(decide("atrium", atriumObserved({ image: "ghcr.io/example/atrium:latest" }))).toEqual({ action: "fail", kind: "spec" });
 	});
 
 	test("in-progress start-first stays pending while replica counts already match", () => {
@@ -115,6 +120,19 @@ describe("rolling update convergence", () => {
 		});
 		expect(rollingSpecMismatches("atrium", previous, ATRIUM_IMAGE)).toContain("healthcheck unset");
 		expect(decide("atrium", previous)).toEqual({ action: "fail", kind: "spec" });
+	});
+
+	test("an untagged Atrium image matches Swarm's latest form", () => {
+		const running = atriumObserved({ image: "ghcr.io/example/atrium:latest@sha256:abc" });
+		expect(rollingSpecMismatches("atrium", running, "ghcr.io/example/atrium")).toEqual([]);
+		expect(evaluateRollingService({
+			service: "atrium",
+			observed: running,
+			replicaHealth: "healthy",
+			deployStartedAtMs,
+			settleObservations: 0,
+			expectedImage: "ghcr.io/example/atrium",
+		})).toEqual({ action: "ready" });
 	});
 
 	test("a completed update with a different image fails", () => {

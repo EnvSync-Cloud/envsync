@@ -121,12 +121,31 @@ export function parseRollingInspect(raw: string): ObservedRollingService {
 	};
 }
 
-/** Swarm may store the requested tag with the resolved digest appended. */
+function splitImageReference(reference: string): { name: string; tag: string; digest: string } {
+	const trimmed = reference.trim();
+	const digestAt = trimmed.lastIndexOf("@");
+	const withoutDigest = digestAt >= 0 ? trimmed.slice(0, digestAt) : trimmed;
+	const digest = digestAt >= 0 ? trimmed.slice(digestAt + 1) : "";
+	const slash = withoutDigest.lastIndexOf("/");
+	const colon = withoutDigest.lastIndexOf(":");
+	if (colon > slash) {
+		const tag = withoutDigest.slice(colon + 1);
+		return { name: withoutDigest.slice(0, colon), tag: tag || "latest", digest };
+	}
+	return { name: withoutDigest, tag: "latest", digest };
+}
+
+/**
+ * Swarm normalizes an untagged reference to `:latest` and may append the
+ * resolved digest. A tag in the requested reference still has to match.
+ */
 export function imageReferenceMatches(actual: string, expected: string): boolean {
-	const observedImage = actual.trim();
-	const wanted = expected.trim();
-	if (!observedImage || !wanted) return false;
-	return observedImage === wanted || observedImage.startsWith(`${wanted}@sha256:`);
+	const observedImage = splitImageReference(actual);
+	const wanted = splitImageReference(expected);
+	if (!observedImage.name || !wanted.name || observedImage.name !== wanted.name) return false;
+	if (observedImage.tag !== wanted.tag) return false;
+	if (wanted.digest && observedImage.digest !== wanted.digest) return false;
+	return true;
 }
 
 function sameHealth(actual: string[], expected: readonly string[]) {
