@@ -535,9 +535,7 @@ export default function HomeLanding() {
           ))}
           <div className="relative mx-auto max-w-[920px]">
             <h1 className="text-balance text-[36px] font-medium leading-[0.99] tracking-[-1.2px] text-white md:text-[56px] md:leading-[55.44px] md:tracking-[-1.4px]">
-              Pull every environment.
-              <br />
-              Production waits for review.
+              Zero trust access layer for secrets
             </h1>
             <p className="mx-auto mt-6 max-w-[640px] text-[16px] leading-7 text-white/90 md:text-[18px]">
               Secrets and config for dev, staging, CI, and production. The CLI pulls them. A protected environment waits for a change request.
