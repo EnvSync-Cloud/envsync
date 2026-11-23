@@ -26,8 +26,24 @@ function isUniqueViolation(error: unknown) {
 	);
 }
 
+function unknownDevice() {
+	return new AppError(
+		"This device is not registered for the session. Sign in again.",
+		401,
+		"DPOP_UNKNOWN_DEVICE",
+	);
+}
+
+function revokedDevice() {
+	return new AppError("This device was signed out. Sign in again.", 401, "DPOP_REVOKED");
+}
+
 export class SessionDeviceService {
 	static async assertActive(directoryUserId: string, jkt: string) {
+		if (!directoryUserId || !jkt) {
+			throw unknownDevice();
+		}
+
 		const db = await DB.getInstance();
 		const active = await db
 			.selectFrom("session_devices")
@@ -46,18 +62,29 @@ export class SessionDeviceService {
 			.where("revoked_at", "is not", null)
 			.executeTakeFirst();
 		if (revoked) {
-			throw new AppError("This device was signed out. Sign in again.", 401, "DPOP_REVOKED");
+			throw revokedDevice();
 		}
+
+		throw unknownDevice();
 	}
 
-	static async touch(input: {
-		directoryUserId: string;
-		userId: string | null;
-		clientId: string;
-		jkt: string;
-		label: string;
-	}): Promise<void> {
+	/**
+	 * Records a device seen with a session.
+	 * Issuance passes `createIfMissing` (the default) so the row exists before later requests.
+	 * Ordinary session requests pass `createIfMissing: false` and only refresh `last_used_at`.
+	 */
+	static async touch(
+		input: {
+			directoryUserId: string;
+			userId: string | null;
+			clientId: string;
+			jkt: string;
+			label: string;
+		},
+		options?: { createIfMissing?: boolean },
+	): Promise<void> {
 		if (!input.directoryUserId || !input.jkt) return;
+		const createIfMissing = options?.createIfMissing !== false;
 		const db = await DB.getInstance();
 		const now = new Date();
 		const active = await db
@@ -89,8 +116,10 @@ export class SessionDeviceService {
 			.where("revoked_at", "is not", null)
 			.executeTakeFirst();
 		if (revoked) {
-			throw new AppError("This device was signed out. Sign in again.", 401, "DPOP_REVOKED");
+			throw revokedDevice();
 		}
+
+		if (!createIfMissing) return;
 
 		try {
 			await db

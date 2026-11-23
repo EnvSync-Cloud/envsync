@@ -92,11 +92,16 @@ func (s *auth) PollForToken(ctx context.Context, credentials *domain.LoginCreden
 // for later refresh grants to configuration
 func (s *auth) SaveToken(token *domain.AccessToken, credentials *domain.LoginCredentials) error {
 	cfg := config.New()
+	if err := repository.RegisterDeviceSession(context.Background(), cfg.BackendURL, token.Token); err != nil {
+		return fmt.Errorf("failed to register device session: %w", err)
+	}
+
 	cfg.AuthConfig.AccessToken = token.Token
 	cfg.AuthConfig.RefreshToken = token.RefreshToken
 	cfg.AuthConfig.ExpiresAt = int(token.ExpiresAt.Unix())
 	cfg.AuthConfig.ClientID = credentials.ClientId
 	cfg.AuthConfig.TokenURL = credentials.TokenUrl
+	cfg.AuthConfig.DeviceRegistrationPending = false
 
 	if err := cfg.WriteConfigFile(); err != nil {
 		return fmt.Errorf("failed to save refresh/access token: %w", err)

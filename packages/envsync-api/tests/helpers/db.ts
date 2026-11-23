@@ -34,6 +34,7 @@ const TABLES_IN_ORDER = [
 	"audit_log",
 	"api_keys",
 	"service_tokens",
+	"session_devices",
 	"org_certificates",
 	"gpg_keys",
 	"settings",

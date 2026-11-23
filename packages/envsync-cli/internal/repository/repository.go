@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -116,6 +117,16 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 		return ""
 	}
 	if !tokenExpired(auth, now) {
+		if auth.DeviceRegistrationPending {
+			err := RegisterDeviceSession(context.Background(), cfg.BackendURL, auth.AccessToken)
+			if err == nil || !registrationRetryable(err) {
+				auth.DeviceRegistrationPending = false
+				cfg.AuthConfig = auth
+				// The outcome is decided. A later command retries only when this write failed
+				// after a successful registration. A failed write leaves the previous file intact.
+				_ = cfg.WriteConfigFile()
+			}
+		}
 		return auth.AccessToken
 	}
 	if auth.RefreshToken == "" {
@@ -131,13 +142,25 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 		return auth.AccessToken
 	}
 
+	// Store the rotated credentials before registration. A crash during the
+	// registration request must not drop a refresh token the provider already rotated.
+	fresh.DeviceRegistrationPending = true
 	cfg.AuthConfig = fresh
-	if err := cfg.WriteConfigFile(); err != nil {
-		// Ignore errors persisting the refreshed token; the request will fail
-		// with the server's own auth error instead of blocking the command.
-		// TODO: Suggest better logging mechanism here
+	// A failed write leaves any previous file intact. Registration still runs
+	// when the token endpoint has already returned new credentials.
+	_ = cfg.WriteConfigFile()
+	regErr := RegisterDeviceSession(context.Background(), cfg.BackendURL, fresh.AccessToken)
+	if regErr != nil && registrationRetryable(regErr) {
+		return auth.AccessToken
 	}
-
+	fresh.DeviceRegistrationPending = false
+	cfg.AuthConfig = fresh
+	// Registration finished. A later command retries if this write failed
+	// after a successful registration. A failed write leaves the previous file intact.
+	_ = cfg.WriteConfigFile()
+	if regErr != nil {
+		return auth.AccessToken
+	}
 	return fresh.AccessToken
 }
 
