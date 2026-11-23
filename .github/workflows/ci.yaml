@@ -96,6 +96,8 @@ jobs:
         run: bun test scripts/bump-release-version.test.ts
       - name: Run release workflow tests
         run: bun test scripts/release-workflow.test.ts
+      - name: Run release autobump tests
+        run: bun test scripts/release-autobump.test.ts
       - name: Run deploy planner tests
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core
