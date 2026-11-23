@@ -59,7 +59,10 @@ export class DB {
 	private static kysely_migration: Promise<Migrator> | undefined;
 
 	static getInstance(): Promise<Kysely<Database>> {
-		this.kysely ??= this._getInstance();
+		this.kysely ??= this._getInstance().catch(err => {
+			this.kysely = undefined;
+			throw err;
+		});
 
 		return this.kysely;
 	}
@@ -193,15 +196,18 @@ export class DB {
 		}
 	}
 
-	// run 'select 1' and return true if the database is reachable
+	static ping() {
+		return PostgresDB.ping();
+	}
+
+	// run 'select 1' and log whether the database is reachable
 	static async healthCheck() {
-		const db = await this.getInstance();
-		try {
-			await sql`SELECT 1 as "status"`.execute(db);
+		const reachable = await this.ping();
+		if (reachable) {
 			infoLogs("Database Connected", LogTypes.LOGS, "DB");
-		} catch (error) {
-			infoLogs("Database Unreachable", LogTypes.ERROR, "DB");
+			return;
 		}
+		infoLogs("Database Unreachable", LogTypes.ERROR, "DB");
 	}
 }
 

@@ -53,6 +53,14 @@ import {
 	sealKeyBundle,
 	stageDataBackup,
 } from "./key-bundle";
+import {
+	REDIS_PING_COMMAND,
+	deployDataPlaneWaits,
+	deployRuntimeWaits,
+	pgIsReadyCommand,
+	shouldStageInfraFirst,
+	waitForLabeledProbes,
+} from "./readiness";
 
 // Edition is forced by package entrypoints:
 // - packages/deploy/src/index.ts → oss
@@ -2498,36 +2506,53 @@ function waitForCommand(
 		return;
 	}
 	logStep(`Waiting for ${label}`);
-	const deadline = Date.now() + timeoutSeconds * 1000;
-	while (Date.now() < deadline) {
-		const args = ["run", "--rm", "--network", stackNetworkName(config)];
-		for (const volume of volumes) {
-			args.push("-v", volume);
-		}
-		for (const [key, value] of Object.entries(env)) {
-			args.push("-e", `${key}=${value}`);
-		}
-		args.push(image, "sh", "-lc", command);
-		if (commandSucceeds("docker", args)) {
-			logSuccess(`${label} is ready`);
-			return;
-		}
-		sleepSeconds(2);
+	const result = waitForLabeledProbes({
+		labels: [label],
+		timeoutSeconds,
+		sleep: sleepSeconds,
+		probe: () => {
+			const args = ["run", "--rm", "--network", stackNetworkName(config)];
+			for (const volume of volumes) {
+				args.push("-v", volume);
+			}
+			for (const [key, value] of Object.entries(env)) {
+				args.push("-e", `${key}=${value}`);
+			}
+			args.push(image, "sh", "-lc", command);
+			return commandSucceeds("docker", args);
+		},
+		onPending: (pendingLabel, elapsedSeconds) => {
+			logInfo(`${pendingLabel} not ready after ${Math.floor(elapsedSeconds)}s`);
+		},
+	});
+	if (result.status !== "ready") {
+		throw new Error(`Timed out waiting for ${label}`);
 	}
-	throw new Error(`Timed out waiting for ${label}`);
+	logSuccess(`${label} is ready`);
 }
 
-function waitForPostgresService(config: DeployConfig, label: string, host: string, user: string, password: string) {
-	waitForCommand(config, `${label} database readiness`, "postgres:17", `pg_isready -h ${host} -U ${user}`, 120, {
+function waitForPostgresService(
+	config: DeployConfig,
+	label: string,
+	host: string,
+	user: string,
+	password: string,
+	timeoutSeconds = 120,
+) {
+	waitForCommand(config, `${label} database readiness`, "postgres:17", pgIsReadyCommand(host, user), timeoutSeconds, {
 		PGPASSWORD: password,
 	});
 }
 
-function waitForRedisService(config: DeployConfig) {
-	waitForCommand(config, "redis readiness", "redis:7", "redis-cli -h redis ping | grep PONG");
+function waitForRedisService(config: DeployConfig, timeoutSeconds = 120) {
+	waitForCommand(config, "redis readiness", "redis:7", REDIS_PING_COMMAND, timeoutSeconds);
 }
 
 function waitForTcpService(config: DeployConfig, label: string, host: string, port: number, timeoutSeconds = 120) {
+	if (currentOptions.dryRun) {
+		logDryRun(`Would wait for ${label} at ${host}:${port}`);
+		return;
+	}
 	const deadline = Date.now() + timeoutSeconds * 1000;
 	while (Date.now() < deadline) {
 		if (commandSucceeds(
@@ -3355,16 +3380,86 @@ function waitForHealthyServices(
 	throw new Error(`Timed out waiting for deployed services to become healthy: ${pending}`);
 }
 
+function dataPlanePassword(
+	kind: "main" | "atrium" | "openfga" | "minikms",
+	runtimeEnv: { ATRIUM_DB_PASSWORD: string; OPENFGA_DB_PASSWORD: string; MINIKMS_DB_PASSWORD: string },
+) {
+	switch (kind) {
+		case "main":
+			return "envsync-postgres";
+		case "atrium":
+			return runtimeEnv.ATRIUM_DB_PASSWORD;
+		case "openfga":
+			return runtimeEnv.OPENFGA_DB_PASSWORD;
+		case "minikms":
+			return runtimeEnv.MINIKMS_DB_PASSWORD;
+	}
+}
+
+function waitForDeployDataPlane(
+	config: DeployConfig,
+	runtimeEnv: { ATRIUM_DB_PASSWORD: string; OPENFGA_DB_PASSWORD: string; MINIKMS_DB_PASSWORD: string },
+) {
+	for (const wait of deployDataPlaneWaits()) {
+		if (wait.kind === "redis") {
+			waitForRedisService(config, wait.timeoutSeconds);
+			continue;
+		}
+		waitForPostgresService(
+			config,
+			wait.label,
+			wait.host,
+			wait.user,
+			dataPlanePassword(wait.password, runtimeEnv),
+			wait.timeoutSeconds,
+		);
+	}
+}
+
+function waitForDeployRuntime(config: DeployConfig) {
+	for (const wait of deployRuntimeWaits()) {
+		if (wait.kind === "http") {
+			waitForHttpService(config, wait.label, wait.target, wait.timeoutSeconds);
+			continue;
+		}
+		waitForTcpService(config, wait.label, wait.host, wait.port, wait.timeoutSeconds);
+	}
+}
+
+function stageColdStartInfra(
+	config: DeployConfig,
+	runtimeEnv: { ATRIUM_DB_PASSWORD: string; OPENFGA_DB_PASSWORD: string; MINIKMS_DB_PASSWORD: string },
+) {
+	if (currentOptions.dryRun) {
+		logDryRun("Would deploy the infra stack before runtime when Postgres or Redis services are absent");
+		logCommand("docker", ["stack", "deploy", "-c", BOOTSTRAP_BASE_STACK_FILE, config.services.stack_name]);
+		waitForDeployDataPlane(config, runtimeEnv);
+		return;
+	}
+	const services = listStackServices(config);
+	if (!shouldStageInfraFirst(services, config.services.stack_name)) {
+		logInfo("Data-plane services are already present; keeping a single stack deploy");
+		return;
+	}
+	logStep("Cold start or restore: deploying infra before runtime");
+	deployStackFile(config, "infra", BOOTSTRAP_BASE_STACK_FILE);
+	waitForDeployDataPlane(config, runtimeEnv);
+}
+
 function deployRenderedStack(config: DeployConfig, label: string) {
+	deployStackFile(config, label, STACK_FILE);
+}
+
+function deployStackFile(config: DeployConfig, label: string, stackFile: string) {
 	if (currentOptions.dryRun) {
 		logDryRun(`Would deploy ${label} stack for ${config.services.stack_name}`);
-		logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+		logCommand("docker", ["stack", "deploy", "-c", stackFile, config.services.stack_name]);
 		return;
 	}
 	logStep(`Deploying ${label} stack`);
-	logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+	logCommand("docker", ["stack", "deploy", "-c", stackFile, config.services.stack_name]);
 	for (let attempt = 1; attempt <= 5; attempt += 1) {
-		const result = spawnSync("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name], {
+		const result = spawnSync("docker", ["stack", "deploy", "-c", stackFile, config.services.stack_name], {
 			env: process.env,
 			stdio: "pipe",
 			encoding: "utf8",
@@ -3383,7 +3478,7 @@ function deployRenderedStack(config: DeployConfig, label: string) {
 			sleepSeconds(3);
 			continue;
 		}
-		throw new Error(`Command failed: docker stack deploy -c ${STACK_FILE} ${config.services.stack_name}${stderr ? `\n${stderr}` : ""}`);
+		throw new Error(`Command failed: docker stack deploy -c ${stackFile} ${config.services.stack_name}${stderr ? `\n${stderr}` : ""}`);
 	}
 }
 
@@ -4005,6 +4100,8 @@ async function cmdDeploy() {
 	const originalState = normalizeGeneratedState(generated);
 	let currentState = originalState;
 	let promoted = false;
+	const readinessEnv = renderHelpers.buildRuntimeEnv(config, originalState);
+	stageColdStartInfra(config, readinessEnv);
 	const candidateDeployment = createPromotionCandidateState(config, currentState);
 	if (candidateDeployment) {
 		const targetSlot = otherApiSlot(candidateDeployment.active_slot);
@@ -4024,6 +4121,7 @@ async function cmdDeploy() {
 		try {
 			logInfo(`Deploying release ${config.release.version} into inactive API slot ${targetSlot}`);
 			deployRenderedStack(config, `candidate ${targetSlot}`);
+			waitForDeployDataPlane(config, readinessEnv);
 			logInfo(`API migration head before upgrade: ${preUpgradeHead ?? "none"}`);
 			if (config.upgrade.db_snapshot_on_api_upgrade) {
 				snapshotPath = await createApiDbUpgradeBackup(config, activeReleaseBeforeUpgrade, config.release.version);
@@ -4031,6 +4129,7 @@ async function cmdDeploy() {
 			runApiMigrationJsonCommand(config, config.images.api, ["latest"]);
 			const postUpgradeHead = runApiMigrationJsonCommand(config, config.images.api, ["head"]).currentHead;
 			logInfo(`API migration head after upgrade: ${postUpgradeHead ?? "none"}`);
+			waitForDeployRuntime(config);
 			waitForApiSlotHealthy(config, targetSlot);
 			currentState = normalizeGeneratedState({
 				...candidateState,
@@ -4075,6 +4174,8 @@ async function cmdDeploy() {
 			});
 			writeDeployArtifacts(config, recoveredState);
 			deployRenderedStack(config, "rollback recovery");
+			waitForDeployDataPlane(config, readinessEnv);
+			waitForDeployRuntime(config);
 			waitForApiSlotHealthy(config, recoveredState.deployment.active_slot);
 			if (snapshotPath && !config.upgrade.keep_failed_upgrade_db_snapshot && !currentOptions.dryRun) {
 				removeSealedSnapshot(snapshotPath);
@@ -4098,7 +4199,9 @@ async function cmdDeploy() {
 		activateFrontendReleaseForState(config, currentState, config.release.version);
 		deployRenderedStack(config, "steady");
 	}
+	waitForDeployDataPlane(config, readinessEnv);
 	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
+	waitForDeployRuntime(config);
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },

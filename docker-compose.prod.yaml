@@ -28,9 +28,9 @@ services:
       - ${MINIKMS_GRPC_CLIENT_KEY_PATH:?Set MINIKMS_GRPC_CLIENT_KEY_PATH to the miniKMS gRPC client key}:/run/secrets/minikms-grpc-client-key:ro
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       rustfs:
         condition: service_started
       openfga:
@@ -66,9 +66,9 @@ services:
       - ${MINIKMS_GRPC_CLIENT_KEY_PATH:?Set MINIKMS_GRPC_CLIENT_KEY_PATH to the miniKMS gRPC client key}:/run/secrets/minikms-grpc-client-key:ro
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       rustfs:
         condition: service_started
       openfga:
@@ -129,6 +129,11 @@ services:
       POSTGRES_USER: atrium
       POSTGRES_PASSWORD: ${ATRIUM_DB_PASSWORD:?ATRIUM_DB_PASSWORD is required}
       POSTGRES_DB: atrium
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atrium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - atrium_db_data:/var/lib/postgresql/data
     networks: [envsync_network]
@@ -144,7 +149,8 @@ services:
       - ./docker/atrium/branding/assets:/branding/assets:ro
       - ./docker/atrium/branding/email:/branding/email:ro
     depends_on:
-      - atrium_db
+      atrium_db:
+        condition: service_healthy
     networks: [envsync_network]
 
   atrium-seed:
@@ -182,6 +188,11 @@ services:
       POSTGRES_USER: openfga
       POSTGRES_PASSWORD: ${OPENFGA_DB_PASSWORD:?OPENFGA_DB_PASSWORD is required}
       POSTGRES_DB: openfga
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openfga"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - openfga_db_data:/var/lib/postgresql/data
     networks: [envsync_network]
@@ -193,7 +204,8 @@ services:
       OPENFGA_DATASTORE_ENGINE: postgres
       OPENFGA_DATASTORE_URI: postgres://openfga:${OPENFGA_DB_PASSWORD:?OPENFGA_DB_PASSWORD is required}@openfga_db:5432/openfga?sslmode=disable
     depends_on:
-      - openfga_db
+      openfga_db:
+        condition: service_healthy
     networks: [envsync_network]
     restart: "no"
 
@@ -207,7 +219,10 @@ services:
       OPENFGA_HTTP_ADDR: 0.0.0.0:8090
       OPENFGA_GRPC_ADDR: 0.0.0.0:8091
     depends_on:
-      - openfga_migrate
+      openfga_migrate:
+        condition: service_started
+      openfga_db:
+        condition: service_healthy
     networks: [envsync_network]
 
   minikms_db:
@@ -217,6 +232,11 @@ services:
       POSTGRES_USER: ${MINIKMS_DB_USER:-postgres}
       POSTGRES_PASSWORD: ${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}
       POSTGRES_DB: minikms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MINIKMS_DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - minikms_db_data:/var/lib/postgresql/data
     networks: [envsync_network]
@@ -229,7 +249,8 @@ services:
     volumes:
       - ./docker/minikms/migrations:/migrations:ro
     depends_on:
-      - minikms_db
+      minikms_db:
+        condition: service_healthy
     networks: [envsync_network]
     restart: "no"
 
@@ -261,8 +282,12 @@ services:
       - ${MINIKMS_GRPC_SERVER_CERT_PATH:?Set MINIKMS_GRPC_SERVER_CERT_PATH to the miniKMS gRPC server certificate}:/run/secrets/minikms-grpc-server-cert:ro
       - ${MINIKMS_GRPC_SERVER_KEY_PATH:?Set MINIKMS_GRPC_SERVER_KEY_PATH to the miniKMS gRPC server key}:/run/secrets/minikms-grpc-server-key:ro
     depends_on:
-      - minikms_migrate
-      - redis
+      minikms_migrate:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      minikms_db:
+        condition: service_healthy
     networks: [envsync_network]
 
   clickstack:

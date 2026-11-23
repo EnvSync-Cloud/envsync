@@ -240,6 +240,32 @@ describe("swarmConfigObjectName", () => {
 });
 
 describe("renderStack", () => {
+	test("fixture swarm-stack-data-plane-healthchecks: pg_isready and redis ping, no depends_on", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		for (const mode of ["base", "full"] as const) {
+			const stack = renderStack(config, runtimeEnv, generated, mode, paths);
+			expect(stack).not.toContain("depends_on");
+			const parsed = parse(stack) as {
+				services: Record<string, { healthcheck?: { test?: string[] } }>;
+			};
+			for (const [name, user, database] of [
+				["postgres", "postgres", "envsync"],
+				["atrium_db", "atrium", "atrium"],
+				["openfga_db", "openfga", "openfga"],
+				["minikms_db", "postgres", "minikms"],
+			] as const) {
+				const testArgs = parsed.services[name]?.healthcheck?.test ?? [];
+				const command = testArgs.join(" ");
+				expect(command).toContain("pg_isready");
+				expect(command).toContain(`-U ${user}`);
+				expect(command).toContain(`-d ${database}`);
+			}
+			const redisTest = (parsed.services.redis?.healthcheck?.test ?? []).join(" ");
+			expect(redisTest).toContain("redis-cli");
+			expect(redisTest).toContain("ping");
+		}
+	});
+
 	test("base mode omits landing, api services, and swarm secrets", () => {
 		const runtimeEnv = buildRuntimeEnv(config, generated);
 		const stackBase = renderStack(config, runtimeEnv, generated, "base", paths);

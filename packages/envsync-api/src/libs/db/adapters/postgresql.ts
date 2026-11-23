@@ -1,7 +1,8 @@
 import { Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
+import { Client, Pool } from "pg";
 
 import { KyselyLogger } from "@/libs/db/KyselyLogger";
+import infoLogs, { LogTypes } from "@/libs/logger";
 import type { Database } from "@/types/db";
 import { config } from "@/utils/env";
 
@@ -18,17 +19,22 @@ export class PostgresDB {
 				`[DB DEBUG] init host=${config.DATABASE_HOST} port=${config.DATABASE_PORT} db=${config.DATABASE_NAME} user=${config.DATABASE_USER}`,
 			);
 		}
-		this.postgres ??= new Pool({
-			database: config.DATABASE_NAME,
-			host: config.DATABASE_HOST,
-			user: config.DATABASE_USER,
-			password: config.DATABASE_PASSWORD,
-			port: Number(config.DATABASE_PORT),
-			max: Number(process.env.DB_POOL_MAX ?? 25),
-			idleTimeoutMillis: 30_000,
-			connectionTimeoutMillis: 5_000,
-			ssl: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
-		});
+		if (!this.postgres) {
+			this.postgres = new Pool({
+				database: config.DATABASE_NAME,
+				host: config.DATABASE_HOST,
+				user: config.DATABASE_USER,
+				password: config.DATABASE_PASSWORD,
+				port: Number(config.DATABASE_PORT),
+				max: Number(process.env.DB_POOL_MAX ?? 25),
+				idleTimeoutMillis: 30_000,
+				connectionTimeoutMillis: 5_000,
+				ssl: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+			});
+			this.postgres.on("error", (err: Error) => {
+				infoLogs(`Postgres pool error: ${err.message}`, LogTypes.ERROR, "DB");
+			});
+		}
 
 		this.db ??= new Kysely({
 			dialect: new PostgresDialect({
@@ -46,6 +52,35 @@ export class PostgresDB {
 
 	static get availableConnections() {
 		return this.postgres?.idleCount ?? 0;
+	}
+
+	/** Short-lived probe so a down server does not cache a failed pool. */
+	static async ping(): Promise<boolean> {
+		const client = new Client({
+			database: config.DATABASE_NAME,
+			host: config.DATABASE_HOST,
+			user: config.DATABASE_USER,
+			password: config.DATABASE_PASSWORD,
+			port: Number(config.DATABASE_PORT),
+			connectionTimeoutMillis: 2_000,
+			ssl: config.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+		});
+		client.on("error", () => {
+			// connect() rejects; the listener keeps a refused connection from crashing the process.
+		});
+		try {
+			await client.connect();
+			await client.query("SELECT 1");
+			return true;
+		} catch {
+			return false;
+		} finally {
+			try {
+				await client.end();
+			} catch {
+				// The probe client is disposable.
+			}
+		}
 	}
 
 	static async destroy() {

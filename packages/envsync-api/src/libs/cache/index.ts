@@ -9,12 +9,18 @@ import { config } from "@/utils/env";
 
 type CacheEnvironment = "development" | "production";
 
+function safeCacheMessage(err: unknown) {
+	const message = err instanceof Error ? err.message : "connection failed";
+	return message.replace(/\/\/[^@\s]+@/g, "//");
+}
+
 /**
  * CacheClient class to handle the caching
  */
 export class CacheClient {
 	private static _clientMode: CacheEnvironment;
-	private static _redisClient: redis.RedisClientType;
+	private static _redisClient: redis.RedisClientType | undefined;
+	private static _redisConnect: Promise<void> | undefined;
 	private static _nodeClient: NodeCache;
 
 	private static ensureNodeClient() {
@@ -26,15 +32,69 @@ export class CacheClient {
 	private static ensureRedisClient() {
 		if (this._redisClient) return;
 
-		const redisUrl = config.REDIS_URL ?? "";
 		this._redisClient = redis.createClient({
-			url: redisUrl,
+			url: config.REDIS_URL ?? "",
 			name: "ec-cache",
+			socket: {
+				connectTimeout: 5_000,
+				reconnectStrategy: (retries: number) =>
+					retries >= 2 ? new Error("Redis reconnect retries exhausted") : Math.min(100 * 2 ** retries, 1_000),
+			},
 		});
+		this._redisClient.on("error", (err: Error) => {
+			infoLogs(`Redis client error: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
+		});
+	}
 
-		this._redisClient.connect().catch(err => {
-			infoLogs(`Redis connection failed: ${err}`, LogTypes.ERROR, "CACHE:INIT");
-		});
+	private static resetRedisClient() {
+		const client = this._redisClient;
+		this._redisClient = undefined;
+		this._redisConnect = undefined;
+		if (!client) return;
+		try {
+			client.destroy();
+		} catch {
+			// The failed client is being dropped.
+		}
+	}
+
+	private static async connectRedis() {
+		this.ensureRedisClient();
+		const client = this._redisClient;
+		if (!client) {
+			throw new Error("Redis client is not configured");
+		}
+		if (client.isReady) return;
+		if (!this._redisConnect) {
+			this._redisConnect = client.connect().then(() => undefined).catch((err: unknown) => {
+				infoLogs(`Redis connection failed: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE:INIT");
+				if (this._redisClient === client) this.resetRedisClient();
+				throw err instanceof Error ? err : new Error("Redis connection failed");
+			});
+		}
+		await this._redisConnect;
+	}
+
+	private static async requireRedis() {
+		await this.connectRedis();
+		if (!this._redisClient) {
+			throw new Error("Redis client is not connected");
+		}
+		return this._redisClient;
+	}
+
+	/** Production Redis answers PING. The development cache is process-local. */
+	static async ping(): Promise<boolean> {
+		if (this._clientMode !== "production") return true;
+		try {
+			const client = await this.requireRedis();
+			const reply = await client.ping();
+			return reply === "PONG";
+		} catch (err) {
+			infoLogs(`Redis ping failed: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
+			this.resetRedisClient();
+			return false;
+		}
 	}
 
 	private static ensureInitialized() {
@@ -81,6 +141,7 @@ export class CacheClient {
 
 		if (env === "production") {
 			this.ensureRedisClient();
+			void this.connectRedis().catch(() => undefined);
 		} else {
 			this.ensureNodeClient();
 		}
@@ -111,10 +172,11 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "SET" });
 			if (this._clientMode === "production") {
+				const client = await this.requireRedis();
 				if (ttl && ttl > 0) {
-					await this._redisClient.SETEX(key, ttl, value);
+					await client.SETEX(key, ttl, value);
 				} else {
-					await this._redisClient.SET(key, value);
+					await client.SET(key, value);
 				}
 			} else {
 				this._nodeClient.set(key, value, ttl ?? 0);
@@ -144,7 +206,7 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "GET" });
 			const value = this._clientMode === "production"
-				? await this._redisClient.get(key)
+				? await (await this.requireRedis()).get(key)
 				: (this._nodeClient.get(key) as string) || null;
 			infoLogs(
 				`Cache GET key=${key} cache_hit=${value !== null}`,
@@ -175,7 +237,8 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "GETDEL" });
 			if (this._clientMode === "production") {
-				return await this._redisClient.getDel(key);
+				const client = await this.requireRedis();
+				return await client.getDel(key);
 			}
 			const value = (this._nodeClient.get(key) as string) || null;
 			if (value !== null) {
@@ -206,7 +269,8 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "DEL" });
 			if (this._clientMode === "production") {
-				await this._redisClient.del(key);
+				const client = await this.requireRedis();
+				await client.del(key);
 			} else {
 				this._nodeClient.del(key);
 			}
@@ -234,12 +298,13 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "DEL_PATTERN" });
 			if (this._clientMode === "production") {
+				const client = await this.requireRedis();
 				let cursor = "0";
 				do {
-					const result = await this._redisClient.scan(cursor, { MATCH: pattern, COUNT: 100 });
+					const result = await client.scan(cursor, { MATCH: pattern, COUNT: 100 });
 					cursor = String(result.cursor);
 					if (result.keys.length > 0) {
-						await this._redisClient.del(result.keys);
+						await client.del(result.keys);
 					}
 				} while (cursor !== "0");
 			} else {
@@ -277,8 +342,8 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "MGET" });
 			if (this._clientMode === "production") {
-				const results = await this._redisClient.mGet(keys);
-				return results;
+				const client = await this.requireRedis();
+				return await client.mGet(keys);
 			} else {
 				return keys.map(k => (this._nodeClient.get(k) as string) || null);
 			}
@@ -307,7 +372,8 @@ export class CacheClient {
 		}, async () => {
 			cacheOperations.add(1, { "db.operation.name": "EXISTS" });
 			if (this._clientMode === "production") {
-				const result = await this._redisClient.exists(key);
+				const client = await this.requireRedis();
+				const result = await client.exists(key);
 				return result === 1;
 			} else {
 				return this._nodeClient.has(key);
