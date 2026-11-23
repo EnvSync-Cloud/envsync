@@ -26,19 +26,40 @@ describe("cmdDeploy rolling convergence placement", () => {
 		const candidate = blockAfter(deploy, "try {");
 		const migrate = candidate.indexOf("runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, candidateState))");
 		const wait = candidate.indexOf("waitForRequestedRollingServices(config)");
+		const promote = candidate.indexOf("createPromotedApiDeploymentState(config, candidateState)");
 		const promoted = candidate.indexOf("promoted = true");
 		const snapshot = candidate.lastIndexOf("removeSealedSnapshot(snapshotPath)");
 		expect(migrate).toBeGreaterThan(-1);
 		expect(wait).toBeGreaterThan(migrate);
-		expect(promoted).toBeGreaterThan(wait);
+		expect(promote).toBeGreaterThan(wait);
+		expect(promoted).toBeGreaterThan(promote);
 		expect(snapshot).toBeGreaterThan(promoted);
 	});
 
-	test("the steady path waits only when the candidate release was not promoted", () => {
+	test("rollback recovery waits before it reports that the previous release was restored", () => {
+		const recovery = blockAfter(deploy, "} catch (error) {");
+		const redeploy = recovery.indexOf("deployRenderedStack(config, \"rollback recovery\")");
+		const wait = recovery.indexOf("waitForRequestedRollingServices(config)");
+		const notConverged = recovery.indexOf("rollback recovery did not converge");
+		const apiWait = recovery.indexOf("waitForApiSlotHealthy(config, recoveredState.deployment.active_slot)");
+		const snapshot = recovery.indexOf("removeSealedSnapshot(snapshotPath)");
+		const restored = recovery.indexOf("Previous release was restored");
+		expect(redeploy).toBeGreaterThan(-1);
+		expect(wait).toBeGreaterThan(redeploy);
+		expect(notConverged).toBeGreaterThan(wait);
+		expect(apiWait).toBeGreaterThan(notConverged);
+		expect(snapshot).toBeGreaterThan(apiWait);
+		expect(restored).toBeGreaterThan(snapshot);
+	});
+
+	test("the steady path deploys, migrates, then waits", () => {
 		const steady = blockAfter(deploy, "if (!promoted) {");
-		expect(steady).toContain("deployRenderedStack(config, \"steady\")");
-		expect(steady).toContain("runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState))");
-		expect(steady).toContain("waitForRequestedRollingServices(config)");
+		const deployAt = steady.indexOf("deployRenderedStack(config, \"steady\")");
+		const migrate = steady.indexOf("runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState))");
+		const wait = steady.indexOf("waitForRequestedRollingServices(config)");
+		expect(deployAt).toBeGreaterThan(-1);
+		expect(migrate).toBeGreaterThan(deployAt);
+		expect(wait).toBeGreaterThan(migrate);
 		const steadyEnd = deploy.indexOf(steady) + steady.length;
 		const beforeReplicaWait = deploy.slice(steadyEnd, deploy.indexOf("waitForHealthyServices(config, ["));
 		expect(beforeReplicaWait).not.toContain("waitForRequestedRollingServices");

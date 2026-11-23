@@ -4200,6 +4200,15 @@ async function cmdDeploy() {
 			});
 			writeDeployArtifacts(config, recoveredState);
 			deployRenderedStack(config, "rollback recovery");
+			// The recovery deploy resubmits the rendered miniKMS and Atrium spec.
+			// Report restoration only after that update has converged.
+			try {
+				waitForRequestedRollingServices(config);
+			} catch (rollingError) {
+				throw new Error(
+					`Deploy failed and rollback recovery did not converge miniKMS and Atrium. ${error instanceof Error ? error.message : String(error)}\n${rollingError instanceof Error ? rollingError.message : String(rollingError)}`,
+				);
+			}
 			waitForApiSlotHealthy(config, recoveredState.deployment.active_slot);
 			if (snapshotPath && !config.upgrade.keep_failed_upgrade_db_snapshot && !currentOptions.dryRun) {
 				removeSealedSnapshot(snapshotPath);
