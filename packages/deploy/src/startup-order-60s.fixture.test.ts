@@ -6,6 +6,8 @@ import path from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
+import { POSTGRES_IMAGE, REDIS_IMAGE } from "./render";
+
 /**
  * Fixture startup-order-60s-postgres-delay.
  * Postgres accepts connections 60 seconds after the container starts.
@@ -127,7 +129,7 @@ describe("startup order 60 second postgres delay", () => {
 
 			docker(["network", "create", network]);
 			created.network = true;
-			docker(["run", "-d", "--name", redisName, "--network", network, "-p", "127.0.0.1::6379", "redis:7"]);
+			docker(["run", "-d", "--name", redisName, "--network", network, "-p", "127.0.0.1::6379", REDIS_IMAGE]);
 			created.redis = true;
 
 			envDir = mkdtempSync(path.join(os.tmpdir(), "envsync-ac5-"));
@@ -146,7 +148,7 @@ describe("startup order 60 second postgres delay", () => {
 				"--env-file", pgEnvFile,
 				"--entrypoint", "/bin/bash",
 				"-p", "127.0.0.1::5432",
-				"postgres:17",
+				POSTGRES_IMAGE,
 				"-c", delayScript,
 			]);
 			created.pg = true;

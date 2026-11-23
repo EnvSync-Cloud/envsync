@@ -83,7 +83,7 @@ services:
     networks: [envsync_network]
 
   postgres:
-    image: postgres:17
+    image: postgres:17.12
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -99,7 +99,7 @@ services:
     networks: [envsync_network]
 
   redis:
-    image: redis:7
+    image: redis:7.4.12
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -123,7 +123,7 @@ services:
     networks: [envsync_network]
 
   atrium_db:
-    image: postgres:17
+    image: postgres:17.12
     restart: unless-stopped
     environment:
       POSTGRES_USER: atrium
@@ -182,7 +182,7 @@ services:
     networks: [envsync_network]
 
   openfga_db:
-    image: postgres:17
+    image: postgres:17.12
     restart: unless-stopped
     environment:
       POSTGRES_USER: openfga
@@ -226,7 +226,7 @@ services:
     networks: [envsync_network]
 
   minikms_db:
-    image: postgres:17
+    image: postgres:17.12
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${MINIKMS_DB_USER:-postgres}
@@ -242,7 +242,7 @@ services:
     networks: [envsync_network]
 
   minikms_migrate:
-    image: postgres:17
+    image: postgres:17.12
     command: ["sh", "-c", "psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/001_initial_schema.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/002_vault_storage.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/003_escrow_recovery.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/004_multi_replica_ha.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/005_leaf_cert_type.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/006_env_ca.sql && psql -h minikms_db -U ${MINIKMS_DB_USER:-postgres} -d minikms -f /migrations/007_pending_org_ca.sql"]
     environment:
       PGPASSWORD: ${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}

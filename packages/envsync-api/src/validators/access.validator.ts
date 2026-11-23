@@ -4,51 +4,45 @@ import "zod-openapi/extend";
 export const loginUrlResponseSchema = z
 	.object({
 		message: z.string().openapi({ example: "Login created successfully." }),
-		loginUrl: z
-			.string()
-			.url()
-			.openapi({
-				example:
-					"https://auth.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code",
-			}),
+		loginUrl: z.string().url().openapi({
+			example:
+				"https://auth.example.com/realms/envsync/protocol/openid-connect/auth?response_type=code",
+		}),
 	})
 	.openapi({ ref: "LoginUrlResponse" });
 
 export const logoutUrlResponseSchema = z
 	.object({
 		message: z.string().openapi({ example: "Web logout prepared successfully." }),
-		logoutUrl: z
-			.string()
-			.url()
-			.openapi({
-				example:
-					"https://auth.example.com/realms/envsync/protocol/openid-connect/logout?client_id=envsync-web",
-			}),
+		logoutUrl: z.string().url().openapi({
+			example:
+				"https://auth.example.com/realms/envsync/protocol/openid-connect/logout?client_id=envsync-web",
+		}),
 	})
 	.openapi({ ref: "LogoutUrlResponse" });
 
 export const cliLoginResponseSchema = z
 	.object({
 		message: z.string().openapi({ example: "CLI login created successfully." }),
-		verification_uri_complete: z
-			.string()
-			.url()
-			.openapi({
-				example: "https://auth.example.com/realms/envsync/protocol/openid-connect/auth/device",
-			}),
+		verification_uri_complete: z.string().url().openapi({
+			example: "https://auth.example.com/realms/envsync/protocol/openid-connect/auth/device",
+		}),
 		user_code: z.string().openapi({ example: "abc123" }),
 		device_code: z.string().openapi({ example: "def456" }),
 		expires_in: z.number().openapi({ example: 300 }),
 		client_id: z.string().openapi({ example: "envsync-cli" }),
-		token_url: z
-			.string()
-			.url()
-			.openapi({
-				example: "https://auth.example.com/realms/envsync/protocol/openid-connect/token",
-			}),
+		token_url: z.string().url().openapi({
+			example: "https://auth.example.com/realms/envsync/protocol/openid-connect/token",
+		}),
 		interval: z.number().openapi({ example: 5 }),
 	})
 	.openapi({ ref: "CliLoginResponse" });
+
+export const cliSessionResponseSchema = z
+	.object({
+		registered: z.literal(true),
+	})
+	.openapi({ ref: "CliSessionResponse" });
 
 export const webSessionResponseSchema = z
 	.object({

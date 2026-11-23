@@ -15,6 +15,7 @@ import {
 import { detectAuthType } from "@/helpers/access";
 import {
 	confirmationThumbprint,
+	defaultDeviceLabel,
 	deviceLabel,
 	requestProofUrls,
 	verifyDpopProof,
@@ -70,9 +71,11 @@ export class AccessController {
 		proofJkt: string,
 		label: string,
 	) {
-		const payload = decodeJwt(tokenData.access_token);
-		const jkt = confirmationThumbprint(payload as Record<string, unknown>);
-		if (!jkt || jkt !== proofJkt) {
+		const verified = await verifyJWTToken(tokenData.access_token);
+		const payload = verified as Record<string, unknown>;
+		const jkt = confirmationThumbprint(payload);
+		const directoryUserId = typeof verified.sub === "string" ? verified.sub : "";
+		if (!jkt || jkt !== proofJkt || !directoryUserId) {
 			throw new AppError(
 				"Session is not bound to a device key. Sign in again.",
 				401,
@@ -80,18 +83,17 @@ export class AccessController {
 			);
 		}
 
-		const userId = await this.setActiveMembershipFromAccessToken(c, tokenData.access_token);
+		const user = await UserService.resolveActiveMembershipByIdpId(directoryUserId);
+		await SessionDeviceService.touch({
+			directoryUserId,
+			userId: user.id,
+			clientId: config.ATRIUM_WEB_CLIENT_ID,
+			jkt,
+			label,
+		});
+		await UserService.touchLastLogin(user.id);
+		setActiveMembershipCookie(c, user.id);
 		setWebAuthCookies(c, tokenData, { includeAccessToken: false });
-		const directoryUserId = typeof payload.sub === "string" ? payload.sub : "";
-		if (directoryUserId) {
-			await SessionDeviceService.touch({
-				directoryUserId,
-				userId: userId ?? null,
-				clientId: config.ATRIUM_WEB_CLIENT_ID,
-				jkt,
-				label,
-			});
-		}
 
 		return {
 			access_token: tokenData.access_token,
@@ -139,6 +141,68 @@ export class AccessController {
 			},
 			201,
 		);
+	};
+
+	public static readonly registerCliSession = async (c: Context) => {
+		const authorization = c.req.header("Authorization") ?? "";
+		const accessToken = authorization.replace(/^(?:Bearer|DPoP)\s+/i, "").trim();
+		if (!accessToken) {
+			return c.json({ error: "No token provided", code: "AUTH_MISSING" }, 401);
+		}
+
+		let payload: Record<string, unknown>;
+		try {
+			payload = (await verifyJWTToken(accessToken)) as Record<string, unknown>;
+		} catch (error) {
+			if (error instanceof AppError) throw error;
+			return c.json({ error: "Session is not valid. Sign in again.", code: "AUTH_INVALID" }, 401);
+		}
+
+		const clientId = typeof payload.client_id === "string" ? payload.client_id : "";
+		if (clientId !== config.ATRIUM_CLI_CLIENT_ID) {
+			return c.json(
+				{ error: "Device registration requires a CLI session.", code: "DPOP_INVALID" },
+				401,
+			);
+		}
+
+		const jkt = confirmationThumbprint(payload);
+		const directoryUserId = typeof payload.sub === "string" ? payload.sub : "";
+		if (!jkt || !directoryUserId) {
+			throw new AppError(
+				"Session is not bound to a device key. Sign in again.",
+				401,
+				"DPOP_REQUIRED",
+			);
+		}
+
+		await verifyDpopProof({
+			proof: c.req.header("DPoP") ?? "",
+			method: "POST",
+			url: c.req.url,
+			urls: requestProofUrls(c.req.url),
+			accessToken,
+			expectedJkt: jkt,
+		});
+
+		let userId: string | null = null;
+		try {
+			const user = await UserService.resolveActiveMembershipByIdpId(directoryUserId);
+			userId = user.id;
+		} catch (error) {
+			if (error instanceof AppError) throw error;
+			userId = null;
+		}
+
+		await SessionDeviceService.touch({
+			directoryUserId,
+			userId,
+			clientId,
+			jkt,
+			label: defaultDeviceLabel(clientId, c.req.header("user-agent")),
+		});
+
+		return c.json({ registered: true }, 200);
 	};
 
 	public static readonly createWebLogin = async (c: Context) => {

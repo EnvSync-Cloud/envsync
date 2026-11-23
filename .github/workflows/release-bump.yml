@@ -4,11 +4,8 @@
 # Those refs are pushed with a GitHub App token so the tag push starts
 # .github/workflows/release.yml. The workflow GITHUB_TOKEN is not used for writes.
 #
-# GitHub App installation: EnvSync-Cloud/envsync only.
-# Repository permissions:
-#   Contents: Read and write
-#   Pull requests: Read
-#   Metadata: Read
+# The token is scoped at mint time to this repository with contents write
+# and pull requests read, whatever the App installation allows.
 #
 # Repository variables:
 #   RELEASE_APP_ID — GitHub App id
@@ -104,6 +101,10 @@ jobs:
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: read
 
       - name: Checkout dev
         uses: actions/checkout@v4

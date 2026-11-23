@@ -223,6 +223,65 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 
 export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.17";
 
+/** Pinned Postgres patch tag. Shared by every Postgres service and CLI helper. */
+export const POSTGRES_IMAGE = "postgres:17.12";
+/** RepoDigest from `docker image inspect` of POSTGRES_IMAGE. */
+export const POSTGRES_IMAGE_DIGEST = "sha256:223efeb196329b55b3b9a13db144956411dbc18e727e59f681c3e0aede6475cf";
+
+/** Pinned Redis patch tag. Shared by the Redis service and CLI helper. */
+export const REDIS_IMAGE = "redis:7.4.12";
+/** RepoDigest from `docker image inspect` of REDIS_IMAGE. */
+export const REDIS_IMAGE_DIGEST = "sha256:2e3eb11462c4e3759e6972678dd051d150ff54b1e60714b3c33b701260172a90";
+
+/** Gives a failing healthcheck time to mark the new task unhealthy before Swarm accepts it. */
+export const ROLLING_UPDATE_MONITOR = "90s";
+export const MINIKMS_REPLICAS = 2;
+export const ATRIUM_REPLICAS = 1;
+export const MINIKMS_STOP_GRACE_PERIOD = "30s";
+export const MINIKMS_HEALTHCHECK_TEST = ["CMD-SHELL", "nc -z 127.0.0.1 50051"] as const;
+export const ATRIUM_HEALTHCHECK_TEST = [
+	"CMD",
+	"/busybox",
+	"wget",
+	"-q",
+	"-O",
+	"/dev/null",
+	"http://127.0.0.1:8080/health",
+] as const;
+
+/** Static BusyBox. The Atrium image has no shell or HTTP client. */
+export const ATRIUM_HEALTHCHECK_IMAGE = "busybox:1.36.1-musl";
+export const ATRIUM_HEALTHCHECK_RELATIVE_PATH = "bin/busybox";
+
+export function atriumHealthcheckHostPath(deployRoot: string) {
+	return `${deployRoot}/${ATRIUM_HEALTHCHECK_RELATIVE_PATH}`;
+}
+
+export function databaseImageLock() {
+	return {
+		postgres: POSTGRES_IMAGE,
+		redis: REDIS_IMAGE,
+		digests: {
+			postgres: POSTGRES_IMAGE_DIGEST,
+			redis: REDIS_IMAGE_DIGEST,
+		},
+	};
+}
+
+function renderStartFirstDeploy(replicas: number) {
+	return `      replicas: ${replicas}
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        monitor: ${ROLLING_UPDATE_MONITOR}
+      rollback_config:
+        parallelism: 1
+        order: start-first
+        failure_action: pause
+        monitor: ${ROLLING_UPDATE_MONITOR}`;
+}
+
 function slotServiceName(slot: ApiSlot) {
 	return `envsync_api_${slot}`;
 }
@@ -1118,7 +1177,7 @@ services:
     networks: [envsync]
 
   postgres:
-    image: postgres:17
+    image: ${POSTGRES_IMAGE}
     environment:
 ${renderEnvList({
 		POSTGRES_USER: "postgres",
@@ -1131,7 +1190,7 @@ ${swarmPgHealthcheck("postgres", "envsync")}
     networks: [envsync]
 
   redis:
-    image: redis:7
+    image: ${REDIS_IMAGE}
     volumes:
       - redis_data:/data
 ${swarmRedisHealthcheck()}
@@ -1164,7 +1223,7 @@ ${renderEnvList({
         - traefik.http.services.${s3ConsoleServiceName}.loadbalancer.server.port=9001
 
   atrium_db:
-    image: postgres:17
+    image: ${POSTGRES_IMAGE}
     environment:
 ${renderEnvList({
 		POSTGRES_USER: "atrium",
@@ -1185,8 +1244,16 @@ ${includeRuntimeInfra ? `
       - ${paths.deployRoot}/atrium-branding/templates:/branding/templates:ro
       - ${paths.deployRoot}/atrium-branding/assets:/branding/assets:ro
       - ${paths.deployRoot}/atrium-branding/email:/branding/email:ro
+      - ${atriumHealthcheckHostPath(paths.deployRoot)}:/busybox:ro
+    healthcheck:
+      test: ["CMD", "/busybox", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
     networks: [envsync]
     deploy:
+${renderStartFirstDeploy(ATRIUM_REPLICAS)}
       labels:
         - traefik.enable=true
         - traefik.http.routers.atrium.rule=Host(\`${hosts.auth}\`)
@@ -1220,7 +1287,7 @@ ${renderEnvList({
         condition: none` : ""}
 
   openfga_db:
-    image: postgres:17
+    image: ${POSTGRES_IMAGE}
     environment:
 ${renderEnvList({
 		POSTGRES_USER: "openfga",
@@ -1245,7 +1312,7 @@ ${renderEnvList({
     networks: [envsync]` : ""}
 
   minikms_db:
-    image: postgres:17
+    image: ${POSTGRES_IMAGE}
     environment:
 ${renderEnvList({
 		POSTGRES_USER: "postgres",
@@ -1284,7 +1351,16 @@ ${renderServiceSecretBlock("minikms")}
       - ${paths.deployRoot}/minikms-grpc-ca-cert.pem:/run/secrets/minikms-grpc-ca-cert:ro
       - ${paths.deployRoot}/minikms-grpc-server-cert.pem:/run/secrets/minikms-grpc-server-cert:ro
       - ${paths.deployRoot}/minikms-grpc-client-cert.pem:/run/secrets/minikms-grpc-client-cert:ro
-    networks: [envsync]` : ""}
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 50051"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: ${MINIKMS_STOP_GRACE_PERIOD}
+    networks: [envsync]
+    deploy:
+${renderStartFirstDeploy(MINIKMS_REPLICAS)}` : ""}
 
   clickstack:
     image: ${config.images.clickstack}

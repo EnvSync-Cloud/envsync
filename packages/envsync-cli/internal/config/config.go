@@ -25,6 +25,10 @@ type AuthConfig struct {
 	// again for the refresh grant.
 	ClientID string `json:"client_id"`
 	TokenURL string `json:"token_url"`
+	// DeviceRegistrationPending is true when refreshed credentials were stored
+	// before the device row was recorded. The next command records the device
+	// before using that access token.
+	DeviceRegistrationPending bool `json:"device_registration_pending,omitempty"`
 }
 
 type OTELConfig struct {
@@ -106,7 +110,56 @@ func (c *AppConfig) WriteConfigFile() error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	return os.WriteFile(filePath, data, 0o644)
+	// Replace the file only after the temporary write is durable. A failed
+	// update leaves the previous credentials in place.
+	if err := writeFileAtomic(filePath, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+	return nil
+}
+
+// writeFileAtomic writes data to a temporary file in the destination directory
+// and renames it over path. The rename is the only step that replaces path.
+func writeFileAtomic(path string, data []byte, mode os.FileMode) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".config.json-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.Remove(tmpName)
+		}
+	}()
+
+	if err := tmp.Chmod(mode); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	cleanup = false
+
+	// Best-effort directory sync. Some platforms reject sync on a directory.
+	if dirFile, err := os.Open(dir); err == nil {
+		_ = dirFile.Sync()
+		_ = dirFile.Close()
+	}
+	return nil
 }
 
 func ReadConfigFile() (AppConfig, error) {

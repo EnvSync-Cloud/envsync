@@ -219,6 +219,32 @@ test("fixture AC3-prod: deploy-production is skipped for rc tags", () => {
 	]);
 });
 
+test("fixture AC2-token-scope: release app token is scoped to this repository", () => {
+	const bumpPath = path.join(root, ".github/workflows/release-bump.yml");
+	const bump = Bun.YAML.parse(readFileSync(bumpPath, "utf8")) as Workflow;
+	const tokenSteps: Step[] = [];
+	for (const job of Object.values(bump.jobs)) {
+		for (const step of job.steps ?? []) {
+			if (typeof step.uses === "string" && step.uses.includes("actions/create-github-app-token")) {
+				tokenSteps.push(step);
+			}
+		}
+	}
+
+	expect(tokenSteps.length).toBeGreaterThan(0);
+	for (const step of tokenSteps) {
+		const inputs = step.with ?? {};
+		expect(inputs.owner).toBe("${{ github.repository_owner }}");
+		expect(inputs.repositories).toBe("${{ github.event.repository.name }}");
+		expect(inputs["permission-contents"]).toBe("write");
+		expect(inputs["permission-pull-requests"]).toBe("read");
+		const writePermissions = Object.entries(inputs)
+			.filter(([key, value]) => key.startsWith("permission-") && value === "write")
+			.map(([key]) => key);
+		expect(writePermissions).toEqual(["permission-contents"]);
+	}
+});
+
 test("fixture AC3-goreleaser: CLI release is a prerelease for rc tags", () => {
 	const config = Bun.YAML.parse(readFileSync(goreleaserPath, "utf8")) as GoreleaserConfig;
 	expect(config.release?.prerelease).toBe("auto");
