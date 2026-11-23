@@ -237,6 +237,30 @@ export const REDIS_IMAGE_DIGEST = "sha256:2e3eb11462c4e3759e6972678dd051d150ff54
 /** Gives a failing healthcheck time to mark the new task unhealthy before Swarm accepts it. */
 export const ROLLING_UPDATE_MONITOR = "90s";
 export const MINIKMS_REPLICAS = 2;
+
+/** Combined-stack default. Proof checks stay off until an operator changes the miniKMS service. */
+export const MINIKMS_DPOP_MODE_DEFAULT = "off";
+export const MINIKMS_DPOP_MAX_PROOF_AGE_SEC_DEFAULT = "60";
+export const MINIKMS_DPOP_ALLOW_DOWNGRADE_DEFAULT = "false";
+
+/**
+ * miniKMS per-request proof settings for the combined stack.
+ * These are set on the miniKMS service only. The API service does not receive them.
+ */
+export function minikmsDpopEnvironment(runtimeEnv: RuntimeEnv): Record<string, string> {
+	const issuer = runtimeEnv.ATRIUM_ISSUER.replace(/\/$/, "");
+	const apiOrigin = new URL(runtimeEnv.API_URL).origin;
+	return {
+		MINIKMS_DPOP_MODE: MINIKMS_DPOP_MODE_DEFAULT,
+		MINIKMS_DPOP_MAX_PROOF_AGE_SEC: MINIKMS_DPOP_MAX_PROOF_AGE_SEC_DEFAULT,
+		MINIKMS_DPOP_ISSUER: issuer,
+		MINIKMS_DPOP_JWKS_URL: `${issuer}/oidc/jwks`,
+		MINIKMS_DPOP_AUDIENCE: apiOrigin,
+		MINIKMS_DPOP_ALLOWED_HTU_ORIGINS: apiOrigin,
+		MINIKMS_DPOP_ALLOW_DOWNGRADE: MINIKMS_DPOP_ALLOW_DOWNGRADE_DEFAULT,
+	};
+}
+
 export const ATRIUM_REPLICAS = 1;
 export const MINIKMS_STOP_GRACE_PERIOD = "30s";
 export const MINIKMS_HEALTHCHECK_TEST = ["CMD-SHELL", "nc -z 127.0.0.1 50051"] as const;
@@ -1318,6 +1342,7 @@ ${renderEnvList({
 		MINIKMS_TLS_CERT: "/run/secrets/minikms-grpc-server-cert",
 		MINIKMS_TLS_KEY: "/run/secrets/minikms-grpc-server-key",
 		MINIKMS_TLS_CA_FILE: "/run/secrets/minikms-grpc-ca-cert",
+		...minikmsDpopEnvironment(runtimeEnv),
 	})}
 ${renderServiceSecretBlock("minikms")}
     volumes:

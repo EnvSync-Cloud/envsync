@@ -15,4 +15,11 @@ describe("production compose hygiene", () => {
 		const guide = readFileSync(path.join(root, "DEPLOY.md"), "utf8");
 		expect(guide).not.toContain("not public deploy CLI");
 	});
+
+	test("fixture: prod-config-unchanged", () => {
+		const prod = readFileSync(path.join(root, "docker-compose.prod.yaml"), "utf8");
+		const dev = readFileSync(path.join(root, "docker-compose.yaml"), "utf8");
+		expect(prod).not.toContain("MINIKMS_DPOP_");
+		expect(dev).not.toContain("MINIKMS_DPOP_");
+	});
 });
