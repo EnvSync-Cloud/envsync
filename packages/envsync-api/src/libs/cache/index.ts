@@ -9,6 +9,11 @@ import { config } from "@/utils/env";
 
 type CacheEnvironment = "development" | "production";
 
+/** A reconnecting client stays open. Only a closed client should be dropped. */
+export function shouldDropRedisClient(client: { isReady: boolean; isOpen: boolean }) {
+	return !client.isReady && !client.isOpen;
+}
+
 function safeCacheMessage(err: unknown) {
 	const message = err instanceof Error ? err.message : "connection failed";
 	return message.replace(/\/\/[^@\s]+@/g, "//");
@@ -77,7 +82,7 @@ export class CacheClient {
 		if (!client) {
 			throw new Error("Redis client is not configured");
 		}
-		if (client.isReady) return;
+		if (client.isReady || client.isOpen) return;
 		if (!this._redisConnect) {
 			this._redisConnect = client.connect().then(() => undefined).catch((err: unknown) => {
 				infoLogs(`Redis connection failed: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE:INIT");
@@ -86,7 +91,7 @@ export class CacheClient {
 			});
 		}
 		await this._redisConnect;
-		if (this._redisClient !== client || !client.isReady) {
+		if (this._redisClient !== client || shouldDropRedisClient(client)) {
 			if (this._redisClient === client) this.resetRedisClient();
 			throw new Error("Redis client is not connected");
 		}

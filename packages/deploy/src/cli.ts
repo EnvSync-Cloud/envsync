@@ -14,6 +14,7 @@ import {
 	ROLLING_UPDATE_WAIT_SECONDS,
 	evaluateDataPlaneUpdate,
 	evaluateRollingService,
+	imageReferenceMatches,
 	parseRollingInspect,
 	rollingSpecMismatches,
 	type ObservedRollingService,
@@ -3432,6 +3433,16 @@ function dataPlanePassword(
 
 const DATA_PLANE_SERVICE_SUFFIXES = ["postgres", "redis", "atrium_db", "openfga_db", "minikms_db"] as const;
 
+function expectedDataPlaneImage(stackName: string, serviceName: string): string | null {
+	const prefix = `${stackName}_`;
+	const suffix = serviceName.startsWith(prefix) ? serviceName.slice(prefix.length) : serviceName;
+	if (suffix === "redis") return renderHelpers.REDIS_IMAGE;
+	if (suffix === "postgres" || suffix === "atrium_db" || suffix === "openfga_db" || suffix === "minikms_db") {
+		return renderHelpers.POSTGRES_IMAGE;
+	}
+	return null;
+}
+
 function waitForDataPlaneServiceUpdates(config: DeployConfig, timeoutSeconds = DEPLOY_DATA_PLANE_TIMEOUT_SECONDS) {
 	if (currentOptions.dryRun) {
 		logDryRun("Would wait for database and Redis service updates to complete before probing readiness");
@@ -3447,10 +3458,12 @@ function waitForDataPlaneServiceUpdates(config: DeployConfig, timeoutSeconds = D
 		let ready = 0;
 		for (const name of names) {
 			const observed = inspectRollingService(name);
+			const expectedImage = expectedDataPlaneImage(config.services.stack_name, name);
 			const decision = evaluateDataPlaneUpdate({
 				observed,
 				deployStartedAtMs,
 				settleObservations: settle.get(name) ?? 0,
+				imageMatches: expectedImage === null || imageReferenceMatches(observed.image, expectedImage),
 			});
 			if (decision.action === "fail") {
 				throw new Error(`${name} service update ${observed.updateState || "absent"} did not stay with this deploy`);

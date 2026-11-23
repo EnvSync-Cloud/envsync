@@ -208,6 +208,23 @@ describe("rolling update convergence", () => {
 		})).toEqual({ action: "ready" });
 	});
 
+	test("a historical rollback without a timestamp does not block a matching service", () => {
+		const historical = observed({ updateState: "rollback_completed", updateStartedAtMs: null });
+		expect(decide("minikms", historical)).toEqual({ action: "wait", kind: "settling" });
+		expect(decide("minikms", historical, { settleObservations: ROLLING_SETTLE_OBSERVATIONS - 1 })).toEqual({
+			action: "ready",
+		});
+	});
+
+	test("a data-plane image that does not match the rendered image does not settle", () => {
+		expect(evaluateDataPlaneUpdate({
+			observed: { updateState: "completed", updateStartedAtMs: deployStartedAtMs - 60_000 },
+			deployStartedAtMs,
+			settleObservations: ROLLING_SETTLE_OBSERVATIONS,
+			imageMatches: false,
+		})).toEqual({ action: "wait", kind: "spec" });
+	});
+
 	test("a data-plane service with no new update settles after enough unchanged observations", () => {
 		const stale = { updateState: "completed", updateStartedAtMs: deployStartedAtMs - 60_000 };
 		expect(evaluateDataPlaneUpdate({
