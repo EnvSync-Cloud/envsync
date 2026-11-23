@@ -20,6 +20,7 @@ export const ROLLING_INSPECT_FORMAT = [
 	"{{if .Spec.RollbackConfig}}{{.Spec.RollbackConfig.Order}}{{end}}",
 	"{{if .Spec.RollbackConfig}}{{.Spec.RollbackConfig.FailureAction}}{{end}}",
 	"{{if .Spec.TaskTemplate.ContainerSpec.Healthcheck}}{{json .Spec.TaskTemplate.ContainerSpec.Healthcheck.Test}}{{end}}",
+	"{{if .Spec.TaskTemplate.ContainerSpec.Image}}{{.Spec.TaskTemplate.ContainerSpec.Image}}{{end}}",
 ].join("|");
 
 /** How long a detached deploy may take to reach a terminal update. */
@@ -46,6 +47,7 @@ export interface ObservedRollingService {
 	rollbackOrder: string;
 	rollbackFailureAction: string;
 	healthTest: string[];
+	image: string;
 }
 
 export type UpdateProgress = "absent" | "in_progress" | "completed" | "failed";
@@ -83,7 +85,7 @@ export function parseDockerTimestamp(value: string | null | undefined): number |
 
 export function parseRollingInspect(raw: string): ObservedRollingService {
 	const parts = raw.trim().split("|");
-	while (parts.length < 8) parts.push("");
+	while (parts.length < 9) parts.push("");
 	const [
 		updateState = "",
 		startedAt = "",
@@ -93,6 +95,7 @@ export function parseRollingInspect(raw: string): ObservedRollingService {
 		rollbackOrder = "",
 		rollbackFailureAction = "",
 		healthRaw = "",
+		image = "",
 	] = parts;
 	let healthTest: string[] = [];
 	if (healthRaw.trim()) {
@@ -114,7 +117,16 @@ export function parseRollingInspect(raw: string): ObservedRollingService {
 		rollbackOrder: rollbackOrder.trim(),
 		rollbackFailureAction: rollbackFailureAction.trim(),
 		healthTest,
+		image: image.trim(),
 	};
+}
+
+/** Swarm may store the requested tag with the resolved digest appended. */
+export function imageReferenceMatches(actual: string, expected: string): boolean {
+	const observedImage = actual.trim();
+	const wanted = expected.trim();
+	if (!observedImage || !wanted) return false;
+	return observedImage === wanted || observedImage.startsWith(`${wanted}@sha256:`);
 }
 
 function sameHealth(actual: string[], expected: readonly string[]) {
@@ -122,10 +134,17 @@ function sameHealth(actual: string[], expected: readonly string[]) {
 }
 
 /** Differences from the spec this deploy renders. Empty means the service matches. */
-export function rollingSpecMismatches(service: RollingServiceName, observed: ObservedRollingService): string[] {
+export function rollingSpecMismatches(
+	service: RollingServiceName,
+	observed: ObservedRollingService,
+	expectedImage: string,
+): string[] {
 	const expectedReplicas = service === "atrium" ? ATRIUM_REPLICAS : MINIKMS_REPLICAS;
 	const expectedHealth = service === "atrium" ? ATRIUM_HEALTHCHECK_TEST : MINIKMS_HEALTHCHECK_TEST;
 	const mismatches: string[] = [];
+	if (!imageReferenceMatches(observed.image, expectedImage)) {
+		mismatches.push(`image ${observed.image || "unset"} != ${expectedImage}`);
+	}
 	if (observed.replicas !== expectedReplicas) {
 		mismatches.push(`replicas ${observed.replicas ?? "unset"} != ${expectedReplicas}`);
 	}
@@ -163,10 +182,11 @@ export function evaluateRollingService(input: {
 	replicaHealth: ServiceHealth;
 	deployStartedAtMs: number;
 	settleObservations: number;
+	expectedImage: string;
 }): RollingDecision {
 	const progress = classifyUpdateState(input.observed.updateState);
 	const belongs = updateBelongsToDeploy(input.observed, input.deployStartedAtMs);
-	const mismatches = rollingSpecMismatches(input.service, input.observed);
+	const mismatches = rollingSpecMismatches(input.service, input.observed, input.expectedImage);
 	const healthy = input.replicaHealth === "healthy";
 
 	if (progress === "in_progress") {

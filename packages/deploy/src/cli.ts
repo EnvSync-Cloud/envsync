@@ -3434,14 +3434,19 @@ function inspectRollingService(serviceName: string) {
 	return parseRollingInspect(output);
 }
 
+function rollingServiceImage(config: DeployConfig, service: RollingServiceName): string {
+	return service === "atrium" ? config.images.atrium : renderHelpers.MINIKMS_IMAGE;
+}
+
 function describeRollingDecision(
 	serviceName: string,
 	service: RollingServiceName,
 	observed: ObservedRollingService,
 	decision: RollingDecision,
 	replicaHealth: ServiceHealth,
+	expectedImage: string,
 ) {
-	const mismatches = rollingSpecMismatches(service, observed);
+	const mismatches = rollingSpecMismatches(service, observed, expectedImage);
 	const state = observed.updateState || "absent";
 	if (decision.action === "fail" && decision.kind === "rolled_back") {
 		const spec = mismatches.length > 0 ? `; spec ${mismatches.join(", ")}` : "";
@@ -3480,14 +3485,16 @@ function waitForRequestedRollingServices(config: DeployConfig) {
 			const serviceName = `${config.services.stack_name}_${service}`;
 			const observed = inspectRollingService(serviceName);
 			const health = replicaHealth.get(serviceName) ?? "missing";
+			const expectedImage = rollingServiceImage(config, service);
 			const decision = evaluateRollingService({
 				service,
 				observed,
 				replicaHealth: health,
 				deployStartedAtMs,
 				settleObservations: settle.get(service) ?? 0,
+				expectedImage,
 			});
-			const detail = describeRollingDecision(serviceName, service, observed, decision, health);
+			const detail = describeRollingDecision(serviceName, service, observed, decision, health, expectedImage);
 			if (decision.action === "fail") {
 				throw new Error(detail);
 			}
