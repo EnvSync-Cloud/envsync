@@ -4153,6 +4153,10 @@ async function cmdDeploy() {
 			const postUpgradeHead = runApiMigrationJsonCommand(config, config.images.api, ["head"]).currentHead;
 			logInfo(`API migration head after upgrade: ${postUpgradeHead ?? "none"}`);
 			waitForApiSlotHealthy(config, targetSlot);
+			// Migrations first, then convergence, both before promotion. A rollback
+			// here still has the API snapshot and has not switched the active slot.
+			runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, candidateState));
+			waitForRequestedRollingServices(config);
 			currentState = normalizeGeneratedState({
 				...candidateState,
 				deployment: {
@@ -4218,9 +4222,9 @@ async function cmdDeploy() {
 	if (!promoted) {
 		activateFrontendReleaseForState(config, currentState, config.release.version);
 		deployRenderedStack(config, "steady");
+		runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
+		waitForRequestedRollingServices(config);
 	}
-	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
-	waitForRequestedRollingServices(config);
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },
