@@ -3434,14 +3434,19 @@ function inspectRollingService(serviceName: string) {
 	return parseRollingInspect(output);
 }
 
+function rollingServiceImage(config: DeployConfig, service: RollingServiceName): string {
+	return service === "atrium" ? config.images.atrium : renderHelpers.MINIKMS_IMAGE;
+}
+
 function describeRollingDecision(
 	serviceName: string,
 	service: RollingServiceName,
 	observed: ObservedRollingService,
 	decision: RollingDecision,
 	replicaHealth: ServiceHealth,
+	expectedImage: string,
 ) {
-	const mismatches = rollingSpecMismatches(service, observed);
+	const mismatches = rollingSpecMismatches(service, observed, expectedImage);
 	const state = observed.updateState || "absent";
 	if (decision.action === "fail" && decision.kind === "rolled_back") {
 		const spec = mismatches.length > 0 ? `; spec ${mismatches.join(", ")}` : "";
@@ -3480,14 +3485,16 @@ function waitForRequestedRollingServices(config: DeployConfig) {
 			const serviceName = `${config.services.stack_name}_${service}`;
 			const observed = inspectRollingService(serviceName);
 			const health = replicaHealth.get(serviceName) ?? "missing";
+			const expectedImage = rollingServiceImage(config, service);
 			const decision = evaluateRollingService({
 				service,
 				observed,
 				replicaHealth: health,
 				deployStartedAtMs,
 				settleObservations: settle.get(service) ?? 0,
+				expectedImage,
 			});
-			const detail = describeRollingDecision(serviceName, service, observed, decision, health);
+			const detail = describeRollingDecision(serviceName, service, observed, decision, health, expectedImage);
 			if (decision.action === "fail") {
 				throw new Error(detail);
 			}
@@ -4153,6 +4160,10 @@ async function cmdDeploy() {
 			const postUpgradeHead = runApiMigrationJsonCommand(config, config.images.api, ["head"]).currentHead;
 			logInfo(`API migration head after upgrade: ${postUpgradeHead ?? "none"}`);
 			waitForApiSlotHealthy(config, targetSlot);
+			// Migrations first, then convergence, both before promotion. A rollback
+			// here still has the API snapshot and has not switched the active slot.
+			runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, candidateState));
+			waitForRequestedRollingServices(config);
 			currentState = normalizeGeneratedState({
 				...candidateState,
 				deployment: {
@@ -4196,6 +4207,15 @@ async function cmdDeploy() {
 			});
 			writeDeployArtifacts(config, recoveredState);
 			deployRenderedStack(config, "rollback recovery");
+			// The recovery deploy resubmits the rendered miniKMS and Atrium spec.
+			// Report restoration only after that update has converged.
+			try {
+				waitForRequestedRollingServices(config);
+			} catch (rollingError) {
+				throw new Error(
+					`Deploy failed and rollback recovery did not converge miniKMS and Atrium. ${error instanceof Error ? error.message : String(error)}\n${rollingError instanceof Error ? rollingError.message : String(rollingError)}`,
+				);
+			}
 			waitForApiSlotHealthy(config, recoveredState.deployment.active_slot);
 			if (snapshotPath && !config.upgrade.keep_failed_upgrade_db_snapshot && !currentOptions.dryRun) {
 				removeSealedSnapshot(snapshotPath);
@@ -4218,9 +4238,9 @@ async function cmdDeploy() {
 	if (!promoted) {
 		activateFrontendReleaseForState(config, currentState, config.release.version);
 		deployRenderedStack(config, "steady");
+		runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
+		waitForRequestedRollingServices(config);
 	}
-	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
-	waitForRequestedRollingServices(config);
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },
