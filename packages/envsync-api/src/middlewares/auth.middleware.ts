@@ -206,13 +206,16 @@ export const authMiddleware = (): MiddlewareHandler => {
 
 			if (dpopJkt && dpopSub) {
 				try {
-					await SessionDeviceService.touch({
-						directoryUserId: dpopSub,
-						userId: user.id,
-						clientId: dpopClientId,
-						jkt: dpopJkt,
-						label: defaultDeviceLabel(dpopClientId, ctx.req.header("user-agent")),
-					});
+					await SessionDeviceService.touch(
+						{
+							directoryUserId: dpopSub,
+							userId: user.id,
+							clientId: dpopClientId,
+							jkt: dpopJkt,
+							label: defaultDeviceLabel(dpopClientId, ctx.req.header("user-agent")),
+						},
+						{ createIfMissing: false },
+					);
 				} catch (error) {
 					if (error instanceof AppError) throw error;
 					infoLogs(

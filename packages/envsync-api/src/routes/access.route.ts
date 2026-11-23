@@ -6,6 +6,7 @@ import { AccessController } from "@/controllers/access.controller";
 import {
 	loginUrlResponseSchema,
 	callbackResponseSchema,
+	cliSessionResponseSchema,
 	logoutUrlResponseSchema,
 	webSessionResponseSchema,
 } from "@/validators/access.validator";
@@ -40,6 +41,36 @@ app.get(
 		},
 	}),
 	AccessController.createCliLogin,
+);
+
+app.post(
+	"/cli/session",
+	describeRoute({
+		operationId: "registerCliSession",
+		summary: "Register CLI Session Device",
+		description:
+			"Record the CLI device for a DPoP-bound access token before later session requests. The proof is signed for this request and must match the token.",
+		tags: ["Access"],
+		responses: {
+			200: {
+				description: "CLI device registered",
+				content: {
+					"application/json": {
+						schema: resolver(cliSessionResponseSchema),
+					},
+				},
+			},
+			401: {
+				description: "DPoP proof or session token was not accepted",
+				content: {
+					"application/json": {
+						schema: resolver(errorResponseSchema),
+					},
+				},
+			},
+		},
+	}),
+	AccessController.registerCliSession,
 );
 
 app.get(

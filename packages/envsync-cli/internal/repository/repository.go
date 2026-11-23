@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -126,16 +127,17 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 	}
 
 	fresh, err := refreshAuth(auth, now)
+	if fresh.AccessToken != "" {
+		cfg.AuthConfig = fresh
+		if writeErr := cfg.WriteConfigFile(); writeErr != nil {
+			// Ignore errors persisting the refreshed token; the request will fail
+			// with the server's own auth error instead of blocking the command.
+			// TODO: Suggest better logging mechanism here
+		}
+	}
 	if err != nil {
 		// TODO: Suggest better logging mechanism here
 		return auth.AccessToken
-	}
-
-	cfg.AuthConfig = fresh
-	if err := cfg.WriteConfigFile(); err != nil {
-		// Ignore errors persisting the refreshed token; the request will fail
-		// with the server's own auth error instead of blocking the command.
-		// TODO: Suggest better logging mechanism here
 	}
 
 	return fresh.AccessToken
@@ -187,6 +189,10 @@ func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, erro
 		auth.RefreshToken = resBody.RefreshToken
 	}
 	auth.ExpiresAt = int(now.Add(time.Duration(resBody.ExpiresIn) * time.Second).Unix())
+
+	if err := RegisterDeviceSession(context.Background(), config.New().BackendURL, resBody.AccessToken); err != nil {
+		return auth, err
+	}
 
 	return auth, nil
 }
