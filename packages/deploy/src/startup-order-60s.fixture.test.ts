@@ -58,9 +58,14 @@ function safeText(text: string) {
 	return cleaned;
 }
 
-const dockerAvailable = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
+const RUN_FIXTURE = process.env.RUN_STARTUP_ORDER_60S === "1";
+const dockerInfo = spawnSync("docker", ["info"], { encoding: "utf8" });
+const dockerAvailable = dockerInfo.status === 0;
+if (RUN_FIXTURE && !dockerAvailable) {
+	throw new Error(`docker is required for test:startup-order-60s: ${dockerInfo.stderr || dockerInfo.stdout || "docker info failed"}`);
+}
 
-describe.skipIf(!dockerAvailable)("startup order 60 second postgres delay", () => {
+describe.skipIf(!RUN_FIXTURE)("startup order 60 second postgres delay", () => {
 	test("fixture startup-order-60s-postgres-delay: API becomes ready without another deploy", async () => {
 		expect(SAML_SECRET.length).toBe(64);
 		expect(/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(OPENFGA_STORE_ID)).toBe(true);

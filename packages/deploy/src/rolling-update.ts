@@ -188,3 +188,32 @@ export function evaluateRollingService(input: {
 	}
 	return { action: "wait", kind: "settling" };
 }
+
+/**
+ * Decide whether a data-plane service update belongs to this detached deploy.
+ * An older completed update is not treated as ready until a new update starts
+ * and completes, or the current spec stays unchanged long enough to settle.
+ */
+export function evaluateDataPlaneUpdate(input: {
+	observed: Pick<ObservedRollingService, "updateState" | "updateStartedAtMs">;
+	deployStartedAtMs: number;
+	settleObservations: number;
+}): RollingDecision {
+	const progress = classifyUpdateState(input.observed.updateState);
+	const startedAt = input.observed.updateStartedAtMs;
+	const belongs = startedAt !== null && startedAt >= input.deployStartedAtMs - ROLLING_CLOCK_SKEW_MS;
+
+	if (progress === "in_progress") {
+		return { action: "wait", kind: "in_progress" };
+	}
+	if (progress === "failed" && (belongs || startedAt === null)) {
+		return { action: "fail", kind: "rolled_back" };
+	}
+	if (progress === "completed" && belongs) {
+		return { action: "ready" };
+	}
+	if (input.settleObservations + 1 >= ROLLING_SETTLE_OBSERVATIONS) {
+		return { action: "ready" };
+	}
+	return { action: "wait", kind: "settling" };
+}

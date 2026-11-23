@@ -41,6 +41,7 @@ type Clock = {
 	maxDelayMs?: number;
 	sleep?: (ms: number) => Promise<void>;
 	now?: () => number;
+	onAttemptTimeout?: () => void;
 };
 
 const readinessOverride = new AsyncLocalStorage<ReadinessOverride>();
@@ -179,8 +180,11 @@ export async function retryDependency(label: string, probe: Probe, clock: Clock 
 					timer = setTimeout(() => reject(new Error(`${label} probe timed out`)), bound);
 				}),
 			]);
-		} catch {
+		} catch (err) {
 			ready = false;
+			if (err instanceof Error && err.message.includes("probe timed out")) {
+				clock.onAttemptTimeout?.();
+			}
 		} finally {
 			if (timer) clearTimeout(timer);
 		}
@@ -213,11 +217,18 @@ export async function bootApiDependencies(options?: {
 		maxDelayMs: options?.maxDelayMs,
 		sleep: options?.sleep,
 		now: options?.now,
+		onAttemptTimeout: options?.onAttemptTimeout,
 	};
 	await retryDependency("Postgres", options?.postgres ?? postgresReadyForBoot, clock);
 	const productionRedis = options?.productionRedis ?? CacheClient.env === "production";
 	if (productionRedis) {
-		await retryDependency("Redis", options?.redis ?? (() => CacheClient.ping()), clock);
+		await retryDependency("Redis", options?.redis ?? (() => CacheClient.ping()), {
+			...clock,
+			onAttemptTimeout: () => {
+				clock.onAttemptTimeout?.();
+				CacheClient.dropRedisClient();
+			},
+		});
 	}
 	await retryDependency("OpenFGA", options?.openfga ?? defaultOpenFgaProbe, clock);
 	if (options?.markBootFinished !== false) {

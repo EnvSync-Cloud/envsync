@@ -157,6 +157,32 @@ describe("startup readiness", () => {
 		})).rejects.toThrow("Postgres not ready after 700ms");
 		expect(attempts).toBeGreaterThan(1);
 	});
+
+	test("a later redis probe can recover after a timed-out connect is dropped", async () => {
+		let shared: Promise<boolean> | undefined;
+		let attempts = 0;
+		let dropped = 0;
+		await retryDependency("Redis", async () => {
+			attempts += 1;
+			if (attempts === 1) {
+				shared = new Promise<boolean>(() => undefined);
+				return shared;
+			}
+			if (shared) throw new Error("timed-out connect was reused");
+			return true;
+		}, {
+			budgetMs: 700,
+			attemptTimeoutMs: 200,
+			initialDelayMs: 0,
+			maxDelayMs: 0,
+			onAttemptTimeout: () => {
+				dropped += 1;
+				shared = undefined;
+			},
+		});
+		expect(attempts).toBeGreaterThan(1);
+		expect(dropped).toBeGreaterThan(0);
+	});
 });
 
 describe("GET /health", () => {

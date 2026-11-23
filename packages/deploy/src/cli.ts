@@ -10,7 +10,9 @@ import * as renderHelpers from "./render";
 import { parseReplicaHealth, type ServiceHealth } from "./replica-health";
 import {
 	ROLLING_INSPECT_FORMAT,
+	ROLLING_SETTLE_OBSERVATIONS,
 	ROLLING_UPDATE_WAIT_SECONDS,
+	evaluateDataPlaneUpdate,
 	evaluateRollingService,
 	parseRollingInspect,
 	rollingSpecMismatches,
@@ -65,6 +67,7 @@ import {
 	stageDataBackup,
 } from "./key-bundle";
 import {
+	DEPLOY_DATA_PLANE_TIMEOUT_SECONDS,
 	REDIS_PING_COMMAND,
 	deployDataPlaneWaits,
 	deployRuntimeWaits,
@@ -3427,10 +3430,53 @@ function dataPlanePassword(
 	}
 }
 
+const DATA_PLANE_SERVICE_SUFFIXES = ["postgres", "redis", "atrium_db", "openfga_db", "minikms_db"] as const;
+
+function waitForDataPlaneServiceUpdates(config: DeployConfig, timeoutSeconds = DEPLOY_DATA_PLANE_TIMEOUT_SECONDS) {
+	if (currentOptions.dryRun) {
+		logDryRun("Would wait for database and Redis service updates to complete before probing readiness");
+		return;
+	}
+	logStep("Waiting for database and Redis service updates to complete");
+	const deployStartedAtMs = lastRenderedStackDeployAtMs ?? Date.now();
+	const names = DATA_PLANE_SERVICE_SUFFIXES.map(suffix => `${config.services.stack_name}_${suffix}`);
+	const settle = new Map<string, number>(names.map(name => [name, 0]));
+	const deadline = Date.now() + timeoutSeconds * 1000;
+	while (Date.now() < deadline) {
+		const pending: string[] = [];
+		let ready = 0;
+		for (const name of names) {
+			const observed = inspectRollingService(name);
+			const decision = evaluateDataPlaneUpdate({
+				observed,
+				deployStartedAtMs,
+				settleObservations: settle.get(name) ?? 0,
+			});
+			if (decision.action === "fail") {
+				throw new Error(`${name} service update ${observed.updateState || "absent"} did not stay with this deploy`);
+			}
+			if (decision.action === "ready") {
+				ready += 1;
+				continue;
+			}
+			settle.set(name, decision.kind === "settling" ? (settle.get(name) ?? 0) + 1 : 0);
+			pending.push(`${name}=${observed.updateState || "absent"}:${decision.kind}`);
+		}
+		if (ready === names.length) {
+			return;
+		}
+		logInfo(`Waiting for data-plane service updates: ${pending.join(", ")}`);
+		sleepSeconds(3);
+	}
+	const pending = names.map(name => `${name}=${inspectRollingService(name).updateState || "absent"}`).join(", ");
+	throw new Error(`Timed out waiting for database and Redis service updates to complete: ${pending}`);
+}
+
 function waitForDeployDataPlane(
 	config: DeployConfig,
 	runtimeEnv: { ATRIUM_DB_PASSWORD: string; OPENFGA_DB_PASSWORD: string; MINIKMS_DB_PASSWORD: string },
 ) {
+	waitForDataPlaneServiceUpdates(config);
 	for (const wait of deployDataPlaneWaits()) {
 		if (wait.kind === "redis") {
 			waitForRedisService(config, wait.timeoutSeconds);

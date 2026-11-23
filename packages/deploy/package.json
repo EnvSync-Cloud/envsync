@@ -20,7 +20,7 @@
     "prepack": "bun run build",
     "check:pack": "npm pack --dry-run",
     "test": "bun run build && bun test",
-    "test:startup-order-60s": "bun test src/startup-order-60s.fixture.test.ts"
+    "test:startup-order-60s": "RUN_STARTUP_ORDER_60S=1 bun test src/startup-order-60s.fixture.test.ts"
   },
   "repository": {
     "type": "git",

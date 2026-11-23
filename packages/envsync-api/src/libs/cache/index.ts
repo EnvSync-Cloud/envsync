@@ -54,6 +54,11 @@ export class CacheClient {
 		this._redisClient = client;
 	}
 
+	/** Drop a hung or failed production client so the next ping opens a new connection. */
+	static dropRedisClient() {
+		this.resetRedisClient();
+	}
+
 	private static resetRedisClient() {
 		const client = this._redisClient;
 		this._redisClient = undefined;
@@ -98,14 +103,22 @@ export class CacheClient {
 	/** Production Redis answers PING. The development cache is process-local. */
 	static async ping(): Promise<boolean> {
 		if (this._clientMode !== "production") return true;
+		const timeoutMs = 5_000;
+		let timer: ReturnType<typeof setTimeout> | undefined;
 		try {
-			const client = await this.requireRedis();
-			const reply = await client.ping();
+			const reply = await Promise.race([
+				this.requireRedis().then(client => client.ping()),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => reject(new Error("Redis ping timed out")), timeoutMs);
+				}),
+			]);
 			return reply === "PONG";
 		} catch (err) {
 			infoLogs(`Redis ping failed: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
 			this.resetRedisClient();
 			return false;
+		} finally {
+			if (timer) clearTimeout(timer);
 		}
 	}
 
