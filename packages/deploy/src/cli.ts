@@ -8,6 +8,16 @@ import YAML from "yaml";
 import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud/deploy-core";
 import * as renderHelpers from "./render";
 import { parseReplicaHealth, type ServiceHealth } from "./replica-health";
+import {
+	ROLLING_INSPECT_FORMAT,
+	ROLLING_UPDATE_WAIT_SECONDS,
+	evaluateRollingService,
+	parseRollingInspect,
+	rollingSpecMismatches,
+	type ObservedRollingService,
+	type RollingDecision,
+	type RollingServiceName,
+} from "./rolling-update";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
@@ -3376,14 +3386,20 @@ function waitForHealthyServices(
 	throw new Error(`Timed out waiting for deployed services to become healthy: ${pending}`);
 }
 
+/** Set when a detached stack deploy is accepted. Convergence is checked later. */
+let lastRenderedStackDeployAtMs: number | null = null;
+
 function deployRenderedStack(config: DeployConfig, label: string) {
 	if (currentOptions.dryRun) {
 		logDryRun(`Would deploy ${label} stack for ${config.services.stack_name}`);
 		logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+		logDryRun("Would wait until miniKMS and Atrium updates complete and their specs match");
 		return;
 	}
 	logStep(`Deploying ${label} stack`);
 	logCommand("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name]);
+	// Stay detached. --detach=false would block inside this out-of-sequence retry loop.
+	const startedAtMs = Date.now();
 	for (let attempt = 1; attempt <= 5; attempt += 1) {
 		const result = spawnSync("docker", ["stack", "deploy", "-c", STACK_FILE, config.services.stack_name], {
 			env: process.env,
@@ -3395,7 +3411,8 @@ function deployRenderedStack(config: DeployConfig, label: string) {
 		if (stdout) console.log(stdout);
 		if (stderr) console.error(stderr);
 		if (result.status === 0) {
-			logSuccess(`${label} stack deployed`);
+			lastRenderedStackDeployAtMs = startedAtMs;
+			logInfo(`${label} stack deploy accepted`);
 			return;
 		}
 		const combined = `${stdout}\n${stderr}`.toLowerCase();
@@ -3406,6 +3423,89 @@ function deployRenderedStack(config: DeployConfig, label: string) {
 		}
 		throw new Error(`Command failed: docker stack deploy -c ${STACK_FILE} ${config.services.stack_name}${stderr ? `\n${stderr}` : ""}`);
 	}
+}
+
+function inspectRollingService(serviceName: string) {
+	const output = tryRun(
+		"docker",
+		["service", "inspect", serviceName, "--format", ROLLING_INSPECT_FORMAT],
+		{ quiet: true },
+	);
+	return parseRollingInspect(output);
+}
+
+function describeRollingDecision(
+	serviceName: string,
+	service: RollingServiceName,
+	observed: ObservedRollingService,
+	decision: RollingDecision,
+	replicaHealth: ServiceHealth,
+) {
+	const mismatches = rollingSpecMismatches(service, observed);
+	const state = observed.updateState || "absent";
+	if (decision.action === "fail" && decision.kind === "rolled_back") {
+		const spec = mismatches.length > 0 ? `; spec ${mismatches.join(", ")}` : "";
+		return `${serviceName} update ${state} did not keep the requested spec${spec}`;
+	}
+	if (decision.action === "fail") {
+		return `${serviceName} update completed with a different spec (${mismatches.join(", ") || state})`;
+	}
+	if (decision.action === "wait" && decision.kind === "settling") {
+		return `${serviceName} no new update yet; confirming the running spec (${state})`;
+	}
+	if (decision.action === "wait" && decision.kind === "unhealthy") {
+		return `${serviceName} update ${state}; replicas ${replicaHealth}`;
+	}
+	if (decision.action === "wait" && decision.kind === "spec") {
+		return `${serviceName} requested spec is not running yet (${mismatches.join(", ") || state})`;
+	}
+	return `${serviceName} update ${state}`;
+}
+
+function waitForRequestedRollingServices(config: DeployConfig) {
+	if (currentOptions.dryRun) {
+		logDryRun("Would wait for miniKMS and Atrium update completion, health, and requested spec");
+		return;
+	}
+	const deployStartedAtMs = lastRenderedStackDeployAtMs ?? Date.now();
+	const deadline = Date.now() + ROLLING_UPDATE_WAIT_SECONDS * 1000;
+	const services: RollingServiceName[] = ["minikms", "atrium"];
+	const settle = new Map<RollingServiceName, number>(services.map(service => [service, 0]));
+	let pending: string[] = [];
+	while (Date.now() < deadline) {
+		const replicaHealth = listStackServices(config);
+		pending = [];
+		let ready = 0;
+		for (const service of services) {
+			const serviceName = `${config.services.stack_name}_${service}`;
+			const observed = inspectRollingService(serviceName);
+			const health = replicaHealth.get(serviceName) ?? "missing";
+			const decision = evaluateRollingService({
+				service,
+				observed,
+				replicaHealth: health,
+				deployStartedAtMs,
+				settleObservations: settle.get(service) ?? 0,
+			});
+			const detail = describeRollingDecision(serviceName, service, observed, decision, health);
+			if (decision.action === "fail") {
+				throw new Error(detail);
+			}
+			if (decision.action === "ready") {
+				ready += 1;
+				continue;
+			}
+			settle.set(service, decision.kind === "settling" ? (settle.get(service) ?? 0) + 1 : 0);
+			pending.push(detail);
+		}
+		if (ready === services.length) {
+			logSuccess("miniKMS and Atrium updates completed with the requested spec");
+			return;
+		}
+		logInfo(pending.join("; "));
+		sleepSeconds(3);
+	}
+	throw new Error(`Timed out waiting for miniKMS and Atrium updates to complete: ${pending.join("; ")}`);
 }
 
 function persistGeneratedState(config: DeployConfig, generated: DeployGeneratedState) {
@@ -4120,6 +4220,7 @@ async function cmdDeploy() {
 		deployRenderedStack(config, "steady");
 	}
 	runMiniKmsMigrate(config, renderHelpers.buildRuntimeEnv(config, currentState));
+	waitForRequestedRollingServices(config);
 	waitForHealthyServices(config, [
 		{ label: "traefik", getHealth: services => serviceHealth(services, `${config.services.stack_name}_traefik`) },
 		{ label: "atrium", getHealth: services => serviceHealth(services, `${config.services.stack_name}_atrium`) },
