@@ -25,6 +25,10 @@ type AuthConfig struct {
 	// again for the refresh grant.
 	ClientID string `json:"client_id"`
 	TokenURL string `json:"token_url"`
+	// DeviceRegistrationPending is true when refreshed credentials were stored
+	// before the device row was recorded. The next command records the device
+	// before using that access token.
+	DeviceRegistrationPending bool `json:"device_registration_pending,omitempty"`
 }
 
 type OTELConfig struct {

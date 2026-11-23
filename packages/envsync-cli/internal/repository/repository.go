@@ -117,6 +117,15 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 		return ""
 	}
 	if !tokenExpired(auth, now) {
+		if auth.DeviceRegistrationPending {
+			if err := RegisterDeviceSession(context.Background(), cfg.BackendURL, auth.AccessToken); err == nil {
+				auth.DeviceRegistrationPending = false
+				cfg.AuthConfig = auth
+				if writeErr := cfg.WriteConfigFile(); writeErr != nil {
+					// The device row is recorded. A later command retries if this write fails.
+				}
+			}
+		}
 		return auth.AccessToken
 	}
 	if auth.RefreshToken == "" {
@@ -126,7 +135,7 @@ func resolveToken(cfg config.AppConfig, now time.Time) string {
 		return auth.AccessToken
 	}
 
-	fresh, err := refreshAuth(auth, now)
+	fresh, err := refreshAuth(auth, cfg.BackendURL, now)
 	if fresh.AccessToken != "" {
 		cfg.AuthConfig = fresh
 		if writeErr := cfg.WriteConfigFile(); writeErr != nil {
@@ -155,7 +164,7 @@ func tokenExpired(auth config.AuthConfig, now time.Time) bool {
 
 // refreshAuth exchanges the stored refresh token for a fresh token pair using
 // the OAuth refresh grant at the recorded token endpoint.
-func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, error) {
+func refreshAuth(auth config.AuthConfig, backendURL string, now time.Time) (config.AuthConfig, error) {
 	if auth.TokenURL == "" || auth.ClientID == "" {
 		return config.AuthConfig{}, errors.New("token endpoint is unknown (this login predates refresh support); run 'envsync auth login' again")
 	}
@@ -190,9 +199,11 @@ func refreshAuth(auth config.AuthConfig, now time.Time) (config.AuthConfig, erro
 	}
 	auth.ExpiresAt = int(now.Add(time.Duration(resBody.ExpiresIn) * time.Second).Unix())
 
-	if err := RegisterDeviceSession(context.Background(), config.New().BackendURL, resBody.AccessToken); err != nil {
+	if err := RegisterDeviceSession(context.Background(), backendURL, resBody.AccessToken); err != nil {
+		auth.DeviceRegistrationPending = true
 		return auth, err
 	}
+	auth.DeviceRegistrationPending = false
 
 	return auth, nil
 }

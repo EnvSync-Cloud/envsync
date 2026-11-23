@@ -101,6 +101,7 @@ func (s *auth) SaveToken(token *domain.AccessToken, credentials *domain.LoginCre
 	cfg.AuthConfig.ExpiresAt = int(token.ExpiresAt.Unix())
 	cfg.AuthConfig.ClientID = credentials.ClientId
 	cfg.AuthConfig.TokenURL = credentials.TokenUrl
+	cfg.AuthConfig.DeviceRegistrationPending = false
 
 	if err := cfg.WriteConfigFile(); err != nil {
 		return fmt.Errorf("failed to save refresh/access token: %w", err)
