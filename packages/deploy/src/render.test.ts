@@ -21,6 +21,14 @@ import {
 	renderStack,
 	swarmConfigObjectName,
 	renderTraefikDynamicConfig,
+	ATRIUM_HEALTHCHECK_TEST,
+	ATRIUM_REPLICAS,
+	MINIKMS_HEALTHCHECK_TEST,
+	MINIKMS_REPLICAS,
+	MINIKMS_STOP_GRACE_PERIOD,
+	POSTGRES_IMAGE,
+	REDIS_IMAGE,
+	ROLLING_UPDATE_MONITOR,
 	type DeployConfig,
 	type DeployGeneratedState,
 } from "./render";
@@ -504,5 +512,125 @@ describe("Atrium social provider configuration", () => {
 			{ id: "github", type: "github", name: "GitHub", enabled, client_id: id, client_secret: secret },
 			{ id: "gitlab", type: "gitlab", name: "GitLab", enabled: false, client_id: "", client_secret: "" },
 		]);
+	});
+});
+
+function durationSeconds(value: string) {
+	const match = /^(\d+)s$/.exec(value);
+	if (!match) throw new Error(`expected a seconds duration, got ${value}`);
+	return Number(match[1]);
+}
+
+function healthcheckFailWindow(healthcheck: { start_period: string; retries: number; interval: string }) {
+	return durationSeconds(healthcheck.start_period) + healthcheck.retries * durationSeconds(healthcheck.interval);
+}
+
+function fullStack() {
+	const runtimeEnv = buildRuntimeEnv(config, generated);
+	return parse(renderStack(config, runtimeEnv, generated, "full", paths)) as {
+		services: Record<string, Record<string, any>>;
+	};
+}
+
+describe("fixture:minikms-ha-ac1", () => {
+	test("full stack gives miniKMS two replicas, start-first rollback, and a TCP healthcheck", () => {
+		const minikms = fullStack().services.minikms;
+		expect(minikms.image).toBe("ghcr.io/envsync-cloud/minikms:sha-cf531ee");
+		expect(minikms.deploy.replicas).toBe(MINIKMS_REPLICAS);
+		expect(minikms.deploy.replicas).toBe(2);
+		expect(minikms.deploy.endpoint_mode).toBeUndefined();
+		expect(minikms.deploy.update_config).toEqual({
+			parallelism: 1,
+			order: "start-first",
+			failure_action: "rollback",
+			monitor: ROLLING_UPDATE_MONITOR,
+		});
+		expect(minikms.deploy.update_config.monitor).toBe("90s");
+		expect(minikms.deploy.rollback_config).toEqual({
+			parallelism: 1,
+			order: "start-first",
+			failure_action: "pause",
+			monitor: "90s",
+		});
+		expect(durationSeconds(minikms.deploy.update_config.monitor)).toBeGreaterThanOrEqual(healthcheckFailWindow(minikms.healthcheck));
+		expect(durationSeconds(minikms.deploy.rollback_config.monitor)).toBeGreaterThanOrEqual(healthcheckFailWindow(minikms.healthcheck));
+		expect(minikms.healthcheck.test).toEqual([...MINIKMS_HEALTHCHECK_TEST]);
+		expect(minikms.healthcheck.test).toEqual(["CMD-SHELL", "nc -z 127.0.0.1 50051"]);
+		expect(minikms.healthcheck.interval).toBe("5s");
+		expect(minikms.healthcheck.timeout).toBe("3s");
+		expect(minikms.healthcheck.retries).toBe(3);
+		expect(minikms.healthcheck.start_period).toBe("20s");
+		expect(minikms.stop_grace_period).toBe(MINIKMS_STOP_GRACE_PERIOD);
+		expect(minikms.stop_grace_period).toBe("30s");
+		const command = Array.isArray(minikms.command) ? minikms.command.join("\n") : String(minikms.command);
+		expect(command).toContain("exec minikms");
+		expect(command).not.toMatch(/migrate|\.sql|\bpsql\b/i);
+		expect(minikms.deploy.update_config.order).toBe("start-first");
+	});
+});
+
+describe("fixture:atrium-ha-ac2", () => {
+	test("full stack keeps one Atrium replica with start-first rollback and an HTTP healthcheck", () => {
+		const stack = fullStack();
+		const atrium = stack.services.atrium;
+		expect(atrium.deploy.replicas).toBe(ATRIUM_REPLICAS);
+		expect(atrium.deploy.replicas).toBe(1);
+		expect(atrium.deploy.update_config).toEqual({
+			parallelism: 1,
+			order: "start-first",
+			failure_action: "rollback",
+			monitor: "90s",
+		});
+		expect(atrium.deploy.rollback_config).toEqual({
+			parallelism: 1,
+			order: "start-first",
+			failure_action: "pause",
+			monitor: "90s",
+		});
+		expect(durationSeconds(atrium.deploy.update_config.monitor)).toBeGreaterThanOrEqual(healthcheckFailWindow(atrium.healthcheck));
+		expect(atrium.healthcheck.test).toEqual([...ATRIUM_HEALTHCHECK_TEST]);
+		expect(atrium.healthcheck.test.join(" ")).toContain("/health");
+		expect(atrium.healthcheck.start_period).toBe("40s");
+		expect(atrium.volumes).toEqual(expect.arrayContaining([
+			"/opt/envsync/deploy/bin/busybox:/busybox:ro",
+		]));
+		expect(atrium.deploy.labels).toEqual(expect.arrayContaining([
+			"traefik.enable=true",
+			"traefik.http.routers.atrium.entrypoints=websecure",
+			"traefik.http.services.atrium.loadbalancer.server.port=8080",
+		]));
+		expect(stack.services.atrium_blue).toBeUndefined();
+		expect(stack.services.atrium_green).toBeUndefined();
+		expect(stack.services.atrium_migrate).toBeUndefined();
+		expect(Object.keys(stack.services).filter(name => name.startsWith("atrium")).sort()).toEqual([
+			"atrium",
+			"atrium_db",
+			"atrium_seed",
+		]);
+		const atriumConfig = parse(renderAtriumConfig(config, buildRuntimeEnv(config, generated))) as {
+			database: { migrations: boolean };
+		};
+		expect(atriumConfig.database.migrations).toBe(true);
+		const command = atrium.command == null ? "" : Array.isArray(atrium.command) ? atrium.command.join("\n") : String(atrium.command);
+		expect(command).not.toMatch(/\.sql|migrate/i);
+	});
+});
+
+describe("fixture:db-pin-ac3", () => {
+	test("full stack pins every Postgres service and Redis and leaves API rolling policy alone", () => {
+		const services = fullStack().services;
+		for (const name of ["postgres", "atrium_db", "openfga_db", "minikms_db"]) {
+			expect(services[name].image).toBe(POSTGRES_IMAGE);
+			expect(services[name].image).toBe("postgres:17.12");
+			expect(services[name].deploy).toBeUndefined();
+		}
+		expect(services.redis.image).toBe(REDIS_IMAGE);
+		expect(services.redis.image).toBe("redis:7.4.12");
+		expect(services.redis.deploy).toBeUndefined();
+		expect(services.rustfs.image).toBe("rustfs/rustfs:latest");
+		expect(services.openfga.image).toBe("openfga/openfga:v1.12.0");
+		expect(services.envsync_api_blue.deploy.update_config).toBeUndefined();
+		expect(services.envsync_api_blue.deploy.rollback_config).toBeUndefined();
+		expect(services.envsync_api_green.deploy.update_config).toBeUndefined();
 	});
 });

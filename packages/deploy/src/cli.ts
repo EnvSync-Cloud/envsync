@@ -7,6 +7,7 @@ import chalk from "chalk";
 import YAML from "yaml";
 import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud/deploy-core";
 import * as renderHelpers from "./render";
+import { parseReplicaHealth, type ServiceHealth } from "./replica-health";
 import * as staticBundleHelpers from "./static-bundle";
 import * as orgSetup from "./org-setup";
 import { generateMinikmsGrpcTlsPemSet, PRIVATE_KEY_FILE_MODE, writePrivateKeyFile } from "./minikms-tls";
@@ -219,7 +220,6 @@ type ApiSlotState = {
 	deployed_at: string;
 };
 type RuntimeEnv = Record<string, string>;
-type ServiceHealth = "healthy" | "missing" | "degraded";
 type CommandOptions = {
 	dryRun: boolean;
 	force: boolean;
@@ -2143,7 +2143,35 @@ function touchApiSlotDeployment(deployment: DeployGeneratedState["deployment"], 
 
 // Phase 7: duplicate local render helpers removed — use ./render (renderHelpers) only.
 
+const ATRIUM_HEALTHCHECK_STAMP = `${renderHelpers.ATRIUM_HEALTHCHECK_IMAGE}\n`;
+
+function ensureAtriumHealthcheckBinary() {
+	const target = renderHelpers.atriumHealthcheckHostPath(DEPLOY_ROOT);
+	const stampPath = `${target}.image`;
+	if (currentOptions.dryRun) {
+		logDryRun(`Would install ${renderHelpers.ATRIUM_HEALTHCHECK_IMAGE} at ${target} for the Atrium /health check`);
+		return;
+	}
+	if (exists(target) && exists(stampPath) && fs.readFileSync(stampPath, "utf8") === ATRIUM_HEALTHCHECK_STAMP) {
+		return;
+	}
+	ensureDir(path.dirname(target));
+	const name = `envsync-atrium-healthcheck-${process.pid}`;
+	logStep("Installing Atrium HTTP healthcheck helper");
+	run("docker", ["rm", "-f", name]);
+	run("docker", ["create", "--name", name, renderHelpers.ATRIUM_HEALTHCHECK_IMAGE]);
+	try {
+		fs.rmSync(target, { force: true });
+		run("docker", ["cp", `${name}:/bin/busybox`, target]);
+		fs.chmodSync(target, 0o755);
+		fs.writeFileSync(stampPath, ATRIUM_HEALTHCHECK_STAMP, { mode: 0o644 });
+	} finally {
+		run("docker", ["rm", "-f", name]);
+	}
+}
+
 function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedState) {
+	ensureAtriumHealthcheckBinary();
 	const setupToken = currentOptions.dryRun
 		? (orgSetup.readSetupTokenFile(SETUP_TOKEN_FILE) ?? orgSetup.generateSetupToken())
 		: orgSetup.ensureSetupTokenFile(SETUP_TOKEN_FILE);
@@ -2180,7 +2208,10 @@ function writeDeployArtifacts(config: DeployConfig, generated: DeployGeneratedSt
 	if (!currentOptions.dryRun) enforceProtectedMaterialModes(protectedMaterialRoots());
 	writeFileMaybe(DEPLOY_ENV, renderHelpers.renderEnvFile(runtimeEnv), SECRET_FILE_MODE);
 	writeInternalConfig(config, mergeGeneratedState(runtimeEnv, generated));
-	writeFileMaybe(VERSIONS_LOCK, JSON.stringify(config.images, null, 2) + "\n");
+	writeFileMaybe(
+		VERSIONS_LOCK,
+		JSON.stringify({ ...config.images, ...renderHelpers.databaseImageLock() }, null, 2) + "\n",
+	);
 	writeFileMaybe(ATRIUM_CONFIG_FILE, renderHelpers.renderAtriumConfig(config, runtimeEnv), SECRET_FILE_MODE);
 	writeFileMaybe(ATRIUM_CLIENTS_FILE, renderHelpers.renderAtriumClients(config, runtimeEnv), SECRET_FILE_MODE);
 	copyAtriumBranding();
@@ -2395,7 +2426,7 @@ async function createApiDbUpgradeBackup(config: DeployConfig, fromVersion: strin
 		"PGPASSWORD=envsync-postgres",
 		"-v",
 		`${UPGRADE_BACKUPS_ROOT}:/backup`,
-		"postgres:17",
+		renderHelpers.POSTGRES_IMAGE,
 		"sh",
 		"-lc",
 		`pg_dump -h ${serviceStackName(config, "postgres")} -U postgres -d envsync -Fc -f /backup/${fileName}`,
@@ -2436,7 +2467,7 @@ async function restoreApiDbUpgradeBackup(config: DeployConfig, backupPath: strin
 			"PGPASSWORD=envsync-postgres",
 			"-v",
 			`${UPGRADE_BACKUPS_ROOT}:/backup:ro`,
-			"postgres:17",
+			renderHelpers.POSTGRES_IMAGE,
 			"sh",
 			"-lc",
 			`pg_restore --clean --if-exists --no-owner --no-privileges -h ${serviceStackName(config, "postgres")} -U postgres -d envsync /backup/${restoreName}`,
@@ -2518,13 +2549,13 @@ function waitForCommand(
 }
 
 function waitForPostgresService(config: DeployConfig, label: string, host: string, user: string, password: string) {
-	waitForCommand(config, `${label} database readiness`, "postgres:17", `pg_isready -h ${host} -U ${user}`, 120, {
+	waitForCommand(config, `${label} database readiness`, renderHelpers.POSTGRES_IMAGE, `pg_isready -h ${host} -U ${user}`, 120, {
 		PGPASSWORD: password,
 	});
 }
 
 function waitForRedisService(config: DeployConfig) {
-	waitForCommand(config, "redis readiness", "redis:7", "redis-cli -h redis ping | grep PONG");
+	waitForCommand(config, "redis readiness", renderHelpers.REDIS_IMAGE, "redis-cli -h redis ping | grep PONG");
 }
 
 function waitForTcpService(config: DeployConfig, label: string, host: string, port: number, timeoutSeconds = 120) {
@@ -2643,7 +2674,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 			`PGPASSWORD=${runtimeEnv.MINIKMS_DB_PASSWORD}`,
 			"-v",
 			`${path.join(REPO_ROOT, "docker/minikms/migrations")}:/migrations:ro`,
-			"postgres:17",
+			renderHelpers.POSTGRES_IMAGE,
 			"sh",
 			"-lc",
 			MINIKMS_MIGRATE_SQL,
@@ -2659,7 +2690,7 @@ function runMiniKmsMigrate(config: DeployConfig, runtimeEnv: RuntimeEnv) {
 		`PGPASSWORD=${runtimeEnv.MINIKMS_DB_PASSWORD}`,
 		"-v",
 		`${path.join(REPO_ROOT, "docker/minikms/migrations")}:/migrations:ro`,
-		"postgres:17",
+		renderHelpers.POSTGRES_IMAGE,
 		"sh",
 		"-lc",
 		MINIKMS_MIGRATE_SQL,
@@ -3058,16 +3089,6 @@ function assertBootstrapState(generated: DeployGeneratedState) {
 	if (!hasCompleteBootstrapState(generated)) {
 		throw new Error("Missing bootstrap state. Run 'envsync-deploy bootstrap' first.");
 	}
-}
-
-function parseReplicaHealth(raw: string): ServiceHealth {
-	const match = raw.match(/^(\d+)\/(\d+)$/);
-	if (!match) return raw.trim() ? "degraded" : "missing";
-	const current = Number(match[1]);
-	const desired = Number(match[2]);
-	if (desired === 0) return "missing";
-	if (current === desired) return "healthy";
-	return "degraded";
 }
 
 function listStackServices(config: DeployConfig) {
