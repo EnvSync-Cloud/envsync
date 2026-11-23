@@ -1,6 +1,6 @@
 {
   "name": "@envsync-cloud/deploy-core",
-  "version": "0.25.3",
+  "version": "0.26.0-rc.1",
   "license": "MIT",
   "author": "EnvSync Cloud Private Limited",
   "type": "module",
