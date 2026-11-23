@@ -29,6 +29,7 @@ import {
 import { SessionDeviceService } from "@/services/session-device.service";
 import { refreshDirectoryToken } from "@/helpers/identity";
 import { isServiceTokenAllowedPath } from "@/middlewares/service-token-scope.middleware";
+import { captureInboundKmsProof, runWithInboundKmsProof } from "@/libs/kms/request-proof";
 
 function isQueryCredentialAttempt(ctx: Context) {
 	return Boolean(ctx.req.query("access_token") || ctx.req.query("api_key"));
@@ -175,121 +176,127 @@ export const authMiddleware = (): MiddlewareHandler => {
 				}
 			}
 
-			let user = await UserService.getUser(access_info.user_id);
-			if (verifyAs !== "SAML" && usesBrowserSession && access_info.auth_service_id) {
-				const requestedMembershipId = readActiveMembershipCookie(ctx);
-				user = await UserService.resolveActiveMembershipByIdpId(
-					access_info.auth_service_id,
-					requestedMembershipId,
-				);
+			const inboundProof = captureInboundKmsProof({
+				dpopHeader: ctx.req.header("DPoP"),
+				credential: verifyAs === "JWT" && token ? token : null,
+			});
+			return await runWithInboundKmsProof(inboundProof, async () => {
+				let user = await UserService.getUser(access_info.user_id);
+				if (verifyAs !== "SAML" && usesBrowserSession && access_info.auth_service_id) {
+					const requestedMembershipId = readActiveMembershipCookie(ctx);
+					user = await UserService.resolveActiveMembershipByIdpId(
+						access_info.auth_service_id,
+						requestedMembershipId,
+					);
 
-				if (requestedMembershipId && requestedMembershipId !== user.id) {
-					await UserService.touchLastLogin(user.id);
-					setActiveMembershipCookie(ctx, user.id);
+					if (requestedMembershipId && requestedMembershipId !== user.id) {
+						await UserService.touchLastLogin(user.id);
+						setActiveMembershipCookie(ctx, user.id);
+					}
+				} else if (
+					verifyAs !== "SAML" &&
+					usesBearerToken &&
+					access_info.auth_service_id &&
+					requestedOrgHeader !== undefined
+				) {
+					const requestedOrgId = requestedOrgHeader.trim();
+					if (!requestedOrgId) {
+						throw new AppError("X-EnvSync-Org-Id must not be blank.", 400, "AUTH_ORG_HEADER_INVALID");
+					}
+
+					user = await UserService.resolveMembershipByOrgId(
+						access_info.auth_service_id,
+						requestedOrgId,
+					);
 				}
-			} else if (
-				verifyAs !== "SAML" &&
-				usesBearerToken &&
-				access_info.auth_service_id &&
-				requestedOrgHeader !== undefined
-			) {
-				const requestedOrgId = requestedOrgHeader.trim();
-				if (!requestedOrgId) {
-					throw new AppError("X-EnvSync-Org-Id must not be blank.", 400, "AUTH_ORG_HEADER_INVALID");
+
+				if (dpopJkt && dpopSub) {
+					try {
+						await SessionDeviceService.touch(
+							{
+								directoryUserId: dpopSub,
+								userId: user.id,
+								clientId: dpopClientId,
+								jkt: dpopJkt,
+								label: defaultDeviceLabel(dpopClientId, ctx.req.header("user-agent")),
+							},
+							{ createIfMissing: false },
+						);
+					} catch (error) {
+						if (error instanceof AppError) throw error;
+						infoLogs(
+							`Session device touch failed: ${error instanceof Error ? error.message : String(error)}`,
+							LogTypes.ERROR,
+							"AuthMiddleware",
+						);
+					}
 				}
 
-				user = await UserService.resolveMembershipByOrgId(
-					access_info.auth_service_id,
-					requestedOrgId,
-				);
-			}
+				const [org, role] = await Promise.all([
+					OrgService.getOrg(user.org_id),
+					RoleService.getRole(user.role_id),
+				]);
 
-			if (dpopJkt && dpopSub) {
-				try {
-					await SessionDeviceService.touch(
+				ctx.set("user_id", user.id);
+				ctx.set("directory_user_id", access_info.auth_service_id ?? access_info.user_id);
+				ctx.set("org_id", user.org_id);
+				ctx.set("role_id", user.role_id);
+				ctx.set("org_name", org.name);
+				ctx.set("role_name", role.name);
+				ctx.set(
+					"auth_type",
+					(
 						{
-							directoryUserId: dpopSub,
-							userId: user.id,
-							clientId: dpopClientId,
-							jkt: dpopJkt,
-							label: defaultDeviceLabel(dpopClientId, ctx.req.header("user-agent")),
+							JWT: "jwt",
+							SAML: "saml",
+							OIDC: "oidc",
+							API_KEY: "api_key",
+							SERVICE_TOKEN: "service_token",
+						} as const
+					)[access_info.auth_type],
+				);
+				if (access_info.service_token) {
+					ctx.set("service_token", access_info.service_token);
+				}
+
+				if (access_info.auth_type === "SERVICE_TOKEN" && !isServiceTokenAllowedPath(ctx.req.path)) {
+					return ctx.json(
+						{
+							error: "Service tokens can only access environment and secret APIs",
+							code: "SERVICE_TOKEN_ROUTE_DENIED",
 						},
-						{ createIfMissing: false },
+						403,
+					);
+				}
+
+				try {
+					await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(
+						user.id,
+						user.org_id,
+						user.role_id,
 					);
 				} catch (error) {
-					if (error instanceof AppError) throw error;
 					infoLogs(
-						`Session device touch failed: ${error instanceof Error ? error.message : String(error)}`,
+						`System member cert not provisioned for ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
 						LogTypes.ERROR,
 						"AuthMiddleware",
 					);
 				}
-			}
 
-			const [org, role] = await Promise.all([
-				OrgService.getOrg(user.org_id),
-				RoleService.getRole(user.role_id),
-			]);
+				const span = getActiveSpan();
+				if (span) {
+					span.setAttributes({
+						"envsync.user_id": user.id,
+						"envsync.org_id": user.org_id,
+						"envsync.org_name": org.name,
+						"envsync.role_name": role.name,
+						"envsync.auth_type": access_info.auth_type,
+						"enduser.id": access_info.auth_service_id ?? access_info.user_id,
+					});
+				}
 
-			ctx.set("user_id", user.id);
-			ctx.set("directory_user_id", access_info.auth_service_id ?? access_info.user_id);
-			ctx.set("org_id", user.org_id);
-			ctx.set("role_id", user.role_id);
-			ctx.set("org_name", org.name);
-			ctx.set("role_name", role.name);
-			ctx.set(
-				"auth_type",
-				(
-					{
-						JWT: "jwt",
-						SAML: "saml",
-						OIDC: "oidc",
-						API_KEY: "api_key",
-						SERVICE_TOKEN: "service_token",
-					} as const
-				)[access_info.auth_type],
-			);
-			if (access_info.service_token) {
-				ctx.set("service_token", access_info.service_token);
-			}
-
-			if (access_info.auth_type === "SERVICE_TOKEN" && !isServiceTokenAllowedPath(ctx.req.path)) {
-				return ctx.json(
-					{
-						error: "Service tokens can only access environment and secret APIs",
-						code: "SERVICE_TOKEN_ROUTE_DENIED",
-					},
-					403,
-				);
-			}
-
-			try {
-				await SystemCertificateProvisioningService.ensureProvisionedForAuthenticatedUser(
-					user.id,
-					user.org_id,
-					user.role_id,
-				);
-			} catch (error) {
-				infoLogs(
-					`System member cert not provisioned for ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
-					LogTypes.ERROR,
-					"AuthMiddleware",
-				);
-			}
-
-			const span = getActiveSpan();
-			if (span) {
-				span.setAttributes({
-					"envsync.user_id": user.id,
-					"envsync.org_id": user.org_id,
-					"envsync.org_name": org.name,
-					"envsync.role_name": role.name,
-					"envsync.auth_type": access_info.auth_type,
-					"enduser.id": access_info.auth_service_id ?? access_info.user_id,
-				});
-			}
-
-			await next();
+				await next();
+			});
 		} catch (err) {
 			if (err instanceof AppError && err.statusCode !== 404) {
 				throw err;

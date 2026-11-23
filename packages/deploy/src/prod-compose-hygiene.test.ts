@@ -34,4 +34,11 @@ describe("production compose hygiene", () => {
 		const renderSource = readFileSync(path.join(root, "packages/deploy/src/render.ts"), "utf8");
 		expect(renderSource).not.toContain("depends_on");
 	});
+
+	test("fixture: prod-config-unchanged", () => {
+		const prod = readFileSync(path.join(root, "docker-compose.prod.yaml"), "utf8");
+		const dev = readFileSync(path.join(root, "docker-compose.yaml"), "utf8");
+		expect(prod).not.toContain("MINIKMS_DPOP_");
+		expect(dev).not.toContain("MINIKMS_DPOP_");
+	});
 });

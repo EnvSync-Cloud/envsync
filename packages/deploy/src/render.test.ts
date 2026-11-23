@@ -26,6 +26,7 @@ import {
 	MINIKMS_HEALTHCHECK_TEST,
 	MINIKMS_REPLICAS,
 	MINIKMS_STOP_GRACE_PERIOD,
+	minikmsDpopEnvironment,
 	POSTGRES_IMAGE,
 	REDIS_IMAGE,
 	ROLLING_UPDATE_MONITOR,
@@ -659,5 +660,50 @@ describe("fixture:db-pin-ac3", () => {
 		expect(services.envsync_api_blue.deploy.update_config).toBeUndefined();
 		expect(services.envsync_api_blue.deploy.rollback_config).toBeUndefined();
 		expect(services.envsync_api_green.deploy.update_config).toBeUndefined();
+	});
+});
+
+function serviceEnvLines(service: { environment?: string[] | Record<string, string> } | undefined): string[] {
+	const env = service?.environment;
+	if (Array.isArray(env)) return env;
+	if (env && typeof env === "object") {
+		return Object.entries(env).map(([key, value]) => `${key}=${value}`);
+	}
+	return [];
+}
+
+describe("fixture: deploy-minikms-dpop-mode-off", () => {
+	test("combined stack sets miniKMS proof env to off and leaves the API service without it", () => {
+		const runtimeEnv = buildRuntimeEnv(config, generated);
+		const expected = minikmsDpopEnvironment(runtimeEnv);
+		expect(expected.MINIKMS_DPOP_MODE).toBe("off");
+		expect(expected.MINIKMS_DPOP_MAX_PROOF_AGE_SEC).toBe("60");
+		expect(expected.MINIKMS_DPOP_ALLOW_DOWNGRADE).toBe("false");
+		expect(expected.MINIKMS_DPOP_ISSUER).toBe("https://auth.enterprise.example.com");
+		expect(expected.MINIKMS_DPOP_JWKS_URL).toBe("https://auth.enterprise.example.com/oidc/jwks");
+		expect(expected.MINIKMS_DPOP_AUDIENCE).toBe("https://api.enterprise.example.com");
+		expect(expected.MINIKMS_DPOP_ALLOWED_HTU_ORIGINS).toBe("https://api.enterprise.example.com");
+		expect(Object.values(expected)).not.toContain("enforce");
+		expect(Object.values(expected)).not.toContain("monitor");
+		expect(renderEnvFile(runtimeEnv)).not.toContain("MINIKMS_DPOP_");
+
+		for (const mode of ["full", "bootstrap"] as const) {
+			const stack = parse(renderStack(config, runtimeEnv, generated, mode, paths)) as {
+				services: Record<string, { environment?: string[] | Record<string, string> }>;
+			};
+			const minikmsEnv = serviceEnvLines(stack.services.minikms);
+			for (const [key, value] of Object.entries(expected)) {
+				expect(minikmsEnv).toContain(`${key}=${value}`);
+			}
+			expect(minikmsEnv.some(line => line.startsWith("MINIKMS_DPOP_MODE=") && !line.endsWith("=off"))).toBe(false);
+		}
+
+		const full = fullStack();
+		for (const name of ["envsync_api_blue", "envsync_api_green"]) {
+			const lines = serviceEnvLines(full.services[name]);
+			expect(lines.some(line => line.startsWith("MINIKMS_DPOP_"))).toBe(false);
+		}
+		const base = renderStack(config, runtimeEnv, generated, "base", paths);
+		expect(base).not.toContain("MINIKMS_DPOP_");
 	});
 });
