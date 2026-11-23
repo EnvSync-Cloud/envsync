@@ -94,6 +94,8 @@ jobs:
         run: bun run check:boundaries
       - name: Run release bump script tests
         run: bun test scripts/bump-release-version.test.ts
+      - name: Run release workflow tests
+        run: bun test scripts/release-workflow.test.ts
       - name: Run deploy planner tests
         run: bun test src/index.test.ts
         working-directory: packages/deploy-core

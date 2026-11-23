@@ -10,7 +10,46 @@ permissions:
   packages: write
 
 jobs:
+  release-meta:
+    name: Release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      is_prerelease: ${{ steps.meta.outputs.is_prerelease }}
+      npm_tag: ${{ steps.meta.outputs.npm_tag }}
+    steps:
+      - name: Classify release tag
+        id: meta
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          tag="${GITHUB_REF_NAME}"
+          pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[1-9][0-9]*)?$'
+          if ! printf '%s\n' "${tag}" | grep -Eq "${pattern}"; then
+            echo "Release tag '${tag}' must match vX.Y.Z or vX.Y.Z-rc.N." >&2
+            exit 1
+          fi
+
+          version="${tag#v}"
+          is_prerelease=false
+          npm_tag=latest
+          case "${version}" in
+            *-rc.*)
+              is_prerelease=true
+              npm_tag=next
+              ;;
+          esac
+
+          {
+            echo "version=${version}"
+            echo "is_prerelease=${is_prerelease}"
+            echo "npm_tag=${npm_tag}"
+          } >> "${GITHUB_OUTPUT}"
+
   goreleaser:
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -39,6 +78,7 @@ jobs:
 
   build-api-image:
     name: Build & Push API Image
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -60,11 +100,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/envsync-cloud/envsync-api
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=stable
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}},enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=stable,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=latest,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
             type=sha,prefix=
 
       - name: Build and push
@@ -79,6 +120,7 @@ jobs:
 
   build-api-enterprise-image:
     name: Build & Push Enterprise API Image (core + /api/v1/manage)
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -98,11 +140,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/envsync-cloud/envsync-api-enterprise
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=stable
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}},enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=stable,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=latest,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
             type=sha,prefix=
 
       - name: Build and push
@@ -116,6 +159,7 @@ jobs:
 
   build-frontend-static-images:
     name: Build & Push Frontend Static Images
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -178,11 +222,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ matrix.image }}
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=stable
-            type=raw,value=latest
+            type=semver,pattern={{major}}.{{minor}},enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=stable,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
+            type=raw,value=latest,enable=${{ needs.release-meta.outputs.is_prerelease != 'true' }}
             type=sha,prefix=
 
       - name: Build and push
@@ -196,6 +241,7 @@ jobs:
 
   publish-oss-deploy:
     name: Publish OSS Deploy CLI
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -283,10 +329,13 @@ jobs:
 
       - name: Publish to npm
         working-directory: packages/deploy
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag "$NPM_DIST_TAG"
+        env:
+          NPM_DIST_TAG: ${{ needs.release-meta.outputs.npm_tag }}
 
   publish-deploy-core:
     name: Publish Deploy Core
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -337,10 +386,13 @@ jobs:
 
       - name: Publish to npm
         working-directory: packages/deploy-core
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag "$NPM_DIST_TAG"
+        env:
+          NPM_DIST_TAG: ${{ needs.release-meta.outputs.npm_tag }}
 
   publish-enterprise-deploy-cli:
     name: Publish Enterprise Deploy CLI (private)
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -430,12 +482,14 @@ jobs:
 
       - name: Publish to GitHub Packages (private / restricted)
         working-directory: packages/deploy-cli
-        run: npm publish --access restricted
+        run: npm publish --access restricted --tag "$NPM_DIST_TAG"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_DIST_TAG: ${{ needs.release-meta.outputs.npm_tag }}
 
   publish-ts-sdk:
     name: Publish TypeScript SDK
+    needs: release-meta
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -486,7 +540,9 @@ jobs:
 
       - name: Publish to npm
         working-directory: sdks/envsync-ts-sdk
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --tag "$NPM_DIST_TAG"
+        env:
+          NPM_DIST_TAG: ${{ needs.release-meta.outputs.npm_tag }}
 
   # Runs only after every publish job succeeds. GitHub pauses the job until a
   # reviewer approves the production environment. The backup is uploaded before
@@ -494,6 +550,7 @@ jobs:
   deploy-production:
     name: Deploy production
     needs:
+      - release-meta
       - goreleaser
       - build-api-image
       - build-api-enterprise-image
@@ -502,6 +559,7 @@ jobs:
       - publish-deploy-core
       - publish-enterprise-deploy-cli
       - publish-ts-sdk
+    if: needs.release-meta.outputs.is_prerelease != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 180
     concurrency:
