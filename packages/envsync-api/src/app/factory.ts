@@ -29,6 +29,7 @@ import {
 import { createApiRoutes } from "@/routes";
 import { obsProxyRouter, posthogProxyRouter } from "@/routes/telemetry-proxy.route";
 import { expandBrowserOrigins } from "@/libs/browser-origins";
+import { evaluateReadiness } from "@/libs/readiness";
 import { config } from "@/utils/env";
 import { version } from "package.json";
 
@@ -286,13 +287,17 @@ export async function createApiApp(surface: ApiSurface) {
 	app.use(prettyJSON());
 	app.use(poweredBy());
 
-	app.get("/health", ctx =>
-		ctx.json({
-			status: "ok!",
-			surface,
-			manage_api_prefix: manageMounted ? MANAGE_API_PREFIX : null,
-		}),
-	);
+	app.get("/health", async ctx => {
+		const decision = await evaluateReadiness();
+		return ctx.json(
+			{
+				...decision.body,
+				surface,
+				manage_api_prefix: manageMounted ? MANAGE_API_PREFIX : null,
+			},
+			decision.status as ContentfulStatusCode,
+		);
+	});
 
 	app.get("/health/mail", async ctx => {
 		try {

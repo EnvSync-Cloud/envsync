@@ -1,16 +1,16 @@
 import "./instrumentation";
 import { app } from "@/app";
-import { CacheClient } from "@/libs/cache";
-import { FGAClient } from "@/libs/openfga";
+import { bootOrExit, enableStartupReadinessGate } from "@/libs/readiness";
 import { config } from "@/utils/env";
-import { DB } from "@/libs/db";
 import {
 	loadApiModules,
 	registerApiBackgroundHandlers,
 } from "@/modules/load-modules";
 
-// Listen before DB/FGA/license so Swarm /health probes succeed immediately.
-// Background work must not block the HTTP server.
+// Listen first so orchestrators can observe /health while dependencies retry.
+// /health stays unavailable until Postgres is reachable and boot has finished.
+enableStartupReadinessGate();
+
 const server = Bun.serve({
 	fetch: app.fetch.bind(app),
 	port: Number(config.PORT),
@@ -18,9 +18,11 @@ const server = Bun.serve({
 	hostname: "0.0.0.0",
 });
 
-CacheClient.init();
-await DB.healthCheck();
-await FGAClient.getInstance();
+await bootOrExit(code => {
+	void server.stop(true);
+	process.exit(code);
+});
+
 await registerApiBackgroundHandlers("core");
 if (loadApiModules("management").length > 0) {
 	await registerApiBackgroundHandlers("management");

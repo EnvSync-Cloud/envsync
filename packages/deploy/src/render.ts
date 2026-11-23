@@ -1107,6 +1107,28 @@ export function buildApiServiceEnvironment(
 	});
 }
 
+function swarmPgHealthcheck(user: string, database: string) {
+	return [
+		"    healthcheck:",
+		`      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${user} -d ${database}"]`,
+		"      interval: 5s",
+		"      timeout: 5s",
+		"      retries: 20",
+		"      start_period: 10s",
+	].join("\n");
+}
+
+function swarmRedisHealthcheck() {
+	return [
+		"    healthcheck:",
+		`      test: ["CMD", "redis-cli", "ping"]`,
+		"      interval: 5s",
+		"      timeout: 5s",
+		"      retries: 20",
+		"      start_period: 5s",
+	].join("\n");
+}
+
 export function renderStack(
 	config: DeployConfig,
 	runtimeEnv: RuntimeEnv,
@@ -1189,12 +1211,14 @@ ${renderEnvList({
 	})}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+${swarmPgHealthcheck("postgres", "envsync")}
     networks: [envsync]
 
   redis:
     image: ${REDIS_IMAGE}
     volumes:
       - redis_data:/data
+${swarmRedisHealthcheck()}
     networks: [envsync]
 
   rustfs:
@@ -1233,6 +1257,7 @@ ${renderEnvList({
 	})}
     volumes:
       - atrium_db_data:/var/lib/postgresql/data
+${swarmPgHealthcheck("atrium", "atrium")}
     networks: [envsync]
 ${includeRuntimeInfra ? `
   atrium:
@@ -1296,6 +1321,7 @@ ${renderEnvList({
 	})}
     volumes:
       - openfga_db_data:/var/lib/postgresql/data
+${swarmPgHealthcheck("openfga", "openfga")}
     networks: [envsync]
 ${includeRuntimeInfra ? `
   openfga:
@@ -1320,6 +1346,7 @@ ${renderEnvList({
 	})}
     volumes:
       - minikms_db_data:/var/lib/postgresql/data
+${swarmPgHealthcheck("postgres", "minikms")}
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:

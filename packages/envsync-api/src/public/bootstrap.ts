@@ -5,6 +5,7 @@
 import { CacheClient } from "@/libs/cache";
 import { DB } from "@/libs/db";
 import { FGAClient } from "@/libs/openfga";
+import { bootApiDependencies } from "@/libs/readiness";
 import { registerApiBackgroundHandlers } from "@/modules/load-modules";
 import type { ApiSurface } from "@/modules/types";
 import { config } from "@/utils/env";
@@ -13,11 +14,9 @@ export { config };
 export { CacheClient, DB, FGAClient };
 export { registerApiBackgroundHandlers };
 
-/** Initialize cache, DB health, FGA, and surface background handlers. */
+/** Initialize cache, retry Postgres/Redis/OpenFGA, then register background handlers. */
 export async function bootstrapRuntime(surface: ApiSurface = "core") {
-	CacheClient.init();
-	await DB.healthCheck();
-	await FGAClient.getInstance();
+	await bootApiDependencies();
 	await registerApiBackgroundHandlers(surface);
 }
 
