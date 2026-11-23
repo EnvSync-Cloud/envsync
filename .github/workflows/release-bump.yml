@@ -1,0 +1,230 @@
+# Release bump on dev.
+#
+# A merged pull request into dev gets one bump commit and one annotated rc tag.
+# Those refs are pushed with a GitHub App token so the tag push starts
+# .github/workflows/release.yml. The workflow GITHUB_TOKEN is not used for writes.
+#
+# GitHub App installation: EnvSync-Cloud/envsync only.
+# Repository permissions:
+#   Contents: Read and write
+#   Pull requests: Read
+#   Metadata: Read
+#
+# Repository variables:
+#   RELEASE_APP_ID — GitHub App id
+#   RELEASE_APP_SLUG — GitHub App slug; the bot login is <slug>[bot]
+# Secret:
+#   RELEASE_APP_PRIVATE_KEY — GitHub App private key (PEM)
+
+name: Release bump (dev)
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Commit and tag locally without pushing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-bump-dev
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
+    steps:
+      - name: Decide whether this push already is a release bump
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          APP_SLUG: ${{ vars.RELEASE_APP_SLUG }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          event_name="${EVENT_NAME:-}"
+          head_message="${HEAD_MESSAGE:-}"
+          actor="${ACTOR:-}"
+          app_slug="${APP_SLUG:-}"
+          sha="${SHA:-}"
+          message_is_bump=false
+          if [ "${event_name}" = "push" ]; then
+            case "${head_message}" in
+              "chore: release version "*)
+                case "${head_message}" in
+                  *"Release-Source:"*)
+                    message_is_bump=true
+                    ;;
+                esac
+                ;;
+            esac
+          fi
+          actor_is_bot=false
+          if [ -n "${app_slug}" ] && [ "${actor}" = "${app_slug}[bot]" ]; then
+            actor_is_bot=true
+          fi
+          skip=false
+          if [ "${message_is_bump}" = "true" ] || [ "${actor_is_bot}" = "true" ]; then
+            echo "skip-on-own-commit: ${sha} is a release bump commit by ${actor}; not bumping again"
+            skip=true
+          fi
+          echo "skip=${skip}" >> "${GITHUB_OUTPUT}"
+
+  bump:
+    name: Bump
+    needs: gate
+    if: needs.gate.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release app credentials
+        env:
+          RELEASE_APP_ID: ${{ vars.RELEASE_APP_ID }}
+          RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RELEASE_APP_ID}" ] || [ -z "${RELEASE_APP_PRIVATE_KEY}" ]; then
+            echo "RELEASE_APP_ID (variable) and RELEASE_APP_PRIVATE_KEY (secret) are required. The App needs contents write and pull requests read on EnvSync-Cloud/envsync." >&2
+            exit 1
+          fi
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+
+      - name: Resolve bot identity and pull request map
+        id: release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          bot_name="${APP_SLUG}[bot]"
+          bot_id="$(gh api "/users/${bot_name}" --jq .id)"
+          bot_email="${bot_id}+${bot_name}@users.noreply.github.com"
+          {
+            echo "bot_name=${bot_name}"
+            echo "bot_email=${bot_email}"
+          } >> "${GITHUB_OUTPUT}"
+
+          git fetch origin dev --tags --force
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            event_sha="$(git rev-parse origin/dev)"
+          else
+            event_sha="${PUSH_SHA}"
+          fi
+          echo "event_sha=${event_sha}" >> "${GITHUB_OUTPUT}"
+
+          last_stable="$(git describe --tags --abbrev=0 --match 'v*' --exclude 'v*-*' origin/dev)"
+          cat > /tmp/build-pr-map.ts <<'EOF'
+          const last = process.env.LAST_STABLE ?? "";
+          const repo = process.env.REPO ?? "";
+
+          function text(value: unknown): string {
+            if (typeof value === "string") return value;
+            if (value instanceof Uint8Array) return new TextDecoder().decode(value);
+            return "";
+          }
+
+          const rev = Bun.spawnSync(["git", "rev-list", "--first-parent", "--reverse", `${last}..origin/dev`], {
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+          if ((rev.exitCode ?? 1) !== 0) {
+            console.error(text(rev.stderr));
+            process.exit(rev.exitCode ?? 1);
+          }
+
+          const map: Record<string, unknown> = {};
+          for (const sha of text(rev.stdout).split("\n").filter((line) => line.length > 0)) {
+            const pullsRun = Bun.spawnSync(["gh", "api", `repos/${repo}/commits/${sha}/pulls`], {
+              stdout: "pipe",
+              stderr: "pipe",
+            });
+            if ((pullsRun.exitCode ?? 1) !== 0) {
+              console.error(text(pullsRun.stderr));
+              process.exit(pullsRun.exitCode ?? 1);
+            }
+            const parsed = JSON.parse(text(pullsRun.stdout)) as unknown;
+            if (!Array.isArray(parsed)) continue;
+            const pr = parsed.find((item) => {
+              if (!item || typeof item !== "object") return false;
+              const record = item as { base?: { ref?: string }; merged_at?: string | null };
+              return record.base?.ref === "dev" && typeof record.merged_at === "string" && record.merged_at.length > 0;
+            }) as
+              | {
+                  number: number;
+                  title: string;
+                  merge_commit_sha?: string | null;
+                  base?: { ref?: string };
+                  labels?: Array<{ name?: string } | string>;
+                }
+              | undefined;
+            if (!pr) continue;
+            const labels = (pr.labels ?? [])
+              .map((label) => (typeof label === "string" ? label : (label.name ?? "")))
+              .filter((label) => label.length > 0);
+            map[sha] = {
+              number: pr.number,
+              base: pr.base?.ref ?? "dev",
+              merged: true,
+              labels,
+              title: pr.title,
+              merge_commit_sha: pr.merge_commit_sha ?? sha,
+            };
+          }
+
+          await Bun.write("pr-map.json", JSON.stringify(map));
+          EOF
+          LAST_STABLE="${last_stable}" bun /tmp/build-pr-map.ts
+
+      - name: Bump and tag
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          BOT_NAME: ${{ steps.release.outputs.bot_name }}
+          BOT_EMAIL: ${{ steps.release.outputs.bot_email }}
+          EVENT_SHA: ${{ steps.release.outputs.event_sha }}
+        run: |
+          set -euo pipefail
+          args=(
+            run
+            --remote origin
+            --branch dev
+            --bot-name "${BOT_NAME}"
+            --bot-email "${BOT_EMAIL}"
+            --event-sha "${EVENT_SHA}"
+            --prs-json pr-map.json
+          )
+          if [ "${DRY_RUN}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          bun run scripts/release-autobump.ts "${args[@]}"
