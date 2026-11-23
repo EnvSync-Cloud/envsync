@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
-import { ATRIUM_HEALTHCHECK_TEST, ATRIUM_REPLICAS, MINIKMS_HEALTHCHECK_TEST, MINIKMS_REPLICAS } from "./render";
+import { ATRIUM_HEALTHCHECK_TEST, ATRIUM_IMAGE, ATRIUM_REPLICAS, MINIKMS_HEALTHCHECK_TEST, MINIKMS_IMAGE, MINIKMS_REPLICAS } from "./render";
 import {
 	ROLLING_INSPECT_FORMAT,
 	ROLLING_SETTLE_OBSERVATIONS,
 	classifyUpdateState,
 	evaluateDataPlaneUpdate,
 	evaluateRollingService,
+	imageReferenceMatches,
 	parseRollingInspect,
 	rollingSpecMismatches,
 	type ObservedRollingService,
+	type RollingServiceName,
 } from "./rolling-update";
+import type { ServiceHealth } from "./replica-health";
 
 const deployStartedAtMs = Date.parse("2026-11-23T01:39:00Z");
 const currentUpdate = Date.parse("2026-11-23T01:39:05Z");
@@ -25,14 +28,31 @@ function observed(overrides: Partial<ObservedRollingService> = {}): ObservedRoll
 		rollbackOrder: "start-first",
 		rollbackFailureAction: "pause",
 		healthTest: [...MINIKMS_HEALTHCHECK_TEST],
+		image: MINIKMS_IMAGE,
 		...overrides,
 	};
+}
+
+function decide(
+	service: RollingServiceName,
+	serviceObserved: ObservedRollingService,
+	extra: { replicaHealth?: ServiceHealth; settleObservations?: number } = {},
+) {
+	return evaluateRollingService({
+		service,
+		observed: serviceObserved,
+		replicaHealth: extra.replicaHealth ?? "healthy",
+		deployStartedAtMs,
+		settleObservations: extra.settleObservations ?? 0,
+		expectedImage: service === "atrium" ? ATRIUM_IMAGE : MINIKMS_IMAGE,
+	});
 }
 
 function atriumObserved(overrides: Partial<ObservedRollingService> = {}) {
 	return observed({
 		replicas: ATRIUM_REPLICAS,
 		healthTest: [...ATRIUM_HEALTHCHECK_TEST],
+		image: ATRIUM_IMAGE,
 		...overrides,
 	});
 }
@@ -51,49 +71,23 @@ describe("rolling update convergence", () => {
 	test("a completed update with the requested spec is ready", () => {
 		expect(ATRIUM_REPLICAS).toBe(1);
 		expect(MINIKMS_REPLICAS).toBe(2);
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: observed(),
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "ready" });
-		expect(evaluateRollingService({
-			service: "atrium",
-			observed: atriumObserved(),
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "ready" });
+		expect(decide("minikms", observed())).toEqual({ action: "ready" });
+		expect(decide("atrium", atriumObserved())).toEqual({ action: "ready" });
+		expect(decide("minikms", observed({ image: `${MINIKMS_IMAGE}@sha256:abc` }))).toEqual({ action: "ready" });
+		expect(imageReferenceMatches(`${ATRIUM_IMAGE}@sha256:abc`, ATRIUM_IMAGE)).toBe(true);
+		expect(imageReferenceMatches(`${MINIKMS_IMAGE}-old`, MINIKMS_IMAGE)).toBe(false);
 	});
 
 	test("in-progress start-first stays pending while replica counts already match", () => {
-		const decision = evaluateRollingService({
-			service: "atrium",
-			observed: atriumObserved({ updateState: "updating" }),
-			replicaHealth: "healthy",
-			deployStartedAtMs,
+		expect(decide("atrium", atriumObserved({ updateState: "updating" }), {
 			settleObservations: ROLLING_SETTLE_OBSERVATIONS,
-		});
-		expect(decision).toEqual({ action: "wait", kind: "in_progress" });
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: observed({ updateState: "rollback_started" }),
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
 		})).toEqual({ action: "wait", kind: "in_progress" });
+		expect(decide("minikms", observed({ updateState: "rollback_started" }))).toEqual({ action: "wait", kind: "in_progress" });
 	});
 
 	test("rollback and paused updates fail", () => {
 		for (const updateState of ["rollback_completed", "rollback_paused", "paused"]) {
-			expect(evaluateRollingService({
-				service: "minikms",
-				observed: observed({ updateState }),
-				replicaHealth: "healthy",
-				deployStartedAtMs,
-				settleObservations: 0,
-			})).toEqual({ action: "fail", kind: "rolled_back" });
+			expect(decide("minikms", observed({ updateState }))).toEqual({ action: "fail", kind: "rolled_back" });
 		}
 	});
 
@@ -107,14 +101,8 @@ describe("rolling update convergence", () => {
 			rollbackFailureAction: "",
 			healthTest: [],
 		});
-		expect(rollingSpecMismatches("minikms", rolledBack).length).toBeGreaterThan(0);
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: rolledBack,
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "fail", kind: "rolled_back" });
+		expect(rollingSpecMismatches("minikms", rolledBack, MINIKMS_IMAGE).length).toBeGreaterThan(0);
+		expect(decide("minikms", rolledBack)).toEqual({ action: "fail", kind: "rolled_back" });
 	});
 
 	test("a completed update that restored the previous spec fails", () => {
@@ -126,42 +114,36 @@ describe("rolling update convergence", () => {
 			rollbackFailureAction: "",
 			healthTest: [],
 		});
-		expect(rollingSpecMismatches("atrium", previous)).toContain("healthcheck unset");
-		expect(evaluateRollingService({
-			service: "atrium",
-			observed: previous,
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "fail", kind: "spec" });
+		expect(rollingSpecMismatches("atrium", previous, ATRIUM_IMAGE)).toContain("healthcheck unset");
+		expect(decide("atrium", previous)).toEqual({ action: "fail", kind: "spec" });
+	});
+
+	test("a completed update with a different image fails", () => {
+		const failedImage = observed({ image: "ghcr.io/envsync-cloud/minikms:sha-failed" });
+		expect(rollingSpecMismatches("minikms", failedImage, MINIKMS_IMAGE).join(" ")).toContain("sha-failed");
+		expect(decide("minikms", failedImage)).toEqual({ action: "fail", kind: "spec" });
+	});
+
+	test("a stale rollback on a different image does not settle", () => {
+		const stale = atriumObserved({
+			updateState: "rollback_completed",
+			updateStartedAtMs: deployStartedAtMs - 60_000,
+			image: "ghcr.io/bravo68web/atrium:failed",
+		});
+		expect(decide("atrium", stale, { settleObservations: ROLLING_SETTLE_OBSERVATIONS })).toEqual({
+			action: "wait",
+			kind: "spec",
+		});
 	});
 
 	test("a completed update waits while the new tasks are not healthy yet", () => {
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: observed(),
-			replicaHealth: "degraded",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "wait", kind: "unhealthy" });
+		expect(decide("minikms", observed(), { replicaHealth: "degraded" })).toEqual({ action: "wait", kind: "unhealthy" });
 	});
 
 	test("an older completed update does not count until the spec stays matched", () => {
 		const stale = observed({ updateStartedAtMs: deployStartedAtMs - 60_000 });
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: stale,
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: 0,
-		})).toEqual({ action: "wait", kind: "settling" });
-		expect(evaluateRollingService({
-			service: "minikms",
-			observed: stale,
-			replicaHealth: "healthy",
-			deployStartedAtMs,
-			settleObservations: ROLLING_SETTLE_OBSERVATIONS - 1,
-		})).toEqual({ action: "ready" });
+		expect(decide("minikms", stale)).toEqual({ action: "wait", kind: "settling" });
+		expect(decide("minikms", stale, { settleObservations: ROLLING_SETTLE_OBSERVATIONS - 1 })).toEqual({ action: "ready" });
 	});
 
 	test("parses inspect output and ignores a zero update timestamp", () => {
@@ -174,14 +156,18 @@ describe("rolling update convergence", () => {
 			"start-first",
 			"pause",
 			JSON.stringify([...MINIKMS_HEALTHCHECK_TEST]),
+			`${MINIKMS_IMAGE}@sha256:abc`,
 		].join("|");
 		const parsed = parseRollingInspect(line);
 		expect(parsed.replicas).toBe(2);
 		expect(parsed.healthTest).toEqual([...MINIKMS_HEALTHCHECK_TEST]);
+		expect(parsed.image).toBe(`${MINIKMS_IMAGE}@sha256:abc`);
 		expect(parseRollingInspect("rollback_completed|0001-01-01T00:00:00Z|1||||||").updateStartedAtMs).toBeNull();
+		expect(parseRollingInspect("rollback_completed|0001-01-01T00:00:00Z|1||||||").image).toBe("");
 		expect(ROLLING_INSPECT_FORMAT).toContain("{{if .UpdateStatus}}");
 		expect(ROLLING_INSPECT_FORMAT).toContain("{{if .Spec.UpdateConfig}}");
 		expect(ROLLING_INSPECT_FORMAT).toContain("{{if .Spec.TaskTemplate.ContainerSpec.Healthcheck}}");
+		expect(ROLLING_INSPECT_FORMAT).toContain("{{if .Spec.TaskTemplate.ContainerSpec.Image}}");
 		expect(ROLLING_INSPECT_FORMAT).not.toContain("Entrypoint");
 	});
 

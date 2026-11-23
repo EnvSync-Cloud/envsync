@@ -429,10 +429,14 @@ function selectCandidates(
 		if (commit && isBump(commit, botName)) lastBumpIndex = i;
 	}
 	if (lastBumpIndex === -1) {
-		if (!commits.some(commit => commit.sha === eventSha)) {
+		const eventIndex = commits.findIndex(commit => commit.sha === eventSha);
+		if (eventIndex === -1) {
 			fail(`event ${eventSha} is not on the first-parent history of ${branch}`);
 		}
-		return [eventSha];
+		// No bump since the stable tag. `commits` is the first-parent range
+		// through the tip read on this attempt (including a push-rejected retry),
+		// oldest first. The PR map still drops anything that is not a merged PR.
+		return commits.slice(eventIndex).map(commit => commit.sha);
 	}
 	const after = commits.slice(lastBumpIndex + 1).map(commit => commit.sha);
 	if (eventSha === tip || after.includes(eventSha)) return after;

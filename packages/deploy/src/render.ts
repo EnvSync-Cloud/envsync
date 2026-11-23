@@ -222,6 +222,7 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 }
 
 export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.17";
+export const MINIKMS_IMAGE = "ghcr.io/envsync-cloud/minikms:sha-cf531ee";
 
 /** Pinned Postgres patch tag. Shared by every Postgres service and CLI helper. */
 export const POSTGRES_IMAGE = "postgres:17.12";
@@ -1325,7 +1326,7 @@ ${swarmPgHealthcheck("postgres", "minikms")}
     networks: [envsync]
 ${includeRuntimeInfra ? `
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-cf531ee
+    image: ${MINIKMS_IMAGE}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - umask 077 && cp /run/secrets/minikms-root-key /tmp/minikms-root-key && cp /run/secrets/minikms-root-ca-key /tmp/minikms-root-ca-key && chmod 600 /tmp/minikms-root-key /tmp/minikms-root-ca-key && exec minikms

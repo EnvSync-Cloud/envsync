@@ -276,6 +276,64 @@ test("fixture AC2-bootstrap: 0.25.3 stable + fix merge -> v0.25.4-rc.1", () => {
 	}
 }, 60_000);
 
+test(
+	"fixture AC2-bootstrap-stacked: merges landing before the first rc run each get their own rc tag",
+	() => {
+		const repo = initRepo();
+		try {
+			const commitA = commitOnDev(repo.work, "fix: merge A");
+			const commitB = commitOnDev(repo.work, "feat: merge B");
+			const prs = path.join(repo.root, "prs.json");
+			writePrs(prs, {
+				[commitA]: { number: 213, title: "fix: merge A" },
+				[commitB]: { number: 215, title: "feat: merge B" },
+			});
+			const first = runCli(repo.work, prs, commitA);
+			assertOk(first);
+			const rc1 = git(repo.bare, ["rev-parse", "v0.26.0-rc.1^{commit}"]);
+			const rc2 = git(repo.bare, ["rev-parse", "v0.26.0-rc.2^{commit}"]);
+			expect(rc1).not.toBe(rc2);
+			expect(git(repo.bare, ["rev-parse", `${rc1}^`])).toBe(commitB);
+			expect(git(repo.bare, ["rev-parse", `${rc2}^`])).toBe(rc1);
+			expect(git(repo.bare, ["rev-parse", `${commitB}^`])).toBe(commitA);
+			expect(devTip(repo.bare)).toBe(rc2);
+			expect(git(repo.bare, ["log", "-1", "--format=%s", rc1])).toBe("chore: release version 0.26.0-rc.1");
+			expect(git(repo.bare, ["log", "-1", "--format=%s", rc2])).toBe("chore: release version 0.26.0-rc.2");
+			expect(git(repo.bare, ["log", "-1", "--format=%b", rc1])).toContain(`Release-Source: ${commitA}`);
+			expect(git(repo.bare, ["log", "-1", "--format=%b", rc2])).toContain(`Release-Source: ${commitB}`);
+			expect(git(repo.bare, ["log", "--first-parent", "--format=%s", "-2", "refs/heads/dev"])).toBe(
+				"chore: release version 0.26.0-rc.2\nchore: release version 0.26.0-rc.1",
+			);
+			const released = lines(first.stdout).filter(line => line.startsWith("released "));
+			expect(released).toEqual([
+				`released v0.26.0-rc.1 at ${rc1} for ${commitA} (#213)`,
+				`released v0.26.0-rc.2 at ${rc2} for ${commitB} (#215)`,
+			]);
+			assertTagCreatedOnce(repo.bare, "v0.26.0-rc.1", rc1);
+			assertTagCreatedOnce(repo.bare, "v0.26.0-rc.2", rc2);
+			assertFirstParentLinear(repo.bare);
+			assertReflogFastForward(repo.bare);
+			expect(git(repo.bare, ["tag", "--list", "v*-rc.*"]).split("\n").filter(Boolean).sort()).toEqual([
+				"v0.26.0-rc.1",
+				"v0.26.0-rc.2",
+			]);
+
+			const tagsBefore = git(repo.bare, ["tag", "--list"]);
+			const second = runCli(repo.work, prs, commitB);
+			assertOk(second);
+			expect(lines(second.stdout)).toContain(`skip: ${commitB} already released as v0.26.0-rc.2`);
+			expect(lines(second.stdout).some(line => line.startsWith("released "))).toBe(false);
+			expect(devTip(repo.bare)).toBe(rc2);
+			expect(git(repo.bare, ["tag", "--list"])).toBe(tagsBefore);
+			expect(git(repo.bare, ["rev-parse", "v0.26.0-rc.1^{commit}"])).toBe(rc1);
+			expect(git(repo.bare, ["rev-parse", "v0.26.0-rc.2^{commit}"])).toBe(rc2);
+		} finally {
+			removeRepo(repo);
+		}
+	},
+	60_000,
+);
+
 test("fixture AC2-rc-increment: second merge for 0.25.4 -> v0.25.4-rc.2", () => {
 	const repo = initRepo();
 	try {
