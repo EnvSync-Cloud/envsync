@@ -1,6 +1,6 @@
 {
   "name": "envsync-kernel",
-  "version": "0.26.0-rc.7",
+  "version": "0.26.0-rc.8",
   "description": "Shared MIT kernel for EnvSync API products (errors, module types)",
   "type": "module",
   "license": "MIT",
