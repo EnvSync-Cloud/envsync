@@ -1,6 +1,10 @@
 import type { ReactNode, FC } from "react";
-import { cn } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
+
+import { FeatureDocsLink } from "@/components/FeatureDocsLink";
 import { Skeleton } from "@/components/ui/skeleton";
+import { docsUrlForPathname } from "@/lib/docs-links";
+import { cn } from "@/lib/utils";
 
 type PageShellStatTone = "default" | "success" | "warning" | "danger";
 
@@ -46,6 +50,9 @@ export function PageShell({
   children,
   isLoading,
 }: PageShellProps) {
+  const { pathname } = useLocation();
+  const docsHref = docsUrlForPathname(pathname);
+
   if (isLoading) {
     return (
       <div className="animate-page-enter space-y-6">
@@ -73,6 +80,14 @@ export function PageShell({
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+              {docsHref && (
+                <FeatureDocsLink
+                  href={docsHref}
+                  label={title}
+                  side="bottom"
+                  className="size-4 self-center"
+                />
+              )}
               {inlineStats && inlineStats.length > 0 && (
                 <p className="text-sm text-muted-foreground">
                   {inlineStats.map((stat, index) => (
