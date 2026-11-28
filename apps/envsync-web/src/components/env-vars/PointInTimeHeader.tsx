@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
+import { DatabaseBackup, RefreshCw } from "lucide-react";
 
+import { PageShell } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { EnvironmentType } from "@/constants";
@@ -17,6 +19,7 @@ interface PointInTimeHeaderProps {
 	enableSecrets?: boolean;
 	onRefresh: () => void;
 	onEnvironmentChange?: (environmentId: string) => void;
+	children: ReactNode;
 }
 
 export const PointInTimeHeader = ({
@@ -26,7 +29,7 @@ export const PointInTimeHeader = ({
 	isRefetching,
 	enableSecrets,
 	onRefresh,
-	onEnvironmentChange,
+	children,
 }: PointInTimeHeaderProps) => {
 	const navigate = useNavigate();
 	const location = useLocation();
@@ -44,19 +47,28 @@ export const PointInTimeHeader = ({
 		navigate(buildPitHref(appId, section, query));
 	}
 
-	return (
-		<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-			<div className="space-y-3">
-				<div className="space-y-1">
-					<h1 className="text-2xl font-medium text-foreground">Recovery</h1>
-					<p className="text-sm text-muted-foreground">
-						{projectName}
-						{selectedEnvironment ? ` / ${selectedEnvironment.name}` : ""}
-						{selectedEnvironment?.is_default ? " · Default" : ""}
-					</p>
-				</div>
+	const environmentLabel = selectedEnvironment
+		? `${projectName} / ${selectedEnvironment.name}${selectedEnvironment.is_default ? " · Default" : ""}`
+		: projectName;
 
-				{enableSecrets ? (
+	return (
+		<PageShell
+			title="Recovery"
+			icon={DatabaseBackup}
+			description={`${environmentLabel}. Earlier versions of ${currentSection.toLowerCase()} in this environment.`}
+			actions={
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={onRefresh}
+					disabled={isRefetching}
+				>
+					<RefreshCw className={cn("mr-2 size-4", isRefetching && "animate-spin")} />
+					Refresh history
+				</Button>
+			}
+			secondaryNav={
+				enableSecrets ? (
 					<div className="inline-flex items-center rounded-lg border border-border p-1">
 						<Button
 							variant="ghost"
@@ -85,19 +97,10 @@ export const PointInTimeHeader = ({
 							Secrets
 						</Button>
 					</div>
-				) : (
-					<p className="text-sm text-muted-foreground">{currentSection}</p>
-				)}
-			</div>
-			<Button
-				variant="outline"
-				size="sm"
-				onClick={onRefresh}
-				disabled={isRefetching}
-			>
-				<RefreshCw className={cn("mr-2 size-4", isRefetching && "animate-spin")} />
-				Refresh history
-			</Button>
-		</div>
+				) : null
+			}
+		>
+			{children}
+		</PageShell>
 	);
 };

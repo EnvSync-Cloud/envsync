@@ -145,6 +145,7 @@ const Teams = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Teams"
+        description="Groups of members that share access to projects."
         icon={Users}
         isLoading={teamsLoading}
         stickyActions

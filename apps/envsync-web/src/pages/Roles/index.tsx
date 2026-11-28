@@ -1,5 +1,7 @@
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ShieldAlert } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageShell } from "@/components/PageShell";
 import { useRolesTable } from "@/hooks/useRoles";
 import { RoleRow } from "@/components/roles/row";
 import { RoleEditForm } from "@/components/roles/edit-form";
@@ -14,23 +16,15 @@ export const Roles = () => {
   }, [isLoading, roles]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex w-full items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Roles</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {roles?.length ?? 0} roles
-          </p>
-        </div>
-        <RoleEditForm />
-      </div>
+    <PageShell
+      title="Roles"
+      icon={ShieldAlert}
+      description="Permission sets that can be assigned to members."
+      stats={[{ label: (roles?.length ?? 0) === 1 ? "role" : "roles", value: String(roles?.length ?? 0) }]}
+      actions={<RoleEditForm />}
+    >
       <Card className="w-full border-border bg-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium text-foreground">
-            Roles
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isEmpty ? (
             <EmptyRoles />
           ) : (
@@ -71,7 +65,7 @@ export const Roles = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 };
 

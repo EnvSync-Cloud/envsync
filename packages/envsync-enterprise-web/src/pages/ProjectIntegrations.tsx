@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Layers3, Link2, Plus } from "lucide-react";
+import { ChevronRight, Layers3, Link2, PlugZap, Plus } from "lucide-react";
 
 import { sdk } from "@shell/api";
 import { useCreateManualSyncRun, useEnvTypeMappings, useIntegrationBindings, useOrgSecrets, useProviderConnections, useSyncRuns, type EnterpriseProvider } from "../api/hooks";
 import { CreateOrgSecretModal } from "../components/CreateOrgSecretModal";
 import { CreateProviderConnectionModal } from "../components/CreateProviderConnectionModal";
 import { SyncRunsList } from "../components/SyncRunsList";
+import { PageShell } from "@shell/components/PageShell";
 import { Button } from "@shell/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@shell/components/ui/tabs";
 import { appDetailPath, appIntegrationProviderPath, orgIntegrationsPath } from "@shell/lib/app-routes";
@@ -56,11 +57,12 @@ export default function ProjectIntegrations() {
   }, [bindings, mappings, providerConnections, syncRuns]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-medium text-foreground">Integrations</h1>
-        <div className="flex items-center gap-2">
+    <PageShell
+      title="Integrations"
+      icon={PlugZap}
+      description="Providers this project can sync environments to."
+      actions={
+        <>
           <Button
             onClick={() => setShowCreateConnection(true)}
             size="sm"
@@ -86,9 +88,9 @@ export default function ProjectIntegrations() {
               Org Integrations
             </Button>
           </Link>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {/* Stats row */}
       <p className="text-sm text-muted-foreground">
         {providerConnections.length} connections · {bindings.length} bindings · {syncRuns.length} syncs
@@ -138,7 +140,7 @@ export default function ProjectIntegrations() {
                     <img
                       src={providerLogo(provider.id)}
                       alt=""
-                      className="size-8 shrink-0 rounded-md"
+                      className="size-8 shrink-0 rounded-md object-contain"
                     />
                   ) : (
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
@@ -232,6 +234,6 @@ export default function ProjectIntegrations() {
         open={showCreateSecret}
         onOpenChange={setShowCreateSecret}
       />
-    </div>
+    </PageShell>
   );
 }

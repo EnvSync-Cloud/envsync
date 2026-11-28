@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { PageDescription } from "@/components/PageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -392,6 +393,12 @@ export const EnvironmentVariablesTable = ({
             ) : null}
           </div>
         </div>
+
+        <PageDescription>
+          {isSecrets
+            ? "Secrets stored for the selected environment."
+            : "Values stored for the selected environment."}
+        </PageDescription>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full max-w-md">

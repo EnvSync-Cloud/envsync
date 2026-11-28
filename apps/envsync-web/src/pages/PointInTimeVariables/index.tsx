@@ -372,24 +372,21 @@ const PointInTime = () => {
 	}
 
 	return (
-		<div className="min-h-full bg-card p-6">
-			<div className="mx-auto flex max-w-7xl flex-col gap-6">
-				<PointInTimeHeader
-					projectName={project?.name || appId || ""}
-					environmentTypes={environmentTypes || []}
-					selectedEnvironmentId={selectedEnvironment.id}
-					isRefetching={snapshotHistoryQuery.isRefetching || rangeHistoryQuery.isRefetching}
-					enableSecrets={enableSecrets}
-					onRefresh={() => {
-						snapshotHistoryQuery.refetch();
-						if (activeMode === "time-range") {
-							rangeHistoryQuery.refetch();
-						}
-					}}
-					onEnvironmentChange={handleEnvironmentChange}
-				/>
-
-				<div className="space-y-4">
+		<PointInTimeHeader
+			projectName={project?.name || appId || ""}
+			environmentTypes={environmentTypes || []}
+			selectedEnvironmentId={selectedEnvironment.id}
+			isRefetching={snapshotHistoryQuery.isRefetching || rangeHistoryQuery.isRefetching}
+			enableSecrets={enableSecrets}
+			onRefresh={() => {
+				snapshotHistoryQuery.refetch();
+				if (activeMode === "time-range") {
+					rangeHistoryQuery.refetch();
+				}
+			}}
+			onEnvironmentChange={handleEnvironmentChange}
+		>
+			<div className="space-y-4">
 					<PitModeSwitch value={activeMode} onValueChange={setActiveMode} />
 
 					{activeMode === "snapshots" ? (
@@ -572,8 +569,7 @@ const PointInTime = () => {
 					onRollbackMessageChange={setRollbackMessage}
 					onConfirm={handleConfirmRollback}
 				/>
-			</div>
-		</div>
+			</PointInTimeHeader>
 	);
 };
 

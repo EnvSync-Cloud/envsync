@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { sdk } from "@/api";
+import { PageShell } from "@/components/PageShell";
 import { useAuthContext } from "@/contexts/auth";
 import { appDetailPath } from "@/lib/app-routes";
 import { Button } from "@/components/ui/button";
@@ -449,20 +450,17 @@ export const ManageEnvironment = () => {
   const { project, environmentTypes } = data;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-medium text-foreground">Environments</h1>
-        <Button
-          onClick={openCreateSheet}
-          size="sm"
-          
-        >
+    <PageShell
+      title="Environments"
+      icon={Layers3}
+      description="Named environments for this project, and whether each one is protected."
+      actions={
+        <Button onClick={openCreateSheet} size="sm">
           <Plus className="mr-1.5 h-4 w-4" />
           Add Environment
         </Button>
-      </div>
-
+      }
+    >
       {/* Stats */}
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span><span data-testid="manage-env-stat-types">{environmentTypes.length}</span> environment{environmentTypes.length !== 1 ? 's' : ''}</span>
@@ -714,7 +712,7 @@ export const ManageEnvironment = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 
