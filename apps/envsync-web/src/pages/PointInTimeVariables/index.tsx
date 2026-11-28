@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProjectEnvironments } from "@/hooks/useProjectEnvironments";
 import {
+	buildPitHref,
 	createDefaultTimeRange,
 	createPresetRange,
 	getDefaultSnapshotCompareIds,
@@ -77,6 +78,11 @@ const PointInTime = () => {
 		error: projectError,
 		refetch: refetchProject,
 	} = useProjectEnvironments(appId);
+
+	useEffect(() => {
+		if (!appId || isProjectLoading || projectError || !project || enableSecrets || kind !== "secrets") return;
+		navigate(buildPitHref(appId, "variables", selectedEnvSlug), { replace: true });
+	}, [appId, enableSecrets, isProjectLoading, kind, navigate, project, projectError, selectedEnvSlug]);
 
 	const selectedEnvironment = useMemo(() => {
 		if (!environmentTypes?.length) return null;

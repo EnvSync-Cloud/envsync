@@ -27,6 +27,8 @@ interface ContextNavProps {
   product: ProductId;
   appId: string | null;
   allowedScopes: string[];
+  /** False hides the project Secrets item. Unset keeps it visible while the project is loading. */
+  secretsEnabled?: boolean;
 }
 
 function NavLink({
@@ -128,7 +130,7 @@ function filterGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function ContextNav({ expanded, product, appId, allowedScopes }: ContextNavProps) {
+export function ContextNav({ expanded, product, appId, allowedScopes, secretsEnabled }: ContextNavProps) {
   const { pathname } = useLocation();
   const { isLoading: isAuthLoading, isAuthenticated, user } = useAuthContext();
   const { data: permissions } = api.permissions.getMyPermissions({
@@ -150,6 +152,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
           label: "Project",
           items: buildProjectNavItems(appId, allowedScopes, permissions, {
             pointInTime: planFlagEnabled(user, "point_in_time"),
+            secrets: secretsEnabled,
           }),
         },
       ];
@@ -161,7 +164,7 @@ export function ContextNav({ expanded, product, appId, allowedScopes }: ContextN
       (item) => item.id === "dashboard" || item.id === "applications",
       permissions,
     );
-  }, [allowedScopes, appId, permissions, product, user]);
+  }, [allowedScopes, appId, permissions, product, secretsEnabled, user]);
 
   const fallbackGroups = useMemo(() => {
     if (groups.length > 0) return groups;

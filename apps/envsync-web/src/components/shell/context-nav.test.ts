@@ -66,6 +66,24 @@ describe("buildProjectNavItems", () => {
     );
   });
 
+  test("hides Secrets when the project has secrets turned off", () => {
+    const shown = buildProjectNavItems("app-1", ["applications"], adminPermissions);
+    expect(shown.map((item) => item.id)).toContain("project-secrets");
+
+    const hidden = buildProjectNavItems("app-1", ["applications", "change-requests"], adminPermissions, {
+      secrets: false,
+    });
+    expect(hidden.map((item) => item.id)).not.toContain("project-secrets");
+    expect(hidden.map((item) => item.id)).toEqual([
+      "project-variables",
+      "project-environments",
+      "project-access",
+      "project-approvals",
+      "project-recovery",
+      "project-settings",
+    ]);
+  });
+
   test("hides Recovery when point in time is not on the plan", () => {
     const included = buildProjectNavItems("app-1", ["applications"], adminPermissions);
     expect(included.map((item) => item.name)).toContain("Recovery");

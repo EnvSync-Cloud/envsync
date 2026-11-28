@@ -33,6 +33,7 @@ export const Sidebar = ({
       return appsData.map((app) => ({
         id: app.id,
         name: app.name,
+        enable_secrets: app.enable_secrets ?? false,
       }));
     },
     staleTime: 5 * 60 * 1000,
@@ -87,6 +88,7 @@ export const Sidebar = ({
         product={product}
         appId={appId}
         allowedScopes={allowedScopes}
+        secretsEnabled={projects.find((project) => project.id === appId)?.enable_secrets}
       />
 
       {expanded && (
