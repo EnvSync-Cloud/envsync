@@ -95,6 +95,7 @@ function writeLockstep(work: string): void {
 	const scriptsDir = path.join(work, "scripts");
 	fs.mkdirSync(scriptsDir, { recursive: true });
 	fs.copyFileSync(path.join(import.meta.dir, "bump-release-version.ts"), path.join(scriptsDir, "bump-release-version.ts"));
+	fs.copyFileSync(path.join(import.meta.dir, "release-manual-version.ts"), path.join(scriptsDir, "release-manual-version.ts"));
 	fs.copyFileSync(path.join(import.meta.dir, "release-autobump.ts"), path.join(scriptsDir, "release-autobump.ts"));
 }
 
