@@ -7,6 +7,7 @@ import chalk from "chalk";
 import YAML from "yaml";
 import { formatDeploymentPlan, loadDeploymentPlanFromFile } from "@envsync-cloud/deploy-core";
 import * as renderHelpers from "./render";
+import { assertDeployReleaseVersion, DEPLOY_RELEASE_VERSION_RE } from "./release-version";
 import { parseReplicaHealth, type ServiceHealth } from "./replica-health";
 import {
 	ROLLING_INSPECT_FORMAT,
@@ -495,7 +496,6 @@ const REQUIRED_CLICKSTACK_TAGS = [
 ] as const;
 const CLICKSTACK_SELFHOST_TEAM_NAME = "EnvSync Self-Hosted Team";
 
-const SEMVER_VERSION_RE = /^\d+\.\d+\.\d+$/;
 let currentOptions: CommandOptions = { dryRun: false, force: false, insecureUnencrypted: false, includeKeys: false };
 const DEFAULT_SOURCE_REPO_URL = "https://github.com/EnvSync-Cloud/envsync.git";
 const DEFAULT_ENTERPRISE_LICENSE_SERVER_URL = "https://license.envsync.cloud";
@@ -1526,7 +1526,7 @@ function printOperatorOverview() {
 		"`bootstrap` is destructive",
 		"`upgrade` updates the pinned release target automatically",
 		"blue/green keeps the previous API slot for rollback",
-		"self-hosted release targets must be exact semver values",
+		"self-hosted release targets must be x.y.z or x.y.z-rc.N",
 	];
 
 	console.log(chalk.bold("EnvSync Self-Host Deploy CLI"));
@@ -1552,9 +1552,7 @@ function printOperatorOverview() {
 }
 
 function assertSemverVersion(version: string, label = "release version") {
-	if (!SEMVER_VERSION_RE.test(version)) {
-		throw new Error(`Invalid ${label} '${version}'. Expected an exact semver like 0.6.2.`);
-	}
+	assertDeployReleaseVersion(version, label);
 }
 
 function versionedImages(version: string, edition: "oss" | "enterprise" = "enterprise") {
@@ -1622,7 +1620,7 @@ function resolveReleaseVersion(raw: Partial<DeployConfig>) {
 		return releaseVersion;
 	}
 	if (typeof raw.release_channel === "string" && raw.release_channel.length > 0) {
-		if (SEMVER_VERSION_RE.test(raw.release_channel)) {
+		if (DEPLOY_RELEASE_VERSION_RE.test(raw.release_channel)) {
 			return raw.release_channel;
 		}
 		if (raw.release_channel === "stable" || raw.release_channel === "latest") {
