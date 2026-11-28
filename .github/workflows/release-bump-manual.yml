@@ -1,0 +1,117 @@
+# Manual release bump on dev.
+#
+# Leave both inputs empty to cut the next patch rc from the current dev version.
+# Set version to x.y.z for a stable release. Set rc to a number such as 1 to
+# publish x.y.z-rc.N, using the current core when version is empty.
+# A stable tag starts .github/workflows/release.yml, which publishes artifacts
+# and waits for production approval before deploying.
+#
+# The bump commit and annotated tag are pushed with the release GitHub App,
+# same as .github/workflows/release-bump.yml. Dry run is the default.
+
+name: Release bump (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Core version, such as 0.27.0 or 0.27.0-rc.1. Empty uses the current core. A stable version also publishes and waits for production approval."
+        required: false
+        type: string
+      rc:
+        description: "RC number, such as 1. With a core version this becomes x.y.z-rc.N. Alone, it uses the current core. Empty means stable when a version is set."
+        required: false
+        type: string
+      dry_run:
+        description: Commit and tag locally without pushing
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-bump-dev
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    name: Bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require release app credentials
+        env:
+          RELEASE_APP_ID: ${{ vars.RELEASE_APP_ID }}
+          RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RELEASE_APP_ID}" ] || [ -z "${RELEASE_APP_PRIVATE_KEY}" ]; then
+            echo "RELEASE_APP_ID (variable) and RELEASE_APP_PRIVATE_KEY (secret) are required. The App needs contents write and pull requests read on EnvSync-Cloud/envsync." >&2
+            exit 1
+          fi
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: read
+
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          persist-credentials: true
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+
+      - name: Resolve bot identity
+        id: release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          bot_name="${APP_SLUG}[bot]"
+          bot_id="$(gh api "/users/${bot_name}" --jq .id)"
+          bot_email="${bot_id}+${bot_name}@users.noreply.github.com"
+          {
+            echo "bot_name=${bot_name}"
+            echo "bot_email=${bot_email}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Bump and tag
+        env:
+          VERSION: ${{ inputs.version }}
+          RC: ${{ inputs.rc }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          BOT_NAME: ${{ steps.release.outputs.bot_name }}
+          BOT_EMAIL: ${{ steps.release.outputs.bot_email }}
+        run: |
+          set -euo pipefail
+          args=(
+            manual
+            --remote origin
+            --branch dev
+            --bot-name "${BOT_NAME}"
+            --bot-email "${BOT_EMAIL}"
+          )
+          if [ -n "${VERSION}" ]; then
+            args+=(--version "${VERSION}")
+          fi
+          if [ -n "${RC}" ]; then
+            args+=(--rc "${RC}")
+          fi
+          if [ "${DRY_RUN}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          bun run scripts/release-autobump.ts "${args[@]}"

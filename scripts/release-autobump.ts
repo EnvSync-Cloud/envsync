@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { resolveManualReleaseVersion } from "./release-manual-version.ts";
+
 export type ReleaseLevel = "patch" | "minor" | "major";
 
 const LEVEL_RANK: Record<ReleaseLevel, number> = {
@@ -168,6 +170,9 @@ function fail(message: string): never {
 function usage(): never {
 	console.error(
 		"Usage: bun run scripts/release-autobump.ts run [--dry-run] [--remote origin] [--branch dev] [--bot-name NAME] [--bot-email EMAIL] [--event-sha SHA] [--prs-json FILE]",
+	);
+	console.error(
+		"       bun run scripts/release-autobump.ts manual [--version x.y.z|x.y.z-rc.N] [--rc N] [--dry-run] [--remote origin] [--branch dev] [--bot-name NAME] [--bot-email EMAIL]",
 	);
 	process.exit(1);
 }
@@ -499,11 +504,11 @@ function runBump(version: string): void {
 	}
 }
 
-function commitRelease(version: string, source: string, prNumber: number, botName: string, botEmail: string): void {
+function commitRelease(version: string, source: string, releasePr: string, botName: string, botEmail: string): void {
 	const added = git(["add", "-u"]);
 	if (added.code !== 0) fail(`git add failed: ${added.stderr || added.stdout}`);
 	const subject = `chore: release version ${version}`;
-	const body = `Release-Source: ${source}\nRelease-PR: #${prNumber}`;
+	const body = `Release-Source: ${source}\nRelease-PR: ${releasePr}`;
 	const env = botEnv(botName, botEmail);
 	const committed = git(
 		["-c", `user.name=${botName}`, "-c", `user.email=${botEmail}`, "commit", "-m", subject, "-m", body],
@@ -596,7 +601,7 @@ function releaseCandidate(
 		fail(`refusing to overwrite existing tag ${tag}`);
 	}
 	runBump(version);
-	commitRelease(version, sha, pr.number, opts.botName, opts.botEmail);
+	commitRelease(version, sha, `#${pr.number}`, opts.botName, opts.botEmail);
 	createTag(tag, opts.botName, opts.botEmail);
 	const commitSha = gitOk(["rev-parse", "HEAD"]);
 	if (opts.dryRun) {
@@ -681,6 +686,104 @@ function runAttempt(opts: CliOptions): "done" | "retry" {
 	return "done";
 }
 
+interface ManualOptions {
+	dryRun: boolean;
+	remote: string;
+	branch: string;
+	botName: string;
+	botEmail: string;
+	version: string;
+	rc: string;
+}
+
+function parseManualArgs(argv: string[]): ManualOptions {
+	const opts: ManualOptions = {
+		dryRun: false,
+		remote: "origin",
+		branch: "dev",
+		botName: "",
+		botEmail: "",
+		version: "",
+		rc: "",
+	};
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		if (arg === "--dry-run") {
+			opts.dryRun = true;
+			continue;
+		}
+		if (arg === "--remote") {
+			opts.remote = requireValue(argv, ++i);
+			continue;
+		}
+		if (arg === "--branch") {
+			opts.branch = requireValue(argv, ++i);
+			continue;
+		}
+		if (arg === "--bot-name") {
+			opts.botName = requireValue(argv, ++i);
+			continue;
+		}
+		if (arg === "--bot-email") {
+			opts.botEmail = requireValue(argv, ++i);
+			continue;
+		}
+		if (arg === "--version") {
+			opts.version = requireValue(argv, ++i);
+			continue;
+		}
+		if (arg === "--rc") {
+			opts.rc = requireValue(argv, ++i);
+			continue;
+		}
+		usage();
+	}
+	return opts;
+}
+
+function runManual(opts: ManualOptions): void {
+	if (!opts.botName || !opts.botEmail) {
+		fail("bot name and email are required to create a release commit (--bot-name, --bot-email)");
+	}
+	const tip = fetchTip(opts.remote, opts.branch);
+	syncBranchToTip(opts.branch, tip);
+	const current = readRootVersion();
+	let version: string;
+	try {
+		const explicit = resolveManualReleaseVersion({ current, version: opts.version, rc: opts.rc });
+		if (explicit) {
+			version = explicit;
+		} else {
+			const lastStable = gitOk(["describe", "--tags", "--abbrev=0", "--match", "v*", "--exclude", "v*-*", "HEAD"]);
+			version = nextRcVersion({ current, lastStable, level: "patch" });
+		}
+	} catch (error) {
+		fail(error instanceof Error ? error.message : String(error));
+	}
+	const tag = `v${version}`;
+	if (localTagExists(tag) || remoteTagExists(opts.remote, tag)) {
+		fail(`refusing to overwrite existing tag ${tag}`);
+	}
+	runBump(version);
+	const dirty = git(["diff", "--quiet"]);
+	if (dirty.code === 0) {
+		fail(`dev is already ${version}`);
+	}
+	commitRelease(version, tip, "manual", opts.botName, opts.botEmail);
+	createTag(tag, opts.botName, opts.botEmail);
+	const commitSha = gitOk(["rev-parse", "HEAD"]);
+	if (opts.dryRun) {
+		console.log(`planned version ${version} tag ${tag}`);
+		console.log(`released ${tag} at ${commitSha} for ${tip}`);
+		return;
+	}
+	const pushed = pushRelease(opts.remote, opts.branch, tag);
+	if (!pushed.ok) {
+		fail(`failed to push ${tag}: ${pushed.output}`);
+	}
+	console.log(`released ${tag} at ${commitSha} for ${tip}`);
+}
+
 function runCli(opts: CliOptions): void {
 	for (let attempt = 1; attempt <= MAX_PUSH_ATTEMPTS; attempt++) {
 		const outcome = runAttempt(opts);
@@ -694,5 +797,7 @@ function runCli(opts: CliOptions): void {
 }
 
 if (import.meta.main) {
-	runCli(parseArgs(process.argv.slice(2)));
+	const argv = process.argv.slice(2);
+	if (argv[0] === "manual") runManual(parseManualArgs(argv.slice(1)));
+	else runCli(parseArgs(argv));
 }
