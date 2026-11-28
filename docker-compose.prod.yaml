@@ -260,7 +260,7 @@ services:
     restart: "no"
 
   minikms:
-    image: ghcr.io/envsync-cloud/minikms:sha-cf531ee
+    image: ghcr.io/envsync-cloud/minikms:0.2.0-rc.4
     restart: unless-stopped
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -272,7 +272,7 @@ services:
       MINIKMS_ROOT_CA_KEY_FILE: /tmp/minikms-root-ca-key
       MINIKMS_DB_URL: postgres://${MINIKMS_DB_USER:-postgres}:${MINIKMS_DB_PASSWORD:?MINIKMS_DB_PASSWORD is required}@minikms_db:5432/minikms?sslmode=disable
       MINIKMS_REDIS_URL: redis://redis:6379
-      # sha-cf531ee refreshes the org admin session on CreateOrgCA.
+      # 0.2.0-rc.4 refreshes the org admin session on CreateOrgCA.
       # TLS stays on because MINIKMS_TLS_ENABLED is true.
       MINIKMS_ALLOW_INSECURE: "true"
       MINIKMS_TLS_ENABLED: "true"

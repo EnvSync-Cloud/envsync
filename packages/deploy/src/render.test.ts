@@ -306,7 +306,7 @@ describe("renderStack", () => {
 		expect(stackFull).toContain("web_nginx");
 		expect(stackFull).toContain("envsync_api_blue");
 		expect(stackFull).toContain("envsync_api_green");
-		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:sha-cf531ee");
+		expect(stackFull).toContain("ghcr.io/envsync-cloud/minikms:0.2.0-rc.4");
 		expect(stackFull).toContain("MINIKMS_ROOT_KEY_FILE=/tmp/minikms-root-key");
 		expect(stackFull).toContain("MINIKMS_SESSION_SIGNING_KEY_FILE=/run/secrets/minikms-session-signing-key");
 		expect(stackFull).toContain("MINIKMS_ROOT_CA_CERT_FILE=/run/secrets/minikms-root-ca-cert");
@@ -563,7 +563,7 @@ function fullStack() {
 describe("fixture:minikms-ha-ac1", () => {
 	test("full stack gives miniKMS two replicas, start-first rollback, and a TCP healthcheck", () => {
 		const minikms = fullStack().services.minikms;
-		expect(minikms.image).toBe("ghcr.io/envsync-cloud/minikms:sha-cf531ee");
+		expect(minikms.image).toBe("ghcr.io/envsync-cloud/minikms:0.2.0-rc.4");
 		expect(minikms.deploy.replicas).toBe(MINIKMS_REPLICAS);
 		expect(minikms.deploy.replicas).toBe(2);
 		expect(minikms.deploy.endpoint_mode).toBeUndefined();

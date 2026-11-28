@@ -222,7 +222,7 @@ function publicHttpsUrlVariants(config: DeployConfig, host: string, urlPath = ""
 }
 
 export const ATRIUM_IMAGE = "ghcr.io/bravo68web/atrium:0.2.0-rc.17";
-export const MINIKMS_IMAGE = "ghcr.io/envsync-cloud/minikms:sha-cf531ee";
+export const MINIKMS_IMAGE = "ghcr.io/envsync-cloud/minikms:0.2.0-rc.4";
 
 /** Pinned Postgres patch tag. Shared by every Postgres service and CLI helper. */
 export const POSTGRES_IMAGE = "postgres:17.12";
@@ -1363,7 +1363,7 @@ ${renderEnvList({
 		MINIKMS_DB_URL: `postgres://postgres:${runtimeEnv.MINIKMS_DB_PASSWORD}@minikms_db:5432/minikms?sslmode=disable`,
 		MINIKMS_REDIS_URL: "redis://redis:6379",
 		MINIKMS_GRPC_ADDR: "0.0.0.0:50051",
-		// sha-cf531ee refreshes the org admin session on CreateOrgCA with TLS on.
+		// 0.2.0-rc.4 refreshes the org admin session on CreateOrgCA with TLS on.
 		// MINIKMS_ALLOW_INSECURE only permits a plaintext listener and is not set here.
 		MINIKMS_TLS_ENABLED: "true",
 		MINIKMS_TLS_CERT: "/run/secrets/minikms-grpc-server-cert",
