@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	FORWARDED_ACCESS_TOKEN_METADATA_KEY,
 	FORWARDED_DPOP_METADATA_KEY,
+	FORWARDED_REQUEST_ID_METADATA_KEY,
 	assertForwardableMetadata,
 	buildMinikmsCallMetadata,
 	captureInboundKmsProof,
@@ -144,6 +145,9 @@ describe("fixture: forwarded-bytes-equal-inbound-header", () => {
 						expect(calls[0].method).toBe(method);
 						expect(metadataValue(calls[0].metadata, FORWARDED_DPOP_METADATA_KEY)).toBe(ORIGINAL_PROOF);
 						expect(metadataValue(calls[0].metadata, FORWARDED_ACCESS_TOKEN_METADATA_KEY)).toBe(ORIGINAL_TOKEN);
+						expect(metadataValue(calls[0].metadata, FORWARDED_REQUEST_ID_METADATA_KEY)).toMatch(
+							/^[0-9a-f-]{36}$/i,
+						);
 						if (sessionToken) {
 							expect(metadataValue(calls[0].metadata, "authorization")).toBe(`Bearer ${sessionToken}`);
 						} else {
@@ -154,7 +158,8 @@ describe("fixture: forwarded-bytes-equal-inbound-header", () => {
 						expect(keys.every(key =>
 							key === "authorization"
 							|| key === FORWARDED_DPOP_METADATA_KEY
-							|| key === FORWARDED_ACCESS_TOKEN_METADATA_KEY,
+							|| key === FORWARDED_ACCESS_TOKEN_METADATA_KEY
+							|| key === FORWARDED_REQUEST_ID_METADATA_KEY,
 						)).toBe(true);
 					}
 				}
@@ -214,14 +219,16 @@ describe("fixture: forwarded-bytes-equal-inbound-header", () => {
 		expect(fromCookie.dpop).toBeNull();
 		expect(fromCookie.accessToken).toBe("cookie-token+/");
 		const absent = captureInboundKmsProof({ dpopHeader: undefined, credential: null });
-		expect(absent).toEqual({ dpop: null, accessToken: null });
+		expect(absent.dpop).toBeNull();
+		expect(absent.accessToken).toBeNull();
+		expect(absent.requestId).toMatch(/^[0-9a-f-]{36}$/i);
 		const emptyHeader = captureInboundKmsProof({ dpopHeader: "", credential: "Bearer tok" });
 		expect(emptyHeader.dpop).toBe("");
 		expect(metadataKeysFor(emptyHeader)).toContain(FORWARDED_DPOP_METADATA_KEY);
 	});
 });
 
-function metadataKeysFor(proof: { dpop: string | null; accessToken: string | null }): string[] {
+function metadataKeysFor(proof: { dpop: string | null; accessToken: string | null; requestId: string }): string[] {
 	let keys: string[] = [];
 	runWithInboundKmsProof(proof, () => {
 		keys = Object.keys(buildMinikmsCallMetadata().getMap());
@@ -236,6 +243,7 @@ describe("fixture: no-mode-or-skip-metadata", () => {
 		expect(literalSets).toEqual(["authorization"]);
 		expect(proofSrc).toContain("metadata.set(FORWARDED_DPOP_METADATA_KEY, proof.dpop)");
 		expect(proofSrc).toContain("metadata.set(FORWARDED_ACCESS_TOKEN_METADATA_KEY, proof.accessToken)");
+		expect(proofSrc).toContain("metadata.set(FORWARDED_REQUEST_ID_METADATA_KEY, proof.requestId)");
 		expect(proofSrc).not.toContain("MINIKMS_DPOP_");
 
 		const metadata = new grpc.Metadata();
