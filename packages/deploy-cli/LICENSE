@@ -1,32 +1,3 @@
-EnvSync Enterprise License (Proprietary)
+This package is Enterprise Software.
 
-Copyright (c) 2025-2026 EnvSync Cloud Private Limited. All rights reserved.
-
-This package (`@envsync-cloud/deploy-enterprise`) is proprietary software. It is
-included in the public monorepo for transparency and dual-license development
-but is **not** licensed under the MIT License that applies to
-`@envsync-cloud/deploy` and `@envsync-cloud/deploy-core`.
-
-## Production use
-
-Use of this software in production requires a valid EnvSync enterprise
-subscription or other written license from EnvSync Cloud Private Limited.
-
-## What this covers
-
-- The enterprise deploy CLI entry point and the forced enterprise edition
-- Packaging and distribution of `@envsync-cloud/deploy-enterprise`
-
-## What this does not cover
-
-- `@envsync-cloud/deploy` and `@envsync-cloud/deploy-core` remain under the MIT License.
-
-## Contributions
-
-Contributions are accepted under terms that assign or license the contribution
-to EnvSync Cloud Private Limited for inclusion under this enterprise license.
-See CONTRIBUTING.md.
-
-## Contact
-
-sales@envsync.cloud
+See [LICENSE.enterprise](../../LICENSE.enterprise).

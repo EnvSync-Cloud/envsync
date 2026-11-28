@@ -107,7 +107,8 @@ Use `bun run test:e2e` from the repo root. It runs `e2e-setup init` before invok
 
 EnvSync is a **public dual-license monorepo** (not private-superset-only). See:
 
-- [LICENSE](./LICENSE) — MIT default + proprietary carve-out  
+- [LICENSE](./LICENSE) — MIT License for the open-source software
+- [LICENSE.enterprise](./LICENSE.enterprise) — enterprise software
 - [EDITIONING.md](./EDITIONING.md) — product matrix and package graph  
 - [SELFHOSTING.md](./SELFHOSTING.md) — self-host deploy / org bootstrap  
 

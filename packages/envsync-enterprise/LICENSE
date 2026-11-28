@@ -1,34 +1,3 @@
-EnvSync Enterprise License (Proprietary)
+This package is Enterprise Software.
 
-Copyright (c) 2025-2026 EnvSync Cloud Private Limited. All rights reserved.
-
-This package (`envsync-enterprise` and related proprietary paths) is proprietary
-software. It is included in the public monorepo for transparency and dual-license
-development (PostHog / Coder style) but is **not** licensed under the MIT License
-that applies to core OSS packages.
-
-## Production use
-
-Use of this software in production (including self-hosted enterprise deployments
-and hosted EnvSync Cloud) requires a valid EnvSync enterprise subscription or
-other written license from EnvSync Cloud Private Limited.
-
-## What this covers
-
-- Management module registry and enterprise API surface
-- Enterprise-only features, services, and migrations in this package
-
-## What this does not cover
-
-- `envsync-kernel`, `envsync-api` core surface, public deploy tools, and other
-  packages explicitly marked MIT remain under their respective MIT licenses.
-
-## Contributions
-
-Contributions to proprietary packages are accepted under terms that assign or
-license the contribution to EnvSync Cloud Private Limited for inclusion under
-this enterprise license (see CONTRIBUTING.md).
-
-## Contact
-
-sales@envsync.cloud / license.envsync.cloud
+See [LICENSE.enterprise](../../LICENSE.enterprise).

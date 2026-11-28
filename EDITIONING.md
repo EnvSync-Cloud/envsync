@@ -1,6 +1,6 @@
 # Edition structure (dual-license monorepo)
 
-EnvSync is a **public monorepo** with a dual license (MIT + proprietary enterprise),
+EnvSync is a **public monorepo** with a dual license ([LICENSE](./LICENSE) is MIT, [LICENSE.enterprise](./LICENSE.enterprise) covers the enterprise paths),
 not a “private superset only” model. Enterprise packages live in-tree under a
 proprietary license; OSS builds must not depend on them.
 
