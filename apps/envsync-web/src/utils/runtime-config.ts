@@ -41,7 +41,7 @@ declare global {
 }
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
-const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/docs/api";
+const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/api";
 /** Unified manage surface on the core API process (no separate manage-api host). */
 const MANAGE_API_PATH = "/api/v1/manage";
 const buildEdition = import.meta.env.VITE_SERVER_LICENSE === "oss"

@@ -31,7 +31,7 @@ declare global {
 
 const defaultApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 const defaultDocsUrl = import.meta.env.VITE_DOCS_URL || "https://docs.envsync.cloud";
-const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || `${defaultDocsUrl.replace(/\/$/, "")}/docs/api`;
+const defaultApiDocsUrl = import.meta.env.VITE_API_DOCS_URL || `${defaultDocsUrl.replace(/\/$/, "")}/api`;
 const defaultContactHref = import.meta.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud";
 
 function inferFallbackRuntimeConfig(): RuntimeConfig {
