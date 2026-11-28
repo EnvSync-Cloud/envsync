@@ -451,6 +451,13 @@ const STACK_VOLUMES = [
 	"clickstack_ch_logs",
 ] as const;
 
+// ClickHouse stores traces, logs, and metrics. A release backup does not need it.
+const BACKUP_EXCLUDED_VOLUMES = new Set<string>(["clickstack_ch_data", "clickstack_ch_logs"]);
+
+function volumesForBackup() {
+	return STACK_VOLUMES.filter(volume => !BACKUP_EXCLUDED_VOLUMES.has(volume));
+}
+
 const REQUIRED_BOOTSTRAP_ENV_KEYS = [
 	"S3_SECRET_KEY",
 	"ATRIUM_MANAGEMENT_CLIENT_SECRET",
@@ -5060,9 +5067,10 @@ async function cmdBackup() {
 			stopManagedRuntime(config, "Stopping existing EnvSync services for consistent backup");
 			logDryRun("Would redeploy the EnvSync stack after the backup archive is created");
 		}
-		for (const volume of STACK_VOLUMES) {
+		for (const volume of volumesForBackup()) {
 			backupDockerVolume(stackVolumeName(config, volume), path.join(staged, "volumes", volume));
 		}
+		logInfo("Skipping ClickHouse volumes clickstack_ch_data and clickstack_ch_logs");
 		if (!isOssConfig(config)) {
 			logDryRun(`Would include Enterprise license material from ${LICENSE_ROOT}`);
 		}
@@ -5102,9 +5110,10 @@ async function cmdBackup() {
 			fs.cpSync(LICENSE_ROOT, path.join(staged, "license"), { recursive: true });
 		}
 		const volumesDir = path.join(staged, "volumes");
-		for (const volume of STACK_VOLUMES) {
+		for (const volume of volumesForBackup()) {
 			backupDockerVolume(stackVolumeName(config, volume), path.join(volumesDir, volume));
 		}
+		logInfo("Skipping ClickHouse volumes clickstack_ch_data and clickstack_ch_logs");
 		run("bash", ["-lc", `tar -czf ${JSON.stringify(tarPath)} -C ${JSON.stringify(staged)} .`]);
 		fs.rmSync(staged, { recursive: true, force: true });
 		if (backupMode === "age") {
@@ -5123,7 +5132,7 @@ async function cmdBackup() {
 			sha256: sha256File(tarPath),
 			created_at: new Date().toISOString(),
 			stack_name: config.services.stack_name,
-			volumes: STACK_VOLUMES.map(volume => stackVolumeName(config, volume)),
+			volumes: volumesForBackup().map(volume => stackVolumeName(config, volume)),
 			keys_included: stagedBackup.keys.included,
 			keys_excluded: stagedBackup.keys.excluded,
 			keys_note: stagedBackup.keys.note,
@@ -5399,7 +5408,15 @@ async function cmdRestore(archivePath: string, autoDeploy = false) {
 	}
 	const config = loadConfig();
 	for (const volume of STACK_VOLUMES) {
-		restoreDockerVolume(stackVolumeName(config, volume), path.join(restoreRoot, "volumes", volume));
+		const sourceDir = path.join(restoreRoot, "volumes", volume);
+		if (!exists(path.join(sourceDir, "volume.tar.gz"))) {
+			if (BACKUP_EXCLUDED_VOLUMES.has(volume)) {
+				logInfo(`Skipping ${volume}; ClickHouse telemetry is not part of the backup`);
+				continue;
+			}
+			throw new Error(`Backup archive is missing volume ${volume}`);
+		}
+		restoreDockerVolume(stackVolumeName(config, volume), sourceDir);
 	}
 	recreateProtectedSwarmSecrets(config);
 	logSuccess("Restore completed");
