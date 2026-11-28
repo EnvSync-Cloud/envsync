@@ -5,6 +5,7 @@
  * The values are copied unchanged. Call metadata is only:
  *   x-envsync-dpop          inbound DPoP header value
  *   x-envsync-access-token  inbound access token with one scheme prefix removed
+ *   x-envsync-request-id    id minted once for this inbound request
  * plus the existing vault-session authorization header when that call already
  * sends one. No mode field is added.
  */
@@ -18,6 +19,9 @@ export const FORWARDED_DPOP_METADATA_KEY = "x-envsync-dpop";
 /** Inbound access token with one `DPoP ` / `Bearer ` prefix removed, byte-for-byte. */
 export const FORWARDED_ACCESS_TOKEN_METADATA_KEY = "x-envsync-access-token";
 
+/** One id for every miniKMS call made while handling this inbound request. */
+export const FORWARDED_REQUEST_ID_METADATA_KEY = "x-envsync-request-id";
+
 const FORBIDDEN_METADATA_KEY = /(?:^|[-_])(?:mode|skip)(?:$|[-_])|dpop[-_]?mode|dpop[-_]?skip/i;
 
 export interface InboundKmsProof {
@@ -25,6 +29,8 @@ export interface InboundKmsProof {
 	readonly dpop: string | null;
 	/** Atrium access token without one scheme prefix. Null when this request has none. */
 	readonly accessToken: string | null;
+	/** Stable for every miniKMS call in this inbound request. */
+	readonly requestId: string;
 }
 
 const requestProof = new AsyncLocalStorage<InboundKmsProof>();
@@ -44,6 +50,7 @@ export function captureInboundKmsProof(input: {
 	return {
 		dpop: input.dpopHeader === undefined ? null : input.dpopHeader,
 		accessToken: stripped === null || stripped.length === 0 ? null : stripped,
+		requestId: crypto.randomUUID(),
 	};
 }
 
@@ -75,6 +82,9 @@ export function buildMinikmsCallMetadata(sessionToken?: string): grpc.Metadata {
 	}
 	if (proof?.accessToken) {
 		metadata.set(FORWARDED_ACCESS_TOKEN_METADATA_KEY, proof.accessToken);
+	}
+	if (proof?.requestId) {
+		metadata.set(FORWARDED_REQUEST_ID_METADATA_KEY, proof.requestId);
 	}
 	assertForwardableMetadata(metadata);
 	return metadata;
