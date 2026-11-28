@@ -6,7 +6,7 @@ import {
 	type JWK,
 	type JWTHeaderParameters,
 } from "jose";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 import {
 	confirmationThumbprint,
@@ -63,10 +63,6 @@ async function proof(input: {
 describe("DPoP proofs", () => {
 	beforeEach(() => {
 		useProofReplayForTests(isolatedReplay());
-	});
-
-	afterEach(() => {
-		useProofReplayForTests(null);
 	});
 
 	test("accepts a proof for the same key, method, url, and token", async () => {

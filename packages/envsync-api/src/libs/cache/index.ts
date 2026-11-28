@@ -190,14 +190,15 @@ export class CacheClient {
 	 * A lost store reports failure instead of accepting the write locally.
 	 */
 	static async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
-		if (ttlSeconds <= 0) {
+		const ttl = Math.ceil(ttlSeconds);
+		if (!Number.isFinite(ttl) || ttl <= 0) {
 			throw new Error("setNx requires a positive ttl");
 		}
 		this.ensureRedisClient();
 		const client = await this.requireRedis();
 		const result = await client.set(key, value, {
 			condition: "NX",
-			expiration: { type: "EX", value: ttlSeconds },
+			expiration: { type: "EX", value: ttl },
 		});
 		return result === "OK";
 	}
