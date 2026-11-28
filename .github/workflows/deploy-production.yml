@@ -1,9 +1,9 @@
-# Deploy an already published stable tag to production.
+# Deploy an already published release tag to production.
 #
-# Run this workflow from dev. The tag dropdown is the newest stable tags.
-# .github/workflows/sync-deploy-tag-choices.yml rewrites the list when a
-# stable tag is pushed. The backup stops the stack until the archive finishes.
-# Leave backup checked unless the archive itself is the problem.
+# Run this workflow from dev. The tag dropdown lists the newest stable tags
+# and release candidates. .github/workflows/sync-deploy-tag-choices.yml
+# rewrites the list when a tag is pushed. The backup stops the stack until
+# the archive finishes. Leave backup checked unless the archive itself is the problem.
 
 name: Deploy production
 
@@ -11,23 +11,31 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Stable release tag to deploy
+        description: Release tag to deploy
         required: true
         type: choice
         options:
           # BEGIN deploy-tag-options
+          - v0.27.0-rc.1
+          - v0.26.1-rc.2
+          - v0.26.1-rc.1
           - v0.26.0
+          - v0.26.0-rc.10
+          - v0.26.0-rc.9
+          - v0.26.0-rc.8
+          - v0.26.0-rc.7
+          - v0.26.0-rc.6
+          - v0.26.0-rc.5
+          - v0.26.0-rc.4
+          - v0.26.0-rc.3
+          - v0.26.0-rc.2
+          - v0.26.0-rc.1
           - v0.25.3
           - v0.25.2
           - v0.25.1
           - v0.25.0
           - v0.24.0
           - v0.23.9
-          - v0.23.8
-          - v0.23.7
-          - v0.23.6
-          - v0.23.5
-          - v0.23.4
           # END deploy-tag-options
       backup:
         description: Back up to Cloudflare R2 before upgrading. This stops the stack until the archive finishes.
@@ -55,14 +63,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Require a published stable tag
+      - name: Require a published release tag
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          pattern='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          pattern='^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[1-9][0-9]*)?$'
           if ! printf '%s\n' "${RELEASE_TAG}" | grep -Eq "${pattern}"; then
-            echo "Production deploy accepts a stable tag such as v0.26.0, not ${RELEASE_TAG}." >&2
+            echo "Production deploy accepts a tag such as v0.26.0 or v0.27.0-rc.1, not ${RELEASE_TAG}." >&2
             exit 1
           fi
           git fetch origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"

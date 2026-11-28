@@ -2,30 +2,53 @@ import fs from "node:fs";
 
 export const DEPLOY_TAG_OPTIONS_BEGIN = "# BEGIN deploy-tag-options";
 export const DEPLOY_TAG_OPTIONS_END = "# END deploy-tag-options";
-export const DEPLOY_TAG_OPTION_LIMIT = 12;
+export const DEPLOY_TAG_OPTION_LIMIT = 20;
 
-const STABLE_TAG = /^v\d+\.\d+\.\d+$/;
+const RELEASE_TAG = /^v(\d+)\.(\d+)\.(\d+)(?:-rc\.([1-9]\d*))?$/;
 
-function compareStableTags(left: string, right: string): number {
-	const a = left.slice(1).split(".").map(part => Number(part));
-	const b = right.slice(1).split(".").map(part => Number(part));
-	for (let index = 0; index < 3; index++) {
-		if (a[index] !== b[index]) return (b[index] ?? 0) - (a[index] ?? 0);
-	}
-	return 0;
+interface ReleaseTag {
+	tag: string;
+	major: number;
+	minor: number;
+	patch: number;
+	rc: number | null;
 }
 
-/** Newest stable tags. Prerelease tags are left out of the production dropdown. */
+function parseReleaseTag(tag: string): ReleaseTag | null {
+	const match = RELEASE_TAG.exec(tag.trim());
+	if (!match) return null;
+	return {
+		tag: match[0],
+		major: Number(match[1]),
+		minor: Number(match[2]),
+		patch: Number(match[3]),
+		rc: match[4] ? Number(match[4]) : null,
+	};
+}
+
+function compareReleaseTags(left: ReleaseTag, right: ReleaseTag): number {
+	if (left.major !== right.major) return right.major - left.major;
+	if (left.minor !== right.minor) return right.minor - left.minor;
+	if (left.patch !== right.patch) return right.patch - left.patch;
+	const leftRc = left.rc ?? Number.POSITIVE_INFINITY;
+	const rightRc = right.rc ?? Number.POSITIVE_INFINITY;
+	return rightRc - leftRc;
+}
+
+/** Newest release tags, stable and rc. A stable tag sorts ahead of its own rcs. */
 export function selectDeployTags(tags: string[], limit = DEPLOY_TAG_OPTION_LIMIT): string[] {
-	const stable = [...new Set(tags.map(tag => tag.trim()).filter(tag => STABLE_TAG.test(tag)))];
-	stable.sort(compareStableTags);
-	return stable.slice(0, limit);
+	const parsed = new Map<string, ReleaseTag>();
+	for (const tag of tags) {
+		const release = parseReleaseTag(tag);
+		if (release) parsed.set(release.tag, release);
+	}
+	return [...parsed.values()].sort(compareReleaseTags).slice(0, limit).map(release => release.tag);
 }
 
 export function replaceDeployTagOptions(yaml: string, tags: string[]): string {
 	const selected = selectDeployTags(tags);
 	if (selected.length === 0) {
-		throw new Error("No stable tags to write into the production deploy dropdown.");
+		throw new Error("No release tags to write into the production deploy dropdown.");
 	}
 	const newline = yaml.includes("\r\n") ? "\r\n" : "\n";
 	const lines = yaml.split(/\r?\n/);

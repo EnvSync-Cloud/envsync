@@ -1,8 +1,8 @@
-# Keep the Deploy production tag dropdown on the newest stable tags.
+# Keep the Deploy production tag dropdown on the newest release tags.
 #
-# GitHub choice inputs are a fixed list in this file. A stable tag push
-# rewrites the markers in deploy-production.yml and pushes that commit to dev
-# with the release GitHub App. The App needs contents write and workflows write.
+# GitHub choice inputs are a fixed list in deploy-production.yml. A tag push,
+# including an rc, rewrites that list and pushes the commit to dev with the
+# release GitHub App. The App needs contents write and workflows write.
 # The release-bump gate skips the bot, so this commit does not cut another rc.
 
 name: Refresh deploy tags
@@ -22,7 +22,6 @@ concurrency:
 jobs:
   refresh:
     name: Refresh tag dropdown
-    if: ${{ !contains(github.ref_name, '-rc.') }}
     runs-on: ubuntu-latest
     steps:
       - name: Require release app credentials
