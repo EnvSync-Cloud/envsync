@@ -5,9 +5,9 @@
  * project settings tabs), so core and enterprise dashboard modules resolve
  * through one map without importing each other.
  *
- * A feature with no entry shows no docs button — docs.envsync.cloud does not
- * describe it. `UNDOCUMENTED_FEATURE_IDS` records that gap explicitly, and the
- * companion test fails if a new nav item is added without deciding.
+ * A feature with no entry gets no "Learn more" link. `UNDOCUMENTED_FEATURE_IDS`
+ * records that gap explicitly, and the companion test fails if a new nav item
+ * is added without deciding.
  */
 
 export const DOCS_BASE = "https://docs.envsync.cloud";
