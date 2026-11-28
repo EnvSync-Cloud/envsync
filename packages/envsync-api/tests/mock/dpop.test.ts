@@ -6,15 +6,29 @@ import {
 	type JWK,
 	type JWTHeaderParameters,
 } from "jose";
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import {
 	confirmationThumbprint,
 	requestProofUrls,
 	sessionClientRequiresDpop,
+	useProofReplayForTests,
 	verifyDpopProof,
 } from "@/helpers/dpop";
+import { AppError } from "@/libs/errors";
 import { config } from "@/utils/env";
+
+function isolatedReplay() {
+	const seen = new Set<string>();
+	return {
+		async claim(jti: string) {
+			if (seen.has(jti)) {
+				throw new AppError("DPoP proof was already used", 401, "DPOP_REPLAYED");
+			}
+			seen.add(jti);
+		},
+	};
+}
 
 async function proof(input: {
 	key: CryptoKey;
@@ -47,6 +61,14 @@ async function proof(input: {
 }
 
 describe("DPoP proofs", () => {
+	beforeEach(() => {
+		useProofReplayForTests(isolatedReplay());
+	});
+
+	afterEach(() => {
+		useProofReplayForTests(null);
+	});
+
 	test("accepts a proof for the same key, method, url, and token", async () => {
 		const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
 		const jwk = await exportJWK(publicKey);
@@ -129,6 +151,30 @@ describe("DPoP proofs", () => {
 			accessToken: "access-token",
 			expectedJkt: jkt,
 		});
+	});
+
+	test("fixture: shared replay rejects a proof already used on the other replica", async () => {
+		const shared = isolatedReplay();
+		useProofReplayForTests(shared);
+		const { privateKey, publicKey } = await generateKeyPair("ES256", { extractable: true });
+		const jwk = await exportJWK(publicKey);
+		const signed = await proof({
+			key: privateKey,
+			jwk,
+			method: "GET",
+			url: "https://api.envsync.cloud/api/access/me",
+			accessToken: "access-token",
+			jti: "shared-jti",
+		});
+		const input = {
+			proof: signed,
+			method: "GET",
+			url: "https://api.envsync.cloud/api/access/me",
+			accessToken: "access-token",
+		};
+		await verifyDpopProof(input);
+		useProofReplayForTests(shared);
+		await expect(verifyDpopProof(input)).rejects.toMatchObject({ code: "DPOP_REPLAYED" });
 	});
 
 	test("requires a device key for web and cli clients only", () => {

@@ -185,6 +185,23 @@ export class CacheClient {
 	 * @param value Value to be set
 	 * @param ttl Time to live in seconds (0 = no expiry)
 	 */
+	/**
+	 * Set a key only when it is absent. This always uses Redis.
+	 * A lost store reports failure instead of accepting the write locally.
+	 */
+	static async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+		if (ttlSeconds <= 0) {
+			throw new Error("setNx requires a positive ttl");
+		}
+		this.ensureRedisClient();
+		const client = await this.requireRedis();
+		const result = await client.set(key, value, {
+			condition: "NX",
+			expiration: { type: "EX", value: ttlSeconds },
+		});
+		return result === "OK";
+	}
+
 	static async set(key: string, value: string, ttl?: number) {
 		this.ensureInitialized();
 		const redisUrl = config.REDIS_URL ? new URL(config.REDIS_URL) : undefined;

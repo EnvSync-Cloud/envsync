@@ -6,11 +6,37 @@ import {
 	jwtVerify,
 } from "jose";
 
+import { CacheClient } from "@/libs/cache";
 import { AppError } from "@/libs/errors";
 import { config } from "@/utils/env";
 
 const proofMaxAgeSeconds = 300;
-const seenProofs = new Map<string, number>();
+const proofReplayKeyPrefix = "dpop:api:jti:";
+
+type ProofReplay = {
+	claim(jti: string, ttlSeconds: number): Promise<void>;
+};
+
+const redisProofReplay: ProofReplay = {
+	async claim(jti, ttlSeconds) {
+		let claimed = false;
+		try {
+			claimed = await CacheClient.setNx(`${proofReplayKeyPrefix}${jti}`, "1", ttlSeconds);
+		} catch {
+			throw new AppError("DPoP replay store is unavailable", 503, "DPOP_REPLAY_UNAVAILABLE");
+		}
+		if (!claimed) {
+			throw new AppError("DPoP proof was already used", 401, "DPOP_REPLAYED");
+		}
+	},
+};
+
+let proofReplay: ProofReplay = redisProofReplay;
+
+/** Tests substitute one shared store. Production always uses Redis. */
+export function useProofReplayForTests(replay: ProofReplay | null) {
+	proofReplay = replay ?? redisProofReplay;
+}
 
 export function sessionClientRequiresDpop(clientId: unknown): boolean {
 	return clientId === config.ATRIUM_CLI_CLIENT_ID || clientId === config.ATRIUM_WEB_CLIENT_ID;
@@ -80,15 +106,10 @@ function htu(url: string): string {
 	return parsed.toString();
 }
 
-function rememberProof(jti: string, exp: number) {
+async function rememberProof(jti: string, exp: number) {
 	const now = Math.floor(Date.now() / 1000);
-	for (const [id, expires] of seenProofs) {
-		if (expires <= now) seenProofs.delete(id);
-	}
-	if (seenProofs.has(jti)) {
-		throw new AppError("DPoP proof was already used", 401, "DPOP_REPLAYED");
-	}
-	seenProofs.set(jti, exp);
+	const ttlSeconds = Math.max(1, exp - now);
+	await proofReplay.claim(jti, ttlSeconds);
 }
 
 export async function verifyDpopProof(input: {
@@ -161,7 +182,7 @@ export async function verifyDpopProof(input: {
 		}
 	}
 
-	rememberProof(String(claims.jti), iat + proofMaxAgeSeconds);
+	await rememberProof(String(claims.jti), iat + proofMaxAgeSeconds);
 	return thumbprint;
 }
 
