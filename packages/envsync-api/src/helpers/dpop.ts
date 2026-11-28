@@ -17,33 +17,12 @@ type ProofReplay = {
 	claim(jti: string, ttlSeconds: number): Promise<void>;
 };
 
-const replayStoreTimeoutMs = 5_000;
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => reject(new Error("DPoP replay store timed out")), timeoutMs);
-		promise.then(
-			value => {
-				clearTimeout(timer);
-				resolve(value);
-			},
-			error => {
-				clearTimeout(timer);
-				reject(error);
-			},
-		);
-	});
-}
-
 const redisProofReplay: ProofReplay = {
 	async claim(jti, ttlSeconds) {
 		const ttl = Math.max(1, Math.ceil(ttlSeconds));
 		let claimed = false;
 		try {
-			claimed = await withTimeout(
-				CacheClient.setNx(`${proofReplayKeyPrefix}${jti}`, "1", ttl),
-				replayStoreTimeoutMs,
-			);
+			claimed = await CacheClient.setNx(`${proofReplayKeyPrefix}${jti}`, "1", ttl);
 		} catch {
 			throw new AppError("DPoP replay store is unavailable", 503, "DPOP_REPLAY_UNAVAILABLE");
 		}

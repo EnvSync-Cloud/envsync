@@ -195,12 +195,30 @@ export class CacheClient {
 			throw new Error("setNx requires a positive ttl");
 		}
 		this.ensureRedisClient();
-		const client = await this.requireRedis();
-		const result = await client.set(key, value, {
-			condition: "NX",
-			expiration: { type: "EX", value: ttl },
-		});
-		return result === "OK";
+		const timeoutMs = 5_000;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			const result = await Promise.race([
+				this.requireRedis().then(client =>
+					client.set(key, value, {
+						condition: "NX",
+						expiration: { type: "EX", value: ttl },
+					}),
+				),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => reject(new Error("Redis setNx timed out")), timeoutMs);
+				}),
+			]);
+			return result === "OK";
+		} catch (err) {
+			if (err instanceof Error && err.message === "Redis setNx timed out") {
+				infoLogs(`Redis setNx timed out: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
+				this.resetRedisClient();
+			}
+			throw err;
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
 	}
 
 	static async set(key: string, value: string, ttl?: number) {
