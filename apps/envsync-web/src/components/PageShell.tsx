@@ -29,6 +29,31 @@ interface PageShellProps {
   isLoading?: boolean;
 }
 
+export function PageDescription({ children }: { children?: ReactNode }) {
+  const { pathname } = useLocation();
+  const docsHref = docsUrlForPathname(pathname);
+  if (!children && !docsHref) return null;
+
+  return (
+    <p className="mt-0.5 text-sm text-muted-foreground">
+      {children}
+      {docsHref ? (
+        <>
+          {children ? " " : null}
+          <a
+            href={docsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+          >
+            Learn more
+          </a>
+        </>
+      ) : null}
+    </p>
+  );
+}
+
 const toneClasses: Record<PageShellStatTone, string> = {
   default: "border-border bg-muted/50 text-foreground",
   success: "border-border bg-card text-accent-ink",
@@ -49,9 +74,6 @@ export function PageShell({
   children,
   isLoading,
 }: PageShellProps) {
-  const { pathname } = useLocation();
-  const docsHref = docsUrlForPathname(pathname);
-
   if (isLoading) {
     return (
       <div className="animate-page-enter space-y-6">
@@ -90,35 +112,7 @@ export function PageShell({
                 </p>
               )}
             </div>
-            {description ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {description}
-                {docsHref ? (
-                  <>
-                    {" "}
-                    <a
-                      href={docsHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
-                    >
-                      Learn more
-                    </a>
-                  </>
-                ) : null}
-              </p>
-            ) : docsHref ? (
-              <p className="mt-0.5 text-sm">
-                <a
-                  href={docsHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
-                >
-                  Learn more
-                </a>
-              </p>
-            ) : null}
+            <PageDescription>{description}</PageDescription>
           </div>
         </div>
         {actions && (

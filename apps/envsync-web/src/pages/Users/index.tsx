@@ -155,6 +155,7 @@ export const Users = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Users"
+        description="Members of this organization, and invitations that are still open."
         icon={User}
         stickyActions
         actions={

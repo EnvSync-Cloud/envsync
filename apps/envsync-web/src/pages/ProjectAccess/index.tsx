@@ -119,6 +119,7 @@ const ProjectAccess = () => {
     <div className="animate-page-enter space-y-6">
       <PageShell
         title="Project Access"
+        description="People and teams that can open this project."
         icon={LockKeyhole}
         actions={
           <Button asChild variant="outline" className="border-border text-foreground">
