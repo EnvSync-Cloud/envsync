@@ -21,7 +21,7 @@ import { useAuthContext } from "@/contexts/auth";
 import { useNavigate, useParams } from "react-router-dom";
 import { parseAsString, useQueryState } from "nuqs";
 import { getDefaultEnvironmentType } from "@/lib/utils";
-import { appEnvironmentsPath, appPointInTimePath } from "@/lib/app-routes";
+import { appDetailPath, appEnvironmentsPath, appPointInTimePath } from "@/lib/app-routes";
 import { planFlagEnabled } from "@/lib/plan";
 
 export const ProjectEnvironments = () => {
@@ -35,6 +35,7 @@ export const ProjectEnvironments = () => {
     project,
     environmentTypes,
     secrets,
+    enableSecrets,
     isLoading,
     error,
     createSecret,
@@ -43,6 +44,11 @@ export const ProjectEnvironments = () => {
     bulkImportSecrets,
     refetch,
   } = useProjectEnvironments(appId);
+
+  useEffect(() => {
+    if (!appId || isLoading || error || enableSecrets) return;
+    navigate(appDetailPath(appId), { replace: true });
+  }, [appId, enableSecrets, error, isLoading, navigate]);
 
   const defaultEnvId = getDefaultEnvironmentType(environmentTypes);
 
