@@ -872,7 +872,7 @@ export function renderFrontendRuntimeConfig(config: DeployConfig, generated: Dep
 		authBaseUrl: publicHttpsUrl(config, hosts.auth),
 		managementApiUrl,
 		webClientId: config.auth.web_client_id,
-		apiDocsUrl: "https://docs.envsync.cloud/docs/api",
+		apiDocsUrl: "https://docs.envsync.cloud/api",
 		docsUrl: "https://docs.envsync.cloud",
 		contactHref: "mailto:team@envsync.cloud",
 		edition,

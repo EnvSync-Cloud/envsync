@@ -1,7 +1,6 @@
 import type { ReactNode, FC } from "react";
 import { useLocation } from "react-router-dom";
 
-import { FeatureDocsLink } from "@/components/FeatureDocsLink";
 import { Skeleton } from "@/components/ui/skeleton";
 import { docsUrlForPathname } from "@/lib/docs-links";
 import { cn } from "@/lib/utils";
@@ -80,14 +79,6 @@ export function PageShell({
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
-              {docsHref && (
-                <FeatureDocsLink
-                  href={docsHref}
-                  label={title}
-                  side="bottom"
-                  className="size-4 self-center"
-                />
-              )}
               {inlineStats && inlineStats.length > 0 && (
                 <p className="text-sm text-muted-foreground">
                   {inlineStats.map((stat, index) => (
@@ -100,7 +91,33 @@ export function PageShell({
               )}
             </div>
             {description ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {description}
+                {docsHref ? (
+                  <>
+                    {" "}
+                    <a
+                      href={docsHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                    >
+                      Learn more
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            ) : docsHref ? (
+              <p className="mt-0.5 text-sm">
+                <a
+                  href={docsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
+                >
+                  Learn more
+                </a>
+              </p>
             ) : null}
           </div>
         </div>

@@ -4,11 +4,9 @@ import { useMemo } from "react";
 
 import { api } from "@/api";
 import type { EffectivePermissions } from "@/api/permissions.api";
-import { FeatureDocsLink } from "@/components/FeatureDocsLink";
 import { navGroups } from "@/constants";
 import { useAuthContext } from "@/contexts/auth";
 import { projectsPath } from "@/lib/app-routes";
-import { docsUrlForNavItem } from "@/lib/docs-links";
 import { planFlagEnabled } from "@/lib/plan";
 import type { ProductId } from "@/lib/shell-context";
 import { cn } from "@/lib/utils";
@@ -42,7 +40,6 @@ function NavLink({
 }) {
   const Icon = item.icon;
   const isActive = isItemActive(pathname, item.href);
-  const docsHref = docsUrlForNavItem(item.id);
 
   return (
     <div className="relative group">
@@ -52,7 +49,6 @@ function NavLink({
         className={cn(
           "relative flex w-full items-center rounded-lg text-left text-sm transition-colors",
           expanded ? "gap-2.5 px-2.5 py-1.5" : "justify-center px-2 py-1.5",
-          docsHref && expanded && "pr-8",
           isActive
             ? "bg-sidebar-primary text-sidebar-primary-foreground"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
@@ -64,13 +60,6 @@ function NavLink({
           <span className="block min-w-0 truncate">{item.name}</span>
         )}
       </Link>
-      {docsHref && expanded && (
-        <FeatureDocsLink
-          href={docsHref}
-          label={item.name}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2"
-        />
-      )}
       {!expanded && (
         <div className="invisible absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
           {item.name}

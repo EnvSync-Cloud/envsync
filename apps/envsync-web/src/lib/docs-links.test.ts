@@ -22,7 +22,7 @@ describe("feature docs mapping", () => {
     const mapped = [...Object.values(NAV_DOCS), ...Object.values(SETTINGS_TAB_DOCS)];
     expect(mapped.length).toBeGreaterThan(10);
     for (const url of mapped) {
-      expect(url.startsWith(`${DOCS_BASE}/docs/`)).toBe(true);
+      expect(url.startsWith(`${DOCS_BASE}/envsync`)).toBe(true);
       expect(publishedPages.has(pageOf(url))).toBe(true);
     }
   });
@@ -49,7 +49,7 @@ describe("feature docs mapping", () => {
   });
 
   test("page header lookup covers every feature route", () => {
-    expect(docsUrlForPathname("/")).toBe(`${DOCS_BASE}/docs/envsync`);
+    expect(docsUrlForPathname("/")).toBe(`${DOCS_BASE}/envsync`);
     expect(docsUrlForPathname("/projects/app_1/secrets")).toContain("secret-encryption--storage");
     expect(docsUrlForPathname("/projects/app_1/pit/secrets")).toContain("point-in-time-history");
     expect(docsUrlForPathname("/projects/app_1/settings/service-tokens")).toContain("service-tokens");

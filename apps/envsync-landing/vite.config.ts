@@ -29,7 +29,7 @@ function hostedRuntimeConfigPlugin(): Plugin {
         authBaseUrl: `${proto}//auth.${root}`,
         webClientId: "envsync-web",
         docsUrl,
-        apiDocsUrl: process.env.VITE_API_DOCS_URL || `${docsUrl.replace(/\/$/, "")}/docs/api`,
+        apiDocsUrl: process.env.VITE_API_DOCS_URL || `${docsUrl.replace(/\/$/, "")}/api`,
         contactHref: process.env.VITE_CONTACT_HREF || "mailto:team@envsync.cloud",
         otelEndpoint: otel,
         hyperdxUrl: otel,

@@ -21,7 +21,7 @@ Vite reads the root `.env` when those variables are set. Local defaults in `src/
 |----------|------|----------------|
 | `VITE_API_BASE_URL` | API origin | `http://localhost:4000` |
 | `VITE_DOCS_URL` | Docs site | `https://docs.envsync.cloud` |
-| `VITE_API_DOCS_URL` | API reference | `{docs}/docs/api` |
+| `VITE_API_DOCS_URL` | API reference | `{docs}/api` |
 | `VITE_CONTACT_HREF` | Contact link | `mailto:team@envsync.cloud` |
 
 Hosted builds inject `window.__ENVSYNC_RUNTIME_CONFIG__`. Do not add a second `.env` inside this app.

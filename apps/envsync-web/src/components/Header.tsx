@@ -1,4 +1,5 @@
 import { Search, Bell, LogOut, Settings, Globe } from "lucide-react";
+import { DOCS_BASE } from "@/lib/docs-links";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/auth";
 import { OrgSwitcher } from "@/components/shell/OrgSwitcher";
@@ -45,6 +46,15 @@ export const Header = () => {
               {isMac ? "⌘" : "Ctrl+"}K
             </kbd>
           </button>
+
+          <a
+            href={DOCS_BASE}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Docs
+          </a>
 
           <button
             onClick={() =>

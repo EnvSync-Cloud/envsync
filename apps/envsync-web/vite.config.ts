@@ -31,7 +31,7 @@ function hostedRuntimeConfigPlugin(): Plugin {
         authBaseUrl: `${proto}//auth.${root}`,
         managementApiUrl: `${apiBase}/api/v1/manage`,
         webClientId: "envsync-web",
-        apiDocsUrl: process.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/docs/api",
+        apiDocsUrl: process.env.VITE_API_DOCS_URL || "https://docs.envsync.cloud/api",
         edition,
         dashboardVariant: edition,
         managementEnabled: edition === "enterprise",
