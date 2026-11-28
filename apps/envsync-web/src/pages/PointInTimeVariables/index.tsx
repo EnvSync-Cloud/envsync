@@ -80,9 +80,9 @@ const PointInTime = () => {
 	} = useProjectEnvironments(appId);
 
 	useEffect(() => {
-		if (!appId || isProjectLoading || projectError || enableSecrets || kind !== "secrets") return;
+		if (!appId || isProjectLoading || projectError || !project || enableSecrets || kind !== "secrets") return;
 		navigate(buildPitHref(appId, "variables", selectedEnvSlug), { replace: true });
-	}, [appId, enableSecrets, isProjectLoading, kind, navigate, projectError, selectedEnvSlug]);
+	}, [appId, enableSecrets, isProjectLoading, kind, navigate, project, projectError, selectedEnvSlug]);
 
 	const selectedEnvironment = useMemo(() => {
 		if (!environmentTypes?.length) return null;

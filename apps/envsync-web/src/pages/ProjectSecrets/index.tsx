@@ -46,9 +46,9 @@ export const ProjectEnvironments = () => {
   } = useProjectEnvironments(appId);
 
   useEffect(() => {
-    if (!appId || isLoading || error || enableSecrets) return;
+    if (!appId || isLoading || error || !project || enableSecrets) return;
     navigate(appDetailPath(appId), { replace: true });
-  }, [appId, enableSecrets, error, isLoading, navigate]);
+  }, [appId, enableSecrets, error, isLoading, navigate, project]);
 
   const defaultEnvId = getDefaultEnvironmentType(environmentTypes);
 
