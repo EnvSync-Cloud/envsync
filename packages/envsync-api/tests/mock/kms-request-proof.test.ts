@@ -280,7 +280,13 @@ describe("fixture: api-never-signs-dpop-proof", () => {
 				const text = readFileSync(file, "utf8");
 				const rel = path.relative(repoRoot, file);
 				if (rel === "packages/envsync-api/src/helpers/dpop.ts") {
-					if (!text.includes('header.typ !== "dpop+jwt"') || text.includes("SignJWT") || /typ:\s*["']dpop\+jwt["']/.test(text)) {
+					if (
+						!text.includes('header.typ !== "dpop+jwt"')
+						|| text.includes("SignJWT")
+						|| /typ:\s*["']dpop\+jwt["']/.test(text)
+						|| text.includes("seenProofs")
+						|| !text.includes("dpop:api:jti:")
+					) {
 						offenders.push(rel);
 					}
 					continue;

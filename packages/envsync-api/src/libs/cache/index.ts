@@ -185,6 +185,42 @@ export class CacheClient {
 	 * @param value Value to be set
 	 * @param ttl Time to live in seconds (0 = no expiry)
 	 */
+	/**
+	 * Set a key only when it is absent. This always uses Redis.
+	 * A lost store reports failure instead of accepting the write locally.
+	 */
+	static async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+		const ttl = Math.ceil(ttlSeconds);
+		if (!Number.isFinite(ttl) || ttl <= 0) {
+			throw new Error("setNx requires a positive ttl");
+		}
+		this.ensureRedisClient();
+		const timeoutMs = 5_000;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		try {
+			const result = await Promise.race([
+				this.requireRedis().then(client =>
+					client.set(key, value, {
+						condition: "NX",
+						expiration: { type: "EX", value: ttl },
+					}),
+				),
+				new Promise<never>((_, reject) => {
+					timer = setTimeout(() => reject(new Error("Redis setNx timed out")), timeoutMs);
+				}),
+			]);
+			return result === "OK";
+		} catch (err) {
+			if (err instanceof Error && err.message === "Redis setNx timed out") {
+				infoLogs(`Redis setNx timed out: ${safeCacheMessage(err)}`, LogTypes.ERROR, "CACHE");
+				this.resetRedisClient();
+			}
+			throw err;
+		} finally {
+			if (timer) clearTimeout(timer);
+		}
+	}
+
 	static async set(key: string, value: string, ttl?: number) {
 		this.ensureInitialized();
 		const redisUrl = config.REDIS_URL ? new URL(config.REDIS_URL) : undefined;

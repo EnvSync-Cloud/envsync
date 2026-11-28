@@ -375,6 +375,9 @@ export class AccessController {
 				}
 			} catch (error) {
 				this.logTokenFailure(error);
+				if (error instanceof AppError && error.code === "DPOP_REPLAY_UNAVAILABLE") {
+					throw error;
+				}
 			}
 		}
 		const authType = detectAuthType(accessToken);

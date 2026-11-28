@@ -23,7 +23,7 @@
     "format": "prettier --write .",
     "start": "bun run src/entrypoint.ts",
     "test": "bun test tests/mock",
-    "test:mock": "bun test tests/mock --timeout 10000",
+    "test:mock": "bun test tests/mock --preload ./tests/mock/preload-dpop-replay.ts --timeout 10000",
     "test:e2e": "TEST_MODE=e2e bun test tests/e2e --preload tests/e2e/helpers/real-setup.ts --timeout 60000",
     "test:all": "bun test tests/ --timeout 30000",
     "e2e:init": "bun run ../../scripts/e2e-setup.ts init",
