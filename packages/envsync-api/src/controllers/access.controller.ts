@@ -376,7 +376,6 @@ export class AccessController {
 			} catch (error) {
 				this.logTokenFailure(error);
 				if (error instanceof AppError && error.code === "DPOP_REPLAY_UNAVAILABLE") {
-					clearWebAuthCookies(c);
 					throw error;
 				}
 			}
